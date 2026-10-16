@@ -1,5 +1,5 @@
 import React, { useContext, useState, useRef, useEffect } from "react";
-import { NavLink, Link, useNavigate } from "react-router-dom";
+import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../PrivateRouter/AuthContext";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 import {
@@ -23,6 +23,7 @@ const Navbar = () => {
   const { cart, wishlist } = useContext(StoreContext);
   const [mobilePages, setMobilePages] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [mobileMenu, setMobileMenu] = useState(false);
   const [userMenu, setUserMenu] = useState(false);
@@ -38,6 +39,7 @@ const Navbar = () => {
   const menuRef = useRef();
   const categoryRef = useRef();
   const pagesRef = useRef();
+  const currentPathRef = useRef(location.pathname);
 
   const confirmLogout = () => {
     logout();
@@ -56,6 +58,7 @@ const Navbar = () => {
   useEffect(() => {
     if (!mobileMenu) return undefined;
 
+    const previousOverflow = document.body.style.overflow;
     const handleKeyDown = (event) => {
       if (event.key === "Escape") closeMobileMenu();
     };
@@ -63,10 +66,17 @@ const Navbar = () => {
     document.body.style.overflow = "hidden";
     document.addEventListener("keydown", handleKeyDown);
     return () => {
-      document.body.style.overflow = "";
+      document.body.style.overflow = previousOverflow;
       document.removeEventListener("keydown", handleKeyDown);
     };
   }, [mobileMenu]);
+
+  useEffect(() => {
+    if (currentPathRef.current !== location.pathname) {
+      currentPathRef.current = location.pathname;
+      closeMobileMenu();
+    }
+  }, [location.pathname]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -386,10 +396,11 @@ const navClass = ({ isActive }) =>
               onClick={() => {
                 setMobileCategory(false);
                 setMobilePages(false);
-                setMobileMenu(!mobileMenu);
+                setMobileMenu((isOpen) => !isOpen);
               }}
               aria-label={mobileMenu ? "Close navigation menu" : "Open navigation menu"}
               aria-expanded={mobileMenu}
+              aria-controls="store-mobile-navigation"
               className="flex h-10 w-10 items-center justify-center rounded-full text-primary transition hover:bg-emerald-50 lg:hidden"
             >
               {mobileMenu ? <X size={23} /> : <Menu size={23} />}
@@ -440,20 +451,32 @@ const navClass = ({ isActive }) =>
         </div>
 
       )}
-      {mobileMenu && (
-        <div className="fixed inset-0 z-[60] lg:hidden">
+      <div
+        className={`fixed inset-0 z-[60] transition-[visibility] duration-300 lg:hidden ${
+          mobileMenu ? "visible pointer-events-auto" : "invisible pointer-events-none"
+        }`}
+        aria-hidden={!mobileMenu}
+      >
           <button
             type="button"
             aria-label="Close navigation menu"
             onClick={closeMobileMenu}
-            className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]"
+            tabIndex={mobileMenu ? 0 : -1}
+            className={`absolute inset-0 h-full w-full bg-slate-950/45 backdrop-blur-[2px] transition-opacity duration-300 ${
+              mobileMenu ? "opacity-100" : "pointer-events-none opacity-0"
+            }`}
           />
           <aside
-            aria-label="Mobile navigation"
-            className="absolute inset-y-0 left-0 flex w-[min(88vw,360px)] flex-col overflow-hidden bg-white shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
+            id="store-mobile-navigation"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Store navigation"
+            inert={!mobileMenu}
+            className={`absolute inset-0 flex h-[100dvh] w-full flex-col overflow-hidden bg-white shadow-2xl transition-transform duration-300 ease-out ${
+              mobileMenu ? "translate-y-0" : "-translate-y-full"
+            }`}
           >
-            <div className="flex items-center justify-between border-b border-emerald-900/10 bg-gradient-to-r from-[#003B3B] to-[#00695C] px-5 py-3 text-white">
+            <div className="flex shrink-0 items-center justify-between border-b border-emerald-900/10 bg-gradient-to-r from-[#003B3B] to-[#00695C] px-5 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] text-white">
               {mobileCategory || mobilePages ? (
                 <button
                   type="button"
@@ -481,7 +504,7 @@ const navClass = ({ isActive }) =>
               </button>
             </div>
 
-            <div className="flex-1 overflow-y-auto px-4 py-5">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
               {!mobileCategory && !mobilePages && (
                 <>
                   <p className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Browse the store</p>
@@ -603,8 +626,7 @@ const navClass = ({ isActive }) =>
               )}
             </div>
           </aside>
-        </div>
-      )}
+      </div>
       <CartDrawer isOpen={cartOpen} onClose={() => setCartOpen(false)} />
       <WishlistDrawer isOpen={wishlistOpen} onClose={() => setWishlistOpen(false)} />
     </nav>
