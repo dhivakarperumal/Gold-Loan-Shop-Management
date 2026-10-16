@@ -6,21 +6,18 @@ import {
   Menu,
   X,
   User,
-  Heart,
-  ShoppingCart,
-  Package
+  Heart
 } from "lucide-react";
 import PageContainer from "./PageContainer";
 import api from "../../api";
 import { FiHome, FiShoppingBag, FiGrid, FiFileText, FiPhone, FiChevronDown } from "react-icons/fi";
 import { FiChevronRight, FiTag } from "react-icons/fi";
-import CartDrawer from "./CartDrawer";
 import WishlistDrawer from "./WishlistDrawer";
 
 const Navbar = () => {
 
   const { user, logout } = useContext(AuthContext);
-  const { cart, wishlist } = useContext(StoreContext);
+  const { wishlist } = useContext(StoreContext);
   const [mobilePages, setMobilePages] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -32,9 +29,7 @@ const Navbar = () => {
   const [categoryMenu, setCategoryMenu] = useState(false);
   const [pagesMenu, setPagesMenu] = useState(false);
   const [mobileCategory, setMobileCategory] = useState(false);
-  const [cartOpen, setCartOpen] = useState(false);
   const [wishlistOpen, setWishlistOpen] = useState(false);
-  const [orderCount, setOrderCount] = useState(0);
 
   const menuRef = useRef();
   const categoryRef = useRef();
@@ -117,29 +112,6 @@ const Navbar = () => {
     fetchCategories();
 
   }, []);
-
-  // Fetch user orders count
-  useEffect(() => {
-    const fetchOrderCount = async () => {
-      if (user) {
-        try {
-          const response = await api.get("/orders");
-          // API returns a plain array when no pagination params are passed
-          const orders = Array.isArray(response.data) ? response.data : (response.data.data || []);
-          // Filter by user_id
-          const userOrders = orders.filter(o => (o.user_id === user.user_id || o.user_id === user.id) && o.status !== "Delivered");
-          setOrderCount(userOrders.length);
-        } catch (error) {
-          console.error("Error fetching order count:", error);
-        }
-      }
-    };
-
-    fetchOrderCount();
-    // Refresh order count every 30 seconds
-    const interval = setInterval(fetchOrderCount, 30000);
-    return () => clearInterval(interval);
-  }, [user]);
 
 const navClass = ({ isActive }) =>
   `px-4 py-1.5 rounded-lg text-sm font-medium transition
@@ -302,33 +274,6 @@ const navClass = ({ isActive }) =>
               {wishlist.length > 0 && (
                 <span className="absolute -top-2 -right-2 bg-rose-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
                   {wishlist.length > 9 ? '9+' : wishlist.length}
-                </span>
-              )}
-            </button>
-
-            <Link
-              to="/ordersmain"
-              aria-label="My orders"
-              className="relative hidden rounded-full p-2 text-primary transition hover:bg-emerald-50 hover:text-primary-light sm:block"
-            >
-              <Package className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
-              {orderCount > 0 && (
-                <span className="absolute -top-2 -right-2 bg-rose-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
-                  {orderCount > 9 ? '9+' : orderCount}
-                </span>
-              )}
-            </Link>
-
-            <button
-              type="button"
-              onClick={() => setCartOpen(true)}
-              aria-label="Open cart"
-              className="relative rounded-full p-2 text-primary transition hover:bg-emerald-50 hover:text-primary-light"
-            >
-              <ShoppingCart className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
-              {cart.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
-                  {cart.length > 9 ? '9+' : cart.length}
                 </span>
               )}
             </button>
@@ -554,9 +499,6 @@ const navClass = ({ isActive }) =>
                         <Link to="/account" onClick={closeMobileMenu} className="flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-[#004D40]">
                           <User size={18} /> My Account
                         </Link>
-                        <Link to="/ordersmain" onClick={closeMobileMenu} className="flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-[#004D40]">
-                          <Package size={18} /> My Orders
-                        </Link>
                         {user.role === "admin" && (
                           <Link to="/admin" onClick={closeMobileMenu} className="flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-[#004D40]">
                             <User size={18} /> Admin Panel
@@ -627,7 +569,6 @@ const navClass = ({ isActive }) =>
             </div>
           </aside>
       </div>
-      <CartDrawer isOpen={cartOpen} onClose={() => setCartOpen(false)} />
       <WishlistDrawer isOpen={wishlistOpen} onClose={() => setWishlistOpen(false)} />
     </nav>
 
