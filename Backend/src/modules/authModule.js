@@ -1,0 +1,113 @@
+const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { pool } = require('../config/db');
+
+const USER_COLUMNS = `
+  user_id,
+  username,
+  name,
+  email,
+  phone,
+  role,
+  status,
+  created_at
+`;
+
+async function initializeAuthModule() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      user_id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      username VARCHAR(100) NOT NULL,
+      name VARCHAR(100) NOT NULL,
+      email VARCHAR(254) NOT NULL UNIQUE,
+      phone VARCHAR(32) NULL UNIQUE,
+      password_hash VARCHAR(255) NOT NULL,
+      role VARCHAR(32) NOT NULL DEFAULT 'user',
+      status ENUM('Active', 'Inactive') NOT NULL DEFAULT 'Active',
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )
+  `);
+}
+
+async function createUser({ username, email, phone, password, status, role = 'user' }) {
+  const passwordHash = await bcrypt.hash(password, 12);
+  const [result] = await pool.execute(
+    `INSERT INTO users (username, name, email, phone, password_hash, role, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [username, username, email, phone || null, passwordHash, role, status]
+  );
+
+  return getUserById(result.insertId);
+}
+
+async function getUserById(userId) {
+  const [users] = await pool.execute(
+    `SELECT ${USER_COLUMNS} FROM users WHERE user_id = ?`,
+    [userId]
+  );
+  return users[0] || null;
+}
+
+async function listUsers() {
+  const [users] = await pool.query(
+    `SELECT ${USER_COLUMNS} FROM users ORDER BY created_at DESC, user_id DESC`
+  );
+  return users;
+}
+
+async function updateUser(userId, { username, name, email, phone, role }) {
+  await pool.execute(
+    `UPDATE users
+     SET username = ?, name = ?, email = ?, phone = ?, role = ?
+     WHERE user_id = ?`,
+    [username, name, email, phone || null, role, userId]
+  );
+  return getUserById(userId);
+}
+
+async function deleteUser(userId) {
+  const [result] = await pool.execute(
+    'DELETE FROM users WHERE user_id = ?',
+    [userId]
+  );
+  return result.affectedRows > 0;
+}
+
+async function findUserForLogin(identifier) {
+  const [users] = await pool.execute(
+    `SELECT ${USER_COLUMNS}, password_hash
+     FROM users
+     WHERE email = ? OR phone = ? OR username = ?
+     LIMIT 1`,
+    [identifier, identifier, identifier]
+  );
+  return users[0] || null;
+}
+
+async function verifyPassword(password, passwordHash) {
+  return bcrypt.compare(password, passwordHash);
+}
+
+function createAccessToken(user) {
+  const secret = process.env.JWT_SECRET;
+  if (!secret) throw new Error('JWT_SECRET is required to issue login tokens');
+
+  return jwt.sign(
+    { user_id: user.user_id, role: user.role },
+    secret,
+    { expiresIn: process.env.JWT_EXPIRES_IN || '9d' }
+  );
+}
+
+module.exports = {
+  createAccessToken,
+  createUser,
+  deleteUser,
+  findUserForLogin,
+  getUserById,
+  initializeAuthModule,
+  listUsers,
+  updateUser,
+  verifyPassword
+};

@@ -1,0 +1,14 @@
+{
+  "name": "gold-shop-web",
+  "private": true,
+  "workspaces": [
+    "Frontend",
+    "Backend"
+  ],
+  "scripts": {
+    "dev": "concurrently -k -n frontend,backend \"npm run dev --workspace frontend\" \"npm run start --workspace backend\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
