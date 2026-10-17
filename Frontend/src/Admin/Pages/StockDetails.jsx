@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useAdmin } from "../../PrivateRouter/AdminContext";
 import api from "../../api";
@@ -9,8 +9,6 @@ import {
     FiBox,
     FiAlertCircle,
     FiTrendingDown,
-    FiPackage,
-    FiFilter,
     FiSearch,
     FiSave,
     FiPlus,
@@ -19,7 +17,7 @@ import {
     FiGrid,
     FiList,
 } from "react-icons/fi";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 const StockDetails = () => {
     const navigate = useNavigate();
@@ -27,6 +25,7 @@ const StockDetails = () => {
     const { current: activeRateSet, loading: ratesLoading, error: ratesError } = useGoldRates();
 
     const [searchTerm, setSearchTerm] = useState("");
+    const [statusFilter, setStatusFilter] = useState("All");
     const [currentPage, setCurrentPage] = useState(1);
     const [viewMode, setViewMode] = useState("table");
     const itemsPerPage = 10;
@@ -34,13 +33,13 @@ const StockDetails = () => {
     const currentCacheKey = JSON.stringify({
         page: currentPage,
         limit: itemsPerPage,
-        search: searchTerm
+        search: searchTerm,
+        status: statusFilter
     });
     
     const pageData = stockCache[currentCacheKey];
     const [products, setProducts] = useState(pageData?.products || []);
     const [loading, setLoading] = useState(!pageData);
-    const [isSyncing, setIsSyncing] = useState(false);
 
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -53,15 +52,14 @@ const StockDetails = () => {
     const [isUpdating, setIsUpdating] = useState(false);
     const [fetchingDetail, setFetchingDetail] = useState(false);
 
-    const fetchProducts = async () => {
+    const fetchProducts = useCallback(async () => {
         const params = {
             page: currentPage,
             limit: itemsPerPage,
-            search: searchTerm
+            search: searchTerm,
+            status: statusFilter
         };
         const cacheKey = JSON.stringify(params);
-        if (!stockCache[cacheKey]) setLoading(true);
-
         try {
             const response = await api.get("/products", { params });
             const data = response.data;
@@ -83,20 +81,15 @@ const StockDetails = () => {
         } catch (error) {
             console.error("Error fetching products:", error);
             setProducts([]);
+            toast.error(error.response?.data?.message || "Could not load stock details.");
         } finally {
             setLoading(false);
-            setIsSyncing(false);
         }
-    };
+    }, [currentPage, searchTerm, statusFilter, setStockCached]);
 
     useEffect(() => {
-        fetchProducts();
-    }, [currentPage, searchTerm]);
-
-    const handleSync = () => {
-        setIsSyncing(true);
-        fetchProducts();
-    };
+        void fetchProducts();
+    }, [fetchProducts]);
 
     const getStockLevel = (product) => {
         const stock = product.total_stock ?? product.stock ?? 0;
@@ -105,7 +98,8 @@ const StockDetails = () => {
 
     const getStatusStyle = (status) => {
         switch (status) {
-            case "Active": return "bg-emerald-50 text-emerald-600 border-emerald-100";
+            case "Active":
+            case "In Stock": return "bg-emerald-50 text-emerald-600 border-emerald-100";
             case "Low Stock": return "bg-amber-50 text-amber-600 border-amber-100";
             case "Out of Stock": return "bg-rose-50 text-rose-600 border-rose-100";
             default: return "bg-gray-50 text-gray-600 border-gray-100";
@@ -115,21 +109,20 @@ const StockDetails = () => {
     const deriveStatus = (stock) => {
         if (stock <= 0) return "Out of Stock";
         if (stock < 10) return "Low Stock";
-        return "Active";
+        return "In Stock";
     };
 
-    const totalPages = pagination.totalPages;
+    const totalPages = Math.max(1, Number(pagination.totalPages) || 1);
     const currentItems = products;
+    const changePage = (page) => {
+        setLoading(true);
+        setCurrentPage(page);
+    };
     const visibleStockMetalValue = products.reduce((total, product) => {
-        const rate = getRateForPurity(activeRateSet, product.purity);
+        const rate = getRateForPurity(activeRateSet, product.purity, product.metal_type || "Gold");
         const count = Number(product.total_stock ?? product.stock ?? 0);
-        return total + (Number(product.net_gold_weight) || 0) * count * (Number(rate?.rate_per_gram) || 0);
+        return total + (Number(product.net_gold_weight) || 0) * count * (Number(rate?.rate_per_unit ?? rate?.rate_per_gram) || 0);
     }, 0);
-
-    // Reset page 1 on search
-    useEffect(() => {
-        setCurrentPage(1);
-    }, [searchTerm]);
 
     // Modal Handlers
     const openUpdateModal = async (product) => {
@@ -185,7 +178,12 @@ const StockDetails = () => {
         setIsUpdating(true);
         try {
             let newTotalStock = 0;
-            const vars = Array.isArray(updatedVariants) ? updatedVariants : [];
+            const vars = Array.isArray(updatedVariants)
+                ? updatedVariants.map((variant) => ({
+                    ...variant,
+                    sizesStock: variant.sizesStock ? { ...variant.sizesStock } : variant.sizesStock
+                }))
+                : [];
             const hasVariantsWithSizes = vars.some(v => v.sizesStock && Object.keys(v.sizesStock).length > 0);
 
             if (hasVariantsWithSizes) {
@@ -205,23 +203,36 @@ const StockDetails = () => {
                 newTotalStock = currentStock + addedStock;
             }
 
-            const status = newTotalStock <= 0 ? "Out of Stock" : newTotalStock < 10 ? "Low Stock" : "Active";
+            const stockStatus = newTotalStock <= 0 ? "Out of Stock" : newTotalStock < 10 ? "Low Stock" : "In Stock";
 
             const payload = {
                 ...selectedProduct,
                 total_stock: newTotalStock.toString(),
                 stock: newTotalStock.toString(),
-                status: status,
+                stock_status: stockStatus,
                 variants: vars
             };
 
             await api.put(`/products/` + selectedProduct.id, payload);
 
-            setProducts(products.map(p =>
+            setProducts((current) => current.map(p =>
                 p.id === selectedProduct.id
-                    ? { ...p, total_stock: newTotalStock, variants: vars, status: status }
+                    ? { ...p, total_stock: newTotalStock, stock_status: stockStatus, variants: vars }
                     : p
             ));
+            setStockCached((current) => {
+                const cachedPage = current[currentCacheKey];
+                if (!cachedPage) return current;
+                return {
+                    ...current,
+                    [currentCacheKey]: {
+                        ...cachedPage,
+                        products: cachedPage.products.map((product) => product.id === selectedProduct.id
+                            ? { ...product, total_stock: newTotalStock, stock_status: stockStatus, variants: vars }
+                            : product)
+                    }
+                };
+            });
 
             toast.success("Stock updated successfully");
             closeUpdateModal();
@@ -268,14 +279,29 @@ const StockDetails = () => {
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10">
             <Toaster position="top-right" />
 
+            <header className="flex flex-wrap items-center justify-between gap-4">
+                <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">Inventory</p>
+                    <h1 className="mt-1 text-2xl font-black text-[#003B3B]">Stock Details</h1>
+                    <p className="mt-1 text-sm text-slate-500">Review availability and update product quantities.</p>
+                </div>
+                <button
+                    type="button"
+                    onClick={() => navigate("/admin/products/stock/add")}
+                    className="flex items-center justify-center gap-2 rounded-xl bg-[#006B62] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#00564f]"
+                >
+                    <FiPlus size={17} /> Add Stock
+                </button>
+            </header>
+
             <section className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
                 <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                        <p className="text-xs font-bold uppercase tracking-wide text-emerald-800">Current-page stock metal estimate</p>
+                        <p className="text-xs font-bold uppercase tracking-wide text-emerald-800">Current-page stock value estimate</p>
                         <p className="mt-1 text-lg font-extrabold text-[#003B3B]">
-                            {ratesLoading ? "Refreshing active rates..." : activeRateSet ? `₹${visibleStockMetalValue.toLocaleString("en-IN", { maximumFractionDigits: 2 })}` : "No active gold rate"}
+                            {ratesLoading ? "Refreshing active rates..." : activeRateSet ? `₹${visibleStockMetalValue.toLocaleString("en-IN", { maximumFractionDigits: 2 })}` : "No active precious metal rates"}
                         </p>
-                        <p className="text-xs text-slate-500">{activeRateSet ? `Based on listed items' net gold weight × quantity × current purity rate · ${formatRateDate(activeRateSet.rate_date)}` : "Activate global rates to value gold stock."}</p>
+                        <p className="text-xs text-slate-500">{activeRateSet ? `Based on listed items' net weight × quantity × current metal purity rate · ${formatRateDate(activeRateSet.rate_date)}` : "Activate global rates to estimate stock value."}</p>
                     </div>
                     {ratesError && <p role="alert" className="text-xs font-semibold text-rose-700">Rate refresh failed: {ratesError}</p>}
                 </div>
@@ -286,10 +312,10 @@ const StockDetails = () => {
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
-                    { label: "Total Products", value: stats.total || 0, sub: "All saree products",    icon: <FiBox size={22} />,          gradient: "from-violet-500 to-purple-600" },
+                    { label: "Total Products", value: stats.total || 0, sub: "All products",    icon: <FiBox size={22} />,          gradient: "from-violet-500 to-purple-600" },
                     { label: "Active",         value: stats.active || 0, sub: "Active products",     icon: <FiCheckCircle />,             gradient: "from-emerald-400 to-teal-500" },
-                    { label: "Inactive",       value: stats.outOfStock || 0, sub: "Inactive products", icon: <FiAlertCircle />,      gradient: "from-orange-400 to-amber-500" },
-                    { label: "Low Stock",      value: stats.lowStock || 0, sub: "Products low in stock", icon: <FiXCircle />,             gradient: "from-rose-400 to-pink-500" },
+                    { label: "Out of Stock",   value: stats.outOfStock || 0, sub: "No units available", icon: <FiAlertCircle />,      gradient: "from-orange-400 to-amber-500" },
+                    { label: "Low Stock",      value: stats.lowStock || 0, sub: "Products below 10 units", icon: <FiTrendingDown />,             gradient: "from-rose-400 to-pink-500" },
                 ].map((stat, i) => (
                     <div key={i} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center gap-4 hover:shadow-md transition-all">
                         <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ` + stat.gradient + ` flex items-center justify-center text-white shadow-lg shrink-0`}>
@@ -310,17 +336,30 @@ const StockDetails = () => {
                     <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
                     <input
                         type="text"
-                        placeholder="Search sarees by name, SKU..."
-                        className="w-1/2 pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-purple-400 focus:bg-white transition-all text-sm font-medium text-slate-700"
+                        placeholder="Search products by name, SKU, category..."
+                        className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-purple-400 focus:bg-white transition-all text-sm font-medium text-slate-700"
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={(e) => {
+                            setLoading(true);
+                            setCurrentPage(1);
+                            setSearchTerm(e.target.value);
+                        }}
                     />
                 </div>
                
              
-                <select className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-slate-600 outline-none hover:border-purple-300 transition-all cursor-pointer">
-                    <option>Select Status</option>
-                    <option>Active</option>
+                <select
+                    aria-label="Filter products by stock status"
+                    value={statusFilter}
+                    onChange={(event) => {
+                        setLoading(true);
+                        setCurrentPage(1);
+                        setStatusFilter(event.target.value);
+                    }}
+                    className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-slate-600 outline-none hover:border-purple-300 transition-all cursor-pointer"
+                >
+                    <option value="All">All stock statuses</option>
+                    <option>In Stock</option>
                     <option>Low Stock</option>
                     <option>Out of Stock</option>
                 </select>
@@ -347,13 +386,6 @@ const StockDetails = () => {
                 </div>
                 
 
-                 <button
-                    type="button"
-                    onClick={() => navigate("/admin/products/stock/add")}
-                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-violet-600 to-purple-600 hover:from-violet-700 hover:to-purple-700 text-white px-5 py-3 rounded-xl font-bold text-sm transition-all shadow-lg shadow-purple-500/25 active:scale-95"
-                >
-                    <FiPlus size={17} /> Add Stock
-                </button>
             </div>
 
             {/* Inventory Table */}
@@ -372,7 +404,7 @@ const StockDetails = () => {
                                         <input type="checkbox" className="rounded border-[#FCD34D]/40 accent-[#FCD34D]" />
                                     </th>
                                     <th className="px-4 py-4 text-[11px] font-bold text-[#FCD34D] uppercase tracking-wider w-12">S.No.</th>
-                                    <th className="px-4 py-4 text-[11px] font-bold text-[#FCD34D] uppercase tracking-wider">Saree</th>
+                                    <th className="px-4 py-4 text-[11px] font-bold text-[#FCD34D] uppercase tracking-wider">Product</th>
                                     <th className="px-4 py-4 text-[11px] font-bold text-[#FCD34D] uppercase tracking-wider">Category</th>
                                     <th className="px-4 py-4 text-[11px] font-bold text-[#FCD34D] uppercase tracking-wider">Price</th>
                                     <th className="px-4 py-4 text-[11px] font-bold text-[#FCD34D] uppercase tracking-wider">Stock</th>
@@ -384,7 +416,7 @@ const StockDetails = () => {
                                 {currentItems.length > 0 ? (
                                     currentItems.map((product, index) => {
                                         const stock = getStockLevel(product);
-                                        const status = product.status && product.status !== "Active" ? product.status : deriveStatus(stock);
+                                        const status = deriveStatus(stock);
 
                                         return (
                                             <tr key={product.id} className="hover:bg-[#240046]/5 transition-colors group">
@@ -464,7 +496,7 @@ const StockDetails = () => {
                         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 p-5">
                             {currentItems.length > 0 ? currentItems.map((product) => {
                                 const stock = getStockLevel(product);
-                                const status = product.status && product.status !== "Active" ? product.status : deriveStatus(stock);
+                                const status = deriveStatus(stock);
 
                                 return (
                                     <div key={product.id} className="group overflow-hidden border border-gray-100 rounded-2xl bg-white hover:-translate-y-0.5 hover:shadow-lg transition-all">
@@ -518,20 +550,21 @@ const StockDetails = () => {
                 {totalPages > 0 && (
                     <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-between bg-white">
                         <p className="text-xs text-gray-500 font-medium">
-                            Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, pagination.total)} of {pagination.total} sarees
+                            Showing {pagination.total ? (currentPage - 1) * itemsPerPage + 1 : 0} to {Math.min(currentPage * itemsPerPage, pagination.total)} of {pagination.total} products
                         </p>
                         <div className="flex items-center gap-2">
                             <button
-                                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                onClick={() => changePage(Math.max(currentPage - 1, 1))}
                                 disabled={currentPage === 1}
                                 className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-500 hover:border-purple-300 hover:text-purple-600 disabled:opacity-30 transition-all"
                             >‹</button>
-                            {[...Array(Math.min(totalPages, 5))].map((_, i) => {
-                                const page = i + 1;
+                            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                                const firstPage = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
+                                const page = firstPage + i;
                                 return (
                                     <button
                                         key={page}
-                                        onClick={() => setCurrentPage(page)}
+                                        onClick={() => changePage(page)}
                                         className={`w-8 h-8 rounded-lg text-xs font-bold transition-all border ` + (currentPage === page ? "bg-[#8a2be2] border-purple-500 text-white shadow-md" : "bg-white border-gray-200 text-gray-500 hover:border-purple-300")}
                                     >
                                         {page}
@@ -541,14 +574,14 @@ const StockDetails = () => {
                             {totalPages > 5 && <span className="text-gray-400 text-sm">...</span>}
                             {totalPages > 5 && (
                                 <button
-                                    onClick={() => setCurrentPage(totalPages)}
+                                    onClick={() => changePage(totalPages)}
                                     className={`w-8 h-8 rounded-lg text-xs font-bold border ` + (currentPage === totalPages ? "bg-[#8a2be2] border-purple-500 text-white shadow-md" : "bg-white border-gray-200 text-gray-500 hover:border-purple-300")}
                                 >
                                     {totalPages}
                                 </button>
                             )}
                             <button
-                                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                onClick={() => changePage(Math.min(currentPage + 1, totalPages))}
                                 disabled={currentPage === totalPages}
                                 className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-500 hover:border-purple-300 hover:text-purple-600 disabled:opacity-30 transition-all"
                             >›</button>
@@ -676,6 +709,4 @@ const StockDetails = () => {
 
 // SVG Helper Components
 const FiCheckCircle = () => <svg stroke="currentColor" fill="none" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>
-const FiXCircle = () => <svg stroke="currentColor" fill="none" strokeWidth="2.5" viewBox="0 0 24 24" strokeLinecap="round" strokeLinejoin="round" height="1em" width="1em" xmlns="http://www.w3.org/2000/svg"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>
-
 export default StockDetails;

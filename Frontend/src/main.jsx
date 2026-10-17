@@ -26,7 +26,9 @@ const Category = React.lazy(() => import("./Admin/Categery/Category.jsx"));
 const Metals = React.lazy(() => import("./Admin/Metal Type/Metals.jsx"));
 const AddProducts = React.lazy(() => import("./Admin/Products/AddProducts.jsx"));
 const AllProducts = React.lazy(() => import("./Admin/Products/AllProducts.jsx"));
+const AddStock = React.lazy(() => import("./Admin/Products/AddStock.jsx"));
 const ProductDetail = React.lazy(() => import("./Admin/Products/ProductDetail.jsx"));
+const StockDetails = React.lazy(() => import("./Admin/Pages/StockDetails.jsx"));
 const LoanCustomerManagement = React.lazy(() => import("./Admin/Loanmanagements/LoanCustomerManagement.jsx"));
 const LoanCustomerDetails = React.lazy(() => import("./Admin/Loanmanagements/LoanCustomerDetails.jsx"));
 const CreateLoan = React.lazy(() => import("./Admin/Loanmanagements/CreateLoan.jsx"));
@@ -80,6 +82,8 @@ const router = createBrowserRouter([
       { path: "products/category", element: <Category /> },
       { path: "products/add", element: <AddProducts /> },
       { path: "products/all", element: <AllProducts /> },
+      { path: "products/stock", element: <StockDetails /> },
+      { path: "products/stock/add", element: <AddStock /> },
       { path: "products/edit/:id", element: <AddProducts /> },
       { path: "products/:id", element: <ProductDetail /> },
       { path: "metals", element: <Metals /> },
