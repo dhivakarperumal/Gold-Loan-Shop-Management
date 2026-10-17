@@ -27,6 +27,7 @@ const AddProducts = React.lazy(() => import("./Admin/Pages/AddProducts.jsx"));
 const AllProducts = React.lazy(() => import("./Admin/Pages/AllProducts.jsx"));
 const ProductDetail = React.lazy(() => import("./Admin/Pages/ProductDetail.jsx"));
 const LoanCustomerManagement = React.lazy(() => import("./Admin/Pages/LoanCustomerManagement.jsx"));
+const LoanCustomerDetails = React.lazy(() => import("./Admin/Pages/LoanCustomerDetails.jsx"));
 const CreateLoan = React.lazy(() => import("./Admin/Pages/CreateLoan.jsx"));
 const AllLoans = React.lazy(() => import("./Admin/Pages/AllLoans.jsx"));
 const LoanDetails = React.lazy(() => import("./Admin/Pages/LoanDetails.jsx"));
@@ -61,6 +62,7 @@ const router = createBrowserRouter([
       { index: true, element: <Dashboard /> },
       { path: "users/all", element: <Users /> },
       { path: "loans/customermanagement", element: <LoanCustomerManagement /> },
+      { path: "loans/customers/:id", element: <LoanCustomerDetails /> },
       { path: "loans/createloan", element: <CreateLoan /> },
       { path: "loans/allloans", element: <AllLoans /> },
       { path: "loans/details/:id", element: <LoanDetails /> },

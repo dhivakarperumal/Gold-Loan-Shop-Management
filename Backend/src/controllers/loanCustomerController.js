@@ -282,6 +282,7 @@ async function removeCustomer(req, res, next) {
 
 module.exports = {
   getCustomerById,
+  getCustomerById,
   getCustomerDocument,
   getCustomerDocuments,
   getCustomerPhoto,

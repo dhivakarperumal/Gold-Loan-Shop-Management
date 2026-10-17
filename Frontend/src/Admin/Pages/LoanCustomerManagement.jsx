@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   FiCheckCircle,
   FiDownload,
@@ -99,9 +100,6 @@ export default function LoanCustomerManagement() {
   const [kycFilter, setKycFilter] = useState("All");
   const [viewMode, setViewMode] = useState("table");
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [viewingCustomer, setViewingCustomer] = useState(null);
-  const [viewingDocuments, setViewingDocuments] = useState([]);
-  const [loadingViewDocuments, setLoadingViewDocuments] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [form, setForm] = useState(EMPTY_CUSTOMER);
   const [saving, setSaving] = useState(false);
@@ -111,9 +109,12 @@ export default function LoanCustomerManagement() {
   const [documents, setDocuments] = useState([]);
   const [pendingDocuments, setPendingDocuments] = useState([]);
   const pendingPreviewUrls = useRef(new Set());
+  const handledEditCustomerId = useRef(null);
   const [documentType, setDocumentType] = useState("");
   const [nextPendingDocumentId, setNextPendingDocumentId] = useState(0);
   const [loadingDocuments, setLoadingDocuments] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const loadCustomers = useCallback(async () => {
     setLoading(true);
@@ -223,24 +224,15 @@ export default function LoanCustomerManagement() {
     }
   };
 
-  const openCustomerView = async (customer) => {
-    setViewingCustomer(customer);
-    setViewingDocuments([]);
-    setLoadingViewDocuments(true);
-    try {
-      const [customerResponse, documentsResponse] = await Promise.all([
-        api.get(`/loan-customers/${customer.id}`),
-        api.get(`/loan-customers/${customer.id}/documents`)
-      ]);
-      setViewingCustomer(customerResponse.data);
-      setViewingDocuments(documentsResponse.data);
-    } catch (error) {
-      console.error("Failed to load customer documents for profile view:", error);
-      toast.error(error.response?.data?.message || "Could not load customer documents.");
-    } finally {
-      setLoadingViewDocuments(false);
-    }
-  };
+  useEffect(() => {
+    const editCustomerId = location.state?.editCustomerId;
+    if (loading || !editCustomerId || handledEditCustomerId.current === String(editCustomerId)) return;
+    const customer = customers.find((item) => String(item.id) === String(editCustomerId));
+    if (!customer) return;
+    handledEditCustomerId.current = String(editCustomerId);
+    navigate(location.pathname, { replace: true, state: null });
+    openEditCustomer(customer);
+  }, [loading, customers, location, navigate]);
 
   const closeForm = () => {
     if (saving || uploadingPhoto) return;
@@ -591,7 +583,7 @@ export default function LoanCustomerManagement() {
                   <td className="px-4 py-3 text-sm text-slate-500">{customer.created_at ? new Date(customer.created_at).toLocaleDateString("en-IN") : "—"}</td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
-                      <button type="button" onClick={() => openCustomerView(customer)} aria-label={`View ${customer.full_name}`} title="View customer" className="rounded-lg p-2 text-slate-600 hover:bg-slate-100"><FiEye /></button>
+                      <button type="button" onClick={() => navigate(`/admin/loans/customers/${customer.id}`)} aria-label={`View ${customer.full_name}`} title="View customer" className="rounded-lg p-2 text-slate-600 hover:bg-slate-100"><FiEye /></button>
                       <button type="button" onClick={() => openEditCustomer(customer)} aria-label={`Edit ${customer.full_name}`} className="rounded-lg p-2 text-[#008577] hover:bg-emerald-50"><FiEdit2 /></button>
                       <button type="button" onClick={() => handleDelete(customer)} aria-label={`Delete ${customer.full_name}`} className="rounded-lg p-2 text-rose-500 hover:bg-rose-50"><FiTrash2 /></button>
                     </div>
@@ -637,7 +629,7 @@ export default function LoanCustomerManagement() {
                       <p className="text-xs text-slate-400">Added {customer.created_at ? new Date(customer.created_at).toLocaleDateString("en-IN") : "—"}</p>
                     </div>
                     <div className="mt-3 flex justify-end gap-2 border-t border-slate-100 pt-3">
-                      <button type="button" onClick={() => openCustomerView(customer)} aria-label={`View ${customer.full_name}`} title="View customer" className="rounded-lg p-2 text-slate-600 hover:bg-slate-100"><FiEye /></button>
+                      <button type="button" onClick={() => navigate(`/admin/loans/customers/${customer.id}`)} aria-label={`View ${customer.full_name}`} title="View customer" className="rounded-lg p-2 text-slate-600 hover:bg-slate-100"><FiEye /></button>
                       <button type="button" onClick={() => openEditCustomer(customer)} aria-label={`Edit ${customer.full_name}`} className="rounded-lg p-2 text-[#008577] hover:bg-emerald-50"><FiEdit2 /></button>
                       <button type="button" onClick={() => handleDelete(customer)} aria-label={`Delete ${customer.full_name}`} className="rounded-lg p-2 text-rose-500 hover:bg-rose-50"><FiTrash2 /></button>
                     </div>
@@ -651,99 +643,6 @@ export default function LoanCustomerManagement() {
           Showing {filteredCustomers.length} of {customers.length} customers
         </div>
       </section>
-
-      {viewingCustomer && (
-        <div
-          className="fixed inset-0 z-[110] flex justify-end bg-slate-950/50"
-          role="presentation"
-          onMouseDown={(event) => {
-            if (event.target === event.currentTarget) setViewingCustomer(null);
-          }}
-        >
-          <section className="flex h-full w-full max-w-xl flex-col bg-white shadow-2xl" role="dialog" aria-modal="true" aria-labelledby="customer-view-title">
-            <header className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
-              <div>
-                <h2 id="customer-view-title" className="text-lg font-extrabold text-[#003B3B]">Customer Profile</h2>
-                <p className="text-xs text-slate-500">Customer Code: {viewingCustomer.customer_code || "—"} · Customer ID: {viewingCustomer.id}</p>
-              </div>
-              <button type="button" onClick={() => setViewingCustomer(null)} aria-label="Close customer profile" className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><FiX size={20} /></button>
-            </header>
-            <div className="flex-1 space-y-5 overflow-y-auto p-5">
-              <div className="flex items-center gap-4 rounded-xl bg-emerald-50 p-4">
-                {customerPhotoPreviews[String(viewingCustomer.id)] ? (
-                  <img src={customerPhotoPreviews[String(viewingCustomer.id)]} alt={`${viewingCustomer.full_name} profile`} className="h-16 w-16 rounded-full border border-white object-cover shadow-sm" />
-                ) : (
-                  <span className="flex h-16 w-16 items-center justify-center rounded-full bg-white text-2xl font-bold text-[#008577]">{viewingCustomer.full_name.trim().charAt(0).toUpperCase()}</span>
-                )}
-                <div className="min-w-0">
-                  <h3 className="truncate text-lg font-bold text-slate-800">{viewingCustomer.full_name}</h3>
-                  <p className="text-sm text-slate-600">{viewingCustomer.mobile}</p>
-                  <span className={`mt-1 inline-block rounded-full px-2.5 py-1 text-xs font-bold ${getKycStyle(viewingCustomer.kyc_status)}`}>{viewingCustomer.kyc_status}</span>
-                </div>
-              </div>
-
-              <section>
-                <h3 className="mb-3 text-sm font-bold text-[#003B3B]">Personal Information</h3>
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {[
-                    ["Customer Type", viewingCustomer.customer_type],
-                    ["Full Name", viewingCustomer.full_name],
-                    ["Primary Mobile", viewingCustomer.mobile],
-                    ["Alternate Mobile", viewingCustomer.alternate_mobile],
-                    ["Date of Birth", viewingCustomer.date_of_birth ? String(viewingCustomer.date_of_birth).slice(0, 10) : ""],
-                    ["Gender", viewingCustomer.gender],
-                    ["Occupation", viewingCustomer.occupation],
-                    ["KYC Status", viewingCustomer.kyc_status],
-                    ["City / Town", viewingCustomer.city],
-                    ["District", viewingCustomer.district],
-                    ["State", viewingCustomer.state],
-                    ["PIN Code", viewingCustomer.pincode],
-                    ["Customer Since", viewingCustomer.created_at ? new Date(viewingCustomer.created_at).toLocaleString("en-IN") : ""],
-                    ["Last Updated", viewingCustomer.updated_at ? new Date(viewingCustomer.updated_at).toLocaleString("en-IN") : ""]
-                  ].map(([label, value]) => (
-                    <div key={label} className="rounded-lg border border-slate-100 p-3">
-                      <p className="text-[11px] text-slate-500">{label}</p>
-                      <p className="mt-1 break-words text-sm font-medium text-slate-800">{value || "—"}</p>
-                    </div>
-                  ))}
-                  <div className="rounded-lg border border-slate-100 p-3 sm:col-span-2">
-                    <p className="text-[11px] text-slate-500">Address</p>
-                    <p className="mt-1 whitespace-pre-wrap text-sm font-medium text-slate-800">{viewingCustomer.address || "—"}</p>
-                  </div>
-                  <div className="rounded-lg border border-slate-100 p-3 sm:col-span-2">
-                    <p className="text-[11px] text-slate-500">Notes</p>
-                    <p className="mt-1 whitespace-pre-wrap text-sm font-medium text-slate-800">{viewingCustomer.notes || "—"}</p>
-                  </div>
-                </div>
-              </section>
-
-              <section>
-                <h3 className="mb-3 text-sm font-bold text-[#003B3B]">KYC Documents</h3>
-                {loadingViewDocuments ? (
-                  <p className="text-sm text-slate-500">Loading documents...</p>
-                ) : viewingDocuments.length === 0 ? (
-                  <p className="rounded-lg bg-slate-50 p-3 text-sm text-slate-500">No KYC documents uploaded.</p>
-                ) : (
-                  <div className="space-y-2">
-                    {viewingDocuments.map((document) => (
-                      <div key={document.id} className="flex items-center justify-between gap-3 rounded-lg border border-slate-100 p-3">
-                        <div className="min-w-0">
-                          <p className="text-sm font-semibold text-slate-700">{DOCUMENT_TYPE_LABELS.get(document.document_type) || document.document_type} · {document.document_side || "front"}</p>
-                          <p className="truncate text-xs text-slate-500">{document.original_name}</p>
-                        </div>
-                        <button type="button" onClick={() => handleOpenDocument(document)} className="shrink-0 rounded-lg px-3 py-2 text-xs font-semibold text-[#008577] hover:bg-emerald-50">Open</button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </section>
-            </div>
-            <footer className="flex justify-end border-t border-slate-100 p-4">
-              <button type="button" onClick={() => { setViewingCustomer(null); openEditCustomer(viewingCustomer); }} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#008577]"><FiEdit2 /> Edit Customer</button>
-            </footer>
-          </section>
-        </div>
-      )}
 
       {isFormOpen && (
         <div className="fixed inset-0 z-[100] flex justify-end bg-slate-950/50" role="presentation" onMouseDown={(event) => {
