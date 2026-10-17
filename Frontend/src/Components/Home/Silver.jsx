@@ -1,39 +1,9 @@
 
 import React from "react";
 import { FaArrowRight, FaHeart, FaShoppingBag } from "react-icons/fa";
+import { formatProductPrice, getProductDetails, getProductImageUrl } from "./productDisplay";
 
-const Silver = () => {
-  const products = [
-    {
-      id: 1,
-      name: "Silver Pooja Set",
-      details: "92.5 Silver · 320 g",
-      price: "₹ 48,500",
-      image: "/images/silver/silver-pooja-set.png",
-    },
-    {
-      id: 2,
-      name: "Silver Kuthuvilakku",
-      details: "92.5 Silver · 450 g",
-      price: "₹ 62,000",
-      image: "/images/silver/silver-kuthuvilakku.png",
-    },
-    {
-      id: 3,
-      name: "Silver Anklet",
-      details: "92.5 Silver · 35 g",
-      price: "₹ 5,800",
-      image: "/images/silver/silver-anklet.png",
-    },
-    {
-      id: 4,
-      name: "Silver Bangle",
-      details: "92.5 Silver · 28 g",
-      price: "₹ 4,950",
-      image: "/images/silver/silver-bangle.png",
-    },
-  ];
-
+const Silver = ({ products, loading, error }) => {
   return (
     <section className="w-full bg-[#fffdf8] px-3 py-4 sm:px-5 lg:px-7">
       <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-4 lg:grid-cols-[0.9fr_2fr]">
@@ -103,7 +73,13 @@ const Silver = () => {
           </div>
 
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {products.map((product) => (
+            {loading ? (
+              <p className="col-span-full py-8 text-center text-sm text-[#777066]" role="status">Loading silver products...</p>
+            ) : error ? (
+              <p className="col-span-full py-8 text-center text-sm text-[#777066]" role="alert">Products could not be loaded.</p>
+            ) : products.length === 0 ? (
+              <p className="col-span-full py-8 text-center text-sm text-[#777066]">No silver products available.</p>
+            ) : products.map((product) => (
               <article
                 key={product.id}
                 className="group min-w-0 overflow-hidden rounded-md border border-[#eadfce] bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
@@ -111,7 +87,7 @@ const Silver = () => {
                 {/* Product image */}
                 <div className="relative aspect-[1.12/1] overflow-hidden bg-[#f6efe4]">
                   <img
-                    src={product.image}
+                    src={getProductImageUrl(product)}
                     alt={product.name}
                     loading="lazy"
                     className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -133,11 +109,11 @@ const Silver = () => {
                   </h3>
 
                   <p className="mt-1 truncate text-[10px] text-[#777066] sm:text-xs">
-                    {product.details}
+                    {getProductDetails(product)}
                   </p>
 
                   <p className="mt-1 text-sm font-bold text-[#9c3218] sm:text-base">
-                    {product.price}
+                    {formatProductPrice(product)}
                   </p>
 
                   <button

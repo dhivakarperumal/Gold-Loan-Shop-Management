@@ -1,39 +1,9 @@
 
 import React from "react";
 import { FaArrowRight, FaHeart, FaShoppingBag } from "react-icons/fa";
+import { formatProductPrice, getProductDetails, getProductImageUrl } from "./productDisplay";
 
-const Diamond = () => {
-    const products = [
-        {
-            id: 1,
-            name: "Diamond Necklace",
-            details: "18K Gold · 12.5 g",
-            price: "₹ 1,25,000",
-            image: "/images/diamond/diamond-necklace.png",
-        },
-        {
-            id: 2,
-            name: "Diamond Earrings",
-            details: "18K Gold · 6.2 g",
-            price: "₹ 78,500",
-            image: "/images/diamond/diamond-earrings.png",
-        },
-        {
-            id: 3,
-            name: "Diamond Ring",
-            details: "18K Gold · 4.1 g",
-            price: "₹ 62,400",
-            image: "/images/diamond/diamond-ring.png",
-        },
-        {
-            id: 4,
-            name: "Diamond Bracelet",
-            details: "18K Gold · 9.8 g",
-            price: "₹ 1,15,200",
-            image: "/images/diamond/diamond-bracelet.png",
-        },
-    ];
-
+const Diamond = ({ products, loading, error }) => {
     return (
         <section className="w-full bg-[#fffdf8] px-3 py-4 sm:px-5 lg:px-7">
             <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-4 lg:grid-cols-[2fr_0.9fr]">
@@ -58,7 +28,13 @@ const Diamond = () => {
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                        {products.map((product) => (
+                        {loading ? (
+                            <p className="col-span-full py-8 text-center text-sm text-[#777066]" role="status">Loading diamond products...</p>
+                        ) : error ? (
+                            <p className="col-span-full py-8 text-center text-sm text-[#777066]" role="alert">Products could not be loaded.</p>
+                        ) : products.length === 0 ? (
+                            <p className="col-span-full py-8 text-center text-sm text-[#777066]">No diamond products available.</p>
+                        ) : products.map((product) => (
                             <article
                                 key={product.id}
                                 className="group min-w-0 overflow-hidden rounded-md border border-[#eadfce] bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
@@ -66,7 +42,7 @@ const Diamond = () => {
                                 {/* Product image */}
                                 <div className="relative aspect-[1.12/1] overflow-hidden bg-[#f6efe4]">
                                     <img
-                                        src={product.image}
+                                        src={getProductImageUrl(product)}
                                         alt={product.name}
                                         loading="lazy"
                                         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -88,11 +64,11 @@ const Diamond = () => {
                                     </h3>
 
                                     <p className="mt-1 truncate text-[10px] text-[#777066] sm:text-xs">
-                                        {product.details}
+                                        {getProductDetails(product)}
                                     </p>
 
                                     <p className="mt-1 text-sm font-bold text-[#9c3218] sm:text-base">
-                                        {product.price}
+                                        {formatProductPrice(product)}
                                     </p>
 
                                     <button

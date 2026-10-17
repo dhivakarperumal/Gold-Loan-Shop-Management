@@ -1,39 +1,9 @@
 
 import React from "react";
 import { FaArrowRight, FaHeart, FaShoppingBag } from "react-icons/fa";
+import { formatProductPrice, getProductDetails, getProductImageUrl } from "./productDisplay";
 
-const Gold = () => {
-    const products = [
-        {
-            id: 1,
-            name: "Traditional Gold Necklace",
-            details: "22K Gold · 18.6 g",
-            price: "₹ 1,28,500",
-            image: "/images/gold/gold-necklace.png",
-        },
-        {
-            id: 2,
-            name: "Antique Gold Jhumkas",
-            details: "22K Gold · 12.3 g",
-            price: "₹ 78,900",
-            image: "/images/gold/gold-jhumkas.png",
-        },
-        {
-            id: 3,
-            name: "Classic Gold Bangles",
-            details: "22K Gold · 24.8 g",
-            price: "₹ 1,02,400",
-            image: "/images/gold/gold-bangles.png",
-        },
-        {
-            id: 4,
-            name: "Gold Mangalsutra",
-            details: "22K Gold · 14.6 g",
-            price: "₹ 89,500",
-            image: "/images/gold/gold-mangalsutra.png",
-        },
-    ];
-
+const Gold = ({ products, loading, error }) => {
     return (
         <section className="w-full bg-[#fffdf8] px-3 py-4 sm:px-5 lg:px-7">
             <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-4 lg:grid-cols-[2fr_0.9fr]">
@@ -58,7 +28,13 @@ const Gold = () => {
                     </div>
 
                     <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                        {products.map((product) => (
+                        {loading ? (
+                            <p className="col-span-full py-8 text-center text-sm text-[#777066]" role="status">Loading gold products...</p>
+                        ) : error ? (
+                            <p className="col-span-full py-8 text-center text-sm text-[#777066]" role="alert">Products could not be loaded.</p>
+                        ) : products.length === 0 ? (
+                            <p className="col-span-full py-8 text-center text-sm text-[#777066]">No gold products available.</p>
+                        ) : products.map((product) => (
                             <article
                                 key={product.id}
                                 className="group min-w-0 overflow-hidden rounded-md border border-[#eadfce] bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
@@ -66,7 +42,7 @@ const Gold = () => {
                                 {/* Product image */}
                                 <div className="relative aspect-[1.12/1] overflow-hidden bg-[#f6efe4]">
                                     <img
-                                        src={product.image}
+                                        src={getProductImageUrl(product)}
                                         alt={product.name}
                                         loading="lazy"
                                         className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
@@ -88,11 +64,11 @@ const Gold = () => {
                                     </h3>
 
                                     <p className="mt-1 truncate text-[10px] text-[#777066] sm:text-xs">
-                                        {product.details}
+                                        {getProductDetails(product)}
                                     </p>
 
                                     <p className="mt-1 text-sm font-bold text-[#9c3218] sm:text-base">
-                                        {product.price}
+                                        {formatProductPrice(product)}
                                     </p>
 
                                     <button
