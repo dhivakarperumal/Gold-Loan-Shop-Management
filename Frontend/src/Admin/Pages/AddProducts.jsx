@@ -168,6 +168,7 @@ const AddProducts = () => {
           setFormData((current) => ({
             ...current,
             category: category?.name || "",
+            subcategory: Array.isArray(category?.subcategory) ? category.subcategory[0] || "" : "",
             metal_type: metalList.find((metal) => metal.status === "Active")?.name || "",
             product_code: productResponse.data.latestCode || "GOLD-PRD-001"
           }));
@@ -182,6 +183,9 @@ const AddProducts = () => {
     load();
     return () => { active = false; };
   }, [id, isEdit]);
+
+  const selectedCategory = categories.find((category) => category.name === formData.category);
+  const subcategories = Array.isArray(selectedCategory?.subcategory) ? selectedCategory.subcategory : [];
 
   const goldValue = useMemo(
     () => (Number(formData.net_gold_weight) || 0) * (Number(formData.gold_rate_per_gram) || 0),
@@ -201,7 +205,19 @@ const AddProducts = () => {
 
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target;
-    setFormData((current) => ({ ...current, [name]: type === "checkbox" ? checked : value }));
+    const nextValue = type === "checkbox" ? checked : value;
+    setFormData((current) => {
+      if (name === "category") {
+        const category = categories.find((item) => item.name === value);
+        const categorySubcategories = Array.isArray(category?.subcategory) ? category.subcategory : [];
+        return {
+          ...current,
+          category: value,
+          subcategory: categorySubcategories.includes(current.subcategory) ? current.subcategory : categorySubcategories[0] || ""
+        };
+      }
+      return { ...current, [name]: nextValue };
+    });
   };
 
   const updateFormField = (name, value) => {
@@ -344,12 +360,15 @@ const AddProducts = () => {
                 { value: "", label: "Select category" },
                 ...categories.map((category) => ({ value: category.name, label: category.name }))
               ]} />
+              <SelectField label="Subcategory" name="subcategory" value={formData.subcategory} onChange={handleChange} options={[
+                { value: "", label: "Select subcategory" },
+                ...subcategories.map((subcategory) => ({ value: subcategory, label: subcategory }))
+              ]} />
               <SelectField label="Metal Type" name="metal_type" value={formData.metal_type} onChange={handleChange} options={[
                 { value: "", label: "Select metal type" },
                 ...metals.map((metal) => ({ value: metal.name, label: metal.purity ? `${metal.name} (${metal.purity})` : metal.name }))
               ]} />
               <SelectField label="Product Type" name="product_type" value={formData.product_type} onChange={handleChange} options={["Traditional", "Daily Wear", "Bridal", "Designer"]} />
-              <Field label="Brand" name="brand" value={formData.brand} onChange={handleChange} placeholder={GOLD_SHOP} />
             </div>
           </Section>
 
