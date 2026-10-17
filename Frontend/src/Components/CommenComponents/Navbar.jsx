@@ -6,7 +6,8 @@ import {
   Menu,
   X,
   User,
-  Heart
+  Heart,
+  Gem
 } from "lucide-react";
 import PageContainer from "./PageContainer";
 import api from "../../api";
@@ -26,13 +27,12 @@ const Navbar = () => {
   const [userMenu, setUserMenu] = useState(false);
   const [logoutConfirm, setLogoutConfirm] = useState(false);
   const [categories, setCategories] = useState([]);
-  const [categoryMenu, setCategoryMenu] = useState(false);
+  const [metals, setMetals] = useState([]);
   const [pagesMenu, setPagesMenu] = useState(false);
   const [mobileCategory, setMobileCategory] = useState(false);
   const [wishlistOpen, setWishlistOpen] = useState(false);
 
   const menuRef = useRef();
-  const categoryRef = useRef();
   const pagesRef = useRef();
   const currentPathRef = useRef(location.pathname);
 
@@ -82,10 +82,6 @@ const Navbar = () => {
         setUserMenu(false);
       }
 
-      if (categoryRef.current && !categoryRef.current.contains(e.target)) {
-        setCategoryMenu(false);
-      }
-
       if (pagesRef.current && !pagesRef.current.contains(e.target)) {
         setPagesMenu(false);
       }
@@ -97,29 +93,43 @@ const Navbar = () => {
 
   }, []);
 
-  // Fetch categories
   useEffect(() => {
+    const controller = new AbortController();
 
-    const fetchCategories = async () => {
+    const fetchNavigationData = async () => {
       try {
-        const res = await api.get("/categories");
-        setCategories(res.data);
+        const [categoryResponse, metalResponse] = await Promise.all([
+          api.get("/categories", { signal: controller.signal }),
+          api.get("/metals", { signal: controller.signal }),
+        ]);
+
+        if (!Array.isArray(categoryResponse.data) || !Array.isArray(metalResponse.data)) {
+          throw new TypeError("Navigation category and metal responses must be arrays");
+        }
+        setCategories(categoryResponse.data.filter(
+          (category) => (category.status || "Active") === "Active"
+        ));
+        setMetals(metalResponse.data.filter((metal) => metal.status === "Active"));
       } catch (error) {
-        console.error(error);
+        if (!controller.signal.aborted) {
+          console.error("Failed to fetch navbar categories and metals:", error);
+        }
       }
     };
 
-    fetchCategories();
-
+    fetchNavigationData();
+    return () => controller.abort();
   }, []);
 
-const navClass = ({ isActive }) =>
-  `px-4 py-1.5 rounded-lg text-sm font-medium transition
-  ${
-    isActive
-      ? "bg-gradient-to-r from-primary-light to-secondary text-white shadow"
-      : "text-gray-600 hover:bg-primary-light/10 hover:text-primary"
-  }`;
+  const getMetalImageUrl = (image) => {
+    if (!image || /^(https?:|data:|blob:)/i.test(image)) return image || "";
+    const backendUrl = (
+      import.meta.env.VITE_BACKEND_URL ||
+      import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") ||
+      "http://localhost:5000"
+    ).replace(/\/$/, "");
+    return `${backendUrl}${image.startsWith("/") ? image : `/${image}`}`;
+  };
 
   return (
 
@@ -138,126 +148,29 @@ const navClass = ({ isActive }) =>
             />
           </Link>
 
-          {/* Desktop Links */}
-
-          <div className="hidden flex-1 justify-center lg:flex">
-
-            <div className="flex items-center gap-1.5 text-sm xl:gap-2 xl:text-base">
-
-              <NavLink to="/" className={navClass}>
-                Home
-              </NavLink>
-
-              <NavLink to="/shop" className={navClass}>
-                Shop
-              </NavLink>
-
-              {/* Categories */}
-
-              <div className="relative" ref={categoryRef}>
-
-                <button
-                  onClick={() => {
-                    setCategoryMenu(!categoryMenu);
-                    setPagesMenu(false);
-                  }}
-                  className="flex cursor-pointer items-center gap-1 text-gray-600 hover:text-primary transition"
-                >
-                  Categories
-                  <FiChevronDown
-                    className={`transition-transform ${categoryMenu ? "rotate-180" : ""}`}
+          {/* Metals row */}
+          <div className="hidden min-w-0 flex-1 items-center justify-center gap-2 overflow-x-auto px-4 lg:flex xl:gap-3">
+            {metals.map((metal) => (
+              <Link
+                key={metal.id}
+                to={`/shop?metal=${encodeURIComponent(metal.name)}`}
+                className="group flex min-w-[88px] shrink-0 flex-col items-center justify-center gap-1 rounded-xl border border-[#f0e5d1] bg-[#fffdf8] px-3 py-2 text-center transition hover:border-[#d6ad5f] hover:bg-[#fff7e7]"
+              >
+                {metal.image ? (
+                  <img
+                    src={getMetalImageUrl(metal.image)}
+                    alt=""
+                    className="h-8 w-10 object-contain"
+                    loading="lazy"
                   />
-                </button>
-
-                {categoryMenu && (
-
-                  <div className="absolute  top-10 left-0 w-48 bg-white border border-primary rounded-xl shadow-xl overflow-hidden animate-dropdown">
-
-                    {categories.map((cat) => (
-
-                      <NavLink
-                        key={cat.id}
-                        to={`/category/${cat.slug || cat.name}`}
-                        onClick={() => setCategoryMenu(false)}
-                        className={({ isActive }) =>
-                          `block px-4 py-3 text-sm transition
-    ${isActive
-                            ? "bg-gradient-to-r from-primary-light via-secondary to-secondary-light text-white"
-                            : "text-gray-700 hover:bg-gradient-to-r from-primary-light via-secondary to-secondary-light hover:text-white"
-                          }`
-                        }
-                      >
-                        {cat.name}
-                      </NavLink>
-
-                    ))}
-
-                  </div>
-
+                ) : (
+                  <Gem className="h-8 w-10 text-[#c99535]" aria-hidden="true" />
                 )}
-
-              </div>
-
-              {/* Pages */}
-
-              <div className="relative" ref={pagesRef}>
-
-                <button
-                  onClick={() => {
-                    setPagesMenu(!pagesMenu);
-                    setCategoryMenu(false);
-                  }}
-                  className="flex items-center cursor-pointer gap-1 text-gray-600 hover:text-primary transition"
-                >
-                  Pages
-                  <FiChevronDown
-                    className={`transition-transform ${pagesMenu ? "rotate-180" : ""}`}
-                  />
-                </button>
-
-                {pagesMenu && (
-
-                  <div className="absolute top-10 left-0 w-44 bg-white border border-primary rounded-xl shadow-xl overflow-hidden animate-dropdown">
-
-                    <NavLink
-                      to="/about"
-                      onClick={() => setPagesMenu(false)}
-                      className={({ isActive }) =>
-                        `block px-4 py-3 text-sm transition
-    ${isActive
-                          ? "bg-gradient-to-r from-primary-light via-secondary to-secondary-light text-white"
-                          : "text-gray-700 hover:bg-gradient-to-r from-primary-light via-secondary to-secondary-light hover:text-white"
-                        }`
-                      }
-                    >
-                      About
-                    </NavLink>
-                    <NavLink
-                      to="/termsandconditions"
-                      onClick={() => setPagesMenu(false)}
-                      className={({ isActive }) =>
-                        `block px-4 py-3 text-sm transition
-    ${isActive
-                          ? "bg-gradient-to-r from-primary-light via-secondary to-secondary-light text-white"
-                          : "text-gray-700 hover:bg-gradient-to-r from-primary-light via-secondary to-secondary-light hover:text-white"
-                        }`
-                      }
-                    >
-                      Terms And Conditions
-                    </NavLink>
-
-                  </div>
-
-                )}
-
-              </div>
-
-              <NavLink to="/contactus" className={navClass}>
-                Contact Us
-              </NavLink>
-
-            </div>
-
+                <span className="text-xs font-semibold text-[#30271b] group-hover:text-[#9c6c1d]">
+                  {metal.name}
+                </span>
+              </Link>
+            ))}
           </div>
 
           {/* Right Icons */}
@@ -356,6 +269,71 @@ const navClass = ({ isActive }) =>
         </div>
 
       </PageContainer>
+
+      {/* Categories row */}
+      <div className="hidden border-t border-[#eadfce] bg-[#fffdf8] lg:block">
+        <PageContainer className="px-3 sm:px-5 lg:px-[3%]">
+          <div className="flex min-h-12 items-center justify-center gap-1 overflow-x-auto">
+            <NavLink
+              to="/"
+              end
+              className={({ isActive }) =>
+                `shrink-0 px-3 py-3 text-sm font-semibold transition hover:text-[#a77525] ${
+                  isActive ? "text-[#a77525]" : "text-[#30271b]"
+                }`
+              }
+            >
+              Home
+            </NavLink>
+            <NavLink
+              to="/shop"
+              className={({ isActive }) =>
+                `shrink-0 px-3 py-3 text-sm font-semibold transition hover:text-[#a77525] ${
+                  isActive ? "text-[#a77525]" : "text-[#30271b]"
+                }`
+              }
+            >
+              Shop
+            </NavLink>
+            {categories.map((category) => (
+              <NavLink
+                key={category.id || category.catId}
+                to={`/category/${category.slug || category.name}`}
+                className={({ isActive }) =>
+                  `shrink-0 border-l border-[#e9d6b0] px-4 py-3 text-sm font-semibold transition hover:bg-[#fff7e7] hover:text-[#a77525] ${
+                    isActive ? "text-[#a77525]" : "text-[#30271b]"
+                  }`
+                }
+              >
+                {category.name}
+              </NavLink>
+            ))}
+            <div className="relative shrink-0 border-l border-[#e9d6b0] px-4 py-2" ref={pagesRef}>
+              <button
+                type="button"
+                onClick={() => setPagesMenu((open) => !open)}
+                className="flex items-center gap-1 text-sm font-semibold text-[#30271b] transition hover:text-[#a77525]"
+              >
+                Pages
+                <FiChevronDown className={`transition-transform ${pagesMenu ? "rotate-180" : ""}`} />
+              </button>
+              {pagesMenu && (
+                <div className="absolute right-0 top-full z-50 w-48 overflow-hidden rounded-xl border border-[#ead8b6] bg-white shadow-xl">
+                  <Link to="/about" onClick={() => setPagesMenu(false)} className="block px-4 py-3 text-sm text-gray-700 transition hover:bg-[#fff7e7] hover:text-[#a77525]">
+                    About
+                  </Link>
+                  <Link to="/termsandconditions" onClick={() => setPagesMenu(false)} className="block px-4 py-3 text-sm text-gray-700 transition hover:bg-[#fff7e7] hover:text-[#a77525]">
+                    Terms and Conditions
+                  </Link>
+                  <Link to="/contactus" onClick={() => setPagesMenu(false)} className="block px-4 py-3 text-sm text-gray-700 transition hover:bg-[#fff7e7] hover:text-[#a77525]">
+                    Contact Us
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
+        </PageContainer>
+      </div>
 
       {/* Logout Modal */}
 
@@ -473,6 +451,35 @@ const navClass = ({ isActive }) =>
                         <Icon size={18} /> {label}
                       </NavLink>
                     ))}
+                    {metals.length > 0 && (
+                      <div className="pt-4">
+                        <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
+                          Shop by metal
+                        </p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {metals.map((metal) => (
+                            <Link
+                              key={metal.id}
+                              to={`/shop?metal=${encodeURIComponent(metal.name)}`}
+                              onClick={closeMobileMenu}
+                              className="flex items-center gap-2 rounded-xl border border-[#f0e5d1] bg-[#fffdf8] px-3 py-2.5 text-sm font-semibold text-[#30271b] transition hover:border-[#d6ad5f] hover:bg-[#fff7e7]"
+                            >
+                              {metal.image ? (
+                                <img
+                                  src={getMetalImageUrl(metal.image)}
+                                  alt=""
+                                  className="h-7 w-8 object-contain"
+                                  loading="lazy"
+                                />
+                              ) : (
+                                <Gem className="h-6 w-7 text-[#c99535]" aria-hidden="true" />
+                              )}
+                              <span className="truncate">{metal.name}</span>
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                     <button
                       type="button"
                       onClick={() => setMobileCategory(true)}
@@ -526,7 +533,7 @@ const navClass = ({ isActive }) =>
                   <p className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Shop by category</p>
                   {categories.length ? categories.map((category) => (
                     <NavLink
-                      key={category.id}
+                      key={category.id || category.catId}
                       to={`/category/${category.slug || category.name}`}
                       onClick={closeMobileMenu}
                       className={({ isActive }) =>
