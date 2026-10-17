@@ -247,7 +247,7 @@ const Category = () => {
             {/* Stats Cards Row */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm flex items-center gap-5">
-                    <div className="w-16 h-16 rounded-[20px] bg-[#8B5CF6] flex items-center justify-center shrink-0 shadow-lg shadow-purple-200">
+                    <div className="w-16 h-16 rounded-[20px] bg-[#003B3B] flex items-center justify-center shrink-0 shadow-lg shadow-emerald-200">
                         <FiBox className="text-white text-2xl" />
                     </div>
                     <div>
@@ -257,7 +257,7 @@ const Category = () => {
                     </div>
                 </div>
                 <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm flex items-center gap-5">
-                    <div className="w-16 h-16 rounded-[20px] bg-[#10B981] flex items-center justify-center shrink-0 shadow-lg shadow-emerald-200">
+                    <div className="w-16 h-16 rounded-[20px] bg-[#D4AF37] flex items-center justify-center shrink-0 shadow-lg shadow-amber-200">
                         <FiCheckCircle className="text-white text-2xl" />
                     </div>
                     <div>
@@ -267,7 +267,7 @@ const Category = () => {
                     </div>
                 </div>
                 <div className="bg-white rounded-2xl p-6 border border-gray-200 shadow-sm flex items-center gap-5">
-                    <div className="w-16 h-16 rounded-[20px] bg-[#F59E0B] flex items-center justify-center shrink-0 shadow-lg shadow-orange-200">
+                    <div className="w-16 h-16 rounded-[20px] bg-[#9A6B2F] flex items-center justify-center shrink-0 shadow-lg shadow-orange-200">
                         <FiAlertCircle className="text-white text-2xl" />
                     </div>
                     <div>
@@ -287,7 +287,7 @@ const Category = () => {
                         placeholder="Search categories by name, ID..."
                         value={searchQuery}
                         onChange={handleSearch}
-                        className="w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm text-gray-700 outline-none focus:border-purple-300 focus:ring-2 focus:ring-purple-100 transition-all font-medium placeholder:text-gray-400"
+                        className="w-full pl-11 pr-4 py-2.5 bg-gray-50 border border-gray-100 rounded-xl text-sm text-gray-700 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 transition-all font-medium placeholder:text-gray-400"
                     />
                 </div>
                 
@@ -296,7 +296,7 @@ const Category = () => {
                         <select
                             value={statusFilter}
                             onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
-                            className="appearance-none bg-white border border-gray-200 text-sm font-bold text-gray-600 pl-4 pr-10 py-2.5 rounded-xl outline-none focus:border-purple-300 cursor-pointer"
+                            className="appearance-none bg-white border border-gray-200 text-sm font-bold text-gray-600 pl-4 pr-10 py-2.5 rounded-xl outline-none focus:border-amber-400 cursor-pointer"
                         >
                             <option value="All">Select Status</option>
                             <option value="Active">Active</option>
@@ -307,14 +307,14 @@ const Category = () => {
                    
                     <div className="flex items-center gap-3">
                     <div className="flex bg-white p-1 rounded-xl border border-gray-200 shadow-sm">
-                        <button onClick={() => setViewMode("table")} className={`p-2 rounded-lg transition-all ${viewMode === 'table' ? 'bg-purple-100 text-purple-600' : 'text-gray-400 hover:text-slate-600'}`}>
+                        <button onClick={() => setViewMode("table")} className={`p-2 rounded-lg transition-all ${viewMode === 'table' ? 'bg-[#003B3B] text-white' : 'text-gray-400 hover:text-slate-600'}`}>
                             <FiList size={18} />
                         </button>
-                        <button onClick={() => setViewMode("grid")} className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-purple-100 text-purple-600' : 'text-gray-400 hover:text-slate-600'}`}>
+                        <button onClick={() => setViewMode("grid")} className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-[#003B3B] text-white' : 'text-gray-400 hover:text-slate-600'}`}>
                             <FiGrid size={18} />
                         </button>
                     </div>
-                    <button onClick={openAddModal} className="flex items-center gap-2 py-3 bg-gradient-to-r from-[#1F0A3C] to-[#3c096c] hover:bg-[#7C3AED] text-white px-5  rounded-md text-sm font-bold transition-all shadow-md active:scale-95">
+                    <button onClick={openAddModal} className="flex items-center gap-2 py-3 bg-[#003B3B] hover:bg-[#008577] text-white px-5 rounded-md text-sm font-bold transition-all shadow-md active:scale-95">
                         <FiPlus size={18} /> Add New Category
                     </button>
                 </div>
@@ -324,7 +324,7 @@ const Category = () => {
             {/* Content Area */}
             {loading ? (
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-12 flex flex-col items-center justify-center">
-                    <div className="w-10 h-10 border-4 border-purple-100 border-t-purple-600 rounded-full animate-spin mb-4"></div>
+                    <div className="w-10 h-10 border-4 border-amber-100 border-t-amber-500 rounded-full animate-spin mb-4"></div>
                     <p className="text-gray-500 font-bold">Loading Categories...</p>
                 </div>
             ) : currentCategories.length === 0 ? (
@@ -340,8 +340,8 @@ const Category = () => {
                     <div className="overflow-x-auto">
                         <table className="w-full text-left whitespace-nowrap">
                             <thead>
-                                <tr className="bg-gradient-to-r from-[#1F0A3C] to-[#3c096c] border-b border-[#3c096c]">
-                                    <th className="px-4 py-4 w-12 text-center "><input type="checkbox" className="rounded accent-white w-4 h-4 border-violet-300" /></th>
+                                <tr className="bg-[#003B3B] border-b border-[#008577]">
+                                    <th className="px-4 py-4 w-12 text-center "><input type="checkbox" className="rounded accent-[#D4AF37] w-4 h-4 border-amber-300" /></th>
                                     <th className="px-4 py-4 text-[10px] font-bold text-[#FCD34D] uppercase tracking-wider w-10">S.NO.</th>
                                     <th className="px-4 py-4 text-[10px] font-bold text-[#FCD34D] uppercase tracking-wider w-10">CATEGORY</th>
                                     <th className="px-4 py-4 text-[10px] font-bold text-[#FCD34D] uppercase tracking-wider w-10">DESCRIPTION</th>
@@ -358,7 +358,7 @@ const Category = () => {
 
                                     return (
                                         <tr key={cat.catId} className="hover:bg-gray-50/50 transition-colors group">
-                                            <td className="px-6 py-4 text-center"><input type="checkbox" className="rounded text-purple-600 focus:ring-purple-500 w-4 h-4 border-gray-300" /></td>
+                                            <td className="px-6 py-4 text-center"><input type="checkbox" className="rounded accent-[#D4AF37] focus:ring-amber-500 w-4 h-4 border-gray-300" /></td>
                                             <td className="px-4 py-4 text-sm font-bold text-gray-500">{sNo}</td>
                                             <td className="px-4 py-4">
                                                 <div className="flex items-center gap-4">
@@ -383,18 +383,18 @@ const Category = () => {
                                             </td>
                                             <td className="px-4 py-4 text-center">
                                                 {status === 'Active' ? (
-                                                    <span className="inline-block px-3 py-1 bg-emerald-50 text-emerald-600 text-[11px] font-bold rounded-lg">
+                                                    <span className="inline-block px-3 py-1 bg-amber-50 text-amber-800 text-[11px] font-bold rounded-lg">
                                                         Active
                                                     </span>
                                                 ) : (
-                                                    <span className="inline-block px-3 py-1 bg-orange-50 text-orange-600 text-[11px] font-bold rounded-lg">
+                                                    <span className="inline-block px-3 py-1 bg-stone-100 text-stone-600 text-[11px] font-bold rounded-lg">
                                                         Inactive
                                                     </span>
                                                 )}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button onClick={() => openEditModal(cat)} className="w-8 h-8 flex items-center justify-center rounded-full bg-blue-50 text-blue-500 hover:bg-blue-100 transition-colors" title="Edit">
+                                                    <button onClick={() => openEditModal(cat)} className="w-8 h-8 flex items-center justify-center rounded-full bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors" title="Edit">
                                                         <FiEdit2 size={14} />
                                                     </button>
                                                     <button onClick={() => handleDeleteCategory(cat.catId)} className="w-8 h-8 flex items-center justify-center rounded-full bg-red-50 text-red-500 hover:bg-red-100 transition-colors" title="Delete">
@@ -444,16 +444,16 @@ const Category = () => {
                                         <div>
                                             <p className="text-[10px] text-gray-400 font-medium">Status</p>
                                             {status === 'Active' ? (
-                                                <span className="inline-block px-2 py-0.5 mt-0.5 bg-emerald-50 text-emerald-600 text-[10px] font-bold uppercase rounded">Active</span>
+                                                <span className="inline-block px-2 py-0.5 mt-0.5 bg-amber-50 text-amber-800 text-[10px] font-bold uppercase rounded">Active</span>
                                             ) : (
-                                                <span className="inline-block px-2 py-0.5 mt-0.5 bg-orange-50 text-orange-600 text-[10px] font-bold uppercase rounded">Inactive</span>
+                                                <span className="inline-block px-2 py-0.5 mt-0.5 bg-stone-100 text-stone-600 text-[10px] font-bold uppercase rounded">Inactive</span>
                                             )}
                                         </div>
                                     </div>
                                 </div>
 
                                 <div className="mt-auto pt-4 border-t border-gray-50 flex items-center gap-2 shrink-0">
-                                    <button onClick={() => openEditModal(cat)} className="flex-1 py-1.5 flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 text-blue-500 hover:bg-blue-50 transition-colors text-xs font-bold">
+                                    <button onClick={() => openEditModal(cat)} className="flex-1 py-1.5 flex items-center justify-center gap-1.5 rounded-lg border border-amber-200 text-amber-700 hover:bg-amber-50 transition-colors text-xs font-bold">
                                         <FiEdit2 size={12} /> Edit
                                     </button>
                                     <button onClick={() => handleDeleteCategory(cat.catId)} className="flex-1 py-1.5 flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 text-red-500 hover:bg-red-50 transition-colors text-xs font-bold">
@@ -480,7 +480,7 @@ const Category = () => {
                         >
                             <FiChevronLeft size={16} />
                         </button>
-                        <button className="w-9 h-9 flex items-center justify-center rounded-xl bg-[#8B5CF6] text-white text-sm font-bold shadow-sm shadow-purple-200">
+                        <button className="w-9 h-9 flex items-center justify-center rounded-xl bg-[#003B3B] text-white text-sm font-bold shadow-sm">
                             {currentPage}
                         </button>
                         <button
@@ -503,7 +503,7 @@ const Category = () => {
                                 <h2 className="text-xl font-black text-slate-800">
                                     {isEditing ? 'Edit Category' : 'Add New Category'}
                                 </h2>
-                                {isEditing && <p className="text-xs text-gray-500 mt-1 font-medium">Editing ID: <span className="font-bold text-[#8B5CF6]">{formData.catId}</span></p>}
+                                {isEditing && <p className="text-xs text-gray-500 mt-1 font-medium">Editing ID: <span className="font-bold text-amber-700">{formData.catId}</span></p>}
                             </div>
                             <button
                                 onClick={() => setIsModalOpen(false)}
@@ -534,8 +534,8 @@ const Category = () => {
                                             name="name"
                                             value={formData.name}
                                             onChange={handleInputChange}
-                                            placeholder="e.g. Silk Sarees"
-                                            className="w-full bg-white border border-gray-200 text-slate-800 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all font-medium text-sm"
+                                            placeholder="e.g. Gold Necklace"
+                                            className="w-full bg-white border border-gray-200 text-slate-800 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all font-medium text-sm"
                                         />
                                     </div>
                                     <div>
@@ -544,9 +544,9 @@ const Category = () => {
                                             name="description"
                                             value={formData.description}
                                             onChange={handleInputChange}
-                                            placeholder="Brief description..."
+                                            placeholder="Enter gold jewellery category description..."
                                             rows="4"
-                                            className="w-full bg-white border border-gray-200 text-slate-800 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all resize-none font-medium text-sm"
+                                            className="w-full bg-white border border-gray-200 text-slate-800 rounded-xl px-4 py-2.5 focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500 transition-all resize-none font-medium text-sm"
                                         ></textarea>
                                     </div>
                                 </div>
@@ -559,14 +559,14 @@ const Category = () => {
                                             <span>Subcategories</span>
                                             <span className="text-[10px] text-gray-400 font-medium">Press enter to add</span>
                                         </label>
-                                        <div className="bg-white border border-gray-200 rounded-xl p-2 min-h-[100px] focus-within:ring-2 focus-within:ring-purple-500/20 focus-within:border-purple-500 transition-all">
+                                        <div className="bg-white border border-gray-200 rounded-xl p-2 min-h-[100px] focus-within:ring-2 focus-within:ring-amber-500/20 focus-within:border-amber-500 transition-all">
                                             <div className="flex flex-wrap gap-2 mb-2">
                                                 {subcategories.map((sub, idx) => (
-                                                    <span key={idx} className="flex items-center gap-1.5 bg-purple-50 text-purple-600 px-2 py-1 rounded-lg text-xs font-bold">
+                                                    <span key={idx} className="flex items-center gap-1.5 bg-amber-50 text-amber-800 px-2 py-1 rounded-lg text-xs font-bold">
                                                         {sub}
                                                         <button
                                                             onClick={() => removeSubcategory(sub)}
-                                                            className="text-purple-400 hover:text-red-500 transition-colors"
+                                                            className="text-amber-700 hover:text-red-500 transition-colors"
                                                         >
                                                             <FiX size={12} />
                                                         </button>
@@ -578,7 +578,7 @@ const Category = () => {
                                                 value={subInput}
                                                 onChange={(e) => setSubInput(e.target.value)}
                                                 onKeyDown={handleAddSubcategory}
-                                                placeholder={subcategories.length === 0 ? "Type and press Enter..." : "Add another..."}
+                                                placeholder="Type and press Enter..."
                                                 className="w-full bg-transparent border-none outline-none text-slate-800 px-1 py-1 text-sm font-medium placeholder:text-gray-400"
                                             />
                                         </div>
@@ -600,19 +600,19 @@ const Category = () => {
                                                         </button>
                                                     </div>
                                                 ))}
-                                                <label className="w-full h-20 border-2 border-dashed border-gray-300 hover:border-purple-400 hover:bg-purple-50/50 rounded-xl cursor-pointer flex flex-col items-center justify-center transition-all">
-                                                    <FiPlus className="text-lg text-purple-500 mb-0.5" />
+                                                <label className="w-full h-20 border-2 border-dashed border-gray-300 hover:border-amber-400 hover:bg-amber-50/50 rounded-xl cursor-pointer flex flex-col items-center justify-center transition-all">
+                                                    <FiPlus className="text-lg text-amber-600 mb-0.5" />
                                                     <span className="text-[10px] font-bold text-gray-500">Add More</span>
                                                     <input type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
                                                 </label>
                                             </div>
                                         ) : (
-                                            <label className="relative border-2 border-dashed border-gray-300 bg-gray-50 hover:bg-purple-50/50 hover:border-purple-400 rounded-xl overflow-hidden transition-all cursor-pointer flex flex-col items-center justify-center p-6 text-center min-h-[100px]">
+                                            <label className="relative border-2 border-dashed border-gray-300 bg-gray-50 hover:bg-amber-50/50 hover:border-amber-400 rounded-xl overflow-hidden transition-all cursor-pointer flex flex-col items-center justify-center p-6 text-center min-h-[100px]">
                                                 <input type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
-                                                <div className="w-8 h-8 bg-white shadow-sm rounded-full flex items-center justify-center mb-2 text-purple-500">
+                                                <div className="w-8 h-8 bg-white shadow-sm rounded-full flex items-center justify-center mb-2 text-amber-600">
                                                     <FiUploadCloud size={16} />
                                                 </div>
-                                                <p className="text-xs font-bold text-slate-700">Upload Images</p>
+                                                <p className="text-xs font-bold text-slate-700">Upload gold jewellery category images</p>
                                                 <p className="text-[10px] text-gray-500 mt-0.5 font-medium">PNG, JPG up to 5MB</p>
                                             </label>
                                         )}
@@ -631,7 +631,7 @@ const Category = () => {
                             <button
                                 onClick={handleSaveCategory}
                                 disabled={!formData.name}
-                                className="px-6 py-2.5 bg-gradient-to-r from-[#1F0A3C] to-[#3c096c] hover:from-[#2d1254] hover:to-[#4d0b87] disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-bold rounded-xl transition-all shadow-md shadow-purple-200 active:scale-95 flex items-center gap-2"
+                                className="px-6 py-2.5 bg-[#003B3B] hover:bg-[#008577] text-white disabled:opacity-50 disabled:cursor-not-allowed text-sm font-bold rounded-xl transition-all shadow-md active:scale-95 flex items-center gap-2"
                             >
                                 {isEditing ? 'Update Category' : 'Save Category'}
                             </button>

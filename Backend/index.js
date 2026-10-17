@@ -3,6 +3,7 @@ const express = require('express');
 const cors = require('cors');
 const { initializeDatabase } = require('./src/config/db');
 const { initializeAuthModule } = require('./src/modules/authModule');
+const { initializeCategoryModule } = require('./src/modules/categoryModule');
 const apiRouter = require('./src/router');
 
 const app = express();
@@ -30,6 +31,7 @@ app.use((error, req, res, next) => {
 async function startServer() {
   await initializeDatabase();
   await initializeAuthModule();
+  await initializeCategoryModule();
   const server = app.listen(PORT, () => {
     console.log(`Backend server is running on port ${PORT}`);
   });

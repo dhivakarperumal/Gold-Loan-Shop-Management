@@ -21,6 +21,7 @@ const Register = React.lazy(() => import("./Components/Auth/Register.jsx"));
 const AdminPanel = React.lazy(() => import("./Admin/AdminPanel.jsx"));
 const Dashboard = React.lazy(() => import("./Admin/Dashboard.jsx"));
 const Users = React.lazy(() => import("./Admin/Pages/Users.jsx"));
+const Category = React.lazy(() => import("./Admin/Pages/Category.jsx"));
 
 const ErrorPage = React.lazy(() => import("./Admin/Pages/ErrorPage.jsx"));
 
@@ -50,7 +51,8 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Dashboard /> },
       { path: "users/all", element: <Users /> },
-     
+      { path: "products/category", element: <Category /> },
+
       // { path: "settings", element: <Settings /> },
       // { path: "profile", element: <Profile /> },
     ],
