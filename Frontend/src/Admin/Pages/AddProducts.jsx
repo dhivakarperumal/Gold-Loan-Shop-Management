@@ -20,7 +20,7 @@ const EMPTY_PRODUCT = {
   product_code: "",
   brand: GOLD_SHOP,
   category: "",
-  subcategory: "",
+  metal_type: "",
   product_type: "Traditional",
   purity: "22K / 916",
   gross_weight: "",
@@ -123,6 +123,7 @@ const AddProducts = () => {
   const isEdit = Boolean(id);
   const navigate = useNavigate();
   const [categories, setCategories] = useState([]);
+  const [metals, setMetals] = useState([]);
   const [formData, setFormData] = useState(EMPTY_PRODUCT);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(isEdit);
@@ -133,13 +134,20 @@ const AddProducts = () => {
     const load = async () => {
       try {
         const categoryRequest = api.get("/categories");
+        const metalRequest = api.get("/metals");
         const productRequest = isEdit
           ? api.get(`/products/${id}`)
           : api.get("/products/latest-code");
-        const [categoryResponse, productResponse] = await Promise.all([categoryRequest, productRequest]);
+        const [categoryResponse, metalResponse, productResponse] = await Promise.all([
+          categoryRequest,
+          metalRequest,
+          productRequest
+        ]);
         if (!active) return;
         const categoryList = Array.isArray(categoryResponse.data) ? categoryResponse.data : [];
+        const metalList = Array.isArray(metalResponse.data) ? metalResponse.data : [];
         setCategories(categoryList);
+        setMetals(metalList.filter((metal) => metal.status === "Active"));
         if (isEdit) {
           const product = productResponse.data;
           setFormData({
@@ -160,7 +168,7 @@ const AddProducts = () => {
           setFormData((current) => ({
             ...current,
             category: category?.name || "",
-            subcategory: category?.subcategory?.[0] || "",
+            metal_type: metalList.find((metal) => metal.status === "Active")?.name || "",
             product_code: productResponse.data.latestCode || "GOLD-PRD-001"
           }));
         }
@@ -174,9 +182,6 @@ const AddProducts = () => {
     load();
     return () => { active = false; };
   }, [id, isEdit]);
-
-  const selectedCategory = categories.find((category) => category.name === formData.category);
-  const subcategories = Array.isArray(selectedCategory?.subcategory) ? selectedCategory.subcategory : [];
 
   const goldValue = useMemo(
     () => (Number(formData.net_gold_weight) || 0) * (Number(formData.gold_rate_per_gram) || 0),
@@ -339,9 +344,9 @@ const AddProducts = () => {
                 { value: "", label: "Select category" },
                 ...categories.map((category) => ({ value: category.name, label: category.name }))
               ]} />
-              <SelectField label="Subcategory" name="subcategory" value={formData.subcategory} onChange={handleChange} options={[
-                { value: "", label: "Select subcategory" },
-                ...subcategories.map((subcategory) => ({ value: subcategory, label: subcategory }))
+              <SelectField label="Metal Type" name="metal_type" value={formData.metal_type} onChange={handleChange} options={[
+                { value: "", label: "Select metal type" },
+                ...metals.map((metal) => ({ value: metal.name, label: metal.purity ? `${metal.name} (${metal.purity})` : metal.name }))
               ]} />
               <SelectField label="Product Type" name="product_type" value={formData.product_type} onChange={handleChange} options={["Traditional", "Daily Wear", "Bridal", "Designer"]} />
               <Field label="Brand" name="brand" value={formData.brand} onChange={handleChange} placeholder={GOLD_SHOP} />
@@ -385,9 +390,24 @@ const AddProducts = () => {
             <div className="mt-4">
               <p className={`${labelClass} mb-2`}>Size Guide Chart</p>
               {formData.size_guide_chart ? (
-                <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 p-3">
-                  <a className="text-sm font-semibold text-[#003B3B] underline" href={imageUrl(formData.size_guide_chart)} target="_blank" rel="noreferrer">View uploaded size guide</a>
-                  <button type="button" onClick={() => updateFormField("size_guide_chart", "")} aria-label="Remove size guide" className="text-red-500"><FiX /></button>
+                <div className="relative overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
+                  {/\.pdf(?:$|[?#])/i.test(formData.size_guide_chart) ? (
+                    <iframe
+                      className="h-32 w-full sm:h-40"
+                      src={imageUrl(formData.size_guide_chart)}
+                      title="Size guide chart preview"
+                    />
+                  ) : (
+                    <img
+                      className="h-32 w-full bg-white object-contain sm:h-40"
+                      src={imageUrl(formData.size_guide_chart)}
+                      alt="Size guide chart preview"
+                    />
+                  )}
+                  <div className="flex items-center justify-between gap-3 border-t border-gray-200 bg-white px-3 py-2">
+                    <a className="text-sm font-semibold text-[#003B3B] underline" href={imageUrl(formData.size_guide_chart)} target="_blank" rel="noreferrer">Open size guide</a>
+                    <button type="button" onClick={() => updateFormField("size_guide_chart", "")} aria-label="Remove size guide" className="text-red-500"><FiX /></button>
+                  </div>
                 </div>
               ) : uploadButton("size_guide_chart", "Upload size chart image or PDF", "PNG, JPG, PDF up to 5 MB")}
             </div>

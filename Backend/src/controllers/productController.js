@@ -16,7 +16,7 @@ const NUMBER_FIELDS = new Set([
   'stone_weight', 'discount', 'gst_rate', 'final_selling_price', 'total_reviews'
 ]);
 const ALLOWED_FIELDS = new Set([
-  'product_code', 'name', 'brand', 'category', 'subcategory', 'product_type',
+  'product_code', 'name', 'brand', 'category', 'subcategory', 'metal_type', 'product_type',
   'description', 'full_description', 'purity', 'gross_weight', 'net_gold_weight',
   'gold_rate_per_gram', 'making_charge_type', 'making_charge', 'wastage_type',
   'wastage', 'stone_weight', 'stone_type', 'huid', 'available_sizes',

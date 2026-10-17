@@ -1,7 +1,7 @@
 const { pool } = require('../config/db');
 
 const PRODUCT_COLUMNS = `
-  id, product_code, name, brand, category, subcategory, product_type,
+  id, product_code, name, brand, category, subcategory, metal_type, product_type,
   description, full_description, purity, gross_weight, net_gold_weight,
   gold_rate_per_gram, making_charge_type, making_charge, wastage_type, wastage,
   stone_weight, stone_type, huid, available_sizes, product_size, length, width,
@@ -33,6 +33,7 @@ function parseProduct(product) {
 
 const columnDefinitions = {
   brand: "VARCHAR(150) NULL",
+  metal_type: "VARCHAR(150) NULL",
   product_type: "VARCHAR(100) NULL",
   full_description: "TEXT NULL",
   purity: "VARCHAR(50) NULL",
