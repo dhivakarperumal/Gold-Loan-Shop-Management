@@ -11,15 +11,12 @@ import {
   FiBox,
   FiTrendingUp,
   FiTrendingDown,
-  FiEye,
-  FiCalendar,
   FiChevronDown,
-  FiPlusCircle,
   FiArrowRight,
   FiMoreHorizontal,
-  FiShoppingCart
+  FiChevronRight
 } from "react-icons/fi";
-import { FaRupeeSign, FaCoins, FaGem, FaHandHoldingUsd } from "react-icons/fa";
+import { FaRupeeSign, FaCoins, FaGem, FaHandHoldingUsd, FaShieldAlt } from "react-icons/fa";
 import { Bar, Doughnut } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
@@ -65,34 +62,34 @@ const DEFAULT_DASHBOARD_DATA = {
       trend: "+12%",
       trendUp: true,
       icon: "users",
-      color: "violet"
+      color: "emerald"
     },
     {
-      id: "total_gold_stock",
-      label: "Total Gold Stock",
-      value: "850.500 g",
-      trend: "+5%",
+      id: "active_gold_loans",
+      label: "Active Gold Loans",
+      value: "386",
+      trend: "+8%",
       trendUp: true,
-      icon: "gold",
+      icon: "loan",
       color: "amber"
     },
     {
-      id: "total_loan_amount",
-      label: "Total Loan Amount",
-      value: "₹ 42,50,000",
-      trend: "-8%",
-      trendUp: false,
-      icon: "loan",
-      color: "rose"
+      id: "today_collection",
+      label: "Today's Collection",
+      value: "₹ 4,85,000",
+      trend: "+15%",
+      trendUp: true,
+      icon: "rupee",
+      color: "emerald"
     },
     {
-      id: "total_sales",
-      label: "Total Sales",
-      value: "₹ 12,80,000",
-      trend: "+18%",
+      id: "gold_stock_value",
+      label: "Gold Stock Value",
+      value: "₹ 1,28,50,000",
+      trend: "+6%",
       trendUp: true,
-      icon: "cart",
-      color: "violet"
+      icon: "gold",
+      color: "amber"
     }
   ],
   totalLoansCount: 248,
@@ -244,42 +241,31 @@ const Dashboard = () => {
     {
       id: "total_customers",
       icon: <FiUsers />,
-      iconClass: "bg-violet-100 text-violet-600",
-      cardClass: "bg-[#E8D29A] border-[#D6BB78]",
-      sparkColor: "#A855F7",
-      sparkFill: "M0 43 C12 39 16 40 25 44 S39 39 45 40 S58 27 64 31 S74 10 81 11 S92 2 100 2 V50 H0 Z",
-      sparkLine: "M0 43 C12 39 16 40 25 44 S39 39 45 40 S58 27 64 31 S74 10 81 11 S92 2 100 2",
+      iconClass: "bg-[#006D50] text-white",
+      cardClass: "bg-[#E9F6EC] border-[#9BCDA8]",
+      chartColor: "text-[#138447]",
       trendUp: true
     },
     {
-      id: "total_gold_stock",
+      id: "active_gold_loans",
       icon: <FaCoins />,
-      iconClass: "bg-amber-100 text-amber-500",
-      cardClass: "bg-[#FFF5DF] border-[#F5E6C3]",
-      sparkColor: "#F59E0B",
-      sparkFill: "M0 45 C12 45 16 37 23 40 S37 31 43 35 S54 27 62 33 S73 18 80 22 S91 13 100 8 V50 H0 Z",
-      sparkLine: "M0 45 C12 45 16 37 23 40 S37 31 43 35 S54 27 62 33 S73 18 80 22 S91 13 100 8",
-      trendUp: true
+      iconClass: "bg-gradient-to-br from-[#FFD56A] to-[#D38A00] text-white",
+      cardClass: "bg-[#FFF3D5] border-[#E8C265]",
+      chartColor: "text-[#C88609]"
     },
     {
-      id: "total_loan_amount",
-      icon: <FaHandHoldingUsd />,
-      iconClass: "bg-rose-100 text-rose-600",
-      cardClass: "bg-[#FFF0F1] border-[#F8DDE1]",
-      sparkColor: "#FB7185",
-      sparkFill: "M0 44 C9 42 17 36 24 39 S36 32 43 35 S54 26 61 31 S72 19 78 24 S91 9 100 8 V50 H0 Z",
-      sparkLine: "M0 44 C9 42 17 36 24 39 S36 32 43 35 S54 26 61 31 S72 19 78 24 S91 9 100 8",
-      trendUp: false
+      id: "today_collection",
+      icon: <FaRupeeSign />,
+      iconClass: "bg-[#006D50] text-white",
+      cardClass: "bg-[#E9F6EC] border-[#9BCDA8]",
+      chartColor: "text-[#138447]"
     },
     {
-      id: "total_sales",
-      icon: <FiShoppingCart />,
-      iconClass: "bg-fuchsia-100 text-fuchsia-600",
-      cardClass: "bg-[#F8EEFF] border-[#EADCF8]",
-      sparkColor: "#C084FC",
-      sparkFill: "M0 44 C10 43 15 35 23 38 S35 32 42 36 S53 27 60 31 S72 20 79 22 S89 12 100 6 V50 H0 Z",
-      sparkLine: "M0 44 C10 43 15 35 23 38 S35 32 42 36 S53 27 60 31 S72 20 79 22 S89 12 100 6",
-      trendUp: true
+      id: "gold_stock_value",
+      icon: <FaGem />,
+      iconClass: "bg-gradient-to-br from-[#FFD56A] to-[#D38A00] text-white",
+      cardClass: "bg-[#FFF3D5] border-[#E8C265]",
+      chartColor: "text-[#C88609]"
     }
   ].map((card) => {
     const defaultStat = DEFAULT_DASHBOARD_DATA.stats.find((stat) => stat.id === card.id);
@@ -288,7 +274,7 @@ const Dashboard = () => {
       ...defaultStat,
       ...liveStat,
       ...card,
-      trendUp: liveStat?.trendUp ?? defaultStat.trendUp
+      trendUp: liveStat?.trendUp ?? defaultStat?.trendUp ?? card.trendUp
     };
   });
 
@@ -425,51 +411,115 @@ const Dashboard = () => {
     <div className="space-y-6 pb-12 bg-[#F8FAFC] min-h-screen">
       <Toaster position="top-right" />
 
-      {/* ── Top Header ────────────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight leading-tight">
-            Dashboard
-          </h1>
-          <p className="text-xs sm:text-sm font-medium text-slate-500 mt-1">
-            Welcome back! Here's what's happening with Sri Golds today.
-          </p>
-        </div>
-
-        {/* Date Range Selector (as in screenshot) */}
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <div className="flex items-center gap-2.5 bg-white border border-slate-200/80 px-3.5 py-2 rounded-xl shadow-sm text-xs font-semibold text-slate-700 hover:border-slate-300 transition-colors cursor-pointer">
-            <FiCalendar className="text-slate-400 text-sm" />
-            <span>Oct 1, 2026 - Oct 16, 2026</span>
-            <FiChevronDown className="text-slate-400 text-xs ml-1" />
+      <section className="relative flex h-[170px] items-center overflow-hidden rounded-xl border border-[#B68A36] bg-[#003B32] shadow-sm sm:h-[184px]">
+        <img
+          src="/images/Hero/hero4.png"
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover object-center"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-[#002D27]/95 via-[#003B32]/80 to-transparent" />
+        <div className="relative z-10 flex h-full w-full items-center px-5 sm:px-9">
+          <div className="max-w-[58%] sm:max-w-[52%]">
+            <p className="text-xs font-semibold tracking-wide text-[#F6D991] sm:text-base" style={{ color: "#FFE39A", textShadow: "0 1px 4px rgba(0,0,0,0.8)" }}>Welcome to</p>
+            <h1
+              className="mt-0.5 font-serif text-3xl font-bold leading-none sm:text-5xl"
+              style={{ color: "#FFD15C", textShadow: "0 2px 8px rgba(0,0,0,0.9)" }}
+            >
+              Sri Golds
+            </h1>
+            <p className="mt-2 max-w-md text-[10px] leading-relaxed text-white/90 sm:text-sm" style={{ color: "#FFFFFF", textShadow: "0 1px 4px rgba(0,0,0,0.85)" }}>
+              Your trusted jewellery &amp; gold loan management partner
+            </p>
+            <div className="mt-3 hidden items-center gap-2 text-[9px] font-bold uppercase tracking-[0.2em] text-[#F6D991] sm:flex" style={{ color: "#FFE39A", textShadow: "0 1px 4px rgba(0,0,0,0.85)" }}>
+              <span>Purity</span><span className="text-white/50">|</span>
+              <span>Trust</span><span className="text-white/50">|</span>
+              <span>Prosperity</span>
+            </div>
+          </div>
+          <div className="ml-auto hidden max-w-[180px] space-y-3 pr-3 text-[#F6D991] lg:block" style={{ color: "#FFE39A", textShadow: "0 1px 4px rgba(0,0,0,0.85)" }}>
+            <div className="flex items-center gap-2">
+              <FaGem className="shrink-0 text-lg" />
+              <span className="text-[9px] font-bold uppercase leading-tight tracking-wide">Traditional Values</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <FaShieldAlt className="shrink-0 text-lg" />
+              <span className="text-[9px] font-bold uppercase leading-tight tracking-wide">Modern Management</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <FiUsers className="shrink-0 text-lg" />
+              <span className="text-[9px] font-bold uppercase leading-tight tracking-wide">Customer Satisfaction</span>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
         {summaryCards.map((card) => (
           <article
             key={card.id}
-            className={`relative flex h-[140px] min-w-0 items-center gap-3 overflow-hidden rounded-xl border ${card.cardClass} p-3 shadow-[0_3px_12px_rgba(30,41,59,0.04)] transition-shadow hover:shadow-md`}
+            className={`relative flex h-[106px] min-w-0 items-center gap-3 overflow-hidden rounded-xl border ${card.cardClass} p-3 shadow-[0_3px_12px_rgba(30,41,59,0.08)] transition-shadow hover:shadow-md`}
           >
-            <div className={`z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-[23px] ${card.iconClass}`}>
+            <div className={`z-10 flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full text-xl shadow-sm ${card.iconClass}`}>
               {card.icon}
             </div>
-            <div className="relative z-10 min-w-0 pb-0.5">
-              <p className="truncate text-[10px] font-semibold text-slate-600">{card.label}</p>
+            <div className="relative z-10 min-w-0 self-center">
+              <p className="truncate text-[10px] font-medium text-slate-700">{card.label}</p>
               <p className="mt-1 truncate text-[18px] font-extrabold leading-none tracking-tight text-slate-900">{card.value}</p>
-              <div className={`mt-2 flex items-center gap-1 text-[10px] font-bold ${card.trendUp ? "text-violet-600" : "text-rose-600"}`}>
+              <div className={`mt-2 flex items-center gap-1 text-[11px] font-extrabold ${card.trendUp ? "text-emerald-700" : "text-rose-600"}`}>
                 {card.trendUp ? <FiTrendingUp /> : <FiTrendingDown />}
                 <span>{card.trend}</span>
               </div>
-              <p className="mt-0.5 text-[8px] font-medium text-slate-500">from last month</p>
+              <p className="mt-0.5 text-[9px] font-medium text-slate-500">{card.id === "today_collection" ? "vs yesterday" : "vs last month"}</p>
             </div>
-            <svg className="pointer-events-none absolute bottom-0 right-0 h-[50px] w-[88px]" viewBox="0 0 100 50" preserveAspectRatio="none" aria-hidden="true">
-              <path d={card.sparkFill} fill={card.sparkColor} fillOpacity="0.12" />
-              <path d={card.sparkLine} fill="none" stroke={card.sparkColor} strokeLinecap="round" strokeWidth="1.5" />
-            </svg>
+            <button
+              type="button"
+              aria-label={`View ${card.label}`}
+              onClick={() => navigate({
+                total_customers: "/admin/loans/customermanagement",
+                gold_stock_value: "/admin/products/stock"
+              }[card.id] || "/admin/loans/allloans")}
+              className="absolute right-2 top-2 z-10 flex h-5 w-5 items-center justify-center rounded-full border border-black/5 bg-white/65 text-[10px] text-slate-700 transition hover:bg-white"
+            >
+              <FiChevronRight />
+            </button>
+            <div className={`absolute bottom-3 right-3 flex h-7 items-end gap-[3px] ${card.chartColor}`}>
+              {[12, 19, 15, 25].map((height, index) => (
+                <span key={index} className="w-[4px] rounded-t-sm bg-current" style={{ height: `${height}px` }} />
+              ))}
+            </div>
           </article>
         ))}
+      </div>
+
+      <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-xs">
+        <div className="mb-4 flex items-center justify-between">
+          <h3 className="text-xs font-black uppercase tracking-widest text-slate-500">
+            Quick Actions & Shortcuts
+          </h3>
+          <span className="text-[10px] font-semibold text-slate-400">One-click management</span>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {[
+            { label: "Add Product", icon: <FiBox size={18} />, color: "from-[#004D40] to-[#008577]", path: "/admin/products/add" },
+            { label: "New Loan", icon: <FaHandHoldingUsd size={18} />, color: "from-[#0F766E] to-[#14B8A6]", path: "/admin/loans/createloan" },
+            { label: "All Loans", icon: <FaCoins size={18} />, color: "from-[#047857] to-[#34D399]", path: "/admin/loans/allloans" },
+            { label: "Customers", icon: <FiUsers size={18} />, color: "from-[#B7791F] to-[#F5C45E]", path: "/admin/loans/customermanagement" },
+            { label: "Stock Details", icon: <FiBox size={18} />, color: "from-[#B45309] to-[#F59E0B]", path: "/admin/products/stock" },
+            { label: "Daily Gold Rate", icon: <FaGem size={18} />, color: "from-[#003B3B] to-[#008577]", path: "/admin/settings/daily-gold-rate" }
+          ].map((action) => (
+            <button
+              key={action.label}
+              type="button"
+              onClick={() => navigate(action.path)}
+              className="group flex flex-col items-center gap-2.5 rounded-2xl border border-slate-100 bg-slate-50/40 p-3.5 transition-all hover:border-slate-200 hover:bg-white hover:shadow-md"
+            >
+              <span className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${action.color} text-white shadow-sm transition-transform group-hover:scale-105`}>
+                {action.icon}
+              </span>
+              <span className="text-center text-xs font-bold leading-tight text-slate-700">{action.label}</span>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* ── Active Daily Gold Rates Banner (Essential for Sri Golds) ── */}
@@ -710,38 +760,6 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* ── Quick Action Shortcuts ──────────────────────────────────── */}
-      <div className="bg-white rounded-2xl border border-slate-100 shadow-xs p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest">
-            Quick Actions & Shortcuts
-          </h3>
-          <span className="text-[10px] text-slate-400 font-semibold">One-click management</span>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-          {[
-            { label: "Add Product", icon: <FiBox size={18} />, color: "from-[#004D40] to-[#008577]", path: "/admin/products/add" },
-            { label: "New Loan", icon: <FaHandHoldingUsd size={18} />, color: "from-[#0F766E] to-[#14B8A6]", path: "/admin/loans/createloan" },
-            { label: "All Loans", icon: <FaCoins size={18} />, color: "from-[#047857] to-[#34D399]", path: "/admin/loans/allloans" },
-            { label: "Customers", icon: <FiUsers size={18} />, color: "from-[#B7791F] to-[#F5C45E]", path: "/admin/loans/customermanagement" },
-            { label: "Stock Details", icon: <FiBox size={18} />, color: "from-[#B45309] to-[#F59E0B]", path: "/admin/products/stock" },
-            { label: "Daily Gold Rate", icon: <FaGem size={18} />, color: "from-[#003B3B] to-[#008577]", path: "/admin/settings/daily-gold-rate" },
-          ].map((action, i) => (
-            <button
-              key={i}
-              onClick={() => navigate(action.path)}
-              className="flex flex-col items-center gap-2.5 p-3.5 rounded-2xl border border-slate-100 hover:border-slate-200 hover:shadow-md transition-all group active:scale-98 bg-slate-50/40 hover:bg-white"
-            >
-              <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center text-white shadow-sm group-hover:scale-105 transition-transform`}>
-                {action.icon}
-              </div>
-              <span className="text-xs font-bold text-slate-700 text-center leading-tight">
-                {action.label}
-              </span>
-            </button>
-          ))}
-        </div>
-      </div>
     </div>
   );
 };

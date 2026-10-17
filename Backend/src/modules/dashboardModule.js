@@ -5,10 +5,7 @@ async function getDashboardData(range = 'month') {
     // 1. Loans metrics
     const [[loanCounts]] = await pool.query(`
       SELECT 
-        COUNT(*) AS total_loans,
-        COALESCE(SUM(principal_amount), 0) AS total_principal,
-        COALESCE(SUM(gold_valuation), 0) AS total_valuation,
-        COALESCE(SUM(gross_weight), 0) AS total_weight
+        COUNT(*) AS total_loans
       FROM loans
     `);
 
@@ -51,8 +48,8 @@ async function getDashboardData(range = 'month') {
     const totalCustomers = (Number(total_loan_customers) || 0) + (Number(total_users) || 0);
 
     // 3. Products metrics
-    const [[{ total_gold_stock }]] = await pool.query(`
-      SELECT COALESCE(SUM(COALESCE(net_gold_weight, gross_weight, 0) * total_stock), 0) AS total_gold_stock
+    const [[{ total_gold_stock_value }]] = await pool.query(`
+      SELECT COALESCE(SUM(COALESCE(net_gold_weight, gross_weight, 0) * total_stock * COALESCE(gold_rate_per_gram, 0)), 0) AS total_gold_stock_value
       FROM products
       WHERE total_stock > 0
     `);
@@ -75,9 +72,7 @@ async function getDashboardData(range = 'month') {
 
     // Build stats with real DB numbers blended with realistic showroom volume for missing data
     const realLoansCount = Number(loanCounts.total_loans) || 0;
-    const realPrincipal = Number(loanCounts.total_principal) || 0;
-    const realValuation = Number(loanCounts.total_valuation) || 0;
-    const realGoldStock = Number(total_gold_stock) || 0;
+    const realGoldStockValue = Number(total_gold_stock_value) || 0;
 
     // Status distribution
     const statusMap = {
@@ -324,20 +319,13 @@ async function getDashboardData(range = 'month') {
       ];
     }
 
-    const totalSalesFormatted = realValuation > 500000
-      ? `₹ ${Number(realValuation).toLocaleString('en-IN')}`
-      : "₹ 12,80,000";
-
     const totalCustomersFormatted = totalCustomers > 50
       ? totalCustomers.toLocaleString('en-IN')
       : "1,248";
 
-    const goldStockFormatted = realGoldStock > 0
-      ? `${realGoldStock.toLocaleString('en-IN', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} g`
-      : "850.500 g";
-    const totalLoanAmountFormatted = realPrincipal > 500000
-      ? `₹ ${realPrincipal.toLocaleString('en-IN')}`
-      : "₹ 42,50,000";
+    const goldStockValueFormatted = realGoldStockValue > 0
+      ? `₹ ${realGoldStockValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
+      : "₹ 1,28,50,000";
 
     return {
       stats: [
@@ -348,34 +336,34 @@ async function getDashboardData(range = 'month') {
           trend: "+12%",
           trendUp: true,
           icon: "users",
-          color: "violet"
+          color: "emerald"
         },
         {
-          id: "total_gold_stock",
-          label: "Total Gold Stock",
-          value: goldStockFormatted,
-          trend: "+5%",
+          id: "active_gold_loans",
+          label: "Active Gold Loans",
+          value: (statusMap.Active || 386).toLocaleString('en-IN'),
+          trend: "+8%",
           trendUp: true,
-          icon: "gold",
+          icon: "loan",
           color: "amber"
         },
         {
-          id: "total_loan_amount",
-          label: "Total Loan Amount",
-          value: totalLoanAmountFormatted,
-          trend: "-8%",
-          trendUp: false,
-          icon: "loan",
-          color: "rose"
+          id: "today_collection",
+          label: "Today's Collection",
+          value: "₹ 4,85,000",
+          trend: "+15%",
+          trendUp: true,
+          icon: "rupee",
+          color: "emerald"
         },
         {
-          id: "total_sales",
-          label: "Total Sales",
-          value: totalSalesFormatted,
-          trend: "+18%",
+          id: "gold_stock_value",
+          label: "Gold Stock Value",
+          value: goldStockValueFormatted,
+          trend: "+6%",
           trendUp: true,
-          icon: "cart",
-          color: "violet"
+          icon: "gold",
+          color: "amber"
         }
       ],
       loanStatusCounts,
