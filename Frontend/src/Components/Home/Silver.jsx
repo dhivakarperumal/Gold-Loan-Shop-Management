@@ -43,17 +43,24 @@ const Silver = () => {
           href="/category/silver-articles"
           className="group relative flex min-h-[280px] overflow-hidden rounded-lg border border-[#c99a43]/60 bg-[#003b2b] sm:min-h-[320px] lg:min-h-0"
         >
+          {/* Silver banner image */}
           <img
-            src="/images/banner/silvercollection.png"
+            src="/images/silverproduct.png"
             alt="Premium silver jewellery and articles"
             loading="lazy"
             className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+            onError={(e) => {
+              e.currentTarget.style.display = "none";
+            }}
           />
 
-          <div className="absolute inset-0 bg-gradient-to-r from-[#003b2b]/85 via-[#003b2b]/40 to-transparent" />
+          {/* Reduced green overlay */}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#003b2b]/20 via-[#003b2b]/5 to-transparent" />
 
+          {/* Decorative gold border */}
           <div className="pointer-events-none absolute inset-[5px] rounded-md border border-[#d8b45e]/60" />
 
+          {/* Banner content */}
           <div className="relative z-10 flex w-[65%] flex-col items-start justify-center p-5 sm:p-7">
             <p className="mb-2 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#f4ce72]">
               Timeless Elegance

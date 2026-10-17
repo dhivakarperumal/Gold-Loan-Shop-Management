@@ -15,9 +15,8 @@ const Home = () => {
       <Category />
       <Banner />
       <Gold />
-      <Products />
-      <Diamond />
       <Silver />
+      <Diamond />
     </div>
   )
 }
