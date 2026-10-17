@@ -1,21 +1,16 @@
-import { useState, useEffect, useContext } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useAdmin } from "../../PrivateRouter/AdminContext";
 import {
   Star,
   Search,
-  Filter,
-  MoreVertical,
   MessageSquare,
   CheckCircle,
   AlertCircle,
-  User,
   Trash2,
   Send,
   Loader2,
-  ChevronRight,
   ShieldAlert,
-  Calendar,
   Package,
   ArrowUpRight,
   Reply,
@@ -64,10 +59,9 @@ const Reviews = () => {
     review_image: null
   });
 
-  const fetchReviews = async () => {
+  const fetchReviews = useCallback(async () => {
     try {
-      const cacheKey = `${filter}-${selectedRating}-${searchQuery}`;
-      if (!reviewsCache[cacheKey]) setLoading(true);
+      setLoading(true);
 
       const params = {};
       if (filter !== "All") params.status = filter;
@@ -78,39 +72,33 @@ const Reviews = () => {
       const data = { reviews: res.data.reviews || [], stats: res.data.stats || null };
       setReviews(data.reviews);
       setStats(data.stats);
-      setReviewsCache(prev => ({ ...prev, [cacheKey]: data }));
+      setReviewsCache(prev => ({ ...prev, [currentCacheKey]: data }));
     } catch (err) {
       console.error("Failed to fetch reviews:", err);
-      toast.error("Failed to load reviews");
+      toast.error(err.response?.data?.message || "Failed to load reviews");
     } finally {
       setLoading(false);
     }
-  };
+  }, [filter, selectedRating, searchQuery, currentCacheKey, setReviewsCache]);
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
-      const res = await api.get("/products");
-      setProducts(res.data || []);
+      const res = await api.get("/products", { params: { limit: 100 } });
+      setProducts(Array.isArray(res.data?.products) ? res.data.products : []);
     } catch (err) {
       console.error("Failed to fetch products:", err);
+      toast.error(err.response?.data?.message || "Failed to load products");
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchReviews();
-  }, [filter, selectedRating]);
-
-  useEffect(() => {
-    if (showAddModal) fetchProducts();
-  }, [showAddModal]);
-
-  // Debounced search
-  useEffect(() => {
-    const timeout = setTimeout(() => {
-      fetchReviews();
-    }, 500);
+    const timeout = setTimeout(() => { void fetchReviews(); }, searchQuery ? 500 : 0);
     return () => clearTimeout(timeout);
-  }, [searchQuery]);
+  }, [fetchReviews, searchQuery]);
+
+  useEffect(() => {
+    if (showAddModal) void Promise.resolve().then(fetchProducts);
+  }, [fetchProducts, showAddModal]);
 
   const handleStatusUpdate = async (id, status) => {
     try {
@@ -118,7 +106,7 @@ const Reviews = () => {
       toast.success(`Review ${status.toLowerCase()} successfully`);
       fetchReviews();
     } catch (err) {
-      toast.error("Failed to update status");
+      toast.error(err.response?.data?.message || "Failed to update status");
     }
   };
 
@@ -129,7 +117,7 @@ const Reviews = () => {
       toast.success("Review deleted");
       fetchReviews();
     } catch (err) {
-      toast.error("Failed to delete review");
+      toast.error(err.response?.data?.message || "Failed to delete review");
     }
   };
 
@@ -142,7 +130,7 @@ const Reviews = () => {
       setActiveReplyId(null);
       fetchReviews();
     } catch (err) {
-      toast.error("Failed to add reply");
+      toast.error(err.response?.data?.message || "Failed to add reply");
     }
   };
 
@@ -212,7 +200,7 @@ const Reviews = () => {
         <div className="w-full">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
             <div className="bg-white p-5 min-h-[116px] rounded-2xl border border-slate-100 shadow-sm flex items-center gap-4 transition-all hover:-translate-y-0.5 hover:shadow-md">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shrink-0">
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#003B3B] to-[#008577] flex items-center justify-center text-white shadow-lg shrink-0">
                 <MessageSquare className="w-5 h-5" />
               </div>
               <div>
@@ -252,8 +240,8 @@ const Reviews = () => {
       {/* FILTERS AND SEARCH BAR */}
       <div className="bg-white p-3 rounded-2xl border border-slate-100 shadow-sm flex flex-col xl:flex-row xl:items-center justify-between gap-3">
         <div className="relative w-full xl:max-w-md group">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-[#4b0b78]" />
-          <input type="text" placeholder="Search reviews, products or users..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full min-h-[48px] bg-slate-50 border border-slate-100 rounded-xl pl-11 pr-4 text-sm font-semibold focus:outline-none focus:border-[#4b0b78]" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-[#008577]" />
+          <input type="text" placeholder="Search reviews, products or users..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full min-h-[48px] bg-slate-50 border border-slate-100 rounded-xl pl-11 pr-4 text-sm font-semibold focus:outline-none focus:border-[#008577]" />
         </div>
         <div className="flex flex-wrap items-center justify-end gap-2">
           <div className="relative">
@@ -261,7 +249,7 @@ const Reviews = () => {
               value={filter}
               onChange={(e) => setFilter(e.target.value)}
               aria-label="Filter reviews by status"
-              className="appearance-none min-w-40 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 pr-9 text-xs font-black uppercase tracking-widest text-[#4b0b78] outline-none focus:border-[#4b0b78]"
+              className="appearance-none min-w-40 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 pr-9 text-xs font-black uppercase tracking-widest text-[#003B3B] outline-none focus:border-[#008577]"
             >
               <option value="All">All</option>
               <option value="Pending">Pending</option>
@@ -275,7 +263,7 @@ const Reviews = () => {
               value={selectedRating || ""}
               onChange={(e) => setSelectedRating(e.target.value ? Number(e.target.value) : null)}
               aria-label="Filter reviews by rating"
-              className="appearance-none min-w-36 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 pr-9 text-xs font-black uppercase tracking-widest text-[#4b0b78] outline-none focus:border-[#4b0b78]"
+              className="appearance-none min-w-36 bg-slate-50 border border-slate-100 rounded-xl px-4 py-3 pr-9 text-xs font-black uppercase tracking-widest text-[#003B3B] outline-none focus:border-[#008577]"
             >
               <option value="">All Ratings</option>
               <option value="5">5 Stars</option>
@@ -287,13 +275,13 @@ const Reviews = () => {
             <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[10px] pointer-events-none">▼</span>
           </div>
           <div className="flex items-center gap-1 rounded-xl border border-slate-100 bg-slate-50 p-1">
-            <button type="button" onClick={() => setViewMode("card")} className={`p-2 rounded-lg ${viewMode === "card" ? "bg-white text-[#4b0b78] shadow-sm" : "text-slate-400"}`} aria-label="Card mode" title="Card mode"><LayoutGrid className="w-4 h-4" /></button>
-            <button type="button" onClick={() => setViewMode("table")} className={`p-2 rounded-lg ${viewMode === "table" ? "bg-white text-[#4b0b78] shadow-sm" : "text-slate-400"}`} aria-label="Table mode" title="Table mode"><List className="w-4 h-4" /></button>
+            <button type="button" onClick={() => setViewMode("card")} className={`p-2 rounded-lg ${viewMode === "card" ? "bg-white text-[#003B3B] shadow-sm" : "text-slate-400"}`} aria-label="Card mode" title="Card mode"><LayoutGrid className="w-4 h-4" /></button>
+            <button type="button" onClick={() => setViewMode("table")} className={`p-2 rounded-lg ${viewMode === "table" ? "bg-white text-[#003B3B] shadow-sm" : "text-slate-400"}`} aria-label="Table mode" title="Table mode"><List className="w-4 h-4" /></button>
           </div>
            <div className="flex items-center justify-end gap-4">
           <button
             onClick={() => setShowAddModal(true)}
-            className="flex items-center gap-2 px-6 py-2 bg-[#4b0b78] text-white rounded-md text-xs font-black uppercase tracking-widest hover:bg-[#260642] shadow-xl shadow-purple-900/10 transition-all active:scale-95"
+            className="flex items-center gap-2 px-6 py-2 bg-[#003B3B] text-white rounded-md text-xs font-black uppercase tracking-widest hover:bg-[#008577] shadow-xl shadow-emerald-900/10 transition-all active:scale-95"
           >
             <Plus className="w-4 h-6" /> Add Review
           </button>
@@ -308,7 +296,7 @@ const Reviews = () => {
       {loading ? (
         <div className="min-h-[400px] flex flex-col items-center justify-center gap-4 bg-white/50 rounded-[2.5rem] border border-dashed border-slate-200">
           <div className="relative">
-            <div className="w-12 h-12 rounded-full border-4 border-slate-100 border-t-blue-600 animate-spin"></div>
+            <div className="w-12 h-12 rounded-full border-4 border-slate-100 border-t-[#008577] animate-spin"></div>
           </div>
           <p className="text-slate-400 font-black text-xs uppercase tracking-widest animate-pulse">Synchronizing Feedback...</p>
         </div>
@@ -321,7 +309,7 @@ const Reviews = () => {
           <p className="text-slate-400 text-sm font-medium">Try adjusting your filters or search query</p>
           <button
             onClick={() => { setFilter("All"); setSelectedRating(null); setSearchQuery(""); }}
-            className="mt-4 px-6 py-3 bg-[#4b0b78] text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#260642] transition-colors"
+            className="mt-4 px-6 py-3 bg-[#003B3B] text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#008577] transition-colors"
           >
             Clear All Filters
           </button>
@@ -330,8 +318,8 @@ const Reviews = () => {
         viewMode === "table" ? (
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">
             <table className="w-full text-left border-collapse whitespace-nowrap">
-              <thead><tr className="bg-gradient-to-r from-[#260642] to-[#4b0b78] text-[#facc15] text-[11px] font-black uppercase tracking-wider"><th className="px-4 py-4 text-center">S No</th><th className="px-6 py-4">Reviewer</th><th className="px-6 py-4">Product</th><th className="px-6 py-4">Rating</th><th className="px-6 py-4">Status</th><th className="px-6 py-4 text-right">Actions</th></tr></thead>
-              <tbody>{reviews.map((item, index) => <tr key={item.id} className="border-b border-slate-50 hover:bg-slate-50/60"><td className="px-4 py-4 text-center text-sm font-bold text-slate-400">{index + 1}</td><td className="px-6 py-4"><p className="font-bold text-slate-800">{item.user_name}</p><p className="text-xs text-slate-400">{new Date(item.created_at).toLocaleDateString()}</p></td><td className="px-6 py-4 text-sm font-semibold text-slate-600">{item.product_name || "Product Deleted"}</td><td className="px-6 py-4"><span className="inline-flex items-center gap-1 font-bold text-amber-500">{item.rating}<Star className="w-3.5 h-3.5 fill-current" /></span></td><td className="px-6 py-4"><span className={`px-2.5 py-1 rounded-lg border text-[10px] font-black uppercase ${getStatusColor(item.status)}`}>{item.status}</span></td><td className="px-6 py-4"><div className="flex justify-end gap-2"><button onClick={() => handleStatusUpdate(item.id, "Published")} className="px-3 py-2 rounded-lg bg-[#4b0b78] text-white text-xs font-bold hover:bg-[#260642]">Approve</button><button onClick={() => setActiveReplyId(item.id)} className="px-3 py-2 rounded-lg bg-[#4b0b78] text-white text-xs font-bold hover:bg-[#260642]">Reply</button><button onClick={() => handleDelete(item.id)} className="p-2 rounded-lg bg-[#4b0b78] text-white hover:bg-[#260642]" aria-label="Delete review"><Trash2 className="w-4 h-4" /></button></div></td></tr>)}</tbody>
+              <thead><tr className="bg-gradient-to-r from-[#003B3B] to-[#008577] text-amber-200 text-[11px] font-black uppercase tracking-wider"><th className="px-4 py-4 text-center">S No</th><th className="px-6 py-4">Reviewer</th><th className="px-6 py-4">Product</th><th className="px-6 py-4">Rating</th><th className="px-6 py-4">Status</th><th className="px-6 py-4 text-right">Actions</th></tr></thead>
+              <tbody>{reviews.map((item, index) => <tr key={item.id} className="border-b border-slate-50 hover:bg-emerald-50/40"><td className="px-4 py-4 text-center text-sm font-bold text-slate-400">{index + 1}</td><td className="px-6 py-4"><p className="font-bold text-slate-800">{item.user_name}</p><p className="text-xs text-slate-400">{new Date(item.created_at).toLocaleDateString()}</p></td><td className="px-6 py-4 text-sm font-semibold text-slate-600">{item.product_name || "Product Deleted"}</td><td className="px-6 py-4"><span className="inline-flex items-center gap-1 font-bold text-amber-500">{item.rating}<Star className="w-3.5 h-3.5 fill-current" /></span></td><td className="px-6 py-4"><span className={`px-2.5 py-1 rounded-lg border text-[10px] font-black uppercase ${getStatusColor(item.status)}`}>{item.status}</span></td><td className="px-6 py-4"><div className="flex justify-end gap-2"><button onClick={() => handleStatusUpdate(item.id, "Published")} className="px-3 py-2 rounded-lg bg-[#003B3B] text-white text-xs font-bold hover:bg-[#008577]">Approve</button><button onClick={() => setActiveReplyId(item.id)} className="px-3 py-2 rounded-lg bg-[#003B3B] text-white text-xs font-bold hover:bg-[#008577]">Reply</button><button onClick={() => handleDelete(item.id)} className="p-2 rounded-lg bg-[#003B3B] text-white hover:bg-[#008577]" aria-label="Delete review"><Trash2 className="w-4 h-4" /></button></div></td></tr>)}</tbody>
             </table>
           </div>
         ) : (
@@ -339,15 +327,15 @@ const Reviews = () => {
           {reviews.map((item, index) => (
             <div
               key={item.id}
-              className={`group relative bg-white rounded-xl border border-slate-100 border-t-4 border-t-[#4b0b78] flex flex-col overflow-hidden hover:shadow-xl hover:shadow-purple-900/10 transition-all duration-300 hover:-translate-y-1 min-w-0
+              className={`group relative bg-white rounded-xl border border-slate-100 border-t-4 border-t-[#008577] flex flex-col overflow-hidden hover:shadow-xl hover:shadow-emerald-900/10 transition-all duration-300 hover:-translate-y-1 min-w-0
                 ${item.status === 'Pending' ? 'ring-2 ring-amber-500/20 shadow-lg shadow-amber-500/5' : ''}`}
             >
-              <span className="absolute top-3 left-5 z-10 px-2 py-1 rounded-md bg-[#4b0b78] text-white text-[9px] font-black uppercase tracking-widest">S No. {index + 1}</span>
+              <span className="absolute top-3 left-5 z-10 px-2 py-1 rounded-md bg-[#003B3B] text-white text-[9px] font-black uppercase tracking-widest">S No. {index + 1}</span>
               {/* Header: User & Rating */}
               <div className="p-5 pt-12 pb-4 space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-11 h-11 rounded-xl bg-[#4b0b78] flex items-center justify-center text-white text-sm font-black shadow-lg shadow-purple-900/20">
+                    <div className="w-11 h-11 rounded-xl bg-[#003B3B] flex items-center justify-center text-white text-sm font-black shadow-lg shadow-emerald-900/20">
                       {item.user_name?.charAt(0).toUpperCase()}
                     </div>
                     <div>
@@ -375,15 +363,15 @@ const Reviews = () => {
               {/* Body: Comment & Product */}
               <div className="flex-1 px-5 space-y-4">
                 <div className="relative">
-                  <p className="text-sm font-semibold text-slate-600 italic leading-relaxed line-clamp-4 min-h-[5rem] pl-3 border-l-2 border-purple-200">
+                  <p className="text-sm font-semibold text-slate-600 italic leading-relaxed line-clamp-4 min-h-[5rem] pl-3 border-l-2 border-[#008577]/30">
                     "{item.comment}"
                   </p>
                 </div>
 
-                <div className="p-3 rounded-xl bg-purple-50/50 border border-purple-100">
+                <div className="p-3 rounded-xl bg-emerald-50/50 border border-emerald-100">
                   <div className="flex items-center justify-between gap-2 overflow-hidden">
                     <div className="flex items-center gap-2 min-w-0">
-                      <Package className="w-3.5 h-3.5 text-[#4b0b78]" />
+                      <Package className="w-3.5 h-3.5 text-[#008577]" />
                       <p className="text-[10px] font-black text-slate-700 truncate">
                         {item.product_name || "Product Deleted"}
                       </p>
@@ -410,8 +398,8 @@ const Reviews = () => {
                 )}
 
                 {item.admin_reply && (
-                  <div className="p-4 rounded-xl bg-blue-50/50 border border-blue-100/50 relative">
-                    <p className="text-[9px] font-black text-blue-600 uppercase tracking-widest mb-1">Official Reply</p>
+                  <div className="p-4 rounded-xl bg-emerald-50/50 border border-emerald-100 relative">
+                    <p className="text-[9px] font-black text-[#008577] uppercase tracking-widest mb-1">Official Reply</p>
                     <p className="text-[11px] font-medium text-slate-500 italic leading-snug line-clamp-2">
                       {item.admin_reply}
                     </p>
@@ -426,7 +414,7 @@ const Reviews = () => {
                     <button
                       onClick={() => handleStatusUpdate(item.id, "Published")}
                       title="Approve"
-                      className="p-2.5 bg-[#4b0b78] text-white border border-[#4b0b78] rounded-xl hover:bg-[#260642] transition-all shadow-sm"
+                      className="p-2.5 bg-[#003B3B] text-white border border-[#003B3B] rounded-xl hover:bg-[#008577] hover:border-[#008577] transition-all shadow-sm"
                     >
                       <CheckCircle className="w-4 h-4" />
                     </button>
@@ -435,7 +423,7 @@ const Reviews = () => {
                     <button
                       onClick={() => handleStatusUpdate(item.id, "Flagged")}
                       title="Flag"
-                      className="p-2.5 bg-[#4b0b78] text-white border border-[#4b0b78] rounded-xl hover:bg-[#260642] transition-all shadow-sm"
+                      className="p-2.5 bg-[#003B3B] text-white border border-[#003B3B] rounded-xl hover:bg-[#008577] hover:border-[#008577] transition-all shadow-sm"
                     >
                       <AlertCircle className="w-4 h-4" />
                     </button>
@@ -446,7 +434,7 @@ const Reviews = () => {
                     className={`p-2.5 rounded-xl border transition-all shadow-sm
                       ${activeReplyId === item.id
                         ? "bg-slate-900 text-white border-slate-900"
-                        : "bg-[#4b0b78] text-white border-[#4b0b78] hover:bg-[#260642]"}`}
+                        : "bg-[#003B3B] text-white border-[#003B3B] hover:bg-[#008577]"}`}
                   >
                     <Reply className="w-4 h-4" />
                   </button>
@@ -455,7 +443,7 @@ const Reviews = () => {
                 <button
                   onClick={() => handleDelete(item.id)}
                   title="Delete"
-                  className="p-2.5 bg-[#4b0b78] text-white hover:bg-[#260642] rounded-xl transition-all"
+                  className="p-2.5 bg-[#003B3B] text-white hover:bg-[#008577] rounded-xl transition-all"
                 >
                   <Trash2 className="w-4 h-4" />
                 </button>
@@ -474,12 +462,12 @@ const Reviews = () => {
                     placeholder="Type response..."
                     value={replyText}
                     onChange={(e) => setReplyText(e.target.value)}
-                    className="flex-1 w-full p-4 rounded-2xl border border-slate-100 bg-slate-50 focus:outline-none focus:border-blue-500 text-xs font-semibold text-slate-700 resize-none mb-4"
+                    className="flex-1 w-full p-4 rounded-2xl border border-slate-100 bg-slate-50 focus:outline-none focus:border-[#008577] text-xs font-semibold text-slate-700 resize-none mb-4"
                   />
                   <button
                     onClick={() => handleReply(item.id)}
                     disabled={!replyText.trim()}
-                    className="w-full py-3 bg-[#4b0b78] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#260642] disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="w-full py-3 bg-[#003B3B] text-white rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-[#008577] disabled:opacity-50 flex items-center justify-center gap-2"
                   >
                     <Send className="w-3 h-3" /> Send Reply
                   </button>
@@ -519,7 +507,7 @@ const Reviews = () => {
                     required
                     value={newReview.product_id}
                     onChange={(e) => setNewReview({ ...newReview, product_id: e.target.value })}
-                    className="w-full p-4 rounded-2xl border border-slate-100 bg-slate-50 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 text-sm font-semibold transition-all"
+                    className="w-full p-4 rounded-2xl border border-slate-100 bg-slate-50 focus:outline-none focus:ring-4 focus:ring-[#008577]/10 focus:border-[#008577] text-sm font-semibold transition-all"
                   >
                     <option value="">Select a Product</option>
                     {products.map(p => (
@@ -536,7 +524,7 @@ const Reviews = () => {
                     placeholder="e.g. Rahul Sharma"
                     value={newReview.user_name}
                     onChange={(e) => setNewReview({ ...newReview, user_name: e.target.value })}
-                    className="w-full p-4 rounded-2xl border border-slate-100 bg-slate-50 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 text-sm font-semibold transition-all"
+                    className="w-full p-4 rounded-2xl border border-slate-100 bg-slate-50 focus:outline-none focus:ring-4 focus:ring-[#008577]/10 focus:border-[#008577] text-sm font-semibold transition-all"
                   />
                 </div>
               </div>
@@ -549,7 +537,7 @@ const Reviews = () => {
                     placeholder="email@example.com"
                     value={newReview.user_email}
                     onChange={(e) => setNewReview({ ...newReview, user_email: e.target.value })}
-                    className="w-full p-4 rounded-2xl border border-slate-100 bg-slate-50 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 text-sm font-semibold transition-all"
+                    className="w-full p-4 rounded-2xl border border-slate-100 bg-slate-50 focus:outline-none focus:ring-4 focus:ring-[#008577]/10 focus:border-[#008577] text-sm font-semibold transition-all"
                   />
                 </div>
 
@@ -581,7 +569,7 @@ const Reviews = () => {
                   placeholder="Write the customer's feedback here..."
                   value={newReview.comment}
                   onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
-                  className="w-full p-5 rounded-2xl border border-slate-100 bg-slate-50 focus:outline-none focus:ring-4 focus:ring-blue-500/5 focus:border-blue-500 text-sm font-semibold transition-all resize-none"
+                  className="w-full p-5 rounded-2xl border border-slate-100 bg-slate-50 focus:outline-none focus:ring-4 focus:ring-[#008577]/10 focus:border-[#008577] text-sm font-semibold transition-all resize-none"
                 ></textarea>
               </div>
 
@@ -594,7 +582,7 @@ const Reviews = () => {
                     onChange={handleImageUpload}
                     className="absolute inset-0 opacity-0 cursor-pointer z-10"
                   />
-                  <div className="w-full p-8 border-2 border-dashed border-slate-200 rounded-[2rem] flex flex-col items-center justify-center gap-3 bg-slate-50 group-hover:bg-blue-50/30 group-hover:border-blue-200 transition-all">
+                  <div className="w-full p-8 border-2 border-dashed border-slate-200 rounded-[2rem] flex flex-col items-center justify-center gap-3 bg-slate-50 group-hover:bg-emerald-50/40 group-hover:border-[#008577]/40 transition-all">
                     {newReview.review_image ? (
                       <div className="relative">
                         <img src={resolveReviewImage(newReview.review_image)} className="w-32 h-32 rounded-2xl object-cover shadow-xl" />
@@ -634,7 +622,7 @@ const Reviews = () => {
               <button
                 onClick={handleSubmitNewReview}
                 disabled={submitting}
-                className="flex items-center gap-2 px-8 py-3 bg-[#4b0b78] text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#260642] shadow-xl shadow-purple-900/20 transition-all active:scale-95 disabled:opacity-50"
+                className="flex items-center gap-2 px-8 py-3 bg-[#003B3B] text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-[#008577] shadow-xl shadow-emerald-900/20 transition-all active:scale-95 disabled:opacity-50"
               >
                 {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
                 {submitting ? "Creating..." : "Create Review"}

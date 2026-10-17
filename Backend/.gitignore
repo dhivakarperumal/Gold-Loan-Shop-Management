@@ -4,6 +4,8 @@ uploads/categories/*
 !uploads/categories/.gitkeep
 uploads/products/*
 !uploads/products/.gitkeep
+uploads/reviews/*
+!uploads/reviews/.gitkeep
 private_uploads/loan-customers/*
 !private_uploads/loan-customers/.gitkeep
 private_uploads/loan-customer-documents/*
