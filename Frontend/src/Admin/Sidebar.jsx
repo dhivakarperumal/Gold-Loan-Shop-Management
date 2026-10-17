@@ -96,7 +96,7 @@ const navItems = [
     icon: SettingsIcon,
     children: [
       { path: "/admin/settings", label: "General Settings", icon: SettingsIcon },
-      { path: "/admin/settings/daily-gold-rate", label: "Daily Gold Rate", icon: Coins },
+      { path: "/admin/settings/daily-gold-rate", label: "Daily Precious Rates", icon: Coins },
     ],
   },
   { path: "/", label: "Back Home", icon: Home },

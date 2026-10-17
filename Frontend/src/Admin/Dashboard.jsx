@@ -596,7 +596,7 @@ const Dashboard = () => {
             { label: "All Loans", icon: <FaCoins size={18} />, color: "from-[#047857] to-[#34D399]", path: "/admin/loans/allloans" },
             { label: "Customers", icon: <FiUsers size={18} />, color: "from-[#B7791F] to-[#F5C45E]", path: "/admin/loans/customermanagement" },
             { label: "Stock Details", icon: <FiBox size={18} />, color: "from-[#B45309] to-[#F59E0B]", path: "/admin/products/stock" },
-            { label: "Daily Gold Rate", icon: <FaGem size={18} />, color: "from-[#003B3B] to-[#008577]", path: "/admin/settings/daily-gold-rate" }
+            { label: "Daily Precious Rates", icon: <FaGem size={18} />, color: "from-[#003B3B] to-[#008577]", path: "/admin/settings/daily-gold-rate" }
           ].map((action) => (
             <button
               key={action.label}
@@ -613,7 +613,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* ── Active Daily Gold Rates Banner (Essential for Sri Golds) ── */}
+      {/* ── Active daily precious rates banner ── */}
       <div className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-[#003B3B] text-[#F5C45E] flex items-center justify-center font-bold text-base shrink-0 shadow-sm">
@@ -621,7 +621,7 @@ const Dashboard = () => {
           </div>
           <div>
             <h2 className="text-xs font-extrabold text-[#003B3B] uppercase tracking-wider">
-              Sri Golds Daily Rates
+              Sri Golds Precious Rates
             </h2>
             <p className="text-[11px] font-medium text-slate-400">
               {goldRatesLoading ? "Refreshing rates..." : currentGoldRates ? `Effective ${formatRateDate(currentGoldRates.rate_date)}` : "Live benchmark market rates"}
@@ -630,11 +630,11 @@ const Dashboard = () => {
         </div>
 
         {currentGoldRates?.rates ? (
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-            {currentGoldRates.rates.slice(0, 4).map((rate) => (
+          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
+            {currentGoldRates.rates.map((rate) => (
               <div key={`${rate.metal_type}-${rate.purity}`} className="rounded-xl bg-emerald-50/60 border border-emerald-100/50 px-3 py-1.5">
                 <span className="text-[10px] font-bold text-slate-500 uppercase">{rate.metal_type} {rate.purity}</span>
-                <p className="text-xs font-black text-[#003B3B]">₹{Number(rate.rate_per_gram).toLocaleString("en-IN")}/g</p>
+                <p className="text-xs font-black text-[#003B3B]">₹{Number(rate.rate_per_unit ?? rate.rate_per_gram).toLocaleString("en-IN")}/{rate.rate_unit === "carat" ? "ct" : "g"}</p>
               </div>
             ))}
           </div>

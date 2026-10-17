@@ -4,12 +4,10 @@ const {
   getCurrentGoldRates,
   listRateBatches,
   listRateHistory,
+  RATE_SPECS,
   updateRateBatch
 } = require('../modules/goldRateModule');
 
-const RATE_KEYS = [
-  'gold_999', 'gold_916', 'gold_833', 'gold_750', 'gold_585', 'silver_999'
-];
 const MAKING_TYPES = new Set(['Percentage', 'Fixed Amount']);
 
 function numericValue(value) {
@@ -39,15 +37,15 @@ function normalizeBatch(body) {
     return { error: 'Wastage percentage must be between 0 and 100' };
   }
   if (!body.rates || typeof body.rates !== 'object' || Array.isArray(body.rates)) {
-    return { error: 'Enter all six metal rates' };
+    return { error: 'Enter all required rates' };
   }
   const rates = {};
-  for (const key of RATE_KEYS) {
-    const value = numericValue(body.rates[key]);
+  for (const spec of RATE_SPECS) {
+    const value = numericValue(body.rates[spec.key]);
     if (!Number.isFinite(value) || value <= 0 || value > 1000000000) {
-      return { error: `Enter a valid positive rate for ${key.replace('_', ' ')}` };
+      return { error: `Enter a valid positive rate for ${`${spec.metal_type} ${spec.purity}`}` };
     }
-    rates[key] = value;
+    rates[spec.key] = value;
   }
   if (typeof body.reason !== 'string' || !body.reason.trim() || body.reason.trim().length > 500) {
     return { error: 'A reason of 1 to 500 characters is required' };
