@@ -42,7 +42,7 @@ const navItems = [
     icon: HandCoins,
     children: [
       { path: "/admin/loans/customermanagement", label: "Customer Management", icon: FilePlus },
-      { path: "/admin/loans/createloan", label: "Create New Loan", icon: FilePlus },
+      // { path: "/admin/loans/createloan", label: "Create New Loan", icon: FilePlus },
       { path: "/admin/loans/allloans", label: "All Loans", icon: Files },
       { path: "/admin/loans/loanrepayment", label: "Loan Repayment", icon: HandCoins },
       { path: "/admin/loans/loanreniwel", label: "Loan Renewal", icon: RefreshCw },

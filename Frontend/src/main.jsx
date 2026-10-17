@@ -21,17 +21,17 @@ const Register = React.lazy(() => import("./Components/Auth/Register.jsx"));
 const AdminPanel = React.lazy(() => import("./Admin/AdminPanel.jsx"));
 const Dashboard = React.lazy(() => import("./Admin/Dashboard.jsx"));
 const Users = React.lazy(() => import("./Admin/Pages/Users.jsx"));
-const Category = React.lazy(() => import("./Admin/Pages/Category.jsx"));
-const Metals = React.lazy(() => import("./Admin/Pages/Metals.jsx"));
-const AddProducts = React.lazy(() => import("./Admin/Pages/AddProducts.jsx"));
-const AllProducts = React.lazy(() => import("./Admin/Pages/AllProducts.jsx"));
-const ProductDetail = React.lazy(() => import("./Admin/Pages/ProductDetail.jsx"));
-const LoanCustomerManagement = React.lazy(() => import("./Admin/Pages/LoanCustomerManagement.jsx"));
-const LoanCustomerDetails = React.lazy(() => import("./Admin/Pages/LoanCustomerDetails.jsx"));
-const CreateLoan = React.lazy(() => import("./Admin/Pages/CreateLoan.jsx"));
-const AllLoans = React.lazy(() => import("./Admin/Pages/AllLoans.jsx"));
-const LoanDetails = React.lazy(() => import("./Admin/Pages/LoanDetails.jsx"));
-const InterestManagement = React.lazy(() => import("./Admin/Pages/InterestManagement.jsx"));
+const Category = React.lazy(() => import("./Admin/Categery/Category.jsx"));
+const Metals = React.lazy(() => import("./Admin/Metal Type/Metals.jsx"));
+const AddProducts = React.lazy(() => import("./Admin/Products/AddProducts.jsx"));
+const AllProducts = React.lazy(() => import("./Admin/Products/AllProducts.jsx"));
+const ProductDetail = React.lazy(() => import("./Admin/Products/ProductDetail.jsx"));
+const LoanCustomerManagement = React.lazy(() => import("./Admin/Loanmanagements/LoanCustomerManagement.jsx"));
+const LoanCustomerDetails = React.lazy(() => import("./Admin/Loanmanagements/LoanCustomerDetails.jsx"));
+const CreateLoan = React.lazy(() => import("./Admin/Loanmanagements/CreateLoan.jsx"));
+const AllLoans = React.lazy(() => import("./Admin/Loanmanagements/AllLoans.jsx"));
+const LoanDetails = React.lazy(() => import("./Admin/Loanmanagements/LoanDetails.jsx"));
+const InterestManagement = React.lazy(() => import("./Admin/Loanmanagements/InterestManagement.jsx"));
 
 const ErrorPage = React.lazy(() => import("./Admin/Pages/ErrorPage.jsx"));
 
