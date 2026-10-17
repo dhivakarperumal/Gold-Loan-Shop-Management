@@ -262,6 +262,9 @@ export default function CreateLoan() {
           ...initialLoan(),
           ...Object.fromEntries(Object.keys(initialLoan()).map((field) => {
             const value = loan[field];
+            if (field === "jewellery_type") {
+              return [field, !savedJewelleryType ? "" : isKnownJewelleryType ? savedJewelleryType : "Other"];
+            }
             if (value == null) return [field, ""];
             if (["loan_date", "maturity_date", "interest_calculation_start_date"].includes(field)) {
               return [field, formDate(value)];
@@ -589,15 +592,7 @@ export default function CreateLoan() {
               form={form}
               onChange={handleChange}
               required
-              options={[
-                ["", "Select jewellery category"],
-                ...(!JEWELLERY_TYPE_OPTIONS.some(([value]) => value === form.jewellery_type) && form.jewellery_type
-                  ? [["Other", "Other"]]
-                  : JEWELLERY_TYPE_OPTIONS),
-                ...(!JEWELLERY_TYPE_OPTIONS.some(([value]) => value === form.jewellery_type) && form.jewellery_type
-                  ? []
-                  : [])
-              ]}
+              options={[["", "Select jewellery category"], ...JEWELLERY_TYPE_OPTIONS]}
             />
             {form.jewellery_type === "Other" && (
               <FormField
