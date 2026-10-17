@@ -1,8 +1,11 @@
 
 import React, { useEffect, useState } from "react";
 import { FaArrowRight, FaHeart, FaShoppingBag } from "react-icons/fa";
+import { Swiper, SwiperSlide } from "swiper/react";
 import api from "../../api";
 import { formatProductPrice, getProductDetails, getProductImageUrl } from "./productDisplay";
+
+import "swiper/css";
 
 const Diamond = () => {
     const [products, setProducts] = useState([]);
@@ -62,61 +65,73 @@ const Diamond = () => {
                         </a>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                        {loading ? (
-                            <p className="col-span-full py-8 text-center text-sm text-[#777066]" role="status">Loading diamond products...</p>
-                        ) : error ? (
-                            <p className="col-span-full py-8 text-center text-sm text-[#777066]" role="alert">Products could not be loaded.</p>
-                        ) : products.length === 0 ? (
-                            <p className="col-span-full py-8 text-center text-sm text-[#777066]">No diamond products available.</p>
-                        ) : products.map((product) => (
-                            <article
-                                key={product.id}
-                                className="group min-w-0 overflow-hidden rounded-md border border-[#eadfce] bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-md"
-                            >
-                                {/* Product image */}
-                                <div className="relative aspect-[1.12/1] overflow-hidden bg-[#f6efe4]">
-                                    <img
-                                        src={getProductImageUrl(product)}
-                                        alt={product.name}
-                                        loading="lazy"
-                                        className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                    />
+                    {loading ? (
+                        <p className="py-8 text-center text-sm text-[#777066]" role="status">Loading diamond products...</p>
+                    ) : error ? (
+                        <p className="py-8 text-center text-sm text-[#777066]" role="alert">Products could not be loaded.</p>
+                    ) : products.length === 0 ? (
+                        <p className="py-8 text-center text-sm text-[#777066]">No diamond products available.</p>
+                    ) : (
+                        <Swiper
+                            slidesPerView={2.1}
+                            spaceBetween={12}
+                            breakpoints={{
+                                480: { slidesPerView: 2.5 },
+                                640: { slidesPerView: 3 },
+                                1024: { slidesPerView: 3.5 },
+                                1280: { slidesPerView: 4 },
+                            }}
+                            grabCursor
+                            className="!pb-2"
+                        >
+                            {products.map((product) => (
+                                <SwiperSlide key={product.id} className="h-auto">
+                                    <article className="group h-full min-w-0 overflow-hidden rounded-md border border-[#eadfce] bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+                                        {/* Product image */}
+                                        <div className="relative aspect-[1.12/1] overflow-hidden bg-[#f6efe4]">
+                                            <img
+                                                src={getProductImageUrl(product)}
+                                                alt={product.name}
+                                                loading="lazy"
+                                                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                                            />
 
-                                    <button
-                                        type="button"
-                                        aria-label={`Add ${product.name} to wishlist`}
-                                        className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-md bg-white/95 text-[#81513b] shadow-sm transition-colors hover:bg-[#fff0e8] hover:text-red-600"
-                                    >
-                                        <FaHeart size={13} />
-                                    </button>
-                                </div>
+                                            <button
+                                                type="button"
+                                                aria-label={`Add ${product.name} to wishlist`}
+                                                className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-md bg-white/95 text-[#81513b] shadow-sm transition-colors hover:bg-[#fff0e8] hover:text-red-600"
+                                            >
+                                                <FaHeart size={13} />
+                                            </button>
+                                        </div>
 
-                                {/* Product details */}
-                                <div className="p-2">
-                                    <h3 className="truncate font-serif text-xs font-semibold text-[#292018] sm:text-sm">
-                                        {product.name}
-                                    </h3>
+                                        {/* Product details */}
+                                        <div className="p-2">
+                                            <h3 className="truncate font-serif text-xs font-semibold text-[#292018] sm:text-sm">
+                                                {product.name}
+                                            </h3>
 
-                                    <p className="mt-1 truncate text-[10px] text-[#777066] sm:text-xs">
-                                        {getProductDetails(product)}
-                                    </p>
+                                            <p className="mt-1 truncate text-[10px] text-[#777066] sm:text-xs">
+                                                {getProductDetails(product)}
+                                            </p>
 
-                                    <p className="mt-1 text-sm font-bold text-[#9c3218] sm:text-base">
-                                        {formatProductPrice(product)}
-                                    </p>
+                                            <p className="mt-1 text-sm font-bold text-[#9c3218] sm:text-base">
+                                                {formatProductPrice(product)}
+                                            </p>
 
-                                    <button
-                                        type="button"
-                                        className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-sm bg-gradient-to-r from-[#efb640] to-[#ffda78] px-1 py-2 text-[10px] font-bold text-[#35240e] transition-all hover:brightness-95 sm:text-xs"
-                                    >
-                                        <FaShoppingBag size={11} />
-                                        Add to Bag
-                                    </button>
-                                </div>
-                            </article>
-                        ))}
-                    </div>
+                                            <button
+                                                type="button"
+                                                className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-sm bg-gradient-to-r from-[#efb640] to-[#ffda78] px-1 py-2 text-[10px] font-bold text-[#35240e] transition-all hover:brightness-95 sm:text-xs"
+                                            >
+                                                <FaShoppingBag size={11} />
+                                                Add to Bag
+                                            </button>
+                                        </div>
+                                    </article>
+                                </SwiperSlide>
+                            ))}
+                        </Swiper>
+                    )}
                 </div>
 
 
