@@ -21,7 +21,13 @@ import {
   Handshake,
   Video,
   Image,
-  Gem
+  Gem,
+  FilePlus,
+  Files,
+  HandCoins,
+  RefreshCw,
+  Clock3,
+  Percent
 } from "lucide-react";
 
 import api from "../api";
@@ -32,16 +38,20 @@ const navItems = [
 
 
   {
-    label: "Orders",
-    icon: ShoppingCart,
+    label: "Loan Management",
+    icon: HandCoins,
     children: [
-      { path: "/admin/orders/new", label: "New Orders", icon: List },
-      { path: "/admin/orders/all", label: "All Orders", icon: Archive },
-      { path: "/admin/orders/delivery", label: "Delivery Orders", icon: Truck },
-      { path: "/admin/orders/cancelled", label: "Cancelled Orders", icon: XCircle },
-      { path: "/admin/orders/billing", label: "Billing", icon: PlusCircle },
+      { path: "/admin/loans/customermanagement", label: "Customer Management", icon: FilePlus },
+      { path: "/admin/loans/createloan", label: "Create New Loan", icon: FilePlus },
+      { path: "/admin/loans/allloans", label: "All Loans", icon: Files },
+      { path: "/admin/loans/loanrepayment", label: "Loan Repayment", icon: HandCoins },
+      { path: "/admin/loans/loanreniwel", label: "Loan Renewal", icon: RefreshCw },
+      { path: "/admin/loans/goldrelease", label: "Gold Release", icon: Gem },
+      { path: "/admin/loans/overdueloans", label: "Overdue Loans", icon: Clock3 },
+      { path: "/admin/loans/interestmanagement", label: "Interest Management", icon: Percent },
     ],
   },
+
 
   {
     label: "Products",

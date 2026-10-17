@@ -269,16 +269,16 @@ const AllProducts = () => {
                         </select>
                        <div className="flex items-center gap-3">
                     <div className="flex bg-gray-100 p-1 rounded-xl border border-gray-200">
-                        <button onClick={() => setViewMode("table")} className={`p-2 rounded-lg transition-all ${viewMode === "table" ? "bg-white text-[#7b2cbf] shadow-sm" : "text-gray-400 hover:text-slate-600"}`}>
+                        <button onClick={() => setViewMode("table")} className={`p-2 rounded-lg transition-all ${viewMode === "table" ? "bg-[#003B3B] text-white shadow-sm" : "text-gray-400 hover:text-slate-600"}`}>
                             <FiList size={17} />
                         </button>
-                        <button onClick={() => setViewMode("grid")} className={`p-2 rounded-lg transition-all ${viewMode === "grid" ? "bg-white text-[#7b2cbf] shadow-sm" : "text-gray-400 hover:text-slate-600"}`}>
+                        <button onClick={() => setViewMode("grid")} className={`p-2 rounded-lg transition-all ${viewMode === "grid" ? "bg-[#003B3B] text-white shadow-sm" : "text-gray-400 hover:text-slate-600"}`}>
                             <FiGrid size={17} />
                         </button>
                     </div>
                     <button
                         onClick={() => navigate("/admin/products/add")}
-                        className="flex items-center gap-2 bg-gradient-to-r from-[#240046] to-[#7b2cbf] hover:from-[#10002b] hover:to-[#5a189a] text-white px-5 py-3 rounded-xl font-bold text-sm transition-all shadow-lg shadow-purple-900/30 active:scale-95"
+                        className="flex items-center gap-2 bg-[#003B3B] hover:bg-[#008577] text-white px-5 py-3 rounded-xl font-bold text-sm transition-all shadow-lg shadow-[#003B3B]/20 active:scale-95"
                     >
                         <FiPlus size={16} /> Add New Saree
                     </button>
@@ -291,17 +291,17 @@ const AllProducts = () => {
                             <div className="overflow-x-auto">
                                 <table className="w-full text-left">
                                     <thead>
-                                        <tr className="bg-gradient-to-r from-[#1F0A3C] to-[#3c096c] border-b border-[#3c096c]">
-                                            <th className="px-4 py-4 text-[11px] font-bold text-[#FCD34D] uppercase tracking-wider w-10">
-                                                <input type="checkbox" className="rounded border-[#FCD34D]/40 accent-[#FCD34D]" />
+                                        <tr className="bg-[#003B3B] border-b border-[#003B3B]">
+                                            <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider w-10">
+                                                <input type="checkbox" className="rounded border-white/40 accent-white" />
                                             </th>
-                                            <th className="px-4 py-4 text-[11px] font-bold text-[#FCD34D] uppercase tracking-wider w-12">S.No.</th>
-                                            <th className="px-4 py-4 text-[11px] font-bold text-[#FCD34D] uppercase tracking-wider">Saree</th>
-                                            <th className="px-4 py-4 text-[11px] font-bold text-[#FCD34D] uppercase tracking-wider">Category</th>
-                                            <th className="px-4 py-4 text-[11px] font-bold text-[#FCD34D] uppercase tracking-wider">Price</th>
-                                            <th className="px-4 py-4 text-[11px] font-bold text-[#FCD34D] uppercase tracking-wider">Stock</th>
-                                            <th className="px-4 py-4 text-[11px] font-bold text-[#FCD34D] uppercase tracking-wider">Status</th>
-                                            <th className="px-4 py-4 text-[11px] font-bold text-[#FCD34D] uppercase tracking-wider">Actions</th>
+                                            <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider w-12">S.No.</th>
+                                            <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Saree</th>
+                                            <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Category</th>
+                                            <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Price</th>
+                                            <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Stock</th>
+                                            <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Status</th>
+                                            <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-50">
@@ -358,7 +358,7 @@ const AllProducts = () => {
                                                     <div className="flex items-center gap-2">
                                                         <Link
                                                             to={`/admin/products/${product.id}`}
-                                                            className="w-8 h-8 rounded-lg bg-[#240046]/10 text-[#7b2cbf] flex items-center justify-center hover:bg-[#240046] hover:text-[#FCD34D] transition-all"
+                                                            className="w-8 h-8 rounded-lg bg-[#003B3B]/10 text-[#003B3B] flex items-center justify-center hover:bg-[#003B3B] hover:text-white transition-all"
                                                             title="View"
                                                         >
                                                             <FiEye size={13} />
@@ -402,7 +402,7 @@ const AllProducts = () => {
                                             <button
                                                 key={page}
                                                 onClick={() => setCurrentPage(page)}
-                                                className={`w-8 h-8 rounded-lg text-xs font-bold transition-all border ${currentPage === page ? "bg-gradient-to-br from-[#1F0A3C] to-[#7b2cbf] border-[#7b2cbf] text-[#FCD34D] shadow-md shadow-purple-900/20" : "bg-white border-gray-200 text-gray-500 hover:border-[#7b2cbf]"}`}
+                                                className={`w-8 h-8 rounded-lg text-xs font-bold transition-all border ${currentPage === page ? "bg-[#003B3B] border-[#003B3B] text-white shadow-md shadow-[#003B3B]/20" : "bg-white border-gray-200 text-gray-500 hover:border-[#003B3B]"}`}
                                             >
                                                 {page}
                                             </button>
@@ -412,7 +412,7 @@ const AllProducts = () => {
                                     {totalPages > 5 && (
                                         <button
                                             onClick={() => setCurrentPage(totalPages)}
-                                            className={`w-8 h-8 rounded-lg text-xs font-bold border ${currentPage === totalPages ? "bg-gradient-to-br from-[#1F0A3C] to-[#7b2cbf] border-[#7b2cbf] text-[#FCD34D]" : "bg-white border-gray-200 text-gray-500 hover:border-[#7b2cbf]"}`}
+                                            className={`w-8 h-8 rounded-lg text-xs font-bold border ${currentPage === totalPages ? "bg-[#003B3B] border-[#003B3B] text-white" : "bg-white border-gray-200 text-gray-500 hover:border-[#003B3B]"}`}
                                         >
                                             {totalPages}
                                         </button>
@@ -460,7 +460,7 @@ const AllProducts = () => {
                                                 <p className="text-base font-black text-slate-800">₹{parseFloat(product.offer_price || product.mrp || 0).toLocaleString('en-IN')}</p>
                                                 <p className="text-[10px] text-gray-400">Stock: {product.total_stock ?? 0}</p>
                                             </div>
-                                            <Link to={`/admin/products/${product.id}`} className="px-3 py-1.5 bg-[#240046]/10 text-[#7b2cbf] rounded-lg text-xs font-bold hover:bg-[#240046] hover:text-[#FCD34D] transition-all">
+                                            <Link to={`/admin/products/${product.id}`} className="px-3 py-1.5 bg-[#003B3B]/10 text-[#003B3B] rounded-lg text-xs font-bold hover:bg-[#003B3B] hover:text-white transition-all">
                                                 View
                                             </Link>
                                         </div>
@@ -518,7 +518,7 @@ const AllProducts = () => {
                             <button
                                 type="submit"
                                 disabled={updatingStock}
-                                className="w-full py-5 bg-gradient-to-r from-[#1F0A3C] to-[#7b2cbf] hover:from-[#10002b] hover:to-[#5a189a] text-[#FCD34D] rounded-2xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 shadow-xl shadow-purple-900/20 flex items-center justify-center gap-3"
+                                className="w-full py-5 bg-[#003B3B] hover:bg-[#008577] text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 shadow-xl shadow-[#003B3B]/20 flex items-center justify-center gap-3"
                             >
                                 {updatingStock ? <div className="w-4 h-4 border-2 border-t-[#FCD34D] rounded-full animate-spin"></div> : "Sync Stock Record"}
                             </button>
@@ -583,14 +583,14 @@ const AllProducts = () => {
                                 <button
                                     onClick={(e) => handleRapidAdd(e, true)}
                                     disabled={rapidSaving}
-                                    className="w-full py-5 bg-white border-2 border-[#7b2cbf]/20 hover:bg-[#240046]/5 text-[#7b2cbf] rounded-2xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 flex items-center justify-center gap-3"
+                                    className="w-full py-5 bg-white border-2 border-[#003B3B]/20 hover:bg-[#003B3B]/5 text-[#003B3B] rounded-2xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 flex items-center justify-center gap-3"
                                 >
                                     List & Add Another
                                 </button>
                                 <button
                                     onClick={(e) => handleRapidAdd(e, false)}
                                     disabled={rapidSaving}
-                                    className="w-full py-5 bg-gradient-to-r from-[#1F0A3C] to-[#7b2cbf] hover:from-[#10002b] hover:to-[#5a189a] text-[#FCD34D] rounded-2xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 shadow-xl shadow-purple-900/20 flex items-center justify-center gap-3"
+                                    className="w-full py-5 bg-[#003B3B] hover:bg-[#008577] text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-all active:scale-95 shadow-xl shadow-[#003B3B]/20 flex items-center justify-center gap-3"
                                 >
                                     {rapidSaving ? <div className="w-4 h-4 border-2 border-t-[#FCD34D] rounded-full animate-spin"></div> : "Save & Close"}
                                 </button>
