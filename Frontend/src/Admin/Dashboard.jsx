@@ -643,7 +643,12 @@ const Dashboard = () => {
 
         {currentGoldRates?.rates ? (
           <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
-            {currentGoldRates.rates.map((rate) => (
+            {[...currentGoldRates.rates]
+              .sort((first, second) => (
+                ["Gold", "Silver", "Platinum", "Diamond"].indexOf(first.metal_type)
+                - ["Gold", "Silver", "Platinum", "Diamond"].indexOf(second.metal_type)
+              ))
+              .map((rate) => (
               <div key={`${rate.metal_type}-${rate.purity}`} className="group rounded-xl border border-white/10 bg-white/[0.08] px-3.5 py-3 backdrop-blur-sm transition hover:-translate-y-0.5 hover:border-amber-200/40 hover:bg-white/[0.13]">
                 <span className="block truncate text-[10px] font-bold uppercase tracking-[0.1em] text-emerald-50/70">{rate.metal_type} {rate.purity}</span>
                 <p className="mt-1.5 text-base font-extrabold tabular-nums text-white">
@@ -651,7 +656,7 @@ const Dashboard = () => {
                   <span className="ml-1 text-xs font-semibold text-emerald-100/70">/{rate.rate_unit === "carat" ? "ct" : "g"}</span>
                 </p>
               </div>
-            ))}
+              ))}
           </div>
         ) : (
           <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
