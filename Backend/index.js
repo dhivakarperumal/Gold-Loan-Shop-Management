@@ -8,6 +8,7 @@ const { initializeCategoryModule } = require('./src/modules/categoryModule');
 const { initializeMetalModule } = require('./src/modules/metalModule');
 const { initializeProductModule } = require('./src/modules/productModule');
 const { initializeLoanCustomerModule } = require('./src/modules/loanCustomerModule');
+const { initializeLoanModule } = require('./src/modules/loanModule');
 const apiRouter = require('./src/router');
 
 const app = express();
@@ -40,6 +41,7 @@ async function startServer() {
   await initializeMetalModule();
   await initializeProductModule();
   await initializeLoanCustomerModule();
+  await initializeLoanModule();
   const server = app.listen(PORT, () => {
     console.log(`Backend server is running on port ${PORT}`);
   });
