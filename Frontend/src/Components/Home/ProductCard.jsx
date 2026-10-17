@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { FaHeart } from "react-icons/fa";
 import { getProductImageUrl } from "./productDisplay";
 
@@ -6,6 +7,7 @@ const formatPrice = (value) =>
   `₹${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 
 const ProductCard = ({ product }) => {
+  const productId = product.id ?? product.product_id ?? product.productId;
   const mrp = Number(product.mrp || 0);
   const offerPrice = Number(
     product.offer_price ?? product.final_selling_price ?? product.mrp ?? 0
@@ -21,12 +23,18 @@ const ProductCard = ({ product }) => {
   return (
     <article className="group h-full overflow-hidden rounded-xl border border-[#eadfce] bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#d8b46c] hover:shadow-lg">
       <div className="relative aspect-[1.12/1] overflow-hidden bg-[#f6efe4]">
-        <img
-          src={getProductImageUrl(product)}
-          alt={product.name}
-          loading="lazy"
-          className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-        />
+        <Link
+          to={`/product/${productId}`}
+          aria-label={`View ${product.name} details`}
+          className="block h-full w-full"
+        >
+          <img
+            src={getProductImageUrl(product)}
+            alt={product.name}
+            loading="lazy"
+            className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+          />
+        </Link>
         <span className="absolute left-2 top-2 max-w-[70%] truncate rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[#765323] shadow-sm">
           {product.category || "Jewelry"}
         </span>
@@ -40,8 +48,10 @@ const ProductCard = ({ product }) => {
       </div>
 
       <div className="flex h-[190px] flex-col p-3 sm:p-4">
-        <h3 className="line-clamp-2 min-h-10 font-serif text-sm font-semibold leading-5 text-[#292018] sm:text-base">
+        <h3 className="line-clamp-2 min-h-10 font-serif text-sm font-semibold leading-5 text-[#292018] transition-colors hover:text-[#174a38] sm:text-base">
+          <Link to={`/product/${productId}`} aria-label={`View ${product.name} details`}>
           {product.name}
+          </Link>
         </h3>
 
         <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
