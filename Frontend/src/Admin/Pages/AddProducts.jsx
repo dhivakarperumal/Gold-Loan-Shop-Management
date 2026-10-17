@@ -1,848 +1,579 @@
-import React, { useState, useEffect } from "react";
-import {
-    FiArrowLeft,
-    FiSave,
-    FiTag,
-    FiBox,
-    FiLayers,
-    FiImage,
-    FiUploadCloud,
-    FiTrash2,
-    FiInfo,
-    FiMaximize,
-    FiScissors,
-    FiPlus,
-    FiDroplet,
-    FiPercent,
-    FiActivity,
-    FiStar,
-    FiHash
-} from "react-icons/fi";
-import { FaRupeeSign } from "react-icons/fa";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import api from "../../api";
 import { toast, Toaster } from "react-hot-toast";
-import imageCompression from "browser-image-compression";
+import {
+  FiArrowLeft,
+  FiCheck,
+  FiImage,
+  FiSave,
+  FiTrash2,
+  FiUploadCloud,
+  FiX
+} from "react-icons/fi";
+import api from "../../api";
 
-// Helper: Color to Name Utility
-const boutiqueColors = [
-    { name: "Pure Red", hex: "#FF0000" },
-    { name: "Crimson", hex: "#DC143C" },
-    { name: "Deep Maroon", hex: "#800000" },
-    { name: "Rose Pink", hex: "#FFC0CB" },
-    { name: "Hot Pink", hex: "#FF69B4" },
-    { name: "Magenta", hex: "#FF00FF" },
-    { name: "Royal Purple", hex: "#800080" },
-    { name: "Violet", hex: "#EE82EE" },
-    { name: "Indigo", hex: "#4B0082" },
-    { name: "Navy Blue", hex: "#000080" },
-    { name: "Royal Blue", hex: "#4169E1" },
-    { name: "Sky Blue", hex: "#87CEEB" },
-    { name: "Teal", hex: "#008080" },
-    { name: "Cyan", hex: "#00FFFF" },
-    { name: "Emerald Green", hex: "#50C878" },
-    { name: "Forest Green", hex: "#228B22" },
-    { name: "Olive Green", hex: "#808000" },
-    { name: "Lime Green", hex: "#32CD32" },
-    { name: "Golden Yellow", hex: "#FFD700" },
-    { name: "Mustard", hex: "#FFDB58" },
-    { name: "Bright Orange", hex: "#FFA500" },
-    { name: "Coral", hex: "#FF7F50" },
-    { name: "Peach", hex: "#FFDAB9" },
-    { name: "Beige", hex: "#F5F5DC" },
-    { name: "Cream", hex: "#FFFDD0" },
-    { name: "Pure White", hex: "#FFFFFF" },
-    { name: "Jet Black", hex: "#000000" },
-    { name: "Steel Grey", hex: "#808080" },
-    { name: "Silver Tone", hex: "#C0C0C0" },
-    { name: "Chocolate Brown", hex: "#8B4513" },
-    { name: "Copper", hex: "#B87333" },
-    { name: "Terracotta", hex: "#E2725B" },
-    { name: "Turquoise", hex: "#40E0D0" }
-];
+const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
+const GOLD_SHOP = "Sri Gold";
 
-const getNearestColorName = (hex) => {
-    hex = hex.replace("#", "");
-    const r1 = parseInt(hex.substring(0, 2), 16);
-    const g1 = parseInt(hex.substring(2, 4), 16);
-    const b1 = parseInt(hex.substring(4, 6), 16);
-
-    let minDistance = Infinity;
-    let nearestName = "Custom Shade";
-
-    boutiqueColors.forEach(color => {
-        const h = color.hex.replace("#", "");
-        const r2 = parseInt(h.substring(0, 2), 16);
-        const g2 = parseInt(h.substring(2, 4), 16);
-        const b2 = parseInt(h.substring(4, 6), 16);
-
-        const distance = Math.sqrt(
-            Math.pow(r2 - r1, 2) +
-            Math.pow(g2 - g1, 2) +
-            Math.pow(b2 - b1, 2)
-        );
-
-        if (distance < minDistance) {
-            minDistance = distance;
-            nearestName = color.name;
-        }
-    });
-
-    return nearestName;
+const EMPTY_PRODUCT = {
+  name: "",
+  product_code: "",
+  brand: GOLD_SHOP,
+  category: "",
+  metal_type: "",
+  product_type: "Traditional",
+  purity: "22K / 916",
+  gross_weight: "",
+  net_gold_weight: "",
+  gold_rate_per_gram: "",
+  making_charge_type: "Percentage",
+  making_charge: "",
+  wastage_type: "Percentage",
+  wastage: "",
+  stone_weight: "0",
+  stone_type: "None",
+  huid: "",
+  available_sizes: [],
+  product_size: "",
+  length: "",
+  width: "",
+  height: "",
+  ring_size: "",
+  bangle_size: "",
+  chain_length: "",
+  size_guide_chart: "",
+  mrp: "",
+  offer: "0",
+  offer_price: "",
+  discount: "0",
+  gst_rate: "",
+  final_selling_price: "",
+  price_includes_gst: true,
+  description: "",
+  full_description: "",
+  highlights: [],
+  specifications: "",
+  care_instructions: "",
+  warranty: "",
+  images: [],
+  video: "",
+  certificate: "",
+  rating: "0",
+  total_reviews: "0",
+  total_stock: "0",
+  stock_status: "Out of Stock",
+  sku_barcode: "",
+  warehouse: "Main Shop",
+  status: "Active",
+  featured: false,
+  new_arrival: false,
+  best_seller: false
 };
 
-const resolveImageUrl = (image) => {
-    if (!image || typeof image !== "string") return "";
-    if (image.startsWith("http") || image.startsWith("data:") || image.startsWith("blob:")) return image;
+const inputClass = "mt-1.5 w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm font-medium text-slate-800 outline-none transition focus:border-amber-400 focus:bg-white focus:ring-2 focus:ring-amber-100";
+const labelClass = "block text-xs font-bold uppercase tracking-wide text-gray-500";
 
-    const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:5000";
-    const cleanPath = image.replace(/\\/g, "/");
-    return `${backendUrl}${cleanPath.startsWith("/") ? cleanPath : `/${cleanPath}`}`;
+const imageUrl = (path) => {
+  if (!path) return "";
+  if (/^(https?:|data:|blob:)/i.test(path)) return path;
+  return `${BACKEND_URL}${path.startsWith("/") ? path : `/${path}`}`;
 };
+
+const Section = ({ title, children }) => (
+  <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
+    <div className="border-b border-gray-100 bg-[#003B3B]/5 px-5 py-4">
+      <h2 className="text-sm font-extrabold text-[#003B3B]">{title}</h2>
+    </div>
+    <div className="p-5">{children}</div>
+  </section>
+);
+
+const Field = ({ label, name, value, onChange, type = "text", placeholder = "", required = false, min, step, readOnly = false }) => (
+  <label className={labelClass}>
+    {label}{required && <span className="ml-1 text-red-500">*</span>}
+    <input
+      className={`${inputClass} ${readOnly ? "cursor-not-allowed bg-gray-100" : ""}`}
+      type={type}
+      name={name}
+      value={value ?? ""}
+      onChange={onChange}
+      placeholder={placeholder}
+      required={required}
+      min={min}
+      step={step}
+      readOnly={readOnly}
+    />
+  </label>
+);
+
+const SelectField = ({ label, name, value, onChange, options, required = false }) => (
+  <label className={labelClass}>
+    {label}{required && <span className="ml-1 text-red-500">*</span>}
+    <select className={inputClass} name={name} value={value ?? ""} onChange={onChange} required={required}>
+      {options.map((option) => {
+        const item = typeof option === "string" ? { value: option, label: option } : option;
+        return <option key={item.value} value={item.value}>{item.label}</option>;
+      })}
+    </select>
+  </label>
+);
 
 const AddProducts = () => {
-    const { id } = useParams();
-    const isEdit = !!id;
-    const navigate = useNavigate();
-    const [categories, setCategories] = useState([]);
-    const [subcategories, setSubcategories] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [fetching, setFetching] = useState(isEdit);
+  const { id } = useParams();
+  const isEdit = Boolean(id);
+  const navigate = useNavigate();
+  const [categories, setCategories] = useState([]);
+  const [metals, setMetals] = useState([]);
+  const [formData, setFormData] = useState(EMPTY_PRODUCT);
+  const [loading, setLoading] = useState(false);
+  const [fetching, setFetching] = useState(isEdit);
+  const [uploading, setUploading] = useState(false);
 
-    // Main State
-    const [formData, setFormData] = useState({
-        name: "",
-        description: "",
-        category: "Saree",
-        subcategory: "",
-        mrp: "",
-        offer: "",
-        offer_price: "",
-        product_code: "",
-        total_stock: "0",
-        rating: "5",
-        status: "Active",
-        material: "",
-        wash_care: "Dry Clean Only",
-        // Traditional Wear Specs
-        saree_length: "5.5 Meters",
-        blouse_length: "0.8 Meters",
-        top_length: "",
-        bottom_length: "",
-        dupatta_length: "",
-        gown_length: "",
-        sleeve_type: "",
-        neck_type: "",
-        fit_type: "",
-        work_type: "Embroidered",
-        zari_color: "Gold Zari",
-        age: "",
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      try {
+        const categoryRequest = api.get("/categories");
+        const metalRequest = api.get("/metals");
+        const productRequest = isEdit
+          ? api.get(`/products/${id}`)
+          : api.get("/products/latest-code");
+        const [categoryResponse, metalResponse, productResponse] = await Promise.all([
+          categoryRequest,
+          metalRequest,
+          productRequest
+        ]);
+        if (!active) return;
+        const categoryList = Array.isArray(categoryResponse.data) ? categoryResponse.data : [];
+        const metalList = Array.isArray(metalResponse.data) ? metalResponse.data : [];
+        setCategories(categoryList);
+        setMetals(metalList.filter((metal) => metal.status === "Active"));
+        if (isEdit) {
+          const product = productResponse.data;
+          setFormData({
+            ...EMPTY_PRODUCT,
+            ...product,
+            product_code: product.product_code || "",
+            available_sizes: Array.isArray(product.available_sizes) ? product.available_sizes : [],
+            highlights: Array.isArray(product.highlights) ? product.highlights : [],
+            images: Array.isArray(product.images) ? product.images : [],
+            offer: String(product.offer ?? "0"),
+            offer_price: String(product.offer_price ?? ""),
+            mrp: String(product.mrp ?? ""),
+            total_stock: String(product.total_stock ?? "0"),
+            price_includes_gst: Boolean(product.price_includes_gst)
+          });
+        } else {
+          const category = categoryList.find((item) => item.name === "Gold Jewellery") || categoryList[0];
+          setFormData((current) => ({
+            ...current,
+            category: category?.name || "",
+            subcategory: Array.isArray(category?.subcategory) ? category.subcategory[0] || "" : "",
+            metal_type: metalList.find((metal) => metal.status === "Active")?.name || "",
+            product_code: productResponse.data.latestCode || "GOLD-PRD-001"
+          }));
+        }
+      } catch (error) {
+        console.error("Failed to load product form data:", error);
+        toast.error(error.response?.data?.message || "Could not load product form data.");
+      } finally {
+        if (active) setFetching(false);
+      }
+    };
+    load();
+    return () => { active = false; };
+  }, [id, isEdit]);
+
+  const selectedCategory = categories.find((category) => category.name === formData.category);
+  const subcategories = Array.isArray(selectedCategory?.subcategory) ? selectedCategory.subcategory : [];
+
+  const goldValue = useMemo(
+    () => (Number(formData.net_gold_weight) || 0) * (Number(formData.gold_rate_per_gram) || 0),
+    [formData.net_gold_weight, formData.gold_rate_per_gram]
+  );
+
+  const pricing = useMemo(() => {
+    const mrp = Number(formData.mrp) || 0;
+    const discount = Number(formData.offer) || 0;
+    const offerPrice = Math.max(0, mrp - mrp * discount / 100);
+    const gstRate = Number(formData.gst_rate) || 0;
+    const finalPrice = formData.price_includes_gst
+      ? offerPrice
+      : offerPrice * (1 + gstRate / 100);
+    return { offerPrice, discount, finalPrice };
+  }, [formData.mrp, formData.offer, formData.gst_rate, formData.price_includes_gst]);
+
+  const handleChange = (event) => {
+    const { name, value, type, checked } = event.target;
+    const nextValue = type === "checkbox" ? checked : value;
+    setFormData((current) => {
+      if (name === "category") {
+        const category = categories.find((item) => item.name === value);
+        const categorySubcategories = Array.isArray(category?.subcategory) ? category.subcategory : [];
+        return {
+          ...current,
+          category: value,
+          subcategory: categorySubcategories.includes(current.subcategory) ? current.subcategory : categorySubcategories[0] || ""
+        };
+      }
+      return { ...current, [name]: nextValue };
     });
+  };
 
-    const [variants, setVariants] = useState([
-        {
-            color: "#3b82f6",
-            colorName: "",
-            images: [],
-            selectedSizes: [],
-            sizesStock: {}
-        }
-    ]);
+  const updateFormField = (name, value) => {
+    setFormData((current) => ({ ...current, [name]: value }));
+  };
 
-    // Track if total stock was manually edited
-    const [isStockManuallyEdited, setIsStockManuallyEdited] = useState(false);
+  const handleUpload = async (event, field) => {
+    const input = event.currentTarget;
+    const files = Array.from(input.files || []);
+    input.value = "";
+    if (files.length === 0) return;
+    const isImage = field === "images";
+    const isVideo = field === "video";
+    const acceptedTypes = isImage || field === "size_guide_chart" || field === "certificate"
+      ? ["image/png", "image/jpeg", ...(isVideo ? ["video/mp4"] : []), ...(field !== "images" ? ["application/pdf"] : [])]
+      : ["video/mp4"];
+    const invalidType = files.find((file) => !acceptedTypes.includes(file.type));
+    if (invalidType) {
+      toast.error(isVideo ? "Choose an MP4 video." : "Choose PNG/JPG images or a PDF document.");
+      return;
+    }
+    const maxBytes = isVideo ? 25 * 1024 * 1024 : 5 * 1024 * 1024;
+    if (files.some((file) => file.size > maxBytes)) {
+      toast.error(isVideo ? "Video must be 25 MB or smaller." : "Each upload must be 5 MB or smaller.");
+      return;
+    }
+    if (isImage && formData.images.length + files.length > 10) {
+      toast.error("Upload up to 10 product images.");
+      return;
+    }
 
-    // 1. Auto-calculate Offer Price whenever MRP or Offer % changes
-    useEffect(() => {
-        const mrpValue = parseFloat(formData.mrp) || 0;
-        const offerValue = parseFloat(formData.offer) || 0;
-        if (mrpValue > 0) {
-            const calculatedPrice = mrpValue - (mrpValue * (offerValue / 100));
-            setFormData(prev => ({ ...prev, offer_price: Math.round(calculatedPrice).toString() }));
-        } else {
-            setFormData(prev => ({ ...prev, offer_price: "0" }));
-        }
-    }, [formData.mrp, formData.offer]);
+    const payload = new FormData();
+    files.forEach((file) => payload.append(field, file));
+    try {
+      setUploading(true);
+      const response = await api.post("/products/upload-media", payload);
+      if (isImage) {
+        updateFormField("images", [...formData.images, ...(response.data.images || [])]);
+      } else {
+        updateFormField(field, response.data[field]);
+      }
+      toast.success("Upload complete.");
+    } catch (error) {
+      console.error("Product media upload failed:", error);
+      toast.error(error.response?.data?.message || "Upload failed.");
+    } finally {
+      setUploading(false);
+    }
+  };
 
-    // 2. Auto-calculate Total Stock whenever variants or sizesStock change
-    useEffect(() => {
-        if (!isStockManuallyEdited) {
-            let total = 0;
-            variants.forEach(variant => {
-                Object.values(variant.sizesStock || {}).forEach(qty => {
-                    total += parseInt(qty) || 0;
-                });
-            });
-            setFormData(prev => ({ ...prev, total_stock: total.toString() }));
-        }
-    }, [variants, isStockManuallyEdited]);
+  const removeImage = (index) => {
+    updateFormField("images", formData.images.filter((_, imageIndex) => imageIndex !== index));
+  };
 
-    // Size Logic based on Category
-    const getSizesByCategory = () => {
-        switch (formData.category) {
-            case "Saree": return ["Free Size"];
-            case "Lehenga":
-            case "Salwar":
-            case "Gown": return ["XS", "S", "M", "L", "XL", "XXL"];
-            case "Material": return ["Free Size"];
-            default: return [];
-        }
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!formData.name.trim() || !formData.product_code.trim() || !formData.category) {
+      toast.error("Product name, SKU, and category are required.");
+      return;
+    }
+    const stock = Math.max(0, Math.floor(Number(formData.total_stock) || 0));
+    const offerPrice = pricing.offerPrice;
+    const gst = Number(formData.gst_rate) || 0;
+    const finalPrice = pricing.finalPrice;
+    const product = {
+      ...formData,
+      name: formData.name.trim(),
+      product_code: formData.product_code.trim(),
+      brand: formData.brand.trim() || GOLD_SHOP,
+      total_stock: stock,
+      stock_status: stock <= 0 ? "Out of Stock" : stock < 10 ? "Low Stock" : "In Stock",
+      mrp: Number(formData.mrp) || 0,
+      offer: Number(formData.offer) || 0,
+      offer_price: offerPrice,
+      discount: pricing.discount,
+      gst_rate: gst,
+      final_selling_price: Number(finalPrice.toFixed(2)),
+      gross_weight: Number(formData.gross_weight) || 0,
+      net_gold_weight: Number(formData.net_gold_weight) || 0,
+      gold_rate_per_gram: Number(formData.gold_rate_per_gram) || 0,
+      making_charge: Number(formData.making_charge) || 0,
+      wastage: Number(formData.wastage) || 0,
+      stone_weight: Number(formData.stone_weight) || 0,
+      rating: Number(formData.rating) || 0,
+      total_reviews: Number(formData.total_reviews) || 0,
+      price_includes_gst: Boolean(formData.price_includes_gst),
+      images: formData.images,
+      variants: [{ images: formData.images }]
     };
+    try {
+      setLoading(true);
+      if (isEdit) {
+        await api.put(`/products/${id}`, product);
+        toast.success("Gold jewellery product updated.");
+      } else {
+        await api.post("/products", product);
+        toast.success("Gold jewellery product added.");
+      }
+      navigate("/admin/products/all");
+    } catch (error) {
+      console.error("Product save failed:", error);
+      toast.error(error.response?.data?.message || "Could not save the product.");
+      setLoading(false);
+    }
+  };
 
-    const sizeOptions = getSizesByCategory();
+  if (fetching) {
+    return <div className="py-20 text-center text-sm font-semibold text-gray-500">Loading product details...</div>;
+  }
 
-    useEffect(() => {
-        const fetchEssentialData = async () => {
-            try {
-                if (isEdit) {
-                    const [catRes, editRes] = await Promise.all([
-                        api.get("/categories"),
-                        api.get(`/products/${id}`)
-                    ]);
+  const uploadButton = (field, label, accept, multiple = false) => (
+    <label className="flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 p-5 text-center transition hover:border-amber-400 hover:bg-amber-50/40">
+      <FiUploadCloud className="mb-2 text-2xl text-amber-600" />
+      <span className="text-sm font-bold text-slate-700">{uploading ? "Uploading..." : label}</span>
+      <span className="mt-1 text-xs text-gray-500">{accept}</span>
+      <input type="file" accept={field === "video" ? "video/mp4" : "image/png,image/jpeg,application/pdf"} multiple={multiple} disabled={uploading} onChange={(event) => handleUpload(event, field)} className="sr-only" />
+    </label>
+  );
 
-                    setCategories(Array.isArray(catRes.data) ? catRes.data : []);
-                    try {
-                        const p = editRes.data;
-                        setFormData({
-                            name: p.name || "",
-                            description: p.description || "",
-                            category: p.category || "Saree",
-                            subcategory: p.subcategory || "",
-                            mrp: p.mrp?.toString() || "",
-                            offer: p.offer?.toString() || "",
-                            offer_price: p.offer_price?.toString() || "",
-                            product_code: p.product_code || "",
-                            total_stock: p.total_stock?.toString() || "0",
-                            rating: p.rating?.toString() || "5",
-                            status: p.status || "Active",
-                            material: p.material || "",
-                            wash_care: p.wash_care || "Dry Clean Only",
-                            saree_length: p.saree_length || "",
-                            blouse_length: p.blouse_length || "",
-                            top_length: p.top_length || "",
-                            bottom_length: p.bottom_length || "",
-                            dupatta_length: p.dupatta_length || "",
-                            gown_length: p.gown_length || "",
-                            sleeve_type: p.sleeve_type || "",
-                            neck_type: p.neck_type || "",
-                            fit_type: p.fit_type || "",
-                            work_type: p.work_type || "",
-                            zari_color: p.zari_color || "",
-                            age: p.age || "",
-                        });
-                        if (p.variants) setVariants(Array.isArray(p.variants) ? p.variants : JSON.parse(p.variants));
-                    } catch (e) {
-                        toast.error("Failed to fetch product details.");
-                    } finally {
-                        setFetching(false);
-                    }
-                } else {
-                    const [catRes, codeRes] = await Promise.all([
-                        api.get("/categories"),
-                        api.get("/products/latest-code")
-                    ]);
-                    
-                    setCategories(Array.isArray(catRes.data) ? catRes.data : []);
-                    setFormData(prev => ({
-                        ...prev,
-                        category: Array.isArray(catRes.data) && catRes.data[0]?.name ? catRes.data[0].name : "Saree",
-                        product_code: codeRes.data.latestCode || "SP001"
-                    }));
-                    setFetching(false);
-                }
-            } catch (error) {
-                console.error("Error fetching data:", error);
-                setFetching(false);
-            }
-        };
-        fetchEssentialData();
-    }, [id, isEdit]);
-
-    // Update Subcategories when Category changes
-    useEffect(() => {
-        const selectedCat = categories.find(c => c.name === formData.category);
-        if (selectedCat && selectedCat.subcategory) {
-            setSubcategories(selectedCat.subcategory);
-            // Only auto-select first subcat if it's currently empty
-            if (!formData.subcategory) {
-                setFormData(prev => ({ ...prev, subcategory: selectedCat.subcategory[0] || "" }));
-            }
-        } else {
-            setSubcategories([]);
-            if (!isEdit) setFormData(prev => ({ ...prev, subcategory: "" }));
-        }
-    }, [formData.category, categories, isEdit]);
-
-    const handleFormChange = (e) => {
-        const { name, value } = e.target;
-        if (name === "total_stock") setIsStockManuallyEdited(true);
-        setFormData(prev => ({ ...prev, [name]: value }));
-    };
-
-    // Reset stock to auto-calculate
-    const resetStockCalculation = () => {
-        setIsStockManuallyEdited(false);
-    };
-
-    // Variant Operations
-    const addVariant = () => {
-        const sizes = getSizesByCategory();
-        const initialVariant = {
-            color: "#3b82f6",
-            colorName: "",
-            images: [],
-            selectedSizes: sizes.length === 1 ? [sizes[0]] : [],
-            sizesStock: sizes.length === 1 ? { [sizes[0]]: 0 } : {}
-        };
-        setVariants([...variants, initialVariant]);
-    };
-
-    const removeVariant = (index) => {
-        if (variants.length > 1) setVariants(variants.filter((_, i) => i !== index));
-    };
-
-    const handleVariantChange = (index, field, value) => {
-        const updated = [...variants];
-        const newVariant = { ...updated[index], [field]: value };
-
-        // Auto-set colorName if color is updated
-        if (field === "color") {
-            newVariant.colorName = getNearestColorName(value);
-        }
-
-        updated[index] = newVariant;
-        setVariants(updated);
-    };
-
-    const toggleSize = (vIndex, size) => {
-        const updated = [...variants];
-        const selected = updated[vIndex].selectedSizes || [];
-        if (selected.includes(size)) {
-            updated[vIndex].selectedSizes = selected.filter(s => s !== size);
-            delete updated[vIndex].sizesStock[size];
-        } else {
-            updated[vIndex].selectedSizes = [...selected, size];
-            if (!updated[vIndex].sizesStock) updated[vIndex].sizesStock = {};
-            updated[vIndex].sizesStock[size] = 0; // Default stock 0
-        }
-        setVariants(updated);
-    };
-
-    const handleStockChange = (vIndex, size, value) => {
-        const updated = [...variants];
-        if (!updated[vIndex].sizesStock) updated[vIndex].sizesStock = {};
-        updated[vIndex].sizesStock[size] = parseInt(value) || 0;
-        setVariants(updated);
-    };
-
-    const handleVariantImageUpload = async (vIndex, e) => {
-        try {
-            const files = Array.from(e.target.files || []);
-
-            if (!files.length) return;
-
-            if ((variants[vIndex].images?.length || 0) + files.length > 5) {
-                toast.error("Boutique limit: Max 5 images per shade.");
-                return;
-            }
-
-            const formData = new FormData();
-            files.forEach((file) => {
-                formData.append("images", file);
-            });
-
-            const response = await api.post("/products/upload", formData, {
-                headers: {
-                    "Content-Type": "multipart/form-data"
-                }
-            });
-
-            const uploadedImages = response.data?.images || [];
-            if (!uploadedImages.length) {
-                toast.error("No images were saved.");
-                return;
-            }
-
-            const updated = [...variants];
-            updated[vIndex].images = [...(updated[vIndex].images || []), ...uploadedImages];
-            setVariants(updated);
-            toast.success(`Success! ${uploadedImages.length} boutique images added.`);
-
-            e.target.value = "";
-        } catch (error) {
-            console.error("Product image upload error:", error);
-            toast.error(error.response?.data?.message || "Upload failed.");
-        }
-    };
-
-    const removeVariantImage = (vIndex, imgIndex) => {
-        const updated = [...variants];
-        updated[vIndex].images = updated[vIndex].images.filter((_, i) => i !== imgIndex);
-        setVariants(updated);
-    };
-
-    const handleSubmit = async (e) => {
-        if (e) e.preventDefault();
-
-        if (!formData.name || !formData.category || !formData.mrp || !formData.age) {
-            toast.error("Please fill in the essentials.");
-            return;
-        }
-
-        setLoading(true);
-        try {
-            const variantStockTotal = variants.reduce(
-                (total, variant) => total + Object.values(variant.sizesStock || {}).reduce(
-                    (stockTotal, quantity) => stockTotal + (parseInt(quantity, 10) || 0),
-                    0,
-                ),
-                0,
-            );
-            const hasVariantStock = variants.some(
-                (variant) => Object.keys(variant.sizesStock || {}).length > 0,
-            );
-            const finalTotalStock = isStockManuallyEdited
-                ? parseInt(formData.total_stock, 10) || 0
-                : hasVariantStock
-                    ? variantStockTotal
-                    : parseInt(formData.total_stock, 10) || 0;
-            const finalData = {
-                ...formData,
-                total_stock: finalTotalStock.toString(),
-                variants,
-            };
-            if (isEdit) {
-                await api.put(`/products/${id}`, finalData);
-                toast.success("Artisan masterpiece updated!");
-            } else {
-                await api.post("/products", finalData);
-                toast.success("Artisan piece listed successfully!");
-            }
-            setTimeout(() => navigate("/admin/products/all"), 1500);
-        } catch (error) {
-            console.error("Submit error:", error);
-            toast.error(error.response?.data?.message || "Operation failed.");
-            setLoading(false);
-        }
-    };
-
-    if (fetching) return (
-        <div className="flex flex-col items-center justify-center py-20">
-            <div className="w-10 h-10 border-4 border-[#1F0A3C]/20 border-t-[#1F0A3C] rounded-full animate-spin mb-4"></div>
-            <p className="text-gray-500 font-semibold">Loading...</p>
+  return (
+    <div className="space-y-5 pb-12">
+      <Toaster position="top-right" />
+      <div className="flex items-center gap-3">
+        <button type="button" onClick={() => navigate(-1)} aria-label="Go back" className="rounded-xl border border-gray-200 bg-white p-2.5 text-gray-500 shadow-sm transition hover:text-[#003B3B]">
+          <FiArrowLeft size={18} />
+        </button>
+        <div>
+          <h1 className="text-xl font-black text-[#003B3B]">{isEdit ? "Edit Gold Product" : "Add Gold Product"}</h1>
+          <p className="text-xs text-gray-500">Manage gold jewellery details, pricing, media, and inventory.</p>
         </div>
-    );
-    return (
-        <div className="space-y-6 pb-20">
+      </div>
 
-            {/* Page Header */}
-            <div className="flex items-center gap-3 pb-2">
-                <button onClick={() => navigate(-1)} className="p-2.5 bg-white border border-gray-200 rounded-xl text-gray-500 hover:text-[#1F0A3C] hover:border-[#1F0A3C]/30 transition-all shadow-sm">
-                    <FiArrowLeft size={18} />
-                </button>
-                <div>
-                    <h1 className="text-xl font-bold text-[#1F0A3C]">{isEdit ? 'Edit Product' : 'Add New Product'}</h1>
-                    <p className="text-xs text-gray-400">Fill in product details below</p>
-                </div>
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 items-start gap-5 xl:grid-cols-3">
+        <div className="space-y-5 xl:col-span-2">
+          <Section title="1. Basic Information">
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <Field label="Product Name" name="name" value={formData.name} onChange={handleChange} placeholder="e.g. Classic Gold Chain" required />
+              <Field label="SKU / Product Code (Auto-generated)" name="product_code" value={formData.product_code} onChange={handleChange} placeholder="Generating..." required readOnly />
+              <SelectField label="Category" name="category" value={formData.category} onChange={handleChange} required options={[
+                { value: "", label: "Select category" },
+                ...categories.map((category) => ({ value: category.name, label: category.name }))
+              ]} />
+              <SelectField label="Subcategory" name="subcategory" value={formData.subcategory} onChange={handleChange} options={[
+                { value: "", label: "Select subcategory" },
+                ...subcategories.map((subcategory) => ({ value: subcategory, label: subcategory }))
+              ]} />
+              <SelectField label="Metal Type" name="metal_type" value={formData.metal_type} onChange={handleChange} options={[
+                { value: "", label: "Select metal type" },
+                ...metals.map((metal) => ({ value: metal.name, label: metal.purity ? `${metal.name} (${metal.purity})` : metal.name }))
+              ]} />
+              <SelectField label="Product Type" name="product_type" value={formData.product_type} onChange={handleChange} options={["Traditional", "Daily Wear", "Bridal", "Designer"]} />
             </div>
+          </Section>
 
-            <form onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="lg:col-span-2 space-y-5">
-                    {/* Primary Categorization & Identity */}
-                    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                        <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-100 bg-[#1F0A3C]/5">
-                            <div className="flex items-center gap-2">
-                                <span className="p-1.5 bg-[#1F0A3C] text-white rounded-lg"><FiLayers size={15} /></span>
-                                <h2 className="text-sm font-bold text-[#1F0A3C]">Product Foundation</h2>
-                            </div>
-                            <div className="flex items-center gap-1.5 px-3 py-1 bg-[#1F0A3C]/10 rounded-lg border border-[#1F0A3C]/15">
-                                <FiHash className="text-[#1F0A3C] w-3 h-3" />
-                                <span className="text-xs font-bold text-[#1F0A3C]">{formData.product_code || 'Generating...'}</span>
-                            </div>
-                        </div>
+          <Section title="2. Gold Details">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <SelectField label="Purity" name="purity" value={formData.purity} onChange={handleChange} options={["18K / 750", "20K", "22K / 916", "24K / 999", "Other"]} />
+              <Field label="Gross Weight (g)" name="gross_weight" type="number" min="0" step="0.001" value={formData.gross_weight} onChange={handleChange} placeholder="10" />
+              <Field label="Net Gold Weight (g)" name="net_gold_weight" type="number" min="0" step="0.001" value={formData.net_gold_weight} onChange={handleChange} placeholder="10" />
+              <Field label="Gold Rate / Gram (₹)" name="gold_rate_per_gram" type="number" min="0" step="0.01" value={formData.gold_rate_per_gram} onChange={handleChange} placeholder="Current shop rate" />
+              <SelectField label="Making Charge Type" name="making_charge_type" value={formData.making_charge_type} onChange={handleChange} options={["Percentage", "Fixed Amount"]} />
+              <Field label={formData.making_charge_type === "Percentage" ? "Making Charge (%)" : "Making Charge (₹)"} name="making_charge" type="number" min="0" step="0.01" value={formData.making_charge} onChange={handleChange} placeholder={formData.making_charge_type === "Percentage" ? "10" : "500"} />
+              <SelectField label="Wastage Type" name="wastage_type" value={formData.wastage_type} onChange={handleChange} options={["Percentage", "Grams"]} />
+              <Field label={formData.wastage_type === "Percentage" ? "Wastage (%)" : "Wastage (g)"} name="wastage" type="number" min="0" step="0.001" value={formData.wastage} onChange={handleChange} placeholder={formData.wastage_type === "Percentage" ? "e.g. 5" : "e.g. 0.5"} />
+              <Field label="Stone Weight (g)" name="stone_weight" type="number" min="0" step="0.001" value={formData.stone_weight} onChange={handleChange} placeholder="0" />
+              <SelectField label="Stone Type" name="stone_type" value={formData.stone_type} onChange={handleChange} options={["None", "Diamond", "Ruby", "Other"]} />
+              <Field label="Hallmark / HUID" name="huid" value={formData.huid} onChange={handleChange} placeholder="Verified HUID" />
+            </div>
+            {goldValue > 0 && (
+              <p className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
+                Estimated gold value: ₹{goldValue.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+              </p>
+            )}
+          </Section>
 
-                        <div className="p-5 space-y-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Category *</label>
-                                    <select name="category" value={formData.category} onChange={handleFormChange} className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:bg-white focus:border-[#1F0A3C]/40 focus:ring-2 focus:ring-[#1F0A3C]/10 transition-all text-sm font-semibold text-gray-800 cursor-pointer appearance-none">
-                                        {categories.map(cat => <option key={cat.id} value={cat.name}>{cat.name}</option>)}
-                                    </select>
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1"><FiStar className="text-amber-500 w-3 h-3" /> Rating</label>
-                                    <select name="rating" value={formData.rating} onChange={handleFormChange} className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:bg-white focus:border-[#1F0A3C]/40 focus:ring-2 focus:ring-[#1F0A3C]/10 transition-all text-sm font-semibold text-gray-800 cursor-pointer appearance-none">
-                                        <option value="1">1 Star</option>
-                                        <option value="2">2 Stars</option>
-                                        <option value="3">3 Stars</option>
-                                        <option value="4">4 Stars</option>
-                                        <option value="5">5 Stars (Excellent)</option>
-                                    </select>
-                                </div>
-                            </div>
-
-                            <div className="space-y-1">
-                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Age Group *</label>
-                                <select
-                                    name="age"
-                                    value={formData.age}
-                                    onChange={handleFormChange}
-                                    required
-                                    className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:bg-white focus:border-[#1F0A3C]/40 focus:ring-2 focus:ring-[#1F0A3C]/10 transition-all text-sm font-semibold text-gray-800 cursor-pointer appearance-none"
-                                >
-                                    <option value="">Select Age Group</option>
-                                    <option value="Infant (0–1)">Infant (0–1)</option>
-                                    <option value="Toddler (1–3)">Toddler (1–3)</option>
-                                    <option value="Kids (3–5)">Kids (3–5)</option>
-                                    <option value="Kids (5–7)">Kids (5–7)</option>
-                                    <option value="Kids (7–10)">Kids (7–10)</option>
-                                    <option value="Teen (10–15)">Teen (10–15)</option>
-                                    <option value="Teen (15–20)">Teen (15–20)</option>
-                                    <option value="Adult (20+)">Adult (20+)</option>
-                                </select>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Product Name *</label>
-                                    <input type="text" name="name" value={formData.name} onChange={handleFormChange} placeholder="e.g. Handwoven Banarasi Silk" className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:bg-white focus:border-[#1F0A3C]/40 focus:ring-2 focus:ring-[#1F0A3C]/10 transition-all text-sm font-semibold text-gray-800" required />
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Description</label>
-                                    <textarea name="description" value={formData.description} onChange={handleFormChange} rows="3" placeholder="Describe the product..." className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:bg-white focus:border-[#1F0A3C]/40 focus:ring-2 focus:ring-[#1F0A3C]/10 transition-all text-sm text-gray-600 resize-none" />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Pricing & Stock */}
-                    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                        <div className="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 bg-[#1F0A3C]/5">
-                            <span className="p-1.5 bg-[#1F0A3C] text-white rounded-lg"><FaRupeeSign size={15} /></span>
-                            <h2 className="text-sm font-bold text-[#1F0A3C]">Pricing & Stock</h2>
-                        </div>
-                        <div className="p-5">
-                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                                <div className="space-y-1">
-                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">MRP *</label>
-                                    <div className="relative">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 font-bold text-sm">₹</span>
-                                        <input type="number" name="mrp" value={formData.mrp} onChange={handleFormChange} className="w-full pl-7 pr-3 py-2.5 bg-gray-50 border border-gray-200 rounded-lg outline-none focus:bg-white focus:border-[#1F0A3C]/40 focus:ring-2 focus:ring-[#1F0A3C]/10 transition-all text-sm font-bold text-gray-900" required />
-                                    </div>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Offer %</label>
-                                    <div className="relative">
-                                        <FiPercent className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-500 w-3.5 h-3.5" />
-                                        <input type="number" name="offer" value={formData.offer} onChange={handleFormChange} className="w-full pl-7 pr-3 py-2.5 bg-amber-50 border border-amber-200 rounded-lg outline-none focus:bg-white focus:border-amber-400 transition-all text-sm font-bold text-amber-700" />
-                                    </div>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Offer Price</label>
-                                    <div className="relative">
-                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-emerald-600 font-bold text-sm">₹</span>
-                                        <input type="number" value={formData.offer_price} readOnly className="w-full pl-7 pr-3 py-2.5 bg-emerald-50 border border-emerald-200 rounded-lg text-sm font-bold text-emerald-700 cursor-not-allowed" />
-                                    </div>
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center justify-between">
-                                        Total Stock
-                                        {isStockManuallyEdited && (
-                                            <button onClick={resetStockCalculation} className="text-[9px] bg-[#1F0A3C]/10 text-[#1F0A3C] px-1.5 py-0.5 rounded hover:bg-[#1F0A3C] hover:text-white transition-colors uppercase tracking-widest">Auto</button>
-                                        )}
-                                    </label>
-                                    <div className="relative">
-                                        <FiActivity className={`absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 ${isStockManuallyEdited ? 'text-amber-500' : 'text-[#1F0A3C]'}`} />
-                                        <input type="number" name="total_stock" value={formData.total_stock} onChange={handleFormChange} className={`w-full pl-7 pr-3 py-2.5 border rounded-lg outline-none transition-all text-sm font-bold ${isStockManuallyEdited ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-[#1F0A3C]/5 border-[#1F0A3C]/20 text-[#1F0A3C]'}`} />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Vitals & Specs */}
-                    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                        <div className="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 bg-[#1F0A3C]/5">
-                            <span className="p-1.5 bg-[#1F0A3C] text-white rounded-lg"><FiMaximize size={15} /></span>
-                            <h2 className="text-sm font-bold text-[#1F0A3C]">Vitals & Artisanship</h2>
-                        </div>
-
-                        <div className="p-5">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div className="space-y-1">
-                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Core Fabric</label>
-                                    <input type="text" name="material" value={formData.material} onChange={handleFormChange} placeholder="Mulberry Silk" className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold text-gray-800 outline-none focus:bg-white focus:border-[#1F0A3C]/40 focus:ring-2 focus:ring-[#1F0A3C]/10 transition-all" />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Embroidery / Work</label>
-                                    <input type="text" name="work_type" value={formData.work_type} onChange={handleFormChange} placeholder="Zardozi" className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold text-gray-800 outline-none focus:bg-white focus:border-[#1F0A3C]/40 focus:ring-2 focus:ring-[#1F0A3C]/10 transition-all" />
-                                </div>
-                                <div className="space-y-1">
-                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider flex items-center gap-1"><FiDroplet className="text-blue-500 w-3 h-3" /> Wash Care</label>
-                                    <select name="wash_care" value={formData.wash_care} onChange={handleFormChange} className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold text-gray-800 outline-none focus:bg-white focus:border-[#1F0A3C]/40 focus:ring-2 focus:ring-[#1F0A3C]/10 transition-all cursor-pointer appearance-none">
-                                        <option value="Dry Clean Only">Dry Clean Only</option>
-                                        <option value="Mild Hand Wash">Mild Hand Wash</option>
-                                        <option value="Cold Machine Wash">Cold Machine Wash</option>
-                                        <option value="Petrol Wash Specialized">Petrol Wash Specialized</option>
-                                        <option value="No Bleach, Line Dry">No Bleach, Line Dry</option>
-                                    </select>
-                                </div>
-
-                                <div className="space-y-1">
-                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Subcategory</label>
-                                    <select name="subcategory" value={formData.subcategory} onChange={handleFormChange} className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold text-gray-800 outline-none focus:bg-white focus:border-[#1F0A3C]/40 focus:ring-2 focus:ring-[#1F0A3C]/10 transition-all cursor-pointer appearance-none disabled:opacity-40" disabled={subcategories.length === 0}>
-                                        <option value="">Default</option>
-                                        {subcategories.map((sub, i) => <option key={i} value={sub}>{sub}</option>)}
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Size & Fit Section */}
-                    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                        <div className="flex items-center gap-2 px-5 py-3.5 border-b border-gray-100 bg-[#1F0A3C]/5">
-                            <span className="p-1.5 bg-[#1F0A3C] text-white rounded-lg"><FiScissors size={15} /></span>
-                            <h2 className="text-sm font-bold text-[#1F0A3C]">Size & Fit</h2>
-                        </div>
-                        <div className="p-5 space-y-4">
-                            {formData.category === "Saree" && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-1">
-                                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Saree Length</label>
-                                        <input
-                                            type="text"
-                                            name="saree_length"
-                                            value={formData.saree_length}
-                                            onChange={handleFormChange}
-                                            placeholder="e.g. 5.5 Meters"
-                                            className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold text-gray-800 outline-none focus:bg-white focus:border-[#1F0A3C]/40 focus:ring-2 focus:ring-[#1F0A3C]/10 transition-all"
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Blouse Length</label>
-                                        <input
-                                            type="text"
-                                            name="blouse_length"
-                                            value={formData.blouse_length}
-                                            onChange={handleFormChange}
-                                            placeholder="e.g. 0.8 Meters"
-                                            className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold text-gray-800 outline-none focus:bg-white focus:border-[#1F0A3C]/40 focus:ring-2 focus:ring-[#1F0A3C]/10 transition-all"
-                                        />
-                                    </div>
-                                </div>
-                            )}
-
-                            {(formData.category === "Lehenga" ||
-                                formData.category === "Salwar" ||
-                                formData.category === "Material") && (
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <div className="space-y-1">
-                                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Top / Lehenga Length</label>
-                                            <input
-                                                type="text"
-                                                name="top_length"
-                                                value={formData.top_length}
-                                                onChange={handleFormChange}
-                                                placeholder="Length"
-                                                className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold text-gray-800 outline-none focus:bg-white focus:border-[#1F0A3C]/40 focus:ring-2 focus:ring-[#1F0A3C]/10 transition-all"
-                                            />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Bottom Length</label>
-                                            <input
-                                                type="text"
-                                                name="bottom_length"
-                                                value={formData.bottom_length}
-                                                onChange={handleFormChange}
-                                                placeholder="Length"
-                                                className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold text-gray-800 outline-none focus:bg-white focus:border-[#1F0A3C]/40 focus:ring-2 focus:ring-[#1F0A3C]/10 transition-all"
-                                            />
-                                        </div>
-                                        <div className="space-y-1">
-                                            <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Dupatta Length</label>
-                                            <input
-                                                type="text"
-                                                name="dupatta_length"
-                                                value={formData.dupatta_length}
-                                                onChange={handleFormChange}
-                                                placeholder="Length"
-                                                className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold text-gray-800 outline-none focus:bg-white focus:border-[#1F0A3C]/40 focus:ring-2 focus:ring-[#1F0A3C]/10 transition-all"
-                                            />
-                                        </div>
-                                    </div>
-                                )}
-
-                            {formData.category === "Gown" && (
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div className="space-y-1">
-                                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Gown Length</label>
-                                        <input
-                                            type="text"
-                                            name="gown_length"
-                                            value={formData.gown_length}
-                                            onChange={handleFormChange}
-                                            placeholder="Length"
-                                            className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold text-gray-800 outline-none focus:bg-white focus:border-[#1F0A3C]/40 focus:ring-2 focus:ring-[#1F0A3C]/10 transition-all"
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Sleeve Type</label>
-                                        <input
-                                            type="text"
-                                            name="sleeve_type"
-                                            value={formData.sleeve_type}
-                                            onChange={handleFormChange}
-                                            placeholder="Full Sleeve / Half Sleeve"
-                                            className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold text-gray-800 outline-none focus:bg-white focus:border-[#1F0A3C]/40 focus:ring-2 focus:ring-[#1F0A3C]/10 transition-all"
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Neck Type</label>
-                                        <input
-                                            type="text"
-                                            name="neck_type"
-                                            value={formData.neck_type}
-                                            onChange={handleFormChange}
-                                            placeholder="V-Neck / Round Neck"
-                                            className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold text-gray-800 outline-none focus:bg-white focus:border-[#1F0A3C]/40 focus:ring-2 focus:ring-[#1F0A3C]/10 transition-all"
-                                        />
-                                    </div>
-                                    <div className="space-y-1">
-                                        <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Fit Type</label>
-                                        <input
-                                            type="text"
-                                            name="fit_type"
-                                            value={formData.fit_type}
-                                            onChange={handleFormChange}
-                                            placeholder="Regular Fit / Slim Fit"
-                                            className="w-full px-3.5 py-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm font-semibold text-gray-800 outline-none focus:bg-white focus:border-[#1F0A3C]/40 focus:ring-2 focus:ring-[#1F0A3C]/10 transition-all"
-                                        />
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-                    </div>
+          <Section title="3. Size & Dimensions">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <Field label="Available Sizes" name="available_sizes_text" value={formData.available_sizes.join(", ")} onChange={(event) => updateFormField("available_sizes", event.target.value.split(",").map((size) => size.trim()).filter(Boolean))} placeholder="12, 14, 16, 18 inches" />
+              <SelectField label="Product Size" name="product_size" value={formData.product_size} onChange={handleChange} options={[
+                { value: "", label: "Select size" }, "Small", "Medium", "Large", "Free Size"
+              ]} />
+              <Field label="Length" name="length" value={formData.length} onChange={handleChange} placeholder="18 inches" />
+              <Field label="Width" name="width" value={formData.width} onChange={handleChange} placeholder="5 mm" />
+              <Field label="Height / Thickness" name="height" value={formData.height} onChange={handleChange} placeholder="2 mm" />
+              <Field label="Ring Size" name="ring_size" value={formData.ring_size} onChange={handleChange} placeholder="As applicable" />
+              <Field label="Bangle Size" name="bangle_size" value={formData.bangle_size} onChange={handleChange} placeholder="As applicable" />
+              <Field label="Chain Length" name="chain_length" value={formData.chain_length} onChange={handleChange} placeholder="18 inches" />
+            </div>
+            <div className="mt-4">
+              <p className={`${labelClass} mb-2`}>Size Guide Chart</p>
+              {formData.size_guide_chart ? (
+                <div className="relative overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
+                  {/\.pdf(?:$|[?#])/i.test(formData.size_guide_chart) ? (
+                    <iframe
+                      className="h-32 w-full sm:h-40"
+                      src={imageUrl(formData.size_guide_chart)}
+                      title="Size guide chart preview"
+                    />
+                  ) : (
+                    <img
+                      className="h-32 w-full bg-white object-contain sm:h-40"
+                      src={imageUrl(formData.size_guide_chart)}
+                      alt="Size guide chart preview"
+                    />
+                  )}
+                  <div className="flex items-center justify-between gap-3 border-t border-gray-200 bg-white px-3 py-2">
+                    <a className="text-sm font-semibold text-[#003B3B] underline" href={imageUrl(formData.size_guide_chart)} target="_blank" rel="noreferrer">Open size guide</a>
+                    <button type="button" onClick={() => updateFormField("size_guide_chart", "")} aria-label="Remove size guide" className="text-red-500"><FiX /></button>
+                  </div>
                 </div>
+              ) : uploadButton("size_guide_chart", "Upload size chart image or PDF", "PNG, JPG, PDF up to 5 MB")}
+            </div>
+          </Section>
 
-                {/* Inventory Manager */}
-                <div className="space-y-4">
-                    <div className="flex items-center justify-between sticky  z-20 bg-white px-4 py-3 rounded-xl border border-gray-200 shadow-sm">
-                        <div className="flex items-center  gap-2">
-                            <FiBox className="text-[#1F0A3C] w-4 h-4" />
-                            <h3 className="text-sm font-bold text-[#1F0A3C] uppercase tracking-wider">Shade & Inventory</h3>
-                        </div>
-                        <button type="button" onClick={addVariant} className="bg-[#1F0A3C] text-white p-1.5 rounded-lg active:scale-90 transition-all shadow hover:bg-[#2d0f57]"><FiPlus size={15} /></button>
+          <Section title="4. Pricing & Offers">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <Field label="MRP (₹)" name="mrp" type="number" min="0" step="0.01" value={formData.mrp} onChange={handleChange} placeholder="100000" required />
+              <Field label="Offer (%)" name="offer" type="number" min="0" step="0.01" value={formData.offer} onChange={handleChange} placeholder="5" />
+              <Field label="Offer Price (₹)" name="offer_price" type="number" value={pricing.offerPrice.toFixed(2)} onChange={() => {}} readOnly />
+              <Field label="GST (%)" name="gst_rate" type="number" min="0" step="0.01" value={formData.gst_rate} onChange={handleChange} placeholder="Applicable GST" />
+              <Field label="Final Selling Price (₹)" name="final_selling_price" type="number" value={pricing.finalPrice.toFixed(2)} onChange={() => {}} readOnly />
+            </div>
+            <label className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <input type="checkbox" name="price_includes_gst" checked={formData.price_includes_gst} onChange={handleChange} className="h-4 w-4 accent-[#003B3B]" />
+              Price includes GST
+            </label>
+          </Section>
+
+          <Section title="5. Product Content">
+            <div className="space-y-4">
+              <label className={labelClass}>Full Description
+                <textarea className={inputClass} rows="4" name="full_description" value={formData.full_description} onChange={handleChange} placeholder="Detailed gold jewellery description..." />
+              </label>
+              <label className={labelClass}>Care Instructions
+                <textarea className={inputClass} rows="2" name="care_instructions" value={formData.care_instructions} onChange={handleChange} placeholder="Store safely and clean appropriately..." />
+              </label>
+            </div>
+          </Section>
+
+          <Section title="6. Media & Uploads">
+            <div>
+              <p className={`${labelClass} mb-2`}>Main Product Images</p>
+              {formData.images.length > 0 && (
+                <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {formData.images.map((image, index) => (
+                    <div key={`${image}-${index}`} className="group relative aspect-square overflow-hidden rounded-xl border border-gray-200">
+                      <img src={imageUrl(image)} alt={`Product ${index + 1}`} className="h-full w-full object-cover" />
+                      <button type="button" onClick={() => removeImage(index)} aria-label="Remove product image" className="absolute right-2 top-2 rounded-full bg-white p-1.5 text-red-500 opacity-0 shadow transition group-hover:opacity-100"><FiTrash2 /></button>
                     </div>
-
-                    {variants.map((v, vIndex) => (
-                        <div key={vIndex} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden group">
-                            <div className="flex items-center justify-between px-4 py-3 bg-[#1F0A3C]/5 border-b border-gray-100">
-                                <div className="flex items-center gap-3 flex-1 min-w-0">
-                                    <input
-                                        type="color"
-                                        value={v.color}
-                                        onChange={(e) => handleVariantChange(vIndex, "color", e.target.value)}
-                                        className="w-8 h-8 rounded-lg border-2 border-white shadow cursor-pointer flex-shrink-0"
-                                    />
-                                    <div className="flex-1 min-w-0">
-                                        <select
-                                            value={v.colorName}
-                                            onChange={(e) => {
-                                                const selected = boutiqueColors.find(bc => bc.name === e.target.value);
-                                                if (selected) {
-                                                    handleVariantChange(vIndex, "color", selected.hex);
-                                                    handleVariantChange(vIndex, "colorName", selected.name);
-                                                } else {
-                                                    handleVariantChange(vIndex, "colorName", e.target.value);
-                                                }
-                                            }}
-                                            className="w-full px-2.5 py-1.5 bg-white border border-gray-200 rounded-lg text-xs font-semibold text-gray-800 outline-none focus:border-[#1F0A3C]/40 transition-all cursor-pointer appearance-none"
-                                        >
-                                            <option value="">Select Shade</option>
-                                            {boutiqueColors.map(bc => <option key={bc.hex} value={bc.name}>{bc.name}</option>)}
-                                            {v.colorName && !boutiqueColors.find(bc => bc.name === v.colorName) && <option value={v.colorName}>{v.colorName}</option>}
-                                        </select>
-                                        <p className="text-[9px] text-gray-400 mt-0.5 ml-0.5">Hex: <span className="font-bold text-[#1F0A3C]">{v.color}</span></p>
-                                    </div>
-                                </div>
-                                <button type="button" onClick={() => removeVariant(vIndex)} className="text-gray-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1 flex-shrink-0"><FiTrash2 size={14} /></button>
-                            </div>
-
-                            <div className="px-4 pb-4 pt-3 space-y-3">
-                                {/* Stock by Size */}
-                                <div className="space-y-2">
-                                    <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider">Stock by Size</label>
-                                    <div className="flex flex-wrap gap-1.5">
-                                        {sizeOptions.map(sz => (
-                                            <button key={sz} type="button" onClick={() => toggleSize(vIndex, sz)} className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${v.selectedSizes.includes(sz) ? 'bg-[#1F0A3C] text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{sz}</button>
-                                        ))}
-                                    </div>
-                                    {v.selectedSizes.length > 0 && (
-                                        <div className="grid grid-cols-2 gap-2 pt-1">
-                                            {v.selectedSizes.map(sz => (
-                                                <div key={sz} className="bg-[#1F0A3C]/5 border border-[#1F0A3C]/15 p-2 rounded-lg flex items-center justify-between">
-                                                    <div>
-                                                        <p className="text-[9px] font-bold text-[#1F0A3C]/60 uppercase mb-0.5">{sz}</p>
-                                                        <input type="number" value={v.sizesStock[sz]} onChange={(e) => handleStockChange(vIndex, sz, e.target.value)} className="w-full bg-transparent border-none outline-none p-0 text-sm font-bold text-[#1F0A3C] focus:ring-0" />
-                                                    </div>
-                                                    <div className="w-1.5 h-1.5 rounded-full bg-[#1F0A3C]/30"></div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Images */}
-                                <div className="grid grid-cols-3 gap-2">
-                                    {v.images.slice(0, 5).map((img, iIndex) => (
-                                        <div key={iIndex} className="relative aspect-[3/4] rounded-xl overflow-hidden bg-gray-50 border border-gray-200 group/img">
-                                            <img src={resolveImageUrl(img)} alt="Product preview" className="w-full h-full object-cover group-hover/img:scale-105 transition-transform duration-500" onError={(e) => { e.currentTarget.style.opacity = "0.35"; }} />
-                                            <button type="button" onClick={() => removeVariantImage(vIndex, iIndex)} className="absolute inset-0 bg-red-600/70 text-white flex items-center justify-center opacity-0 group-hover/img:opacity-100 transition-opacity"><FiTrash2 size={13} /></button>
-                                        </div>
-                                    ))}
-                                    {v.images.length < 5 && (
-                                        <label className="flex flex-col items-center justify-center aspect-[3/4] rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 cursor-pointer hover:bg-[#1F0A3C]/5 hover:border-[#1F0A3C]/40 group/label transition-all">
-                                            <FiUploadCloud size={18} className="text-gray-300 group-hover/label:text-[#1F0A3C] transition-colors" />
-                                            <input type="file" multiple className="hidden" accept="image/*" onChange={(e) => handleVariantImageUpload(vIndex, e)} />
-                                        </label>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-                    ))}
+                  ))}
                 </div>
-
-                {/* Bottom Global Action Button */}
-                <div className="lg:col-span-3 pt-5 pb-10 border-t border-gray-200 mt-2">
-                    <div className="flex items-center justify-end gap-3">
-                        <button type="button" onClick={() => navigate(-1)} className="px-5 py-2.5 text-sm font-semibold text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors">
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={loading}
-                            className="flex items-center gap-2 bg-[#1F0A3C] hover:bg-[#2d0f57] disabled:opacity-50 disabled:cursor-not-allowed text-white py-2.5 px-6 rounded-xl text-sm font-semibold shadow-lg transition-all active:scale-95"
-                        >
-                            {loading ? (
-                                <div className="flex items-center gap-2">
-                                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                    <span>Saving...</span>
-                                </div>
-                            ) : (
-                                <>
-                                    <FiSave size={15} />
-                                    <span>{isEdit ? 'Update Product' : 'Add Product'}</span>
-                                </>
-                            )}
-                        </button>
+              )}
+              {formData.images.length < 10 && uploadButton("images", "Upload product images", "JPG / PNG up to 5 MB each", true)}
+            </div>
+            <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <p className={`${labelClass} mb-2`}>Product Video</p>
+                {formData.video ? (
+                  <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
+                    <video className="h-32 w-full bg-black object-contain sm:h-40" src={imageUrl(formData.video)} controls preload="metadata">
+                      Your browser does not support video playback.
+                    </video>
+                    <div className="flex justify-end border-t border-gray-200 bg-white px-3 py-2">
+                      <button type="button" onClick={() => updateFormField("video", "")} aria-label="Remove video" className="text-red-500"><FiX /></button>
                     </div>
-                </div>
-            </form>
+                  </div>
+                ) : uploadButton("video", "Upload optional MP4 video", "MP4 up to 25 MB")}
+              </div>
+              <div>
+                <p className={`${labelClass} mb-2`}>Certificate Upload</p>
+                {formData.certificate ? (
+                  <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
+                    {/\.pdf(?:$|[?#])/i.test(formData.certificate) ? (
+                      <iframe
+                        className="h-32 w-full sm:h-40"
+                        src={imageUrl(formData.certificate)}
+                        title="Certificate preview"
+                      />
+                    ) : (
+                      <img
+                        className="h-32 w-full bg-white object-contain sm:h-40"
+                        src={imageUrl(formData.certificate)}
+                        alt="Certificate preview"
+                      />
+                    )}
+                    <div className="flex items-center justify-between gap-3 border-t border-gray-200 bg-white px-3 py-2">
+                      <a className="text-sm font-semibold text-[#003B3B] underline" href={imageUrl(formData.certificate)} target="_blank" rel="noreferrer">Open certificate</a>
+                      <button type="button" onClick={() => updateFormField("certificate", "")} aria-label="Remove certificate" className="text-red-500"><FiX /></button>
+                    </div>
+                  </div>
+                ) : uploadButton("certificate", "Upload certificate", "PNG, JPG, PDF up to 5 MB")}
+              </div>
+            </div>
+          </Section>
+
+          <Section title="7. Ratings & Reviews">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Field label="Average Rating (1–5)" name="rating" type="number" min="0" step="0.1" value={formData.rating} onChange={handleChange} placeholder="0" />
+            </div>
+          </Section>
+
+          <Section title="8. Inventory & Publishing">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <Field label="Stock Quantity" name="total_stock" type="number" min="0" step="1" value={formData.total_stock} onChange={handleChange} placeholder="5" />
+              <SelectField label="Stock Status" name="stock_status" value={formData.stock_status} onChange={handleChange} options={["In Stock", "Out of Stock", "Low Stock"]} />
+              <Field label="Warehouse / Location" name="warehouse" value={formData.warehouse} onChange={handleChange} placeholder="Main Shop" />
+              <SelectField label="Product Status" name="status" value={formData.status} onChange={handleChange} options={["Active", "Draft", "Inactive"]} />
+            </div>
+            <div className="mt-5 flex flex-wrap gap-x-6 gap-y-3">
+              {[
+                ["featured", "Featured Product"],
+                ["new_arrival", "New Arrival"],
+                ["best_seller", "Best Seller"]
+              ].map(([name, label]) => (
+                <label key={name} className="inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
+                  <input type="checkbox" name={name} checked={Boolean(formData[name])} onChange={handleChange} className="h-4 w-4 accent-[#003B3B]" />
+                  {label}
+                </label>
+              ))}
+            </div>
+          </Section>
         </div>
-    );
+
+        <aside className="space-y-4 xl:sticky xl:top-5">
+          <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center gap-2">
+              <FiImage className="text-[#003B3B]" />
+              <h2 className="text-sm font-extrabold text-[#003B3B]">Product Snapshot</h2>
+            </div>
+            {formData.images[0] ? (
+              <img src={imageUrl(formData.images[0])} alt={formData.name || "Product preview"} className="aspect-square w-full rounded-xl bg-gray-50 object-contain" />
+            ) : (
+              <div className="flex aspect-square w-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 text-gray-400">
+                <FiImage size={30} />
+                <span className="mt-2 text-xs font-semibold">Product image preview</span>
+              </div>
+            )}
+            <p className="mt-4 truncate font-bold text-slate-800">{formData.name || "Product name"}</p>
+            <p className="mt-1 text-xs text-gray-500">{formData.product_code || "SKU"} · {formData.purity}</p>
+            <div className="mt-4 flex items-baseline justify-between border-t border-gray-100 pt-4">
+              <span className="text-xs font-semibold text-gray-500">Final selling price</span>
+              <span className="font-black text-[#003B3B]">₹{pricing.finalPrice.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</span>
+            </div>
+            <p className="mt-2 text-xs text-gray-500">Stock: {formData.total_stock || 0} · {formData.stock_status}</p>
+          </div>
+          <div className="flex gap-3 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+            <button type="button" onClick={() => navigate(-1)} className="flex-1 rounded-xl border border-gray-200 px-4 py-3 text-sm font-bold text-gray-600 transition hover:bg-gray-50">Cancel</button>
+            <button type="submit" disabled={loading || uploading} className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-[#003B3B] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#008577] disabled:cursor-not-allowed disabled:opacity-50">
+              {loading ? <FiCheck /> : <FiSave />}
+              {loading ? "Saving..." : isEdit ? "Update Product" : "Save Product"}
+            </button>
+          </div>
+        </aside>
+      </form>
+    </div>
+  );
 };
 
 export default AddProducts;

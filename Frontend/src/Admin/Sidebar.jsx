@@ -20,7 +20,8 @@ import {
   Archive,
   Handshake,
   Video,
-  Image
+  Image,
+  Gem
 } from "lucide-react";
 
 import api from "../api";
@@ -49,9 +50,11 @@ const navItems = [
       { path: "/admin/products/all", label: "All Products", icon: List },
       { path: "/admin/products/add", label: "Add Product", icon: PlusCircle },
       { path: "/admin/products/stock", label: "Stock Details", icon: Archive },
+      { path: "/admin/products/category", label: "Categories", icon: Layers },
+      { path: "/admin/metals", label: "Add Metal", icon: Gem },
     ],
   },
-  { path: "/admin/products/category", label: "Categories", icon: Layers },
+
   { path: "/admin/users/all", label: "Customers", icon: Users },
   { path: "/admin/banners", label: "Offers & Banners", icon: Image },
   { path: "/admin/reviews", label: "Reviews", icon: MessageSquare },
