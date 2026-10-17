@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState, useCallback } from "react";
 import { AuthContext } from "../PrivateRouter/AuthContext";
 import { useAdmin } from "../PrivateRouter/AdminContext";
 import { formatRateDate } from "../PrivateRouter/goldRateUtils";
@@ -9,8 +9,6 @@ import { useNavigate } from "react-router-dom";
 import {
   FiUsers,
   FiBox,
-  FiTrendingUp,
-  FiTrendingDown,
   FiChevronDown,
   FiArrowRight,
   FiMoreHorizontal,
@@ -60,8 +58,8 @@ const DEFAULT_DASHBOARD_DATA = {
     {
       id: "total_customers",
       label: "Total Customers",
-      value: "1,248",
-      trend: "+12%",
+      value: "—",
+      trend: "Live API count",
       trendUp: true,
       icon: "users",
       color: "emerald"
@@ -69,8 +67,8 @@ const DEFAULT_DASHBOARD_DATA = {
     {
       id: "active_gold_loans",
       label: "Active Gold Loans",
-      value: "386",
-      trend: "+8%",
+      value: "—",
+      trend: "Live API count",
       trendUp: true,
       icon: "loan",
       color: "amber"
@@ -78,8 +76,8 @@ const DEFAULT_DASHBOARD_DATA = {
     {
       id: "today_collection",
       label: "Today's Collection",
-      value: "₹ 4,85,000",
-      trend: "+15%",
+      value: "—",
+      trend: "No loan payment data",
       trendUp: true,
       icon: "rupee",
       color: "emerald"
@@ -87,8 +85,8 @@ const DEFAULT_DASHBOARD_DATA = {
     {
       id: "gold_stock_value",
       label: "Gold Stock Value",
-      value: "₹ 1,28,50,000",
-      trend: "+6%",
+      value: "—",
+      trend: "Live API estimate",
       trendUp: true,
       icon: "gold",
       color: "amber"
@@ -130,12 +128,12 @@ const DEFAULT_DASHBOARD_DATA = {
       color: "rose"
     }
   ],
-  totalLoansCount: 248,
+  totalLoansCount: 0,
   loanStatusCounts: {
-    Active: 150,
-    Processing: 48,
-    Pending: 32,
-    Overdue: 18
+    Active: 0,
+    Processing: 0,
+    Pending: 0,
+    Overdue: 0
   },
   revenueTrends: [
     { label: "Oct 01", revenue: 42000, date: "Oct 01, 2026" },
@@ -249,32 +247,46 @@ const Dashboard = () => {
   const { user } = useContext(AuthContext);
   const { dashboardData, setDashboardCached } = useAdmin();
   const { current: currentGoldRates, loading: goldRatesLoading } = useGoldRates();
-  const [loading, setLoading] = useState(false);
   const [salesRange, setSalesRange] = useState("month");
+  const [metricsError, setMetricsError] = useState(false);
+  const metricsLoading = !dashboardData?.stats && !metricsError;
 
-  useEffect(() => {
-    fetchDashboardData("month");
-  }, []);
-
-  const fetchDashboardData = async (range = salesRange) => {
+  const fetchDashboardData = useCallback(async (range = salesRange) => {
     try {
       const response = await api.get('/dashboard', { params: { range } });
-      if (response.data && response.data.stats) {
-        setDashboardCached(response.data);
-      }
+      if (!response.data?.stats) throw new Error("Dashboard API returned no metrics");
+      setDashboardCached(response.data);
+      setMetricsError(false);
     } catch (error) {
-      console.warn("Using dashboard showcase data:", error?.message || error);
+      setMetricsError(true);
+      console.error("Failed to refresh dashboard metrics:", error);
     }
-  };
+  }, [salesRange, setDashboardCached]);
+
+  useEffect(() => {
+    const initialRefresh = window.setTimeout(() => fetchDashboardData(), 0);
+    const refreshInterval = window.setInterval(() => {
+      if (document.visibilityState === "visible") fetchDashboardData();
+    }, 30000);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") fetchDashboardData();
+    };
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    return () => {
+      window.clearTimeout(initialRefresh);
+      window.clearInterval(refreshInterval);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+    };
+  }, [fetchDashboardData]);
 
   // Safe resolved data (merged with defaults so it ALWAYS renders properly)
   const data = dashboardData || DEFAULT_DASHBOARD_DATA;
-  const stats = data.stats || DEFAULT_DASHBOARD_DATA.stats;
+  const stats = dashboardData?.stats || [];
   const recentLoans = data.recentLoans?.length ? data.recentLoans : DEFAULT_DASHBOARD_DATA.recentLoans;
   const topProducts = data.topProducts?.length ? data.topProducts : DEFAULT_DASHBOARD_DATA.topProducts;
   const loanStatusCounts = data.loanStatusCounts || DEFAULT_DASHBOARD_DATA.loanStatusCounts;
   const revenueTrends = data.revenueTrends?.length ? data.revenueTrends : DEFAULT_DASHBOARD_DATA.revenueTrends;
-  const totalLoansCount = data.totalLoansCount || 248;
+  const totalLoansCount = data.totalLoansCount ?? 0;
   const summaryCards = [
     {
       id: "total_customers",
@@ -340,7 +352,7 @@ const Dashboard = () => {
       ...defaultStat,
       ...liveStat,
       ...card,
-      trendUp: liveStat?.trendUp ?? defaultStat?.trendUp ?? card.trendUp
+      value: liveStat?.value ?? (metricsLoading ? "Loading…" : metricsError ? "Unavailable" : "—"),
     };
   });
 
@@ -429,12 +441,12 @@ const Dashboard = () => {
   const loanStatusLabels = ['Active', 'Processing', 'Pending', 'Overdue'];
   const loanStatusColors = ['#10B981', '#F59E0B', '#38BDF8', '#EF4444'];
   const loanStatusValues = [
-    loanStatusCounts.Active || 150,
-    loanStatusCounts.Processing || 48,
-    loanStatusCounts.Pending || 32,
-    loanStatusCounts.Overdue || 18,
+    loanStatusCounts.Active ?? 0,
+    loanStatusCounts.Processing ?? 0,
+    loanStatusCounts.Pending ?? 0,
+    loanStatusCounts.Overdue ?? 0,
   ];
-  const totalLoanStatusSum = loanStatusValues.reduce((a, b) => a + b, 0) || totalLoansCount;
+  const totalLoanStatusSum = loanStatusValues.reduce((a, b) => a + b, 0) || 1;
 
   const doughnutData = {
     labels: loanStatusLabels,
@@ -532,11 +544,19 @@ const Dashboard = () => {
             <div className="relative z-10 min-w-0 self-center">
               <p style={{ color: "#E2E8F0" }} className="truncate text-[11px] font-semibold">{card.label}</p>
               <p style={{ color: "#FFFFFF" }} className="mt-1 truncate text-[19px] font-black leading-none tracking-tight">{card.value}</p>
-              <div style={{ color: card.trendUp ? "#86EFAC" : "#FDA4AF" }} className="mt-2 flex items-center gap-1 text-[11px] font-extrabold">
-                {card.trendUp ? <FiTrendingUp /> : <FiTrendingDown />}
+              <div style={{ color: card.id === "today_collection" ? "#FCD34D" : metricsError ? "#FDA4AF" : "#86EFAC" }} className="mt-2 flex items-center gap-1 text-[11px] font-extrabold">
+                <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${!metricsError && card.id !== "today_collection" ? "animate-pulse bg-current" : "bg-current"}`} />
                 <span>{card.trend}</span>
               </div>
-              <p style={{ color: "#CBD5E1" }} className="mt-0.5 text-[9px] font-medium">{card.id === "today_collection" ? "vs yesterday" : "vs last month"}</p>
+              <p style={{ color: "#CBD5E1" }} className="mt-0.5 text-[9px] font-medium">
+                {card.id === "today_collection"
+                  ? "Loan payment source unavailable"
+                  : metricsError && dashboardData?.stats
+                    ? "Refresh failed · showing last data"
+                    : metricsLoading
+                      ? "Loading live API data…"
+                      : "Updates every 30 seconds"}
+              </p>
             </div>
             <button
               type="button"

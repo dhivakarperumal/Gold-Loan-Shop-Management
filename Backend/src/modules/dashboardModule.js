@@ -79,7 +79,7 @@ async function getDashboardData(range = 'month') {
       ORDER BY metal_type ASC, purity DESC
     `);
 
-    // Build stats with real DB numbers blended with realistic showroom volume for missing data
+    // Build dashboard metrics exclusively from current database values.
     const realLoansCount = Number(loanCounts.total_loans) || 0;
     const realGoldStockValue = Number(total_gold_stock_value) || 0;
     const totalProducts = Number(productCounts.total_products) || 0;
@@ -98,24 +98,15 @@ async function getDashboardData(range = 'month') {
     for (const row of statusRows) {
       if (statusMap[row.loan_status] !== undefined) {
         statusMap[row.loan_status] += Number(row.count);
-      } else {
-        statusMap.Active += Number(row.count);
       }
     }
     const completedLoans = Number(statusMap.Completed) || 0;
 
-    // Default showcase status counts if DB is fresh
-    const finalLoansCount = realLoansCount > 10 ? realLoansCount : 248;
-    const activeCount = statusMap.Active > 0 ? statusMap.Active : Math.round(finalLoansCount * 0.60);
-    const processingCount = statusMap.Processing > 0 ? statusMap.Processing : Math.round(finalLoansCount * 0.19);
-    const pendingCount = statusMap.Pending > 0 ? statusMap.Pending : Math.round(finalLoansCount * 0.13);
-    const overdueCount = statusMap.Overdue > 0 ? statusMap.Overdue : Math.round(finalLoansCount * 0.08);
-
     const loanStatusCounts = {
-      Active: activeCount,
-      Processing: processingCount,
-      Pending: pendingCount,
-      Overdue: overdueCount,
+      Active: statusMap.Active,
+      Processing: statusMap.Processing,
+      Pending: statusMap.Pending,
+      Overdue: statusMap.Overdue,
     };
 
     // Showcase default recent loans if database has fewer than 5
@@ -333,13 +324,8 @@ async function getDashboardData(range = 'month') {
       ];
     }
 
-    const totalCustomersFormatted = totalCustomers > 50
-      ? totalCustomers.toLocaleString('en-IN')
-      : "1,248";
-
-    const goldStockValueFormatted = realGoldStockValue > 0
-      ? `₹ ${realGoldStockValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`
-      : "₹ 1,28,50,000";
+    const totalCustomersFormatted = totalCustomers.toLocaleString('en-IN');
+    const goldStockValueFormatted = `₹ ${realGoldStockValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 
     return {
       stats: [
@@ -347,7 +333,7 @@ async function getDashboardData(range = 'month') {
           id: "total_customers",
           label: "Total Customers",
           value: totalCustomersFormatted,
-          trend: "+12%",
+          trend: "Live API count",
           trendUp: true,
           icon: "users",
           color: "emerald"
@@ -355,8 +341,8 @@ async function getDashboardData(range = 'month') {
         {
           id: "active_gold_loans",
           label: "Active Gold Loans",
-          value: (statusMap.Active || 386).toLocaleString('en-IN'),
-          trend: "+8%",
+          value: statusMap.Active.toLocaleString('en-IN'),
+          trend: "Live API count",
           trendUp: true,
           icon: "loan",
           color: "amber"
@@ -364,8 +350,8 @@ async function getDashboardData(range = 'month') {
         {
           id: "today_collection",
           label: "Today's Collection",
-          value: "₹ 4,85,000",
-          trend: "+15%",
+          value: "—",
+          trend: "No loan payment data",
           trendUp: true,
           icon: "rupee",
           color: "emerald"
@@ -374,7 +360,7 @@ async function getDashboardData(range = 'month') {
           id: "gold_stock_value",
           label: "Gold Stock Value",
           value: goldStockValueFormatted,
-          trend: "+6%",
+          trend: "Live API estimate",
           trendUp: true,
           icon: "gold",
           color: "amber"
@@ -417,7 +403,7 @@ async function getDashboardData(range = 'month') {
         }
       ],
       loanStatusCounts,
-      totalLoansCount: finalLoansCount,
+      totalLoansCount: realLoansCount,
       recentLoans: mergedRecentLoans.slice(0, 5),
       topProducts: mergedTopProducts.slice(0, 5),
       revenueTrends,
