@@ -26,6 +26,7 @@ const Metals = React.lazy(() => import("./Admin/Pages/Metals.jsx"));
 const AddProducts = React.lazy(() => import("./Admin/Pages/AddProducts.jsx"));
 const AllProducts = React.lazy(() => import("./Admin/Pages/AllProducts.jsx"));
 const ProductDetail = React.lazy(() => import("./Admin/Pages/ProductDetail.jsx"));
+const LoanCustomerManagement = React.lazy(() => import("./Admin/Pages/LoanCustomerManagement.jsx"));
 
 const ErrorPage = React.lazy(() => import("./Admin/Pages/ErrorPage.jsx"));
 
@@ -55,6 +56,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Dashboard /> },
       { path: "users/all", element: <Users /> },
+      { path: "loans/customermanagement", element: <LoanCustomerManagement /> },
       { path: "products/category", element: <Category /> },
       { path: "products/add", element: <AddProducts /> },
       { path: "products/all", element: <AllProducts /> },
