@@ -78,15 +78,7 @@ export default function AllLoans() {
 
   return (
     <main className="space-y-5 p-4 sm:p-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-extrabold text-[#003B3B]">All Loans</h1>
-          <p className="mt-1 text-sm text-slate-500">Registered gold loans linked to their customers.</p>
-        </div>
-        <button type="button" onClick={loadLoans} disabled={loading} aria-label="Refresh loans" title="Refresh loans" className="rounded-lg bg-[#008577] p-3 text-white hover:bg-[#00695C] disabled:opacity-60">
-          <FiRefreshCw className={loading ? "animate-spin" : ""} />
-        </button>
-      </header>
+   
       <section aria-label="Loan summary" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {summaryCards.map(({ label, value, icon: Icon, color }) => (
           <article key={label} className="flex items-center justify-between rounded-xl border border-slate-100 bg-white p-5 shadow-sm">

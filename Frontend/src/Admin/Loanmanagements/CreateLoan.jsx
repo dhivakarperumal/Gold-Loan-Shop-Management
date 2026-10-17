@@ -27,6 +27,16 @@ const GOLD_PURITY_OPTIONS = [
   ["18K / 750", "18K (750)"],
   ["14K / 585", "14K (585)"]
 ];
+const JEWELLERY_TYPE_OPTIONS = [
+  ["Bangles", "Bangles"],
+  ["Chains", "Chains"],
+  ["Necklaces", "Necklaces"],
+  ["Earrings", "Earrings"],
+  ["Rings", "Rings"],
+  ["Bracelets", "Bracelets"],
+  ["Coins & Bars", "Coins & Bars"],
+  ["Other", "Other"]
+];
 const fieldClass = "mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-[#008577] focus:ring-2 focus:ring-emerald-100";
 const labelClass = "block text-xs font-semibold text-slate-600";
 
@@ -189,6 +199,8 @@ export default function CreateLoan() {
   const [customer, setCustomer] = useState(null);
   const [customerLoans, setCustomerLoans] = useState([]);
   const [form, setForm] = useState(initialLoan);
+  const [otherJewelleryType, setOtherJewelleryType] = useState("");
+  const [loanAmountMode, setLoanAmountMode] = useState("auto");
   const [loadingCustomers, setLoadingCustomers] = useState(true);
   const [customerLoadError, setCustomerLoadError] = useState("");
   const [loadingCustomer, setLoadingCustomer] = useState(false);
@@ -223,6 +235,8 @@ export default function CreateLoan() {
           setCustomer(null);
           setCustomerQuery("");
           setCustomerLoans([]);
+          setLoanAmountMode("auto");
+          setOtherJewelleryType("");
           setForm({
             ...initialLoan(),
             interest_type: interestResponse.data.find((type) => type.enabled)?.type_key || ""
@@ -237,6 +251,10 @@ export default function CreateLoan() {
         ]);
         if (!active) return;
         setLoanRecord(loan);
+        setLoanAmountMode("manual");
+        const savedJewelleryType = String(loan.jewellery_type || "");
+        const isKnownJewelleryType = JEWELLERY_TYPE_OPTIONS.some(([value]) => value === savedJewelleryType && value !== "Other");
+        setOtherJewelleryType(isKnownJewelleryType ? "" : savedJewelleryType);
         setCustomer(customerDetails.data);
         setCustomerQuery(`${customerDetails.data.customer_code || customerDetails.data.id} · ${customerDetails.data.full_name}`);
         setCustomerLoans(customerLoanResponse.data);
@@ -319,7 +337,7 @@ export default function CreateLoan() {
   const estimatedGoldValuation = loanRecord && savedPurityUnchanged && loanRecord.gold_rate_per_gram == null
     ? Number(form.gold_valuation) || 0
     : Math.max(0, Number(form.gross_weight || 0) - Number(form.stone_weight || 0)) * Number(appliedGoldRate || 0);
-
+  const calculatedLoanAmount = (Math.round(estimatedGoldValuation * 50) / 100).toFixed(2);
   const selectCustomer = async (selected) => {
     setCustomer(selected);
     setCustomerQuery(`${selected.customer_code || selected.id} · ${selected.full_name}`);
@@ -347,8 +365,20 @@ export default function CreateLoan() {
     setForm((current) => ({ ...current, [name]: value }));
   };
 
+  const handleLoanAmountModeChange = (mode) => {
+    setLoanAmountMode(mode);
+    if (mode === "manual") {
+      setForm((current) => ({
+        ...current,
+        principal_amount: current.principal_amount || calculatedLoanAmount
+      }));
+    }
+  };
+
   const handleReset = () => {
     setForm(initialLoan());
+    setOtherJewelleryType("");
+    setLoanAmountMode("auto");
     setCustomer(null);
     setCustomerQuery("");
     setCustomerLoans([]);
@@ -375,6 +405,10 @@ export default function CreateLoan() {
       toast.error("Maturity date must be after the loan date.");
       return;
     }
+    if (form.jewellery_type === "Other" && !otherJewelleryType.trim()) {
+      toast.error("Enter the jewellery type.");
+      return;
+    }
     if (!loanRecord && !(appliedGoldRate > 0)) {
       toast.error("An active daily gold rate for the selected purity is required before creating a loan.");
       return;
@@ -383,9 +417,12 @@ export default function CreateLoan() {
     try {
       const loanData = {
         ...form,
+        jewellery_type: form.jewellery_type === "Other" ? otherJewelleryType.trim() : form.jewellery_type,
         customer_id: String(customer.id),
         net_gold_weight: (gross - stone).toFixed(3),
-        gold_valuation: estimatedGoldValuation.toFixed(2)
+        gold_valuation: estimatedGoldValuation.toFixed(2),
+        principal_amount: loanAmountMode === "auto" ? calculatedLoanAmount : form.principal_amount,
+        loan_amount_mode: loanAmountMode
       };
       let payload = loanData;
       if (goldImageFile) {
@@ -546,11 +583,31 @@ export default function CreateLoan() {
           </p>}
           {ratesError && <p role="alert" className="mb-4 rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">Could not refresh rates: {ratesError}</p>}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <label className={labelClass}>
-              Gold Pledge Number
-              <input className={`${fieldClass} bg-slate-50`} value={loanRecord?.gold_pledge_number || "Auto-generated on save"} readOnly />
-            </label>
-            <FormField label="Jewellery Type" name="jewellery_type" form={form} onChange={handleChange} required />
+            <FormSelect
+              label="Jewellery Type"
+              name="jewellery_type"
+              form={form}
+              onChange={handleChange}
+              required
+              options={[
+                ["", "Select jewellery category"],
+                ...(!JEWELLERY_TYPE_OPTIONS.some(([value]) => value === form.jewellery_type) && form.jewellery_type
+                  ? [["Other", "Other"]]
+                  : JEWELLERY_TYPE_OPTIONS),
+                ...(!JEWELLERY_TYPE_OPTIONS.some(([value]) => value === form.jewellery_type) && form.jewellery_type
+                  ? []
+                  : [])
+              ]}
+            />
+            {form.jewellery_type === "Other" && (
+              <FormField
+                label="Specify Jewellery Type"
+                name="jewellery_type_other"
+                form={{ jewellery_type_other: otherJewelleryType }}
+                onChange={(event) => setOtherJewelleryType(event.target.value)}
+                required
+              />
+            )}
             <FormSelect
               label="Gold Purity"
               name="gold_purity"
@@ -574,7 +631,34 @@ export default function CreateLoan() {
             <label className={labelClass}>Net Gold Weight (g)<input className={`${fieldClass} bg-slate-50`} value={Math.max(0, Number(form.gross_weight || 0) - Number(form.stone_weight || 0)).toFixed(3)} readOnly /></label>
             <FormField label="Gold Rate / Gram (₹)" name="gold_rate_per_gram" form={{ gold_rate_per_gram: appliedGoldRate ?? "" }} onChange={() => {}} readOnly help={loanRecord && savedPurityUnchanged && loanRecord.gold_rate_per_gram != null ? `Saved loan rate from ${formatRateDate(loanRecord.gold_rate_date)}; today's changes do not alter it.` : loanRecord && savedPurityUnchanged ? "Legacy loan; its saved valuation is preserved." : ratesLoading ? "Loading today's active rate..." : "Selected by the configured purity."} />
             <FormField label="Gold Valuation (₹)" name="gold_valuation" form={{ gold_valuation: estimatedGoldValuation.toFixed(2) }} onChange={() => {}} readOnly required min="0.01" step="0.01" help="Eligible net gold weight × the applied rate snapshot; not the retail jewellery price." />
-            <FormField label="Loan Amount (₹)" name="principal_amount" form={form} onChange={handleChange} type="number" min="0.01" step="0.01" required />
+            <div className="sm:col-span-2 lg:col-span-4">
+              <span className={labelClass}>Loan Amount (₹)<span className="ml-1 text-rose-500">*</span></span>
+              <div className="mt-1.5 inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1" role="radiogroup" aria-label="Loan amount calculation mode">
+                {[
+                  ["auto", "Auto calculate (50%)"],
+                  ["manual", "Enter manually"]
+                ].map(([mode, label]) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    role="radio"
+                    aria-checked={loanAmountMode === mode}
+                    onClick={() => handleLoanAmountModeChange(mode)}
+                    className={`rounded-md px-3 py-2 text-xs font-semibold transition ${loanAmountMode === mode ? "bg-[#003B3B] text-white shadow-sm" : "text-slate-600 hover:bg-white"}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {loanAmountMode === "auto" ? (
+                <>
+                  <input className={`${fieldClass} bg-slate-50`} type="number" value={calculatedLoanAmount} readOnly aria-label="Automatically calculated loan amount" />
+                  <p className="mt-1 text-[11px] font-normal text-slate-400">Automatically calculated as 50% of the pledged gold valuation ({formatCurrency(estimatedGoldValuation)}).</p>
+                </>
+              ) : (
+                <FormField name="principal_amount" form={form} onChange={handleChange} type="number" min="0.01" step="0.01" required help="Enter the loan amount to disburse." />
+              )}
+            </div>
           </div>
           <div className="mt-5 rounded-xl border border-dashed border-slate-300 p-4">
             <label className={labelClass}>
@@ -625,12 +709,7 @@ export default function CreateLoan() {
             {form.interest_type === "compound" && <FormSelect label="Compounding Frequency" name="compounding_frequency" form={form} onChange={handleChange} options={COMPOUND_FREQUENCIES} required />}
             <FormSelect label="Day-Count Convention" name="day_count_convention" form={form} onChange={handleChange} options={[["actual_365", "Actual / 365"], ["actual_360", "Actual / 360"], ["30_360", "30 / 360"]]} />
             <FormField label="Calculation Start Date" name="interest_calculation_start_date" form={form} onChange={handleChange} type="date" required />
-            <FormField label="Grace Period (days)" name="grace_period_days" form={form} onChange={handleChange} type="number" min="0" step="1" />
-            <FormField label="Interest-Free Period (days)" name="interest_free_days" form={form} onChange={handleChange} type="number" min="0" step="1" />
-            <FormField label="Late Payment Interest Rate (%)" name="late_payment_interest_rate" form={form} onChange={handleChange} type="number" min="0" step="0.0001" />
-            <FormField label="Minimum Interest (₹)" name="minimum_interest_amount" form={form} onChange={handleChange} type="number" min="0" step="0.01" />
-            <FormField label="Maximum Interest (₹)" name="maximum_interest_amount" form={form} onChange={handleChange} type="number" min="0" step="0.01" />
-            <FormField label="Processing Fee (₹)" name="processing_fee" form={form} onChange={handleChange} type="number" min="0" step="0.01" />
+            <FormSelect label="Loan Status" name="loan_status" form={form} onChange={handleChange} options={(loanRecord ? ["Active", "Pending", "Inactive", "Completed"] : ["Active", "Pending"]).map((status) => [status, status])} required />
             <FormField label="Other Authorized Charges (₹)" name="other_charges" form={form} onChange={handleChange} type="number" min="0" step="0.01" />
           </div>
           {!loadingCustomers && interestTypes.length === 0 && (
@@ -654,7 +733,6 @@ export default function CreateLoan() {
             <FormField label="Loan Date" name="loan_date" form={form} onChange={handleChange} type="date" required />
             <FormField label="Maturity Date" name="maturity_date" form={form} onChange={handleChange} type="date" required />
             <FormSelect label="Payment Frequency" name="payment_frequency" form={form} onChange={handleChange} options={PAYMENT_FREQUENCIES} required />
-            <FormSelect label="Loan Status" name="loan_status" form={form} onChange={handleChange} options={(loanRecord ? ["Active", "Pending", "Inactive", "Completed"] : ["Active", "Pending"]).map((status) => [status, status])} required />
           </div>
           <label className={`${labelClass} mt-4`}>Notes<textarea className={fieldClass} name="notes" rows="3" maxLength="5000" value={form.notes} onChange={handleChange} /></label>
         </section>

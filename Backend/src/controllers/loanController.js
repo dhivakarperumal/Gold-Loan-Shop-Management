@@ -54,7 +54,13 @@ function parseAmount(value, label, { min = 0, max = MAXIMUM } = {}) {
   return { value: amount.toFixed(4) };
 }
 
+function calculateLoanAmount(goldValuation) {
+  return (Math.round(Number(goldValuation) * 50) / 100).toFixed(2);
+}
+
 function normalizeLoan(body) {
+  const loanAmountMode = body.loan_amount_mode == null ? 'manual' : body.loan_amount_mode;
+  if (!['auto', 'manual'].includes(loanAmountMode)) return { error: 'Select a valid loan amount mode' };
   if (!validId(body.customer_id)) return { error: 'Select a valid customer' };
   for (const field of REQUIRED_TEXT) {
     if (typeof body[field] !== 'string' || !body[field].trim() || body[field].trim().length > 100) {
@@ -132,6 +138,7 @@ function normalizeLoan(body) {
     return { error: 'Custom interest period must be a whole number of days from 1 to 3650' };
   }
   return {
+    loanAmountMode,
     loan: {
       customer_id: String(body.customer_id),
       jewellery_type: body.jewellery_type.trim(),
@@ -262,7 +269,7 @@ async function postLoan(req, res, next) {
     if (cleanupStatus) return res.status(cleanupStatus).json({ message: 'The uploaded file is not a valid PNG or JPG image' });
     return;
   }
-  const { loan, error } = normalizeLoan(req.body || {});
+  const { loan, loanAmountMode, error } = normalizeLoan(req.body || {});
   if (error) {
     const cleanupStatus = await rejectUploadedImage(req, next, 400);
     if (cleanupStatus) return res.status(cleanupStatus).json({ message: error });
@@ -281,6 +288,7 @@ async function postLoan(req, res, next) {
     const createdLoan = await createLoan({
       ...loan,
       gold_valuation: goldValuation.toFixed(2),
+      principal_amount: loanAmountMode === 'auto' ? calculateLoanAmount(goldValuation) : loan.principal_amount,
       gold_rate_per_gram: activeRate.rate_per_gram,
       gold_rate_date: activeRateSet.rate_date,
       gold_image_url: req.file ? `/api/loans/gold-images/${req.file.filename}` : null,
@@ -310,7 +318,7 @@ async function putLoan(req, res, next) {
     if (cleanupStatus) return res.status(cleanupStatus).json({ message: 'The uploaded file is not a valid PNG or JPG image' });
     return;
   }
-  const { loan, error } = normalizeLoan(req.body || {});
+  const { loan, loanAmountMode, error } = normalizeLoan(req.body || {});
   if (error) {
     const cleanupStatus = await rejectUploadedImage(req, next, 400);
     if (cleanupStatus) return res.status(cleanupStatus).json({ message: error });
@@ -348,6 +356,9 @@ async function putLoan(req, res, next) {
       loan.gold_rate_per_gram = null;
       loan.gold_rate_date = null;
       loan.gold_valuation = existingLoan.gold_valuation;
+    }
+    if (loanAmountMode === 'auto') {
+      loan.principal_amount = calculateLoanAmount(loan.gold_valuation);
     }
     if (req.file) loan.gold_image_url = `/api/loans/gold-images/${req.file.filename}`;
     const updatedLoan = await updateLoan(req.params.id, loan);
@@ -396,6 +407,8 @@ module.exports = {
   getLoan,
   getLoanGoldImage,
   getLoans,
+  calculateLoanAmount,
+  normalizeLoan,
   putLoan,
   postLoan,
   removeLoan,
