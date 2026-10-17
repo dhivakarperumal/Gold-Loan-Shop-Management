@@ -135,12 +135,12 @@ const Silver = () => {
                 1280: { slidesPerView: Math.max(1, Math.min(4, products.length - 1)) },
               }}
               grabCursor
-              centeredSlides={products.length === 1}
+              centeredSlides={false}
               className="!pb-2"
             >
               {products.map((product) => (
                 <SwiperSlide key={product.id} className="h-auto">
-                  <article className={`group h-full min-w-0 overflow-hidden rounded-md border border-[#eadfce] bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-md ${products.length === 1 ? "mx-auto max-w-[280px]" : ""}`}>
+                  <article className={`group h-full min-w-0 overflow-hidden rounded-md border border-[#eadfce] bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-md ${products.length === 1 ? "max-w-[280px]" : ""}`}>
                     {/* Product image */}
                     <div className="relative aspect-[1.12/1] overflow-hidden bg-[#f6efe4]">
                       <img
