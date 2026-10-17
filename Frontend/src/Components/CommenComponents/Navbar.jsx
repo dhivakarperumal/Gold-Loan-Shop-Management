@@ -303,6 +303,16 @@ const navClass = ({ isActive }) =>
                       My Account
                     </Link>
 
+                    {user.role === "user" && (
+                      <Link
+                        to="/account/kyc"
+                        className="block px-4 py-3 text-sm hover:bg-gray-100"
+                        onClick={() => setUserMenu(false)}
+                      >
+                        KYC Verification
+                      </Link>
+                    )}
+
                     {user.role === "admin" && (
                       <Link
                         to="admin"
@@ -499,6 +509,11 @@ const navClass = ({ isActive }) =>
                         <Link to="/account" onClick={closeMobileMenu} className="flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-[#004D40]">
                           <User size={18} /> My Account
                         </Link>
+                        {user.role === "user" && (
+                          <Link to="/account/kyc" onClick={closeMobileMenu} className="flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-[#004D40]">
+                            <FiFileText size={18} /> KYC Verification
+                          </Link>
+                        )}
                         {user.role === "admin" && (
                           <Link to="/admin" onClick={closeMobileMenu} className="flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-[#004D40]">
                             <User size={18} /> Admin Panel

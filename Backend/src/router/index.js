@@ -11,10 +11,12 @@ const videoRouter = require('./videoRouter');
 const reviewRouter = require('./reviewRouter');
 const dealerRouter = require('./dealerRouter');
 const dashboardRouter = require('./dashboardRouter');
+const kycRouter = require('./kycRouter');
 
 const router = express.Router();
 
 router.use('/dashboard', dashboardRouter);
+router.use('/kyc', kycRouter);
 router.use('/auth', authRouter);
 router.use('/categories', categoryRouter);
 router.use('/metals', metalRouter);

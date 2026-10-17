@@ -41,6 +41,8 @@ const Reviews = React.lazy(() => import("./Admin/Pages/Reviews.jsx"));
 const Settings = React.lazy(() => import("./Admin/Pages/Settings.jsx"));
 const DailyGoldRate = React.lazy(() => import("./Admin/Pages/DailyGoldRate.jsx"));
 const Dealers = React.lazy(() => import("./Admin/Dealers/Dealers.jsx"));
+const CustomerKyc = React.lazy(() => import("./Components/Account/CustomerKyc.jsx"));
+const AdminKyc = React.lazy(() => import("./Admin/Kyc/AdminKyc.jsx"));
 
 const ErrorPage = React.lazy(() => import("./Admin/Pages/ErrorPage.jsx"));
 
@@ -51,6 +53,14 @@ const router = createBrowserRouter([
     errorElement: <ErrorPage />,
     children: [
       { path: "/", element: <Home /> },
+      {
+        path: "/account/kyc",
+        element: (
+          <PrivateRoute allowedRoles={["user"]}>
+            <CustomerKyc />
+          </PrivateRoute>
+        )
+      },
      
 
     ],
@@ -72,6 +82,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Dashboard /> },
       { path: "users/all", element: <Users /> },
+      { path: "kyc", element: <AdminKyc /> },
       { path: "loans/customermanagement", element: <LoanCustomerManagement /> },
       { path: "loans/customers/:id", element: <LoanCustomerDetails /> },
       { path: "loans/createloan", element: <CreateLoan /> },

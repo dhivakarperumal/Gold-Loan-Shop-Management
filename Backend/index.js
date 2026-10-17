@@ -14,7 +14,10 @@ const { initializeGoldRateModule } = require('./src/modules/goldRateModule');
 const { initializeVideoModule } = require('./src/modules/videoModule');
 const { initializeReviewModule } = require('./src/modules/reviewModule');
 const { initializeDealerModule } = require('./src/modules/dealerModule');
+const { initializeKycModule } = require('./src/modules/kycModule');
+const { cleanupOrphanedKycUploads } = require('./src/middleware/kycUpload');
 const apiRouter = require('./src/router');
+const { pool } = require('./src/config/db');
 
 const app = express();
 const PORT = Number(process.env.PORT || 5000);
@@ -59,6 +62,8 @@ async function startServer() {
   await initializeVideoModule();
   await initializeReviewModule();
   await initializeDealerModule();
+  await initializeKycModule();
+  await cleanupOrphanedKycUploads(pool);
   const server = app.listen(PORT, () => {
     console.log(`Backend server is running on port ${PORT}`);
   });
