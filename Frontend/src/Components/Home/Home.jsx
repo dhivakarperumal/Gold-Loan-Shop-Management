@@ -11,13 +11,13 @@ import Gold from './Gold'
 const Home = () => {
   return (
     <div>
-    <Hero/>
-    <Category />
-    <Banner />
-    <Gold/>
-    <Products/>
-    <Diamond />
-    <Silver />
+      <Hero />
+      <Category />
+      <Banner />
+      <Gold />
+      <Products />
+      <Diamond />
+      <Silver />
     </div>
   )
 }
