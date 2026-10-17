@@ -505,7 +505,8 @@ export default function CreateLoan() {
         </div>
       </header>
 
-      <form onSubmit={handleSubmit} className="space-y-6">
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+        <div className="space-y-6">
         <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
           <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-50 text-sm font-black text-[#006b62]">01</span>
@@ -579,7 +580,7 @@ export default function CreateLoan() {
             <div className="mt-5 rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50/80 to-white p-4 sm:p-5">
               {loadingCustomer ? <p className="text-sm text-slate-500">Loading customer account and loan history...</p> : (
                 <>
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
                     {[
                       ["Customer ID", customer.customer_code || customer.id],
                       ["Full Name", customer.full_name],
@@ -617,6 +618,85 @@ export default function CreateLoan() {
 
         <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
           <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-sky-50 text-sm font-black text-sky-700">03</span>
+            <div>
+              <h2 className="text-base font-bold text-[#003B3B]">Interest & Contract Terms</h2>
+              <p className="mt-0.5 text-xs text-slate-500">Set the interest method, rate and authorized charges.</p>
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
+            <FormSelect label="Interest Type" name="interest_type" form={form} onChange={handleChange} required options={[["", "Select interest type"], ...interestTypes.map(({ type_key, label, enabled }) => [type_key, label, !enabled && type_key !== form.interest_type])]} />
+            {form.interest_type !== "fixed" && <FormField label="Interest Rate (%)" name="interest_rate" form={form} onChange={handleChange} type="number" min="0" step="0.0001" required />}
+            <FormSelect label="Interest Calculation Frequency" name="interest_frequency" form={form} onChange={handleChange} options={INTEREST_FREQUENCIES} required />
+            {form.interest_frequency === "custom_period" && <FormField label="Custom Period (days)" name="custom_period_days" form={form} onChange={handleChange} type="number" min="1" max="3650" step="1" required />}
+            {form.interest_type === "fixed" && <FormField label="Fixed Interest Amount (₹/period)" name="fixed_interest_amount" form={form} onChange={handleChange} type="number" min="0.01" step="0.01" required />}
+            {form.interest_type === "compound" && <FormSelect label="Compounding Frequency" name="compounding_frequency" form={form} onChange={handleChange} options={COMPOUND_FREQUENCIES} required />}
+            <FormSelect label="Day-Count Convention" name="day_count_convention" form={form} onChange={handleChange} options={[["actual_365", "Actual / 365"], ["actual_360", "Actual / 360"], ["30_360", "30 / 360"]]} />
+            <FormField label="Calculation Start Date" name="interest_calculation_start_date" form={form} onChange={handleChange} type="date" required />
+            <FormSelect label="Loan Status" name="loan_status" form={form} onChange={handleChange} options={(loanRecord ? ["Active", "Pending", "Inactive", "Completed"] : ["Active", "Pending"]).map((status) => [status, status])} required />
+            <FormField label="Other Authorized Charges (₹)" name="other_charges" form={form} onChange={handleChange} type="number" min="0" step="0.01" />
+          </div>
+          {!loadingCustomers && interestTypes.length === 0 && (
+            <p className="mt-4 rounded-lg bg-rose-50 p-3 text-xs text-rose-700">
+              No interest methods are enabled. An administrator must enable at least one in Interest Management before creating a loan.
+            </p>
+          )}
+          {(form.interest_type === "slab_based" || form.interest_type === "custom") && (
+            <p className="mt-4 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
+              {form.interest_type === "slab_based"
+                ? "Enter the applicable authorized slab rate above. Verify the customer's principal falls within the configured slab before saving."
+                : "Enter the authorized custom rate and record the governing terms in Notes."}
+            </p>
+          )}
+        </section>
+        <section className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-5 shadow-sm sm:p-6">
+          <div className="mb-5 flex items-center gap-3 border-b border-amber-100 pb-4">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-100 text-sm font-black text-amber-800">05</span>
+            <div>
+              <h2 className="text-base font-bold text-[#003B3B]">Estimated Interest Preview</h2>
+              <p className="mt-0.5 text-xs text-slate-600">Review the estimated amount due at maturity before saving.</p>
+            </div>
+          </div>
+          {estimate ? (
+            <div className="overflow-hidden rounded-xl border border-amber-100 bg-white shadow-sm">
+              <div className="grid gap-x-6 px-4 sm:grid-cols-2 sm:px-5">
+                {[
+                  ["Principal Amount", formatCurrency(estimate.principal)],
+                  ["Interest Type", interestTypes.find((type) => type.type_key === form.interest_type)?.label || "—"],
+                  ["Applicable Rate", form.interest_type === "fixed"
+                    ? `${formatCurrency(Number(form.fixed_interest_amount || 0))} / ${form.interest_frequency.replaceAll("_", " ")}`
+                    : `${Number(form.interest_rate || 0)}% / ${form.interest_frequency.replaceAll("_", " ")}`],
+                  ["Accrued Interest at Maturity", formatCurrency(estimate.interest)],
+                  ["Processing Fee", formatCurrency(estimate.fee)],
+                  ["Other Charges", formatCurrency(estimate.charges)],
+                  ["Payments Received", formatCurrency(0)],
+                  ["Outstanding Principal", formatCurrency(estimate.principal)]
+                ].map(([label, value]) => (
+                  <div key={label} className="flex items-center justify-between gap-3 border-b border-slate-100 py-3">
+                    <p className="text-xs text-slate-500">{label}</p>
+                    <p className="text-right text-sm font-semibold text-slate-800">{value}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-amber-100 bg-amber-50/70 px-4 py-4 sm:px-5">
+                <div>
+                  <p className="text-xs font-bold text-slate-600">Total Amount Due · Settlement Estimate</p>
+                  <p className="mt-1 text-xl font-extrabold tabular-nums text-[#003B3B]">{formatCurrency(estimate.total)}</p>
+                </div>
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-amber-800">Estimated at maturity</span>
+              </div>
+              <div className="border-t border-slate-100 bg-slate-50/70 px-4 py-3 text-xs leading-relaxed text-slate-600 sm:px-5">
+                <p><FiCalendar className="mr-1 inline" />{form.interest_calculation_start_date} to {form.maturity_date}: {estimate.days} convention days; {estimate.eligibleDays} interest-bearing days after configured grace and interest-free days.</p>
+                <p className="mt-1">Principal basis: {estimate.basis}. Values round to two decimal places for display. This estimate assumes no payments received and does not allocate payments; it is not a settlement quote. Review the signed contract terms before disbursement.</p>
+              </div>
+            </div>
+          ) : <p className="text-sm text-slate-500">Enter the loan amount, interest rate, and dates to see the estimate.</p>}
+        </section>
+        </div>
+
+        <div className="space-y-6">
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
+          <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-50 text-sm font-black text-amber-700">02</span>
             <div>
               <h2 className="text-base font-bold text-[#003B3B]">Pledged Jewellery</h2>
@@ -627,7 +707,7 @@ export default function CreateLoan() {
             Global rate set effective {formatRateDate(activeRateSet.rate_date)}. Valuation uses eligible net {form.metal_type.toLowerCase()} weight × its configured rate; retail charges are excluded.
           </p>}
           {ratesError && <p role="alert" className="mb-4 rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">Could not refresh rates: {ratesError}</p>}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
             <FormSelect
               label="Jewellery Type"
               name="jewellery_type"
@@ -741,47 +821,13 @@ export default function CreateLoan() {
 
         <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
           <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-sky-50 text-sm font-black text-sky-700">03</span>
-            <div>
-              <h2 className="text-base font-bold text-[#003B3B]">Interest & Contract Terms</h2>
-              <p className="mt-0.5 text-xs text-slate-500">Set the interest method, rate and authorized charges.</p>
-            </div>
-          </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <FormSelect label="Interest Type" name="interest_type" form={form} onChange={handleChange} required options={[["", "Select interest type"], ...interestTypes.map(({ type_key, label, enabled }) => [type_key, label, !enabled && type_key !== form.interest_type])]} />
-            {form.interest_type !== "fixed" && <FormField label="Interest Rate (%)" name="interest_rate" form={form} onChange={handleChange} type="number" min="0" step="0.0001" required />}
-            <FormSelect label="Interest Calculation Frequency" name="interest_frequency" form={form} onChange={handleChange} options={INTEREST_FREQUENCIES} required />
-            {form.interest_frequency === "custom_period" && <FormField label="Custom Period (days)" name="custom_period_days" form={form} onChange={handleChange} type="number" min="1" max="3650" step="1" required />}
-            {form.interest_type === "fixed" && <FormField label="Fixed Interest Amount (₹/period)" name="fixed_interest_amount" form={form} onChange={handleChange} type="number" min="0.01" step="0.01" required />}
-            {form.interest_type === "compound" && <FormSelect label="Compounding Frequency" name="compounding_frequency" form={form} onChange={handleChange} options={COMPOUND_FREQUENCIES} required />}
-            <FormSelect label="Day-Count Convention" name="day_count_convention" form={form} onChange={handleChange} options={[["actual_365", "Actual / 365"], ["actual_360", "Actual / 360"], ["30_360", "30 / 360"]]} />
-            <FormField label="Calculation Start Date" name="interest_calculation_start_date" form={form} onChange={handleChange} type="date" required />
-            <FormSelect label="Loan Status" name="loan_status" form={form} onChange={handleChange} options={(loanRecord ? ["Active", "Pending", "Inactive", "Completed"] : ["Active", "Pending"]).map((status) => [status, status])} required />
-            <FormField label="Other Authorized Charges (₹)" name="other_charges" form={form} onChange={handleChange} type="number" min="0" step="0.01" />
-          </div>
-          {!loadingCustomers && interestTypes.length === 0 && (
-            <p className="mt-4 rounded-lg bg-rose-50 p-3 text-xs text-rose-700">
-              No interest methods are enabled. An administrator must enable at least one in Interest Management before creating a loan.
-            </p>
-          )}
-          {(form.interest_type === "slab_based" || form.interest_type === "custom") && (
-            <p className="mt-4 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">
-              {form.interest_type === "slab_based"
-                ? "Enter the applicable authorized slab rate above. Verify the customer's principal falls within the configured slab before saving."
-                : "Enter the authorized custom rate and record the governing terms in Notes."}
-            </p>
-          )}
-        </section>
-
-        <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
-          <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-violet-50 text-sm font-black text-violet-700">04</span>
             <div>
               <h2 className="text-base font-bold text-[#003B3B]">Loan Schedule</h2>
               <p className="mt-0.5 text-xs text-slate-500">Choose the loan dates and repayment frequency.</p>
             </div>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
             <label className={labelClass}>Loan Number<input className={`${fieldClass} bg-slate-50`} value={loanRecord?.loan_number || "Auto-generated on save"} readOnly placeholder="Auto-generated on save" /></label>
             <FormField label="Loan Date" name="loan_date" form={form} onChange={handleChange} type="date" required />
             <FormField label="Maturity Date" name="maturity_date" form={form} onChange={handleChange} type="date" required />
@@ -789,42 +835,9 @@ export default function CreateLoan() {
           </div>
           <label className={`${labelClass} mt-4`}>Notes<textarea className={fieldClass} name="notes" rows="3" maxLength="5000" value={form.notes} onChange={handleChange} placeholder="Enter any additional loan notes (optional)" /></label>
         </section>
+        </div>
 
-        <section className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-5 shadow-sm sm:p-6">
-          <div className="mb-5 flex items-center gap-3 border-b border-amber-100 pb-4">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-100 text-sm font-black text-amber-800">05</span>
-            <div>
-              <h2 className="text-base font-bold text-[#003B3B]">Estimated Interest Preview</h2>
-              <p className="mt-0.5 text-xs text-slate-600">Review the estimated amount due at maturity before saving.</p>
-            </div>
-          </div>
-          {estimate ? (
-            <>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                {[
-                  ["Principal Amount", formatCurrency(estimate.principal)],
-                  ["Interest Type", interestTypes.find((type) => type.type_key === form.interest_type)?.label || "—"],
-                  ["Applicable Rate", form.interest_type === "fixed"
-                    ? `${formatCurrency(Number(form.fixed_interest_amount || 0))} / ${form.interest_frequency.replaceAll("_", " ")}`
-                    : `${Number(form.interest_rate || 0)}% / ${form.interest_frequency.replaceAll("_", " ")}`],
-                  ["Accrued Interest at Maturity", formatCurrency(estimate.interest)],
-                  ["Processing Fee", formatCurrency(estimate.fee)],
-                  ["Other Charges", formatCurrency(estimate.charges)],
-                  ["Payments Received", formatCurrency(0)],
-                  ["Outstanding Principal", formatCurrency(estimate.principal)],
-                  ["Total Amount Due", formatCurrency(estimate.total)],
-                  ["Settlement Estimate", formatCurrency(estimate.total)]
-                ].map(([label, value]) => <div key={label} className="rounded-xl border border-amber-100 bg-white p-3.5 shadow-sm"><p className="text-[11px] font-medium text-slate-500">{label}</p><p className="mt-1 text-sm font-bold text-slate-800">{value}</p></div>)}
-              </div>
-              <div className="mt-4 rounded-xl border border-amber-100 bg-white/80 p-4 text-xs leading-relaxed text-slate-600">
-                <p><FiCalendar className="mr-1 inline" />{form.interest_calculation_start_date} to {form.maturity_date}: {estimate.days} convention days; {estimate.eligibleDays} interest-bearing days after configured grace and interest-free days.</p>
-                <p className="mt-1">Principal basis: {estimate.basis}. Values round to two decimal places for display. This estimate assumes no payments received and does not allocate payments; it is not a settlement quote. Review the signed contract terms before disbursement.</p>
-              </div>
-            </>
-          ) : <p className="text-sm text-slate-500">Enter the loan amount, interest rate, and dates to see the estimate.</p>}
-        </section>
-
-        <div className="sticky bottom-0 z-10 flex flex-wrap justify-end gap-2 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl shadow-slate-900/10 backdrop-blur-md sm:p-4">
+        <div className="sticky bottom-0 z-10 flex flex-wrap justify-end gap-2 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl shadow-slate-900/10 backdrop-blur-md sm:p-4 lg:col-span-2">
           <button type="button" onClick={() => navigate("/admin/loans/allloans")} disabled={saving} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Cancel</button>
           {!loanRecord && <button type="button" onClick={handleReset} disabled={saving} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Reset</button>}
           <button type="submit" disabled={saving || loadingCustomer || !customer || interestTypes.length === 0} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#008577] disabled:cursor-not-allowed disabled:opacity-50">
