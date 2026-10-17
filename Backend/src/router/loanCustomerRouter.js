@@ -1,6 +1,7 @@
 const express = require('express');
 const {
   getCustomers,
+  getCustomerById,
   getCustomerDocument,
   getCustomerDocuments,
   getCustomerPhoto,
@@ -43,6 +44,7 @@ router.post('/:id/documents', (req, res, next) => {
 }, postCustomerDocuments);
 router.delete('/:id/documents/:documentId', removeCustomerDocument);
 router.get('/', getCustomers);
+router.get('/:id', getCustomerById);
 router.post('/', postCustomer);
 router.put('/:id', putCustomer);
 router.delete('/:id', removeCustomer);

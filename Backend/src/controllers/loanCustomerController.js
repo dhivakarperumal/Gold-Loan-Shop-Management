@@ -95,6 +95,17 @@ async function getCustomers(req, res, next) {
   }
 }
 
+async function getCustomerById(req, res, next) {
+  if (!validId(req.params.id)) return res.status(400).json({ message: 'Customer ID is invalid' });
+  try {
+    const customer = await getLoanCustomerById(req.params.id);
+    if (!customer) return res.status(404).json({ message: 'Customer not found' });
+    return res.json(customer);
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function postCustomer(req, res, next) {
   const { customer, error } = normalizeCustomer(req.body || {});
   if (error) return res.status(400).json({ message: error });
@@ -262,11 +273,16 @@ async function removeCustomer(req, res, next) {
     await removeLoanCustomerDocuments(documents);
     return res.json({ message: 'Customer deleted successfully' });
   } catch (error) {
+    if (error.code === 'ER_ROW_IS_REFERENCED_2') {
+      return res.status(409).json({ message: 'This customer has loan records and cannot be deleted.' });
+    }
     return next(error);
   }
 }
 
 module.exports = {
+  getCustomerById,
+  getCustomerById,
   getCustomerDocument,
   getCustomerDocuments,
   getCustomerPhoto,

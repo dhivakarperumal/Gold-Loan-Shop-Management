@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import {
   FiCheckCircle,
   FiDownload,
   FiEdit2,
+  FiEye,
   FiFilter,
   FiGrid,
   FiList,
   FiMapPin,
   FiPlus,
-  FiRefreshCw,
   FiSearch,
   FiTrash2,
   FiUser,
@@ -108,9 +109,12 @@ export default function LoanCustomerManagement() {
   const [documents, setDocuments] = useState([]);
   const [pendingDocuments, setPendingDocuments] = useState([]);
   const pendingPreviewUrls = useRef(new Set());
+  const handledEditCustomerId = useRef(null);
   const [documentType, setDocumentType] = useState("");
   const [nextPendingDocumentId, setNextPendingDocumentId] = useState(0);
   const [loadingDocuments, setLoadingDocuments] = useState(false);
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const loadCustomers = useCallback(async () => {
     setLoading(true);
@@ -219,6 +223,16 @@ export default function LoanCustomerManagement() {
       setLoadingDocuments(false);
     }
   };
+
+  useEffect(() => {
+    const editCustomerId = location.state?.editCustomerId;
+    if (loading || !editCustomerId || handledEditCustomerId.current === String(editCustomerId)) return;
+    const customer = customers.find((item) => String(item.id) === String(editCustomerId));
+    if (!customer) return;
+    handledEditCustomerId.current = String(editCustomerId);
+    navigate(location.pathname, { replace: true, state: null });
+    openEditCustomer(customer);
+  }, [loading, customers, location, navigate]);
 
   const closeForm = () => {
     if (saving || uploadingPhoto) return;
@@ -569,6 +583,7 @@ export default function LoanCustomerManagement() {
                   <td className="px-4 py-3 text-sm text-slate-500">{customer.created_at ? new Date(customer.created_at).toLocaleDateString("en-IN") : "—"}</td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
+                      <button type="button" onClick={() => navigate(`/admin/loans/customers/${customer.id}`)} aria-label={`View ${customer.full_name}`} title="View customer" className="rounded-lg p-2 text-slate-600 hover:bg-slate-100"><FiEye /></button>
                       <button type="button" onClick={() => openEditCustomer(customer)} aria-label={`Edit ${customer.full_name}`} className="rounded-lg p-2 text-[#008577] hover:bg-emerald-50"><FiEdit2 /></button>
                       <button type="button" onClick={() => handleDelete(customer)} aria-label={`Delete ${customer.full_name}`} className="rounded-lg p-2 text-rose-500 hover:bg-rose-50"><FiTrash2 /></button>
                     </div>
@@ -614,6 +629,7 @@ export default function LoanCustomerManagement() {
                       <p className="text-xs text-slate-400">Added {customer.created_at ? new Date(customer.created_at).toLocaleDateString("en-IN") : "—"}</p>
                     </div>
                     <div className="mt-3 flex justify-end gap-2 border-t border-slate-100 pt-3">
+                      <button type="button" onClick={() => navigate(`/admin/loans/customers/${customer.id}`)} aria-label={`View ${customer.full_name}`} title="View customer" className="rounded-lg p-2 text-slate-600 hover:bg-slate-100"><FiEye /></button>
                       <button type="button" onClick={() => openEditCustomer(customer)} aria-label={`Edit ${customer.full_name}`} className="rounded-lg p-2 text-[#008577] hover:bg-emerald-50"><FiEdit2 /></button>
                       <button type="button" onClick={() => handleDelete(customer)} aria-label={`Delete ${customer.full_name}`} className="rounded-lg p-2 text-rose-500 hover:bg-rose-50"><FiTrash2 /></button>
                     </div>

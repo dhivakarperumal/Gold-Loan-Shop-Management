@@ -56,10 +56,10 @@ async function listLoanCustomers(search = '') {
   const [rows] = await pool.execute(
     `SELECT ${CUSTOMER_COLUMNS}
      FROM loan_customers
-     WHERE ? = '' OR customer_code LIKE ? OR full_name LIKE ? OR mobile LIKE ?
+     WHERE ? = '' OR CAST(id AS CHAR) LIKE ? OR customer_code LIKE ? OR full_name LIKE ? OR mobile LIKE ?
        OR alternate_mobile LIKE ? OR city LIKE ? OR district LIKE ?
      ORDER BY created_at DESC, id DESC`,
-    [search, term, term, term, term, term, term]
+    [search, term, term, term, term, term, term, term]
   );
   return rows;
 }

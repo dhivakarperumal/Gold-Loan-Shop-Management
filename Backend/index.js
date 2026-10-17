@@ -8,6 +8,8 @@ const { initializeCategoryModule } = require('./src/modules/categoryModule');
 const { initializeMetalModule } = require('./src/modules/metalModule');
 const { initializeProductModule } = require('./src/modules/productModule');
 const { initializeLoanCustomerModule } = require('./src/modules/loanCustomerModule');
+const { initializeLoanModule } = require('./src/modules/loanModule');
+const { initializeBannerModule } = require('./src/modules/bannerModule');
 const apiRouter = require('./src/router');
 
 const app = express();
@@ -20,6 +22,13 @@ app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.get('/', (req, res) => {
   res.json({ message: 'Gold Shop Management Backend is running' });
+});
+
+app.use('/api', (req, res, next) => {
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+  res.set('Pragma', 'no-cache');
+  res.set('Expires', '0');
+  return next();
 });
 
 app.use('/api', apiRouter);
@@ -40,6 +49,8 @@ async function startServer() {
   await initializeMetalModule();
   await initializeProductModule();
   await initializeLoanCustomerModule();
+  await initializeLoanModule();
+  await initializeBannerModule();
   const server = app.listen(PORT, () => {
     console.log(`Backend server is running on port ${PORT}`);
   });
