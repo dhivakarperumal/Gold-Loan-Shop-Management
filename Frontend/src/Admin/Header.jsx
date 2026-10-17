@@ -55,6 +55,7 @@ const pageTitles = {
   "/admin/products/add": "Add Product",
   "/admin/products/edit": "Edit Product",
   "/admin/products/category": "Categories",
+  "/admin/metals": "Add Metal",
   "/admin/products/stock": "Stock Details",
   "/admin/products/stock/add": "Add Stock",
   "/admin/products": "Inventory",

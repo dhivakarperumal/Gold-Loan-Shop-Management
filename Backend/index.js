@@ -4,6 +4,7 @@ const cors = require('cors');
 const { initializeDatabase } = require('./src/config/db');
 const { initializeAuthModule } = require('./src/modules/authModule');
 const { initializeCategoryModule } = require('./src/modules/categoryModule');
+const { initializeMetalModule } = require('./src/modules/metalModule');
 const apiRouter = require('./src/router');
 
 const app = express();
@@ -32,6 +33,7 @@ async function startServer() {
   await initializeDatabase();
   await initializeAuthModule();
   await initializeCategoryModule();
+  await initializeMetalModule();
   const server = app.listen(PORT, () => {
     console.log(`Backend server is running on port ${PORT}`);
   });
