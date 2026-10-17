@@ -8,7 +8,6 @@ import {
   FaBars,
   FaChevronDown,
   FaChevronRight,
-  FaCompass,
   FaFileAlt,
   FaGem,
   FaHeart,
@@ -16,6 +15,7 @@ import {
   FaPhoneAlt,
   FaSearch,
   FaShoppingBag,
+  FaStore,
   FaTag,
   FaThLarge,
   FaTimes,
@@ -193,13 +193,13 @@ const Navbar = () => {
 
           <div ref={dropdownRef} className="hidden min-w-0 flex-1 items-center justify-center xl:flex">
             <div className="flex h-full items-center">
-              <NavLink to="/" end className={({ isActive }) => `flex h-[76px] min-w-[90px] flex-col items-center justify-center gap-1 border-r border-[#efe5d4] px-4 text-sm font-semibold transition hover:text-[#a77525] ${isActive ? "border-b-2 border-b-[#c68c22] text-[#164333]" : "text-[#30271b]"}`}>
-                <FaHome className="text-lg text-[#174a38]" />
-                Home
+              <NavLink to="/" end className={({ isActive }) => `flex h-[76px] min-w-[90px] flex-col items-center justify-center gap-1 border-r border-[#efe5d4] px-4 text-sm font-semibold transition hover:bg-[#fff9ed] ${isActive ? "border-b-2 border-b-[#c68c22]" : ""}`}>
+                <FaHome className="text-lg text-[#a77525]" />
+                <span className="text-[#174a38]">Home</span>
               </NavLink>
-              <NavLink to="/shop" className={({ isActive }) => `flex h-[76px] min-w-[95px] flex-col items-center justify-center gap-1 border-r border-[#efe5d4] px-4 text-sm font-semibold transition hover:text-[#a77525] ${isActive ? "border-b-2 border-b-[#c68c22] text-[#164333]" : "text-[#30271b]"}`}>
-                <FaCompass className="text-lg text-[#a77525]" />
-                <span>Explore</span>
+              <NavLink to="/shop" className={({ isActive }) => `flex h-[76px] min-w-[95px] flex-col items-center justify-center gap-1 border-r border-[#efe5d4] px-4 text-sm font-semibold transition hover:bg-[#fff9ed] ${isActive ? "border-b-2 border-b-[#c68c22]" : ""}`}>
+                <FaStore className="text-lg text-[#a77525]" />
+                <span className="text-[#174a38]">Explore</span>
               </NavLink>
 
               <div className="relative h-full">
@@ -210,10 +210,10 @@ const Navbar = () => {
                     setOpenDropdown(openDropdown === "categories" ? "" : "categories");
                     setSelectedCategory(categories[0] || null);
                   }}
-                  className={`flex h-[76px] min-w-[110px] flex-col items-center justify-center gap-1 border-r border-[#efe5d4] px-4 text-sm font-semibold transition hover:bg-[#fff9ed] hover:text-[#a77525] ${openDropdown === "categories" ? "bg-[#fff9ed] text-[#8c5e13]" : "text-[#30271b]"}`}
+                  className={`flex h-[76px] min-w-[110px] flex-col items-center justify-center gap-1 border-r border-[#efe5d4] px-4 text-sm font-semibold transition hover:bg-[#fff9ed] ${openDropdown === "categories" ? "bg-[#fff9ed]" : ""}`}
                 >
-                  <FaThLarge className="text-lg text-[#174a38]" />
-                  <span className="flex items-center gap-1">Category <FaChevronDown className={`transition-transform ${openDropdown === "categories" ? "rotate-180" : ""}`} /></span>
+                  <FaThLarge className="text-lg text-[#a77525]" />
+                  <span className="flex items-center gap-1 text-[#174a38]">Category <FaChevronDown className={`text-[#174a38] transition-transform ${openDropdown === "categories" ? "rotate-180" : ""}`} /></span>
                 </button>
                 {openDropdown === "categories" && (
                   <div className="absolute left-0 top-full z-50 flex min-w-[300px] rounded-xl border border-[#efe5d4] bg-white p-2 shadow-xl">
@@ -275,10 +275,10 @@ const Navbar = () => {
                   type="button"
                   aria-expanded={openDropdown === "metals"}
                   onClick={() => setOpenDropdown(openDropdown === "metals" ? "" : "metals")}
-                  className={`flex h-[76px] min-w-[95px] flex-col items-center justify-center gap-1 border-r border-[#efe5d4] px-4 text-sm font-semibold transition hover:bg-[#fff9ed] hover:text-[#a77525] ${openDropdown === "metals" ? "bg-[#fff9ed] text-[#8c5e13]" : "text-[#30271b]"}`}
+                  className={`flex h-[76px] min-w-[95px] flex-col items-center justify-center gap-1 border-r border-[#efe5d4] px-4 text-sm font-semibold transition hover:bg-[#fff9ed] ${openDropdown === "metals" ? "bg-[#fff9ed]" : ""}`}
                 >
-                  <FaGem className="text-lg text-[#174a38]" />
-                  <span className="flex items-center gap-1">Metal <FaChevronDown className={`transition-transform ${openDropdown === "metals" ? "rotate-180" : ""}`} /></span>
+                  <FaGem className="text-lg text-[#a77525]" />
+                  <span className="flex items-center gap-1 text-[#174a38]">Metal <FaChevronDown className={`text-[#174a38] transition-transform ${openDropdown === "metals" ? "rotate-180" : ""}`} /></span>
                 </button>
                 {openDropdown === "metals" && (
                   <div className="absolute left-0 top-full z-50 w-[250px] rounded-xl border border-[#efe5d4] bg-white p-2 shadow-xl">
@@ -300,9 +300,9 @@ const Navbar = () => {
                 )}
               </div>
 
-              <Link to="/contactus" className="flex h-[76px] min-w-[100px] flex-col items-center justify-center gap-1 px-4 text-sm font-semibold text-[#30271b] transition hover:text-[#a77525]">
-                <FaPhoneAlt className="text-lg text-[#174a38]" />
-                Contact Us
+              <Link to="/contactus" className="flex h-[76px] min-w-[100px] flex-col items-center justify-center gap-1 px-4 text-sm font-semibold transition hover:bg-[#fff9ed]">
+                <FaPhoneAlt className="text-lg text-[#a77525]" />
+                <span className="text-[#174a38]">Contact Us</span>
               </Link>
             </div>
           </div>
@@ -395,8 +395,8 @@ const Navbar = () => {
           id="navbar-search-panel"
           className="absolute inset-x-0 top-full z-50 border-t border-[#efe5d4] bg-white px-3 py-4 shadow-lg sm:px-5"
         >
-          <PageContainer>
-            <form onSubmit={handleSearch} className="mx-auto flex max-w-2xl items-center overflow-hidden rounded-lg border border-[#d9d9d9] bg-white shadow-sm">
+          <PageContainer className="flex items-center gap-3">
+            <form onSubmit={handleSearch} className="mx-auto flex max-w-2xl flex-1 items-center overflow-hidden rounded-lg border border-[#d9d9d9] bg-white shadow-sm">
               <FaSearch className="ml-3 shrink-0 text-[#174a38]" />
               <input
                 ref={searchInputRef}
@@ -407,11 +407,19 @@ const Navbar = () => {
                 aria-label="Search jewelry and collections"
                 className="min-w-0 flex-1 px-3 py-3 text-sm outline-none placeholder:text-gray-500"
               />
-              <button type="submit" className="flex h-11 shrink-0 items-center justify-center gap-2 bg-[#d69b17] px-4 text-sm font-semibold text-white transition hover:bg-[#bd850f]">
+              <button type="submit" className="flex h-11 shrink-0 items-center justify-center gap-2 bg-[#174a38] px-4 text-sm font-semibold text-white transition hover:bg-[#10382b]">
                 <FaSearch />
                 <span>Search</span>
               </button>
             </form>
+            <button
+              type="button"
+              onClick={() => setSearchOpen(false)}
+              aria-label="Close search"
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-[#174a38] transition hover:bg-[#edf4ef]"
+            >
+              <FaTimes />
+            </button>
           </PageContainer>
         </div>
       )}
