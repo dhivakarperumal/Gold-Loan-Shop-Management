@@ -20,6 +20,13 @@ const COMPOUND_FREQUENCIES = [
   ["daily", "Daily"], ["weekly", "Weekly"], ["monthly", "Monthly"],
   ["quarterly", "Quarterly"], ["half_yearly", "Half-Yearly"], ["yearly", "Yearly"]
 ];
+const GOLD_PURITY_OPTIONS = [
+  ["24K / 999", "24K (999)"],
+  ["22K / 916", "22K (916)"],
+  ["20K / 833", "20K (833)"],
+  ["18K / 750", "18K (750)"],
+  ["14K / 585", "14K (585)"]
+];
 const fieldClass = "mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-[#008577] focus:ring-2 focus:ring-emerald-100";
 const labelClass = "block text-xs font-semibold text-slate-600";
 
@@ -161,13 +168,14 @@ function FormField({ label, name, form, onChange, type = "text", required = fals
   );
 }
 
-function FormSelect({ label, name, form, onChange, options, required = false }) {
+function FormSelect({ label, name, form, onChange, options, required = false, disabled = false, help }) {
   return (
     <label className={labelClass}>
       {label}{required && <span className="ml-1 text-rose-500">*</span>}
-      <select className={fieldClass} name={name} value={form[name] ?? ""} onChange={onChange} required={required}>
+      <select className={fieldClass} name={name} value={form[name] ?? ""} onChange={onChange} required={required} disabled={disabled}>
         {options.map(([value, text, disabled]) => <option key={value} value={value} disabled={disabled}>{text}</option>)}
       </select>
+      {help && <span className="mt-1 block text-[11px] font-normal text-slate-400">{help}</span>}
     </label>
   );
 }
@@ -498,7 +506,24 @@ export default function CreateLoan() {
               <input className={`${fieldClass} bg-slate-50`} value={loanRecord?.gold_pledge_number || "Auto-generated on save"} readOnly />
             </label>
             <FormField label="Jewellery Type" name="jewellery_type" form={form} onChange={handleChange} required />
-            <FormField label="Gold Purity" name="gold_purity" form={form} onChange={handleChange} required readOnly={Boolean(loanRecord && loanRecord.gold_rate_per_gram == null)} help={loanRecord && loanRecord.gold_rate_per_gram == null ? "This legacy loan has no rate snapshot; its existing purity and saved valuation are preserved." : "Example: 22K or 916"} />
+            <FormSelect
+              label="Gold Purity"
+              name="gold_purity"
+              form={form}
+              onChange={handleChange}
+              required
+              disabled={Boolean(loanRecord && loanRecord.gold_rate_per_gram == null)}
+              help={loanRecord && loanRecord.gold_rate_per_gram == null
+                ? "This legacy loan has no rate snapshot; its saved purity and valuation are preserved."
+                : "Select the purity matching the pledged gold and active rate."}
+              options={[
+                ["", "Select gold purity"],
+                ...(!GOLD_PURITY_OPTIONS.some(([value]) => value === form.gold_purity) && form.gold_purity
+                  ? [[form.gold_purity, `${form.gold_purity} (saved)`]]
+                  : []),
+                ...GOLD_PURITY_OPTIONS
+              ]}
+            />
             <FormField label="Gross Weight (g)" name="gross_weight" form={form} onChange={handleChange} type="number" min="0.001" step="0.001" required />
             <FormField label="Stone Weight (g)" name="stone_weight" form={form} onChange={handleChange} type="number" min="0" step="0.001" />
             <label className={labelClass}>Net Gold Weight (g)<input className={`${fieldClass} bg-slate-50`} value={Math.max(0, Number(form.gross_weight || 0) - Number(form.stone_weight || 0)).toFixed(3)} readOnly /></label>
