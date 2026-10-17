@@ -492,20 +492,28 @@ export default function CreateLoan() {
   }
 
   return (
-    <main className="space-y-5 p-4 sm:p-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
+    <main className="mx-auto max-w-[1440px] space-y-6 bg-slate-50/60 p-4 sm:p-6 lg:p-8">
+      <header className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#003B3B] via-[#00594f] to-[#087568] px-5 py-6 text-white shadow-lg sm:px-7">
+        <div className="pointer-events-none absolute -right-12 -top-24 h-64 w-64 rounded-full border-[30px] border-white/5" />
         <div>
-          <Link to="/admin/loans/allloans" className="mb-2 inline-flex items-center gap-2 text-xs font-semibold text-[#008577] hover:text-[#003B3B]">
-            <FiArrowLeft /> All Loans
+          <Link to="/admin/loans/allloans" className="relative mb-3 inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/90 transition hover:bg-white/20">
+            <FiArrowLeft /> Back to All Loans
           </Link>
-          <h1 className="text-2xl font-extrabold text-[#003B3B]">{loanRecord ? `Edit Loan ${loanRecord.loan_number}` : "Create Gold Loan"}</h1>
-          <p className="mt-1 text-sm text-slate-500">{loanRecord ? "Update the pledged gold and agreed contract terms." : "Select a registered customer and record the pledged gold and agreed terms."}</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-200">Loan Management</p>
+          <h1 className="mt-1 text-2xl font-extrabold sm:text-3xl">{loanRecord ? `Edit Loan ${loanRecord.loan_number}` : "Create Gold Loan"}</h1>
+          <p className="mt-2 max-w-2xl text-sm text-white/75">{loanRecord ? "Update the customer, pledged jewellery and agreed loan terms." : "Add customer details, record pledged jewellery and define the loan terms."}</p>
         </div>
       </header>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <section className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm sm:p-5">
-          <h2 className="mb-4 text-base font-bold text-[#003B3B]">Customer</h2>
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
+          <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-50 text-sm font-black text-[#006b62]">01</span>
+            <div>
+              <h2 className="text-base font-bold text-[#003B3B]">Customer</h2>
+              <p className="mt-0.5 text-xs text-slate-500">Choose the registered customer for this loan.</p>
+            </div>
+          </div>
           <div className="relative max-w-2xl">
             <label className={labelClass}>
               Select Customer<span className="ml-1 text-rose-500">*</span>
@@ -531,7 +539,7 @@ export default function CreateLoan() {
               </div>
             </label>
             {showCustomerMenu && !id && (
-              <div className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white p-1 shadow-xl">
+              <div className="absolute z-20 mt-2 max-h-64 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-900/10">
                 {loadingCustomers ? (
                   <p className="p-3 text-sm text-slate-500">Loading registered customers...</p>
                 ) : customerLoadError ? (
@@ -550,7 +558,7 @@ export default function CreateLoan() {
                     key={item.id}
                     type="button"
                     onClick={() => selectCustomer(item)}
-                    className="flex w-full items-center justify-between gap-3 rounded-md px-3 py-2.5 text-left hover:bg-emerald-50"
+                    className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left transition hover:bg-emerald-50"
                   >
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-semibold text-slate-800">{item.full_name}</span>
@@ -568,7 +576,7 @@ export default function CreateLoan() {
             )}
           </div>
           {customer && (
-            <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/50 p-4">
+            <div className="mt-5 rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50/80 to-white p-4 sm:p-5">
               {loadingCustomer ? <p className="text-sm text-slate-500">Loading customer account and loan history...</p> : (
                 <>
                   <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -607,8 +615,14 @@ export default function CreateLoan() {
           )}
         </section>
 
-        <section className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm sm:p-5">
-          <h2 className="mb-4 text-base font-bold text-[#003B3B]">Pledged Jewellery</h2>
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
+          <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-50 text-sm font-black text-amber-700">02</span>
+            <div>
+              <h2 className="text-base font-bold text-[#003B3B]">Pledged Jewellery</h2>
+              <p className="mt-0.5 text-xs text-slate-500">Enter the collateral details to calculate its current valuation.</p>
+            </div>
+          </div>
           {activeRateSet && <p className="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
             Global rate set effective {formatRateDate(activeRateSet.rate_date)}. Valuation uses eligible net {form.metal_type.toLowerCase()} weight × its configured rate; retail charges are excluded.
           </p>}
@@ -656,8 +670,8 @@ export default function CreateLoan() {
             <FormField label={`${form.metal_type} Rate / ${appliedRateUnit === "carat" ? "Carat" : "Gram"} (₹)`} name="gold_rate_per_gram" form={{ gold_rate_per_gram: appliedGoldRate ?? "" }} onChange={() => {}} readOnly help={loanRecord && savedPurityUnchanged && loanRecord.gold_rate_per_gram != null ? `Saved loan rate from ${formatRateDate(loanRecord.gold_rate_date)}; today's changes do not alter it.` : loanRecord && savedPurityUnchanged ? "Legacy loan; its saved valuation is preserved." : ratesLoading ? "Loading today's active rate..." : "Selected by the configured metal purity or quality."} />
             <FormField label={`${form.metal_type} Valuation (₹)`} name="gold_valuation" form={{ gold_valuation: estimatedGoldValuation.toFixed(2) }} onChange={() => {}} readOnly required min="0.01" step="0.01" help={`Eligible net weight (${weightUnit}) × the applied ${appliedRateUnit} rate snapshot; retail charges are excluded.`} />
           </div>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
-            <div>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-4">
               <span className={labelClass}>Loan Amount (₹)<span className="ml-1 text-rose-500">*</span></span>
               <div className="mt-1.5 inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1" role="radiogroup" aria-label="Loan amount calculation mode">
                 {[
@@ -685,7 +699,7 @@ export default function CreateLoan() {
                 <FormField label="Loan Amount (₹)" name="principal_amount" form={form} onChange={handleChange} type="number" min="0.01" step="0.01" required placeholder="Enter loan amount" help="Enter the loan amount to disburse." />
               )}
             </div>
-            <div className="rounded-xl border border-dashed border-slate-300 p-4">
+            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/70 p-4">
               <p className={labelClass}>Gold Image <span className="font-normal text-slate-400">(optional, PNG or JPG up to 5 MB)</span></p>
               <label className={labelClass}>
                 <input
@@ -725,8 +739,14 @@ export default function CreateLoan() {
           </div>
         </section>
 
-        <section className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm sm:p-5">
-          <h2 className="mb-4 text-base font-bold text-[#003B3B]">Interest & Contract Terms</h2>
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
+          <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-sky-50 text-sm font-black text-sky-700">03</span>
+            <div>
+              <h2 className="text-base font-bold text-[#003B3B]">Interest & Contract Terms</h2>
+              <p className="mt-0.5 text-xs text-slate-500">Set the interest method, rate and authorized charges.</p>
+            </div>
+          </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <FormSelect label="Interest Type" name="interest_type" form={form} onChange={handleChange} required options={[["", "Select interest type"], ...interestTypes.map(({ type_key, label, enabled }) => [type_key, label, !enabled && type_key !== form.interest_type])]} />
             {form.interest_type !== "fixed" && <FormField label="Interest Rate (%)" name="interest_rate" form={form} onChange={handleChange} type="number" min="0" step="0.0001" required />}
@@ -753,8 +773,14 @@ export default function CreateLoan() {
           )}
         </section>
 
-        <section className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm sm:p-5">
-          <h2 className="mb-4 text-base font-bold text-[#003B3B]">Loan Schedule</h2>
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
+          <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-violet-50 text-sm font-black text-violet-700">04</span>
+            <div>
+              <h2 className="text-base font-bold text-[#003B3B]">Loan Schedule</h2>
+              <p className="mt-0.5 text-xs text-slate-500">Choose the loan dates and repayment frequency.</p>
+            </div>
+          </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <label className={labelClass}>Loan Number<input className={`${fieldClass} bg-slate-50`} value={loanRecord?.loan_number || "Auto-generated on save"} readOnly placeholder="Auto-generated on save" /></label>
             <FormField label="Loan Date" name="loan_date" form={form} onChange={handleChange} type="date" required />
@@ -764,8 +790,14 @@ export default function CreateLoan() {
           <label className={`${labelClass} mt-4`}>Notes<textarea className={fieldClass} name="notes" rows="3" maxLength="5000" value={form.notes} onChange={handleChange} placeholder="Enter any additional loan notes (optional)" /></label>
         </section>
 
-        <section className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm sm:p-5">
-          <h2 className="mb-3 text-base font-bold text-[#003B3B]">Estimated Interest Preview</h2>
+        <section className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-5 shadow-sm sm:p-6">
+          <div className="mb-5 flex items-center gap-3 border-b border-amber-100 pb-4">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-100 text-sm font-black text-amber-800">05</span>
+            <div>
+              <h2 className="text-base font-bold text-[#003B3B]">Estimated Interest Preview</h2>
+              <p className="mt-0.5 text-xs text-slate-600">Review the estimated amount due at maturity before saving.</p>
+            </div>
+          </div>
           {estimate ? (
             <>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -782,9 +814,9 @@ export default function CreateLoan() {
                   ["Outstanding Principal", formatCurrency(estimate.principal)],
                   ["Total Amount Due", formatCurrency(estimate.total)],
                   ["Settlement Estimate", formatCurrency(estimate.total)]
-                ].map(([label, value]) => <div key={label} className="rounded-lg bg-white/80 p-3"><p className="text-[11px] text-slate-500">{label}</p><p className="mt-1 text-sm font-bold text-slate-800">{value}</p></div>)}
+                ].map(([label, value]) => <div key={label} className="rounded-xl border border-amber-100 bg-white p-3.5 shadow-sm"><p className="text-[11px] font-medium text-slate-500">{label}</p><p className="mt-1 text-sm font-bold text-slate-800">{value}</p></div>)}
               </div>
-              <div className="mt-3 rounded-lg bg-white/80 p-3 text-xs leading-relaxed text-slate-600">
+              <div className="mt-4 rounded-xl border border-amber-100 bg-white/80 p-4 text-xs leading-relaxed text-slate-600">
                 <p><FiCalendar className="mr-1 inline" />{form.interest_calculation_start_date} to {form.maturity_date}: {estimate.days} convention days; {estimate.eligibleDays} interest-bearing days after configured grace and interest-free days.</p>
                 <p className="mt-1">Principal basis: {estimate.basis}. Values round to two decimal places for display. This estimate assumes no payments received and does not allocate payments; it is not a settlement quote. Review the signed contract terms before disbursement.</p>
               </div>
@@ -792,7 +824,7 @@ export default function CreateLoan() {
           ) : <p className="text-sm text-slate-500">Enter the loan amount, interest rate, and dates to see the estimate.</p>}
         </section>
 
-        <div className="sticky bottom-0 z-10 flex flex-wrap justify-end gap-2 rounded-xl border border-slate-100 bg-white/95 p-3 shadow-lg backdrop-blur">
+        <div className="sticky bottom-0 z-10 flex flex-wrap justify-end gap-2 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl shadow-slate-900/10 backdrop-blur-md sm:p-4">
           <button type="button" onClick={() => navigate("/admin/loans/allloans")} disabled={saving} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Cancel</button>
           {!loanRecord && <button type="button" onClick={handleReset} disabled={saving} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Reset</button>}
           <button type="submit" disabled={saving || loadingCustomer || !customer || interestTypes.length === 0} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#008577] disabled:cursor-not-allowed disabled:opacity-50">
