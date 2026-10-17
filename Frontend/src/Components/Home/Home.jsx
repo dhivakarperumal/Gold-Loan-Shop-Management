@@ -1,10 +1,15 @@
 import React from 'react'
+import Category from '../CommenComponents/Category'
+import Products from '../CommenComponents/Products'
+import Hero from '../CommenComponents/Hero'
 
 
 const Home = () => {
   return (
     <div>
-    <h1>Home Page</h1>
+    <Hero/>
+    <Category />
+    <Products/>
     </div>
   )
 }
