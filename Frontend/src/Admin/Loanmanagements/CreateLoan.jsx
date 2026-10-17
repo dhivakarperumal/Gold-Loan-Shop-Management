@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { FiArrowLeft, FiCalendar, FiCheck, FiChevronDown, FiSearch, FiUserPlus } from "react-icons/fi";
+import { FiArrowLeft, FiCalendar, FiCheck, FiChevronDown, FiSearch, FiUploadCloud, FiUserPlus } from "react-icons/fi";
 import { toast } from "react-hot-toast";
-import api from "../../api";
+import api, { getPrivateFile } from "../../api";
 import { formatRateDate, getRateForPurity } from "../../PrivateRouter/goldRateUtils";
 import useGoldRates from "../../PrivateRouter/useGoldRates";
 
@@ -196,6 +196,10 @@ export default function CreateLoan() {
   const [saving, setSaving] = useState(false);
   const [loanRecord, setLoanRecord] = useState(null);
   const [loadedFor, setLoadedFor] = useState(null);
+  const [goldImageFile, setGoldImageFile] = useState(null);
+  const [goldImagePreview, setGoldImagePreview] = useState(null);
+  const goldImageInput = useRef(null);
+  const selectedGoldImagePreview = useRef("");
   const { current: activeRateSet, loading: ratesLoading, error: ratesError } = useGoldRates();
 
   useEffect(() => {
@@ -265,6 +269,36 @@ export default function CreateLoan() {
     return () => { active = false; };
   }, [id]);
 
+  useEffect(() => {
+    let active = true;
+    let previewUrl = "";
+    if (goldImageFile || !loanRecord?.gold_image_url) return undefined;
+    if (loanRecord?.gold_image_url) {
+      getPrivateFile(loanRecord.gold_image_url, { responseType: "blob" })
+        .then(({ data }) => {
+          if (!active) return;
+          previewUrl = URL.createObjectURL(data);
+          setGoldImagePreview({ key: loanRecord.gold_image_url, url: previewUrl });
+        })
+        .catch((error) => {
+          console.error("Failed to load pledged gold image:", error);
+          if (active) toast.error(error.response?.data?.message || "Could not load the saved gold image.");
+        });
+    }
+    return () => {
+      active = false;
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [goldImageFile, loanRecord?.gold_image_url]);
+
+  useEffect(() => () => {
+    if (selectedGoldImagePreview.current) URL.revokeObjectURL(selectedGoldImagePreview.current);
+  }, []);
+
+  const goldImagePreviewUrl = goldImageFile
+    ? (goldImagePreview && goldImagePreview.key === goldImageFile ? goldImagePreview.url : "")
+    : (goldImagePreview && goldImagePreview.key === loanRecord?.gold_image_url ? goldImagePreview.url : "");
+
   const filteredCustomers = useMemo(() => {
     const search = customerQuery.trim().toLowerCase();
     if (!search) return customers;
@@ -318,6 +352,11 @@ export default function CreateLoan() {
     setCustomer(null);
     setCustomerQuery("");
     setCustomerLoans([]);
+    setGoldImageFile(null);
+    if (selectedGoldImagePreview.current) URL.revokeObjectURL(selectedGoldImagePreview.current);
+    selectedGoldImagePreview.current = "";
+    setGoldImagePreview(null);
+    if (goldImageInput.current) goldImageInput.current.value = "";
   };
 
   const handleSubmit = async (event) => {
@@ -342,12 +381,18 @@ export default function CreateLoan() {
     }
     setSaving(true);
     try {
-      const payload = {
+      const loanData = {
         ...form,
-        customer_id: customer.id,
+        customer_id: String(customer.id),
         net_gold_weight: (gross - stone).toFixed(3),
         gold_valuation: estimatedGoldValuation.toFixed(2)
       };
+      let payload = loanData;
+      if (goldImageFile) {
+        payload = new FormData();
+        Object.entries(loanData).forEach(([key, value]) => payload.append(key, value ?? ""));
+        payload.append("gold_image", goldImageFile);
+      }
       const response = loanRecord
         ? await api.put(`/loans/${loanRecord.id}`, payload)
         : await api.post("/loans", payload);
@@ -530,6 +575,42 @@ export default function CreateLoan() {
             <FormField label="Gold Rate / Gram (₹)" name="gold_rate_per_gram" form={{ gold_rate_per_gram: appliedGoldRate ?? "" }} onChange={() => {}} readOnly help={loanRecord && savedPurityUnchanged && loanRecord.gold_rate_per_gram != null ? `Saved loan rate from ${formatRateDate(loanRecord.gold_rate_date)}; today's changes do not alter it.` : loanRecord && savedPurityUnchanged ? "Legacy loan; its saved valuation is preserved." : ratesLoading ? "Loading today's active rate..." : "Selected by the configured purity."} />
             <FormField label="Gold Valuation (₹)" name="gold_valuation" form={{ gold_valuation: estimatedGoldValuation.toFixed(2) }} onChange={() => {}} readOnly required min="0.01" step="0.01" help="Eligible net gold weight × the applied rate snapshot; not the retail jewellery price." />
             <FormField label="Loan Amount (₹)" name="principal_amount" form={form} onChange={handleChange} type="number" min="0.01" step="0.01" required />
+          </div>
+          <div className="mt-5 rounded-xl border border-dashed border-slate-300 p-4">
+            <label className={labelClass}>
+              Gold Image <span className="font-normal text-slate-400">(optional, PNG or JPG up to 5 MB)</span>
+              <input
+                ref={goldImageInput}
+                className="sr-only"
+                type="file"
+                accept="image/png,image/jpeg"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (!file) return;
+                  if (!["image/png", "image/jpeg"].includes(file.type)) {
+                    toast.error("Choose a PNG or JPG gold image.");
+                    event.target.value = "";
+                    return;
+                  }
+                  if (file.size > 5 * 1024 * 1024) {
+                    toast.error("Gold image must be 5 MB or smaller.");
+                    event.target.value = "";
+                    return;
+                  }
+                  if (selectedGoldImagePreview.current) URL.revokeObjectURL(selectedGoldImagePreview.current);
+                  selectedGoldImagePreview.current = URL.createObjectURL(file);
+                  setGoldImagePreview({ key: file, url: selectedGoldImagePreview.current });
+                  setGoldImageFile(file);
+                }}
+              />
+              <span className="mt-2 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                <FiUploadCloud className="text-[#008577]" />
+                {goldImageFile ? "Choose a different image" : loanRecord?.gold_image_url ? "Replace gold image" : "Upload gold image"}
+              </span>
+            </label>
+            {goldImagePreviewUrl && (
+              <img src={goldImagePreviewUrl} alt="Pledged gold preview" className="mt-3 h-40 w-40 rounded-lg border border-slate-200 object-cover" />
+            )}
           </div>
         </section>
 

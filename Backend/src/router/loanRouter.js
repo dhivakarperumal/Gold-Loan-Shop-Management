@@ -1,11 +1,13 @@
 const express = require('express');
 const requireAdmin = require('../middleware/requireAdmin');
+const { uploadLoanGoldImage } = require('../middleware/loanGoldImageUpload');
 const {
   getCustomer,
   getCustomerLoans,
   getCustomers,
   getInterestTypes,
   getLoan,
+  getLoanGoldImage,
   getLoans,
   postLoan,
   putLoan,
@@ -22,9 +24,22 @@ router.get('/customers/:id', getCustomer);
 router.get('/loans/interest-types', getInterestTypes);
 router.patch('/loans/interest-types/:typeKey', updateInterestType);
 router.get('/loans', getLoans);
+router.get('/loans/gold-images/:filename', getLoanGoldImage);
 router.get('/loans/:id', getLoan);
-router.post('/loans', postLoan);
-router.put('/loans/:id', putLoan);
+router.post('/loans', (req, res, next) => {
+  uploadLoanGoldImage.single('gold_image')(req, res, (error) => {
+    if (!error) return next();
+    const status = error.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+    return res.status(status).json({ message: error.message });
+  });
+}, postLoan);
+router.put('/loans/:id', (req, res, next) => {
+  uploadLoanGoldImage.single('gold_image')(req, res, (error) => {
+    if (!error) return next();
+    const status = error.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+    return res.status(status).json({ message: error.message });
+  });
+}, putLoan);
 router.delete('/loans/:id', removeLoan);
 
 module.exports = router;

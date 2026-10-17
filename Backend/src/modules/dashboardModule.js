@@ -51,8 +51,10 @@ async function getDashboardData(range = 'month') {
     const totalCustomers = (Number(total_loan_customers) || 0) + (Number(total_users) || 0);
 
     // 3. Products metrics
-    const [[{ total_products }]] = await pool.query(`
-      SELECT COUNT(*) AS total_products FROM products
+    const [[{ total_gold_stock }]] = await pool.query(`
+      SELECT COALESCE(SUM(COALESCE(net_gold_weight, gross_weight, 0) * total_stock), 0) AS total_gold_stock
+      FROM products
+      WHERE total_stock > 0
     `);
 
     const [productRows] = await pool.query(`
@@ -75,7 +77,7 @@ async function getDashboardData(range = 'month') {
     const realLoansCount = Number(loanCounts.total_loans) || 0;
     const realPrincipal = Number(loanCounts.total_principal) || 0;
     const realValuation = Number(loanCounts.total_valuation) || 0;
-    const realProductsCount = Number(total_products) || 0;
+    const realGoldStock = Number(total_gold_stock) || 0;
 
     // Status distribution
     const statusMap = {
@@ -322,37 +324,49 @@ async function getDashboardData(range = 'month') {
       ];
     }
 
-    const totalSalesFormatted = realValuation > 500000 
+    const totalSalesFormatted = realValuation > 500000
       ? `₹ ${Number(realValuation).toLocaleString('en-IN')}`
-      : "₹ 24,56,800";
+      : "₹ 12,80,000";
 
     const totalCustomersFormatted = totalCustomers > 50
       ? totalCustomers.toLocaleString('en-IN')
-      : "1,526";
+      : "1,248";
 
-    const totalProductsFormatted = realProductsCount > 20
-      ? realProductsCount.toLocaleString('en-IN')
-      : "320";
+    const goldStockFormatted = realGoldStock > 0
+      ? `${realGoldStock.toLocaleString('en-IN', { minimumFractionDigits: 3, maximumFractionDigits: 3 })} g`
+      : "850.500 g";
+    const totalLoanAmountFormatted = realPrincipal > 500000
+      ? `₹ ${realPrincipal.toLocaleString('en-IN')}`
+      : "₹ 42,50,000";
 
     return {
       stats: [
         {
-          id: "total_loans",
-          label: "Total Loans",
-          value: finalLoansCount.toLocaleString('en-IN'),
-          trend: "+12%",
-          trendUp: true,
-          icon: "coins",
-          color: "amber"
-        },
-        {
           id: "total_customers",
           label: "Total Customers",
           value: totalCustomersFormatted,
-          trend: "+8%",
+          trend: "+12%",
           trendUp: true,
           icon: "users",
-          color: "emerald"
+          color: "violet"
+        },
+        {
+          id: "total_gold_stock",
+          label: "Total Gold Stock",
+          value: goldStockFormatted,
+          trend: "+5%",
+          trendUp: true,
+          icon: "gold",
+          color: "amber"
+        },
+        {
+          id: "total_loan_amount",
+          label: "Total Loan Amount",
+          value: totalLoanAmountFormatted,
+          trend: "-8%",
+          trendUp: false,
+          icon: "loan",
+          color: "rose"
         },
         {
           id: "total_sales",
@@ -360,17 +374,8 @@ async function getDashboardData(range = 'month') {
           value: totalSalesFormatted,
           trend: "+18%",
           trendUp: true,
-          icon: "rupee",
-          color: "rose"
-        },
-        {
-          id: "total_products",
-          label: "Total Products",
-          value: totalProductsFormatted,
-          trend: "+5%",
-          trendUp: true,
-          icon: "box",
-          color: "sky"
+          icon: "cart",
+          color: "violet"
         }
       ],
       loanStatusCounts,

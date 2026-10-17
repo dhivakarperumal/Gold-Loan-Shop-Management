@@ -10,6 +10,12 @@ const {
   updateLoan
 } = require('../modules/loanModule');
 const { findGoldRateForPurity, getCurrentGoldRates } = require('../modules/goldRateModule');
+const fs = require('node:fs');
+const {
+  getLoanGoldImagePath,
+  isValidLoanGoldImage,
+  removeLoanGoldImage
+} = require('../middleware/loanGoldImageUpload');
 
 const INTEREST_FREQUENCIES = new Set([
   'daily', 'weekly', 'monthly', 'quarterly', 'half_yearly', 'yearly', 'custom_period'
@@ -227,23 +233,66 @@ async function getLoan(req, res, next) {
   }
 }
 
+async function getLoanGoldImage(req, res, next) {
+  const imagePath = getLoanGoldImagePath(`/api/loans/gold-images/${req.params.filename}`);
+  if (!imagePath) return res.status(400).json({ message: 'Gold image reference is invalid' });
+  try {
+    if (!fs.existsSync(imagePath)) return res.status(404).json({ message: 'Gold image not found' });
+    return res.sendFile(imagePath, (error) => {
+      if (error && !res.headersSent) next(error);
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function rejectUploadedImage(req, next, status) {
+  try {
+    if (req.file) await removeLoanGoldImage(`/api/loans/gold-images/${req.file.filename}`);
+    return status;
+  } catch (error) {
+    next(error);
+    return null;
+  }
+}
+
 async function postLoan(req, res, next) {
+  if (req.file && !isValidLoanGoldImage(req.file.path, req.file.mimetype)) {
+    const cleanupStatus = await rejectUploadedImage(req, next, 400);
+    if (cleanupStatus) return res.status(cleanupStatus).json({ message: 'The uploaded file is not a valid PNG or JPG image' });
+    return;
+  }
   const { loan, error } = normalizeLoan(req.body || {});
-  if (error) return res.status(400).json({ message: error });
+  if (error) {
+    const cleanupStatus = await rejectUploadedImage(req, next, 400);
+    if (cleanupStatus) return res.status(cleanupStatus).json({ message: error });
+    return;
+  }
   try {
     const activeRateSet = await getCurrentGoldRates();
     const activeRate = findGoldRateForPurity(activeRateSet, loan.gold_purity);
-    if (!activeRate) return res.status(409).json({ message: 'No active gold rate matches this loan purity. Configure and activate the daily gold rates first.' });
+    if (!activeRate) {
+      const cleanupStatus = await rejectUploadedImage(req, next, 409);
+      if (cleanupStatus) return res.status(cleanupStatus).json({ message: 'No active gold rate matches this loan purity. Configure and activate the daily gold rates first.' });
+      return;
+    }
     const netGoldWeight = Number(loan.net_gold_weight);
     const goldValuation = netGoldWeight * activeRate.rate_per_gram;
-    return res.status(201).json(await createLoan({
+    const createdLoan = await createLoan({
       ...loan,
       gold_valuation: goldValuation.toFixed(2),
       gold_rate_per_gram: activeRate.rate_per_gram,
       gold_rate_date: activeRateSet.rate_date,
+      gold_image_url: req.file ? `/api/loans/gold-images/${req.file.filename}` : null,
       created_by: req.adminUser.user_id
-    }));
+    });
+    return res.status(201).json(createdLoan);
   } catch (createError) {
+    try {
+      if (req.file) await removeLoanGoldImage(`/api/loans/gold-images/${req.file.filename}`);
+    } catch (cleanupError) {
+      return next(cleanupError);
+    }
     if (createError.code === 'CUSTOMER_NOT_FOUND') return res.status(404).json({ message: createError.message });
     if (createError.code === 'INTEREST_TYPE_UNAVAILABLE') return res.status(400).json({ message: createError.message });
     return next(createError);
@@ -251,12 +300,30 @@ async function postLoan(req, res, next) {
 }
 
 async function putLoan(req, res, next) {
-  if (!validId(req.params.id)) return res.status(400).json({ message: 'Loan ID is invalid' });
+  if (!validId(req.params.id)) {
+    const cleanupStatus = await rejectUploadedImage(req, next, 400);
+    if (cleanupStatus) return res.status(cleanupStatus).json({ message: 'Loan ID is invalid' });
+    return;
+  }
+  if (req.file && !isValidLoanGoldImage(req.file.path, req.file.mimetype)) {
+    const cleanupStatus = await rejectUploadedImage(req, next, 400);
+    if (cleanupStatus) return res.status(cleanupStatus).json({ message: 'The uploaded file is not a valid PNG or JPG image' });
+    return;
+  }
   const { loan, error } = normalizeLoan(req.body || {});
-  if (error) return res.status(400).json({ message: error });
+  if (error) {
+    const cleanupStatus = await rejectUploadedImage(req, next, 400);
+    if (cleanupStatus) return res.status(cleanupStatus).json({ message: error });
+    return;
+  }
+  let uploadedImageSaved = false;
   try {
     const existingLoan = await getLoanById(req.params.id);
-    if (!existingLoan) return res.status(404).json({ message: 'Loan not found' });
+    if (!existingLoan) {
+      const cleanupStatus = await rejectUploadedImage(req, next, 404);
+      if (cleanupStatus) return res.status(cleanupStatus).json({ message: 'Loan not found' });
+      return;
+    }
     if (existingLoan.gold_rate_per_gram != null && existingLoan.gold_purity === loan.gold_purity) {
       loan.gold_rate_per_gram = existingLoan.gold_rate_per_gram;
       loan.gold_rate_date = existingLoan.gold_rate_date;
@@ -264,22 +331,40 @@ async function putLoan(req, res, next) {
     } else if (existingLoan.gold_rate_per_gram != null) {
       const activeRateSet = await getCurrentGoldRates();
       const activeRate = findGoldRateForPurity(activeRateSet, loan.gold_purity);
-      if (!activeRate) return res.status(409).json({ message: 'No active rate matches the updated loan purity.' });
+      if (!activeRate) {
+        const cleanupStatus = await rejectUploadedImage(req, next, 409);
+        if (cleanupStatus) return res.status(cleanupStatus).json({ message: 'No active rate matches the updated loan purity.' });
+        return;
+      }
       loan.gold_rate_per_gram = activeRate.rate_per_gram;
       loan.gold_rate_date = activeRateSet.rate_date;
       loan.gold_valuation = (Number(loan.net_gold_weight) * activeRate.rate_per_gram).toFixed(2);
     } else {
       if (existingLoan.gold_purity !== loan.gold_purity) {
-        return res.status(409).json({ message: 'This historical loan has no rate snapshot, so its purity cannot be changed safely.' });
+        const cleanupStatus = await rejectUploadedImage(req, next, 409);
+        if (cleanupStatus) return res.status(cleanupStatus).json({ message: 'This historical loan has no rate snapshot, so its purity cannot be changed safely.' });
+        return;
       }
       loan.gold_rate_per_gram = null;
       loan.gold_rate_date = null;
       loan.gold_valuation = existingLoan.gold_valuation;
     }
+    if (req.file) loan.gold_image_url = `/api/loans/gold-images/${req.file.filename}`;
     const updatedLoan = await updateLoan(req.params.id, loan);
-    if (!updatedLoan) return res.status(404).json({ message: 'Loan not found' });
+    if (!updatedLoan) {
+      const cleanupStatus = await rejectUploadedImage(req, next, 404);
+      if (cleanupStatus) return res.status(cleanupStatus).json({ message: 'Loan not found' });
+      return;
+    }
+    uploadedImageSaved = Boolean(req.file);
+    if (req.file && existingLoan.gold_image_url) await removeLoanGoldImage(existingLoan.gold_image_url);
     return res.json(updatedLoan);
   } catch (updateError) {
+    try {
+      if (req.file && !uploadedImageSaved) await removeLoanGoldImage(`/api/loans/gold-images/${req.file.filename}`);
+    } catch (cleanupError) {
+      return next(cleanupError);
+    }
     if (updateError.code === 'ER_NO_REFERENCED_ROW_2') {
       return res.status(404).json({ message: 'Selected customer does not exist' });
     }
@@ -290,7 +375,10 @@ async function putLoan(req, res, next) {
 async function removeLoan(req, res, next) {
   if (!validId(req.params.id)) return res.status(400).json({ message: 'Loan ID is invalid' });
   try {
+    const loan = await getLoanById(req.params.id);
+    if (!loan) return res.status(404).json({ message: 'Loan not found' });
     if (!await deleteLoan(req.params.id)) return res.status(404).json({ message: 'Loan not found' });
+    if (loan.gold_image_url) await removeLoanGoldImage(loan.gold_image_url);
     return res.status(204).end();
   } catch (error) {
     if (error.code === 'ER_ROW_IS_REFERENCED_2') {
@@ -306,6 +394,7 @@ module.exports = {
   getCustomers,
   getInterestTypes,
   getLoan,
+  getLoanGoldImage,
   getLoans,
   putLoan,
   postLoan,

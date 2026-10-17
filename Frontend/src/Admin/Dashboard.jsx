@@ -16,7 +16,8 @@ import {
   FiChevronDown,
   FiPlusCircle,
   FiArrowRight,
-  FiMoreHorizontal
+  FiMoreHorizontal,
+  FiShoppingCart
 } from "react-icons/fi";
 import { FaRupeeSign, FaCoins, FaGem, FaHandHoldingUsd } from "react-icons/fa";
 import { Bar, Doughnut } from 'react-chartjs-2';
@@ -55,44 +56,43 @@ const getDashboardImageUrl = (image) => {
   return `${backendUrl}${image.startsWith("/") ? image : `/${image}`}`;
 };
 
-// Default high-fidelity showcase data (never blank, matches Sri Golds design mockup)
 const DEFAULT_DASHBOARD_DATA = {
   stats: [
     {
-      id: "total_loans",
-      label: "Total Loans",
-      value: "248",
+      id: "total_customers",
+      label: "Total Customers",
+      value: "1,248",
       trend: "+12%",
       trendUp: true,
-      icon: "coins",
+      icon: "users",
+      color: "violet"
+    },
+    {
+      id: "total_gold_stock",
+      label: "Total Gold Stock",
+      value: "850.500 g",
+      trend: "+5%",
+      trendUp: true,
+      icon: "gold",
       color: "amber"
     },
     {
-      id: "total_customers",
-      label: "Total Customers",
-      value: "1,526",
-      trend: "+8%",
-      trendUp: true,
-      icon: "users",
-      color: "emerald"
+      id: "total_loan_amount",
+      label: "Total Loan Amount",
+      value: "₹ 42,50,000",
+      trend: "-8%",
+      trendUp: false,
+      icon: "loan",
+      color: "rose"
     },
     {
       id: "total_sales",
       label: "Total Sales",
-      value: "₹ 24,56,800",
+      value: "₹ 12,80,000",
       trend: "+18%",
       trendUp: true,
-      icon: "rupee",
-      color: "rose"
-    },
-    {
-      id: "total_products",
-      label: "Total Products",
-      value: "320",
-      trend: "+5%",
-      trendUp: true,
-      icon: "box",
-      color: "sky"
+      icon: "cart",
+      color: "violet"
     }
   ],
   totalLoansCount: 248,
@@ -240,6 +240,57 @@ const Dashboard = () => {
   const loanStatusCounts = data.loanStatusCounts || DEFAULT_DASHBOARD_DATA.loanStatusCounts;
   const revenueTrends = data.revenueTrends?.length ? data.revenueTrends : DEFAULT_DASHBOARD_DATA.revenueTrends;
   const totalLoansCount = data.totalLoansCount || 248;
+  const summaryCards = [
+    {
+      id: "total_customers",
+      icon: <FiUsers />,
+      iconClass: "bg-violet-100 text-violet-600",
+      cardClass: "bg-[#E8D29A] border-[#D6BB78]",
+      sparkColor: "#A855F7",
+      sparkFill: "M0 43 C12 39 16 40 25 44 S39 39 45 40 S58 27 64 31 S74 10 81 11 S92 2 100 2 V50 H0 Z",
+      sparkLine: "M0 43 C12 39 16 40 25 44 S39 39 45 40 S58 27 64 31 S74 10 81 11 S92 2 100 2",
+      trendUp: true
+    },
+    {
+      id: "total_gold_stock",
+      icon: <FaCoins />,
+      iconClass: "bg-amber-100 text-amber-500",
+      cardClass: "bg-[#FFF5DF] border-[#F5E6C3]",
+      sparkColor: "#F59E0B",
+      sparkFill: "M0 45 C12 45 16 37 23 40 S37 31 43 35 S54 27 62 33 S73 18 80 22 S91 13 100 8 V50 H0 Z",
+      sparkLine: "M0 45 C12 45 16 37 23 40 S37 31 43 35 S54 27 62 33 S73 18 80 22 S91 13 100 8",
+      trendUp: true
+    },
+    {
+      id: "total_loan_amount",
+      icon: <FaHandHoldingUsd />,
+      iconClass: "bg-rose-100 text-rose-600",
+      cardClass: "bg-[#FFF0F1] border-[#F8DDE1]",
+      sparkColor: "#FB7185",
+      sparkFill: "M0 44 C9 42 17 36 24 39 S36 32 43 35 S54 26 61 31 S72 19 78 24 S91 9 100 8 V50 H0 Z",
+      sparkLine: "M0 44 C9 42 17 36 24 39 S36 32 43 35 S54 26 61 31 S72 19 78 24 S91 9 100 8",
+      trendUp: false
+    },
+    {
+      id: "total_sales",
+      icon: <FiShoppingCart />,
+      iconClass: "bg-fuchsia-100 text-fuchsia-600",
+      cardClass: "bg-[#F8EEFF] border-[#EADCF8]",
+      sparkColor: "#C084FC",
+      sparkFill: "M0 44 C10 43 15 35 23 38 S35 32 42 36 S53 27 60 31 S72 20 79 22 S89 12 100 6 V50 H0 Z",
+      sparkLine: "M0 44 C10 43 15 35 23 38 S35 32 42 36 S53 27 60 31 S72 20 79 22 S89 12 100 6",
+      trendUp: true
+    }
+  ].map((card) => {
+    const defaultStat = DEFAULT_DASHBOARD_DATA.stats.find((stat) => stat.id === card.id);
+    const liveStat = stats.find((stat) => stat.id === card.id);
+    return {
+      ...defaultStat,
+      ...liveStat,
+      ...card,
+      trendUp: liveStat?.trendUp ?? defaultStat.trendUp
+    };
+  });
 
   // Status styling
   const getStatusBadge = (status) => {
@@ -395,139 +446,30 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* ── 4 Top Stat Cards (Matching Screenshot) ────────────────── */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
-        {/* Card 1: Total Loans (Replaces Total Orders properly) */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group cursor-pointer">
-          <div className="flex items-start justify-between">
-            <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-500 flex items-center justify-center shadow-xs">
-              <FaCoins className="text-xl" />
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {summaryCards.map((card) => (
+          <article
+            key={card.id}
+            className={`relative flex h-[140px] min-w-0 items-center gap-3 overflow-hidden rounded-xl border ${card.cardClass} p-3 shadow-[0_3px_12px_rgba(30,41,59,0.04)] transition-shadow hover:shadow-md`}
+          >
+            <div className={`z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl text-[23px] ${card.iconClass}`}>
+              {card.icon}
             </div>
-          </div>
-          <div className="mt-4">
-            <p className="text-xs font-semibold text-slate-500">Total Loans</p>
-            <h3 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight mt-1">
-              {stats[0]?.value || "248"}
-            </h3>
-            <div className="flex items-center gap-1.5 mt-2">
-              <span className="flex items-center text-xs font-bold text-emerald-600">
-                <FiTrendingUp className="mr-0.5" /> +12%
-              </span>
-              <span className="text-[11px] font-medium text-slate-400">vs last month</span>
+            <div className="relative z-10 min-w-0 pb-0.5">
+              <p className="truncate text-[10px] font-semibold text-slate-600">{card.label}</p>
+              <p className="mt-1 truncate text-[18px] font-extrabold leading-none tracking-tight text-slate-900">{card.value}</p>
+              <div className={`mt-2 flex items-center gap-1 text-[10px] font-bold ${card.trendUp ? "text-violet-600" : "text-rose-600"}`}>
+                {card.trendUp ? <FiTrendingUp /> : <FiTrendingDown />}
+                <span>{card.trend}</span>
+              </div>
+              <p className="mt-0.5 text-[8px] font-medium text-slate-500">from last month</p>
             </div>
-          </div>
-          {/* Sparkline wave */}
-          <div className="mt-3 pt-2">
-            <svg className="w-full h-7 overflow-visible" viewBox="0 0 100 24" fill="none">
-              <path
-                d="M 0 18 Q 20 22, 35 15 T 70 8 T 100 12"
-                stroke="#F59E0B"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
+            <svg className="pointer-events-none absolute bottom-0 right-0 h-[50px] w-[88px]" viewBox="0 0 100 50" preserveAspectRatio="none" aria-hidden="true">
+              <path d={card.sparkFill} fill={card.sparkColor} fillOpacity="0.12" />
+              <path d={card.sparkLine} fill="none" stroke={card.sparkColor} strokeLinecap="round" strokeWidth="1.5" />
             </svg>
-          </div>
-        </div>
-
-        {/* Card 2: Total Customers */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group cursor-pointer">
-          <div className="flex items-start justify-between">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-500 flex items-center justify-center shadow-xs">
-              <FiUsers className="text-xl" />
-            </div>
-          </div>
-          <div className="mt-4">
-            <p className="text-xs font-semibold text-slate-500">Total Customers</p>
-            <h3 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight mt-1">
-              {stats[1]?.value || "1,526"}
-            </h3>
-            <div className="flex items-center gap-1.5 mt-2">
-              <span className="flex items-center text-xs font-bold text-emerald-600">
-                <FiTrendingUp className="mr-0.5" /> +8%
-              </span>
-              <span className="text-[11px] font-medium text-slate-400">vs last month</span>
-            </div>
-          </div>
-          {/* Sparkline wave */}
-          <div className="mt-3 pt-2">
-            <svg className="w-full h-7 overflow-visible" viewBox="0 0 100 24" fill="none">
-              <path
-                d="M 0 20 Q 25 10, 45 16 T 75 6 T 100 10"
-                stroke="#10B981"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-        </div>
-
-        {/* Card 3: Total Sales / Portfolio */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group cursor-pointer">
-          <div className="flex items-start justify-between">
-            <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center shadow-xs">
-              <FaRupeeSign className="text-lg" />
-            </div>
-          </div>
-          <div className="mt-4">
-            <p className="text-xs font-semibold text-slate-500">Total Sales</p>
-            <h3 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight mt-1 truncate">
-              {stats[2]?.value || "₹ 24,56,800"}
-            </h3>
-            <div className="flex items-center gap-1.5 mt-2">
-              <span className="flex items-center text-xs font-bold text-emerald-600">
-                <FiTrendingUp className="mr-0.5" /> +18%
-              </span>
-              <span className="text-[11px] font-medium text-slate-400">vs last month</span>
-            </div>
-          </div>
-          {/* Sparkline wave */}
-          <div className="mt-3 pt-2">
-            <svg className="w-full h-7 overflow-visible" viewBox="0 0 100 24" fill="none">
-              <path
-                d="M 0 22 Q 30 18, 50 12 T 75 16 T 100 4"
-                stroke="#F43F5E"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-        </div>
-
-        {/* Card 4: Total Products */}
-        <div className="bg-white rounded-2xl border border-slate-100 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between group cursor-pointer">
-          <div className="flex items-start justify-between">
-            <div className="w-12 h-12 rounded-2xl bg-sky-50 text-sky-500 flex items-center justify-center shadow-xs">
-              <FiBox className="text-xl" />
-            </div>
-          </div>
-          <div className="mt-4">
-            <p className="text-xs font-semibold text-slate-500">Total Products</p>
-            <h3 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight mt-1">
-              {stats[3]?.value || "320"}
-            </h3>
-            <div className="flex items-center gap-1.5 mt-2">
-              <span className="flex items-center text-xs font-bold text-emerald-600">
-                <FiTrendingUp className="mr-0.5" /> +5%
-              </span>
-              <span className="text-[11px] font-medium text-slate-400">vs last month</span>
-            </div>
-          </div>
-          {/* Sparkline wave */}
-          <div className="mt-3 pt-2">
-            <svg className="w-full h-7 overflow-visible" viewBox="0 0 100 24" fill="none">
-              <path
-                d="M 0 16 Q 25 24, 50 16 T 75 14 T 100 8"
-                stroke="#0284C7"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </div>
-        </div>
+          </article>
+        ))}
       </div>
 
       {/* ── Active Daily Gold Rates Banner (Essential for Sri Golds) ── */}

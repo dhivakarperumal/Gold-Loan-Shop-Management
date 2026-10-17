@@ -50,6 +50,7 @@ async function initializeLoanModule() {
       payment_frequency VARCHAR(20) NOT NULL,
       loan_status VARCHAR(20) NOT NULL DEFAULT 'Active',
       notes TEXT NULL,
+      gold_image_url VARCHAR(255) NULL,
       created_by BIGINT UNSIGNED NULL,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -66,7 +67,8 @@ async function initializeLoanModule() {
     fixed_interest_amount: 'DECIMAL(14,2) NULL AFTER interest_rate',
     custom_period_days: 'SMALLINT UNSIGNED NULL AFTER interest_frequency',
     gold_rate_per_gram: 'DECIMAL(14,2) NULL AFTER gold_valuation',
-    gold_rate_date: 'DATE NULL AFTER gold_rate_per_gram'
+    gold_rate_date: 'DATE NULL AFTER gold_rate_per_gram',
+    gold_image_url: 'VARCHAR(255) NULL AFTER notes'
   };
   for (const [column, definition] of Object.entries(loanColumnMigrations)) {
     if (!existingColumns.has(column)) {
