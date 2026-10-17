@@ -2,18 +2,24 @@ import React, { useContext, useState, useRef, useEffect } from "react";
 import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
 import { AuthContext } from "../../PrivateRouter/AuthContext";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
-import {
-  Menu,
-  X,
-  User,
-  Heart,
-  Gem,
-  Search
-} from "lucide-react";
 import PageContainer from "./PageContainer";
 import api from "../../api";
-import { FiHome, FiShoppingBag, FiGrid, FiFileText, FiPhone, FiChevronDown } from "react-icons/fi";
-import { FiChevronRight, FiTag } from "react-icons/fi";
+import {
+  FaBars,
+  FaChevronDown,
+  FaChevronRight,
+  FaFileAlt,
+  FaGem,
+  FaHeart,
+  FaHome,
+  FaPhoneAlt,
+  FaSearch,
+  FaShoppingBag,
+  FaTag,
+  FaThLarge,
+  FaTimes,
+  FaUser,
+} from "react-icons/fa";
 import WishlistDrawer from "./WishlistDrawer";
 
 const Navbar = () => {
@@ -187,11 +193,11 @@ const Navbar = () => {
           <div ref={dropdownRef} className="hidden min-w-0 flex-1 items-center justify-center xl:flex">
             <div className="flex h-full items-center">
               <NavLink to="/" end className={({ isActive }) => `flex h-[76px] min-w-[90px] flex-col items-center justify-center gap-1 border-r border-[#efe5d4] px-4 text-sm font-semibold transition hover:text-[#a77525] ${isActive ? "border-b-2 border-b-[#c68c22] text-[#164333]" : "text-[#30271b]"}`}>
-                <FiHome className="text-lg text-[#174a38]" />
+                <FaHome className="text-lg text-[#174a38]" />
                 Home
               </NavLink>
               <NavLink to="/shop" className={({ isActive }) => `flex h-[76px] min-w-[95px] flex-col items-center justify-center gap-1 border-r border-[#efe5d4] px-4 text-sm font-semibold transition hover:text-[#a77525] ${isActive ? "border-b-2 border-b-[#c68c22] text-[#164333]" : "text-[#30271b]"}`}>
-                <Gem className="h-5 w-5 text-[#174a38]" />
+                <FaGem className="text-lg text-[#174a38]" />
                 Explore
               </NavLink>
 
@@ -205,8 +211,8 @@ const Navbar = () => {
                   }}
                   className={`flex h-[76px] min-w-[110px] flex-col items-center justify-center gap-1 border-r border-[#efe5d4] px-4 text-sm font-semibold transition hover:bg-[#fff9ed] hover:text-[#a77525] ${openDropdown === "categories" ? "bg-[#fff9ed] text-[#8c5e13]" : "text-[#30271b]"}`}
                 >
-                  <FiGrid className="text-lg text-[#174a38]" />
-                  <span className="flex items-center gap-1">Category <FiChevronDown className={`transition-transform ${openDropdown === "categories" ? "rotate-180" : ""}`} /></span>
+                  <FaThLarge className="text-lg text-[#174a38]" />
+                  <span className="flex items-center gap-1">Category <FaChevronDown className={`transition-transform ${openDropdown === "categories" ? "rotate-180" : ""}`} /></span>
                 </button>
                 {openDropdown === "categories" && (
                   <div className="absolute left-0 top-full z-50 flex min-w-[300px] rounded-xl border border-[#efe5d4] bg-white p-2 shadow-xl">
@@ -226,7 +232,7 @@ const Navbar = () => {
                               className="flex min-w-0 flex-1 items-center gap-3 px-2 py-2.5 text-sm font-medium text-[#30271b]"
                             >
                               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#fbf5e9]">
-                                {image ? <img src={getMetalImageUrl(image)} alt="" className="h-8 w-8 object-contain" loading="lazy" /> : <FiTag className="text-[#174a38]" />}
+                                {image ? <img src={getMetalImageUrl(image)} alt="" className="h-8 w-8 object-contain" loading="lazy" /> : <FaTag className="text-[#174a38]" />}
                               </span>
                               <span className="truncate">{category.name}</span>
                             </Link>
@@ -236,7 +242,7 @@ const Navbar = () => {
                               onClick={() => setSelectedCategory(category)}
                               className="p-2 text-[#b47a25] hover:text-[#7c5318]"
                             >
-                              <FiChevronRight />
+                              <FaChevronRight />
                             </button>
                           </div>
                         );
@@ -270,8 +276,8 @@ const Navbar = () => {
                   onClick={() => setOpenDropdown(openDropdown === "metals" ? "" : "metals")}
                   className={`flex h-[76px] min-w-[95px] flex-col items-center justify-center gap-1 border-r border-[#efe5d4] px-4 text-sm font-semibold transition hover:bg-[#fff9ed] hover:text-[#a77525] ${openDropdown === "metals" ? "bg-[#fff9ed] text-[#8c5e13]" : "text-[#30271b]"}`}
                 >
-                  <Gem className="h-5 w-5 text-[#174a38]" />
-                  <span className="flex items-center gap-1">Metal <FiChevronDown className={`transition-transform ${openDropdown === "metals" ? "rotate-180" : ""}`} /></span>
+                  <FaGem className="text-lg text-[#174a38]" />
+                  <span className="flex items-center gap-1">Metal <FaChevronDown className={`transition-transform ${openDropdown === "metals" ? "rotate-180" : ""}`} /></span>
                 </button>
                 {openDropdown === "metals" && (
                   <div className="absolute left-0 top-full z-50 w-[250px] rounded-xl border border-[#efe5d4] bg-white p-2 shadow-xl">
@@ -283,10 +289,10 @@ const Navbar = () => {
                         className="flex items-center gap-3 rounded-lg px-2 py-2.5 text-sm font-medium text-[#30271b] transition hover:bg-[#fff8e9] hover:text-[#8c5e13]"
                       >
                         <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#fbf5e9]">
-                          {metal.image ? <img src={getMetalImageUrl(metal.image)} alt="" className="h-8 w-8 object-contain" loading="lazy" /> : <Gem className="h-5 w-5 text-[#c68c22]" />}
+                          {metal.image ? <img src={getMetalImageUrl(metal.image)} alt="" className="h-8 w-8 object-contain" loading="lazy" /> : <FaGem className="text-lg text-[#174a38]" />}
                         </span>
                         <span className="flex-1">{metal.name}</span>
-                        <FiChevronRight className="text-[#30271b]" />
+                        <FaChevronRight className="text-[#174a38]" />
                       </Link>
                     ))}
                   </div>
@@ -294,7 +300,7 @@ const Navbar = () => {
               </div>
 
               <Link to="/contactus" className="flex h-[76px] min-w-[100px] flex-col items-center justify-center gap-1 px-4 text-sm font-semibold text-[#30271b] transition hover:text-[#a77525]">
-                <FiPhone className="text-lg text-[#174a38]" />
+                <FaPhoneAlt className="text-lg text-[#174a38]" />
                 Contact Us
               </Link>
             </div>
@@ -311,7 +317,7 @@ const Navbar = () => {
               aria-controls="navbar-search-panel"
               className="flex min-w-12 flex-col items-center gap-0.5 rounded-lg px-2 py-2 text-[#172c28] transition hover:bg-[#fff8e9] hover:text-[#a77525]"
             >
-              <Search className="h-5 w-5" />
+              <FaSearch className="text-lg" />
               <span className="hidden text-xs font-semibold sm:block">Search</span>
             </button>
 
@@ -321,7 +327,7 @@ const Navbar = () => {
               aria-label="Open favorites"
               className="relative flex min-w-12 flex-col items-center gap-0.5 rounded-lg px-2 py-2 text-[#172c28] transition hover:bg-[#fff8e9] hover:text-[#a77525]"
             >
-              <Heart className="h-5 w-5" />
+              <FaHeart className="text-lg" />
               <span className="hidden text-xs font-semibold sm:block">Wishlist</span>
               {wishlist.length > 0 && (
                 <span className="absolute right-1 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#d69b17] px-1 text-[9px] font-black text-white">
@@ -356,7 +362,7 @@ const Navbar = () => {
               </div>
             ) : (
               <Link to="/login" aria-label="Account / Sign in" className="hidden min-w-12 flex-col items-center gap-0.5 rounded-lg px-2 py-2 text-[#172c28] transition hover:bg-[#fff8e9] hover:text-[#a77525] sm:flex">
-                <User className="h-5 w-5" />
+                <FaUser className="text-lg" />
                 <span className="text-xs font-semibold">Account</span>
               </Link>
             )}
@@ -373,7 +379,7 @@ const Navbar = () => {
               aria-controls="store-mobile-navigation"
               className="flex h-10 w-10 items-center justify-center rounded-full text-[#174a38] transition hover:bg-[#fff8e9] xl:hidden"
             >
-              {mobileMenu ? <X size={23} /> : <Menu size={23} />}
+              {mobileMenu ? <FaTimes size={21} /> : <FaBars size={21} />}
             </button>
 
           </div>
@@ -390,7 +396,7 @@ const Navbar = () => {
         >
           <PageContainer>
             <form onSubmit={handleSearch} className="mx-auto flex max-w-2xl items-center overflow-hidden rounded-lg border border-[#d9d9d9] bg-white shadow-sm">
-              <Search className="ml-3 h-5 w-5 shrink-0 text-[#182c29]" />
+              <FaSearch className="ml-3 shrink-0 text-[#174a38]" />
               <input
                 ref={searchInputRef}
                 type="search"
@@ -401,7 +407,7 @@ const Navbar = () => {
                 className="min-w-0 flex-1 px-3 py-3 text-sm outline-none placeholder:text-gray-500"
               />
               <button type="submit" className="flex h-11 shrink-0 items-center justify-center gap-2 bg-[#d69b17] px-4 text-sm font-semibold text-white transition hover:bg-[#bd850f]">
-                <Search className="h-5 w-5" />
+                <FaSearch />
                 <span>Search</span>
               </button>
             </form>
@@ -483,7 +489,7 @@ const Navbar = () => {
                   }}
                   className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium text-white/90 hover:bg-white/10"
                 >
-                  <FiChevronRight className="rotate-180" /> Back
+                  <FaChevronRight className="rotate-180" /> Back
                 </button>
               ) : (
                 <Link to="/" onClick={closeMobileMenu} className="flex items-center gap-2">
@@ -497,7 +503,7 @@ const Navbar = () => {
                 aria-label="Close navigation menu"
                 className="flex h-9 w-9 items-center justify-center rounded-full text-white/90 transition hover:bg-white/15"
               >
-                <X size={21} />
+                <FaTimes size={20} />
               </button>
             </div>
 
@@ -507,9 +513,9 @@ const Navbar = () => {
                   <p className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Browse the store</p>
                   <div className="space-y-1.5">
                     {[
-                      { to: "/", label: "Home", icon: FiHome },
-                      { to: "/shop", label: "Shop", icon: FiShoppingBag },
-                      { to: "/contactus", label: "Contact Us", icon: FiPhone },
+                      { to: "/", label: "Home", icon: FaHome },
+                      { to: "/shop", label: "Shop", icon: FaShoppingBag },
+                      { to: "/contactus", label: "Contact Us", icon: FaPhoneAlt },
                     ].map(({ to, label, icon: Icon }) => (
                       <NavLink
                         key={to}
@@ -546,7 +552,7 @@ const Navbar = () => {
                                   loading="lazy"
                                 />
                               ) : (
-                                <Gem className="h-6 w-7 text-[#c99535]" aria-hidden="true" />
+                                <FaGem className="text-xl text-[#174a38]" aria-hidden="true" />
                               )}
                               <span className="truncate">{metal.name}</span>
                             </Link>
@@ -559,16 +565,16 @@ const Navbar = () => {
                       onClick={() => setMobileCategory(true)}
                       className="flex w-full items-center justify-between rounded-xl px-3.5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-[#004D40]"
                     >
-                      <span className="flex items-center gap-3"><FiGrid size={18} /> Categories</span>
-                      <FiChevronRight size={17} className="text-slate-400" />
+                      <span className="flex items-center gap-3"><FaThLarge size={17} className="text-[#174a38]" /> Categories</span>
+                      <FaChevronRight size={15} className="text-[#174a38]" />
                     </button>
                     <button
                       type="button"
                       onClick={() => setMobilePages(true)}
                       className="flex w-full items-center justify-between rounded-xl px-3.5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-[#004D40]"
                     >
-                      <span className="flex items-center gap-3"><FiFileText size={18} /> Pages</span>
-                      <FiChevronRight size={17} className="text-slate-400" />
+                      <span className="flex items-center gap-3"><FaFileAlt size={17} className="text-[#174a38]" /> Pages</span>
+                      <FaChevronRight size={15} className="text-[#174a38]" />
                     </button>
                   </div>
 
@@ -582,16 +588,16 @@ const Navbar = () => {
                         </Link>
                         {user.role === "admin" && (
                           <Link to="/admin" onClick={closeMobileMenu} className="flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-[#004D40]">
-                            <User size={18} /> Admin Panel
+                            <FaUser size={17} className="text-[#174a38]" /> Admin Panel
                           </Link>
                         )}
                         <button type="button" onClick={() => { setLogoutConfirm(true); closeMobileMenu(); }} className="flex w-full items-center gap-3 rounded-xl px-3.5 py-3 text-left text-sm font-semibold text-rose-600 transition hover:bg-rose-50">
-                          <User size={18} /> Sign Out
+                          <FaUser size={17} className="text-[#174a38]" /> Sign Out
                         </button>
                       </>
                     ) : (
                       <Link to="/login" onClick={closeMobileMenu} className="flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-[#004D40]">
-                        <User size={18} /> Sign In / Register
+                        <FaUser size={17} className="text-[#174a38]" /> Sign In / Register
                       </Link>
                     )}
                   </div>
@@ -616,8 +622,8 @@ const Navbar = () => {
                         }`
                       }
                     >
-                      <span className="flex items-center gap-3"><FiTag size={17} />{category.name}</span>
-                      <FiChevronRight size={16} className="text-slate-400" />
+                      <span className="flex items-center gap-3"><FaTag size={16} className="text-[#174a38]" />{category.name}</span>
+                      <FaChevronRight size={14} className="text-[#174a38]" />
                     </NavLink>
                   )) : (
                     <p className="rounded-xl bg-slate-50 px-4 py-5 text-center text-sm text-slate-500">No categories available.</p>
@@ -629,8 +635,8 @@ const Navbar = () => {
                 <div className="space-y-1.5">
                   <p className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Information</p>
                   {[
-                    { to: "/about", label: "About", icon: FiFileText },
-                    { to: "/termsandconditions", label: "Terms and Conditions", icon: FiFileText },
+                    { to: "/about", label: "About", icon: FaFileAlt },
+                    { to: "/termsandconditions", label: "Terms and Conditions", icon: FaFileAlt },
                   ].map(({ to, label, icon: Icon }) => (
                     <NavLink
                       key={to}
