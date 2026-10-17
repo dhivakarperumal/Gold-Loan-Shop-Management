@@ -158,7 +158,12 @@ function calculateEstimate(form, interestType) {
   };
 }
 
-function FormField({ label, name, form, onChange, type = "text", required = false, min, step, help, readOnly = false }) {
+function FormField({ label, name, form, onChange, type = "text", required = false, min, step, help, readOnly = false, placeholder }) {
+  const fieldPlaceholder = placeholder || (type === "date"
+    ? `Select ${label.toLowerCase()}`
+    : type === "number"
+      ? `Enter ${label.toLowerCase()}`
+      : `Enter ${label.toLowerCase()}`);
   return (
     <label className={labelClass}>
       {label}{required && <span className="ml-1 text-rose-500">*</span>}
@@ -172,18 +177,23 @@ function FormField({ label, name, form, onChange, type = "text", required = fals
         min={min}
         step={step}
         readOnly={readOnly}
+        placeholder={fieldPlaceholder}
+        title={type === "date" ? fieldPlaceholder : undefined}
       />
       {help && <span className="mt-1 block text-[11px] font-normal text-slate-400">{help}</span>}
     </label>
   );
 }
 
-function FormSelect({ label, name, form, onChange, options, required = false, disabled = false, help }) {
+function FormSelect({ label, name, form, onChange, options, required = false, disabled = false, help, placeholder }) {
+  const selectOptions = options.some(([value]) => value === "")
+    ? options
+    : [["", placeholder || `Select ${label.toLowerCase()}`], ...options];
   return (
     <label className={labelClass}>
       {label}{required && <span className="ml-1 text-rose-500">*</span>}
       <select className={fieldClass} name={name} value={form[name] ?? ""} onChange={onChange} required={required} disabled={disabled}>
-        {options.map(([value, text, disabled]) => <option key={value} value={value} disabled={disabled}>{text}</option>)}
+        {selectOptions.map(([value, text, disabled]) => <option key={value} value={value} disabled={disabled}>{text}</option>)}
       </select>
       {help && <span className="mt-1 block text-[11px] font-normal text-slate-400">{help}</span>}
     </label>
@@ -623,7 +633,7 @@ export default function CreateLoan() {
             />
             <FormField label="Gross Weight (g)" name="gross_weight" form={form} onChange={handleChange} type="number" min="0.001" step="0.001" required />
             <FormField label="Stone Weight (g)" name="stone_weight" form={form} onChange={handleChange} type="number" min="0" step="0.001" />
-            <label className={labelClass}>Net Gold Weight (g)<input className={`${fieldClass} bg-slate-50`} value={Math.max(0, Number(form.gross_weight || 0) - Number(form.stone_weight || 0)).toFixed(3)} readOnly /></label>
+            <label className={labelClass}>Net Gold Weight (g)<input className={`${fieldClass} bg-slate-50`} value={Math.max(0, Number(form.gross_weight || 0) - Number(form.stone_weight || 0)).toFixed(3)} readOnly placeholder="Calculated from gross and stone weight" /></label>
             <FormField label="Gold Rate / Gram (₹)" name="gold_rate_per_gram" form={{ gold_rate_per_gram: appliedGoldRate ?? "" }} onChange={() => {}} readOnly help={loanRecord && savedPurityUnchanged && loanRecord.gold_rate_per_gram != null ? `Saved loan rate from ${formatRateDate(loanRecord.gold_rate_date)}; today's changes do not alter it.` : loanRecord && savedPurityUnchanged ? "Legacy loan; its saved valuation is preserved." : ratesLoading ? "Loading today's active rate..." : "Selected by the configured purity."} />
             <FormField label="Gold Valuation (₹)" name="gold_valuation" form={{ gold_valuation: estimatedGoldValuation.toFixed(2) }} onChange={() => {}} readOnly required min="0.01" step="0.01" help="Eligible net gold weight × the applied rate snapshot; not the retail jewellery price." />
             <div className="sm:col-span-2 lg:col-span-4">
@@ -647,11 +657,11 @@ export default function CreateLoan() {
               </div>
               {loanAmountMode === "auto" ? (
                 <>
-                  <input className={`${fieldClass} bg-slate-50`} type="number" value={calculatedLoanAmount} readOnly aria-label="Automatically calculated loan amount" />
+                  <input className={`${fieldClass} bg-slate-50`} type="number" value={calculatedLoanAmount} readOnly aria-label="Automatically calculated loan amount" placeholder="Calculated from gold valuation" />
                   <p className="mt-1 text-[11px] font-normal text-slate-400">Automatically calculated as 50% of the pledged gold valuation ({formatCurrency(estimatedGoldValuation)}).</p>
                 </>
               ) : (
-                <FormField name="principal_amount" form={form} onChange={handleChange} type="number" min="0.01" step="0.01" required help="Enter the loan amount to disburse." />
+                <FormField label="Loan Amount (₹)" name="principal_amount" form={form} onChange={handleChange} type="number" min="0.01" step="0.01" required placeholder="Enter loan amount" help="Enter the loan amount to disburse." />
               )}
             </div>
           </div>
@@ -663,6 +673,7 @@ export default function CreateLoan() {
                 className="sr-only"
                 type="file"
                 accept="image/png,image/jpeg"
+                title="Choose a PNG or JPG image of the pledged gold"
                 onChange={(event) => {
                   const file = event.target.files?.[0];
                   if (!file) return;
@@ -724,12 +735,12 @@ export default function CreateLoan() {
         <section className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm sm:p-5">
           <h2 className="mb-4 text-base font-bold text-[#003B3B]">Loan Schedule</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <label className={labelClass}>Loan Number<input className={`${fieldClass} bg-slate-50`} value={loanRecord?.loan_number || "Auto-generated on save"} readOnly /></label>
+            <label className={labelClass}>Loan Number<input className={`${fieldClass} bg-slate-50`} value={loanRecord?.loan_number || "Auto-generated on save"} readOnly placeholder="Auto-generated on save" /></label>
             <FormField label="Loan Date" name="loan_date" form={form} onChange={handleChange} type="date" required />
             <FormField label="Maturity Date" name="maturity_date" form={form} onChange={handleChange} type="date" required />
             <FormSelect label="Payment Frequency" name="payment_frequency" form={form} onChange={handleChange} options={PAYMENT_FREQUENCIES} required />
           </div>
-          <label className={`${labelClass} mt-4`}>Notes<textarea className={fieldClass} name="notes" rows="3" maxLength="5000" value={form.notes} onChange={handleChange} /></label>
+          <label className={`${labelClass} mt-4`}>Notes<textarea className={fieldClass} name="notes" rows="3" maxLength="5000" value={form.notes} onChange={handleChange} placeholder="Enter any additional loan notes (optional)" /></label>
         </section>
 
         <section className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm sm:p-5">
