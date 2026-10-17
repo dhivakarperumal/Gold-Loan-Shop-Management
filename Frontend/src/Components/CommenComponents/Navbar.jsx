@@ -32,11 +32,15 @@ const Navbar = () => {
   const [openDropdown, setOpenDropdown] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
   const [mobileCategory, setMobileCategory] = useState(false);
   const [wishlistOpen, setWishlistOpen] = useState(false);
 
   const menuRef = useRef();
   const dropdownRef = useRef();
+  const searchButtonRef = useRef();
+  const searchInputRef = useRef();
+  const searchPanelRef = useRef();
   const currentPathRef = useRef(location.pathname);
 
   const confirmLogout = () => {
@@ -90,12 +94,32 @@ const Navbar = () => {
         setSelectedCategory(null);
       }
 
+      if (
+        searchButtonRef.current &&
+        !searchButtonRef.current.contains(e.target) &&
+        searchPanelRef.current &&
+        !searchPanelRef.current.contains(e.target)
+      ) {
+        setSearchOpen(false);
+      }
+
     };
 
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
 
   }, []);
+
+  useEffect(() => {
+    if (!searchOpen) return undefined;
+
+    searchInputRef.current?.focus();
+    const handleKeyDown = (event) => {
+      if (event.key === "Escape") setSearchOpen(false);
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [searchOpen]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -138,6 +162,7 @@ const Navbar = () => {
   const handleSearch = (event) => {
     event.preventDefault();
     const query = searchTerm.trim();
+    setSearchOpen(false);
     navigate(query ? `/shop?search=${encodeURIComponent(query)}` : "/shop");
   };
 
@@ -153,21 +178,6 @@ const Navbar = () => {
           <Link to="/" className="flex shrink-0 items-center" aria-label="Sri Golds home">
             <img src="/images/logo.png" alt="Sri Golds" className="h-12 w-20 object-contain sm:h-14 sm:w-24" />
           </Link>
-
-          <form onSubmit={handleSearch} className="hidden w-[clamp(190px,20vw,300px)] shrink-0 items-center overflow-hidden rounded-lg border border-[#d9d9d9] bg-white md:flex">
-            <Search className="ml-3 h-5 w-5 shrink-0 text-[#182c29]" />
-            <input
-              type="search"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search for jewelry, collections..."
-              aria-label="Search jewelry and collections"
-              className="min-w-0 flex-1 px-3 py-3 text-sm outline-none placeholder:text-gray-500"
-            />
-            <button type="submit" aria-label="Search" className="flex h-11 w-12 shrink-0 items-center justify-center bg-[#d69b17] text-white transition hover:bg-[#bd850f]">
-              <Search className="h-5 w-5" />
-            </button>
-          </form>
 
           <div ref={dropdownRef} className="hidden min-w-0 flex-1 items-center justify-center xl:flex">
             <div className="flex h-full items-center">
@@ -281,6 +291,19 @@ const Navbar = () => {
           <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2 xl:ml-0">
 
             <button
+              ref={searchButtonRef}
+              type="button"
+              onClick={() => setSearchOpen((isOpen) => !isOpen)}
+              aria-label={searchOpen ? "Close search" : "Open search"}
+              aria-expanded={searchOpen}
+              aria-controls="navbar-search-panel"
+              className="flex min-w-12 flex-col items-center gap-0.5 rounded-lg px-2 py-2 text-[#172c28] transition hover:bg-[#fff8e9] hover:text-[#a77525]"
+            >
+              <Search className="h-5 w-5" />
+              <span className="hidden text-xs font-semibold sm:block">Search</span>
+            </button>
+
+            <button
               type="button"
               onClick={() => setWishlistOpen(true)}
               aria-label="Open favorites"
@@ -298,19 +321,22 @@ const Navbar = () => {
             {user ? (
               <div className="relative hidden sm:block" ref={menuRef}>
                 <button
-                  onClick={() => setUserMenu(!userMenu)}
+                  type="button"
+                  aria-expanded={userMenu}
+                  aria-haspopup="menu"
+                  onClick={() => setUserMenu((isOpen) => !isOpen)}
                   className="flex min-w-12 cursor-pointer flex-col items-center gap-0.5 rounded-lg px-2 py-2 text-[#172c28] transition hover:bg-[#fff8e9] hover:text-[#a77525]"
                 >
                   <User className="h-5 w-5" />
                   <span className="text-xs font-semibold">Account</span>
                 </button>
                 {userMenu && (
-                  <div className="absolute right-0 top-full z-50 mt-2 w-44 overflow-hidden rounded-xl border border-[#efe5d4] bg-white shadow-xl">
-                    <Link to="/account" className="block px-4 py-3 text-sm hover:bg-[#fff8e9]" onClick={() => setUserMenu(false)}>My Account</Link>
+                  <div role="menu" className="absolute right-0 top-full z-50 mt-2 w-44 overflow-hidden rounded-xl border border-[#efe5d4] bg-white shadow-xl">
+                    <Link to="/account" role="menuitem" className="block px-4 py-3 text-sm hover:bg-[#fff8e9]" onClick={() => setUserMenu(false)}>My Account</Link>
                     {user.role === "admin" && (
-                      <Link to="/admin" className="block px-4 py-3 text-sm hover:bg-[#fff8e9]" onClick={() => setUserMenu(false)}>Admin Panel</Link>
+                      <Link to="/admin" role="menuitem" className="block px-4 py-3 text-sm hover:bg-[#fff8e9]" onClick={() => setUserMenu(false)}>Admin Panel</Link>
                     )}
-                    <button onClick={() => setLogoutConfirm(true)} className="w-full px-4 py-3 text-left text-sm text-red-500 hover:bg-red-50">Logout</button>
+                    <button type="button" role="menuitem" onClick={() => setLogoutConfirm(true)} className="w-full px-4 py-3 text-left text-sm text-red-500 hover:bg-red-50">Logout</button>
                   </div>
                 )}
               </div>
@@ -341,6 +367,33 @@ const Navbar = () => {
         </div>
 
       </PageContainer>
+
+      {searchOpen && (
+        <div
+          ref={searchPanelRef}
+          id="navbar-search-panel"
+          className="absolute inset-x-0 top-full z-50 border-t border-[#efe5d4] bg-white px-3 py-4 shadow-lg sm:px-5"
+        >
+          <PageContainer>
+            <form onSubmit={handleSearch} className="mx-auto flex max-w-2xl items-center overflow-hidden rounded-lg border border-[#d9d9d9] bg-white shadow-sm">
+              <Search className="ml-3 h-5 w-5 shrink-0 text-[#182c29]" />
+              <input
+                ref={searchInputRef}
+                type="search"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Search for jewelry, collections..."
+                aria-label="Search jewelry and collections"
+                className="min-w-0 flex-1 px-3 py-3 text-sm outline-none placeholder:text-gray-500"
+              />
+              <button type="submit" className="flex h-11 shrink-0 items-center justify-center gap-2 bg-[#d69b17] px-4 text-sm font-semibold text-white transition hover:bg-[#bd850f]">
+                <Search className="h-5 w-5" />
+                <span>Search</span>
+              </button>
+            </form>
+          </PageContainer>
+        </div>
+      )}
 
       {/* Logout Modal */}
 
