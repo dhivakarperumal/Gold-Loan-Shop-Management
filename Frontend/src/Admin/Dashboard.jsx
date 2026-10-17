@@ -59,7 +59,7 @@ const DEFAULT_DASHBOARD_DATA = {
       id: "total_customers",
       label: "Total Customers",
       value: "—",
-      trend: "Live API count",
+      trend: "Users table count",
       trendUp: true,
       icon: "users",
       color: "emerald"

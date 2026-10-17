@@ -38,14 +38,11 @@ async function getDashboardData(range = 'month') {
       LIMIT 10
     `);
 
-    // 2. Customers metrics
-    const [[{ total_loan_customers }]] = await pool.query(`
-      SELECT COUNT(*) AS total_loan_customers FROM loan_customers
-    `);
+    // Match the Users page total: count every account in the users table.
     const [[{ total_users }]] = await pool.query(`
-      SELECT COUNT(*) AS total_users FROM users WHERE role = 'user'
+      SELECT COUNT(*) AS total_users FROM users
     `);
-    const totalCustomers = (Number(total_loan_customers) || 0) + (Number(total_users) || 0);
+    const totalCustomers = Number(total_users) || 0;
 
     // 3. Products metrics
     const [[{ total_gold_stock_value }]] = await pool.query(`
@@ -333,7 +330,7 @@ async function getDashboardData(range = 'month') {
           id: "total_customers",
           label: "Total Customers",
           value: totalCustomersFormatted,
-          trend: "Live API count",
+          trend: "Users table count",
           trendUp: true,
           icon: "users",
           color: "emerald"
