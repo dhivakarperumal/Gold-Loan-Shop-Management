@@ -27,6 +27,12 @@ const GOLD_PURITY_OPTIONS = [
   ["18K / 750", "18K (750)"],
   ["14K / 585", "14K (585)"]
 ];
+const METAL_OPTIONS = {
+  Gold: GOLD_PURITY_OPTIONS,
+  Silver: [["999", "999 Fine"]],
+  Platinum: [["950", "950"], ["900", "900"]],
+  Diamond: [["D-F / VVS", "D-F / VVS"], ["G-H / VS", "G-H / VS"], ["I-J / SI", "I-J / SI"]]
+};
 const JEWELLERY_TYPE_OPTIONS = [
   ["Bangles", "Bangles"],
   ["Chains", "Chains"],
@@ -61,6 +67,7 @@ function initialLoan() {
   maturity.setMonth(maturity.getMonth() + 12);
   return {
     jewellery_type: "",
+    metal_type: "Gold",
     gold_purity: "",
     gross_weight: "",
     stone_weight: "0",
@@ -117,7 +124,7 @@ function periodCount(days, frequency, convention = "actual_365", customDays = 30
 function calculateEstimate(form, interestType) {
   const principal = Number(form.principal_amount);
   const rate = Number(form.interest_rate);
-  if (!(principal > 0) || !(rate >= 0) || !form.interest_calculation_start_date || !form.maturity_date) return null;
+  if (!interestType || !(principal > 0) || !(rate >= 0) || !form.interest_calculation_start_date || !form.maturity_date) return null;
   const days = elapsedDays(form.interest_calculation_start_date, form.maturity_date, form.day_count_convention);
   const eligibleDays = Math.max(0, days - Number(form.interest_free_days || 0) - Number(form.grace_period_days || 0));
   const periods = periodCount(eligibleDays, form.interest_frequency, form.day_count_convention, form.custom_period_days);
@@ -272,6 +279,7 @@ export default function CreateLoan() {
           ...initialLoan(),
           ...Object.fromEntries(Object.keys(initialLoan()).map((field) => {
             const value = loan[field];
+            if (field === "metal_type") return [field, loan.metal_type || "Gold"];
             if (field === "jewellery_type") {
               return [field, !savedJewelleryType ? "" : isKnownJewelleryType ? savedJewelleryType : "Other"];
             }
@@ -338,19 +346,27 @@ export default function CreateLoan() {
     ].some((value) => String(value || "").toLowerCase().includes(search)));
   }, [customers, customerQuery]);
 
-  const estimate = useMemo(
-    () => calculateEstimate(form, form.interest_type),
-    [form]
-  );
-  const activeGoldRate = getRateForPurity(activeRateSet, form.gold_purity);
-  const savedPurityUnchanged = loanRecord?.gold_purity === form.gold_purity;
+  const activeGoldRate = getRateForPurity(activeRateSet, form.gold_purity, form.metal_type);
+  const savedPurityUnchanged = (loanRecord?.metal_type || "Gold") === form.metal_type
+    && loanRecord?.gold_purity === form.gold_purity;
   const appliedGoldRate = loanRecord && savedPurityUnchanged
     ? (loanRecord.gold_rate_per_gram == null ? null : Number(loanRecord.gold_rate_per_gram))
     : activeGoldRate?.rate_per_gram;
+  const appliedRateUnit = loanRecord && savedPurityUnchanged
+    ? loanRecord.rate_unit || "gram"
+    : activeGoldRate?.rate_unit || (form.metal_type === "Diamond" ? "carat" : "gram");
+  const weightUnit = appliedRateUnit === "carat" ? "ct" : "g";
   const estimatedGoldValuation = loanRecord && savedPurityUnchanged && loanRecord.gold_rate_per_gram == null
     ? Number(form.gold_valuation) || 0
     : Math.max(0, Number(form.gross_weight || 0) - Number(form.stone_weight || 0)) * Number(appliedGoldRate || 0);
   const calculatedLoanAmount = (Math.round(estimatedGoldValuation * 50) / 100).toFixed(2);
+  const estimate = useMemo(
+    () => calculateEstimate({
+      ...form,
+      principal_amount: loanAmountMode === "auto" ? calculatedLoanAmount : form.principal_amount
+    }, form.interest_type),
+    [form, loanAmountMode, calculatedLoanAmount]
+  );
   const selectCustomer = async (selected) => {
     setCustomer(selected);
     setCustomerQuery(`${selected.customer_code || selected.id} · ${selected.full_name}`);
@@ -375,7 +391,9 @@ export default function CreateLoan() {
 
   const handleChange = (event) => {
     const { name, value } = event.target;
-    setForm((current) => ({ ...current, [name]: value }));
+    setForm((current) => name === "metal_type"
+      ? { ...current, metal_type: value, gold_purity: "" }
+      : { ...current, [name]: value });
   };
 
   const handleLoanAmountModeChange = (mode) => {
@@ -592,7 +610,7 @@ export default function CreateLoan() {
         <section className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm sm:p-5">
           <h2 className="mb-4 text-base font-bold text-[#003B3B]">Pledged Jewellery</h2>
           {activeRateSet && <p className="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
-            Global rate set effective {formatRateDate(activeRateSet.rate_date)}. Loan valuation uses eligible net gold weight × its purity rate; retail making, wastage, stones, and tax are excluded.
+            Global rate set effective {formatRateDate(activeRateSet.rate_date)}. Valuation uses eligible net {form.metal_type.toLowerCase()} weight × its configured rate; retail charges are excluded.
           </p>}
           {ratesError && <p role="alert" className="mb-4 rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">Could not refresh rates: {ratesError}</p>}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -613,8 +631,9 @@ export default function CreateLoan() {
                 required
               />
             )}
+            <FormSelect label="Metal Type" name="metal_type" form={form} onChange={handleChange} required disabled={Boolean(loanRecord && loanRecord.gold_rate_per_gram == null)} options={["Gold", "Silver", "Platinum", "Diamond"].map((metal) => [metal, metal])} />
             <FormSelect
-              label="Gold Purity"
+              label={`${form.metal_type} Purity / Quality`}
               name="gold_purity"
               form={form}
               onChange={handleChange}
@@ -622,20 +641,20 @@ export default function CreateLoan() {
               disabled={Boolean(loanRecord && loanRecord.gold_rate_per_gram == null)}
               help={loanRecord && loanRecord.gold_rate_per_gram == null
                 ? "This legacy loan has no rate snapshot; its saved purity and valuation are preserved."
-                : "Select the purity matching the pledged gold and active rate."}
+                : `Select the ${form.metal_type.toLowerCase()} purity or quality matching its active rate.`}
               options={[
-                ["", "Select gold purity"],
-                ...(!GOLD_PURITY_OPTIONS.some(([value]) => value === form.gold_purity) && form.gold_purity
+                ["", `Select ${form.metal_type.toLowerCase()} purity / quality`],
+                ...(!(METAL_OPTIONS[form.metal_type] || []).some(([value]) => value === form.gold_purity) && form.gold_purity
                   ? [[form.gold_purity, `${form.gold_purity} (saved)`]]
                   : []),
-                ...GOLD_PURITY_OPTIONS
+                ...(METAL_OPTIONS[form.metal_type] || [])
               ]}
             />
-            <FormField label="Gross Weight (g)" name="gross_weight" form={form} onChange={handleChange} type="number" min="0.001" step="0.001" required />
-            <FormField label="Stone Weight (g)" name="stone_weight" form={form} onChange={handleChange} type="number" min="0" step="0.001" />
-            <label className={labelClass}>Net Gold Weight (g)<input className={`${fieldClass} bg-slate-50`} value={Math.max(0, Number(form.gross_weight || 0) - Number(form.stone_weight || 0)).toFixed(3)} readOnly placeholder="Calculated from gross and stone weight" /></label>
-            <FormField label="Gold Rate / Gram (₹)" name="gold_rate_per_gram" form={{ gold_rate_per_gram: appliedGoldRate ?? "" }} onChange={() => {}} readOnly help={loanRecord && savedPurityUnchanged && loanRecord.gold_rate_per_gram != null ? `Saved loan rate from ${formatRateDate(loanRecord.gold_rate_date)}; today's changes do not alter it.` : loanRecord && savedPurityUnchanged ? "Legacy loan; its saved valuation is preserved." : ratesLoading ? "Loading today's active rate..." : "Selected by the configured purity."} />
-            <FormField label="Gold Valuation (₹)" name="gold_valuation" form={{ gold_valuation: estimatedGoldValuation.toFixed(2) }} onChange={() => {}} readOnly required min="0.01" step="0.01" help="Eligible net gold weight × the applied rate snapshot; not the retail jewellery price." />
+            <FormField label={`Gross Weight (${weightUnit})`} name="gross_weight" form={form} onChange={handleChange} type="number" min="0.001" step="0.001" required />
+            <FormField label={`Stone Weight (${weightUnit})`} name="stone_weight" form={form} onChange={handleChange} type="number" min="0" step="0.001" />
+            <label className={labelClass}>Net {form.metal_type} Weight ({weightUnit})<input className={`${fieldClass} bg-slate-50`} value={Math.max(0, Number(form.gross_weight || 0) - Number(form.stone_weight || 0)).toFixed(3)} readOnly placeholder="Calculated from gross and stone weight" /></label>
+            <FormField label={`${form.metal_type} Rate / ${appliedRateUnit === "carat" ? "Carat" : "Gram"} (₹)`} name="gold_rate_per_gram" form={{ gold_rate_per_gram: appliedGoldRate ?? "" }} onChange={() => {}} readOnly help={loanRecord && savedPurityUnchanged && loanRecord.gold_rate_per_gram != null ? `Saved loan rate from ${formatRateDate(loanRecord.gold_rate_date)}; today's changes do not alter it.` : loanRecord && savedPurityUnchanged ? "Legacy loan; its saved valuation is preserved." : ratesLoading ? "Loading today's active rate..." : "Selected by the configured metal purity or quality."} />
+            <FormField label={`${form.metal_type} Valuation (₹)`} name="gold_valuation" form={{ gold_valuation: estimatedGoldValuation.toFixed(2) }} onChange={() => {}} readOnly required min="0.01" step="0.01" help={`Eligible net weight (${weightUnit}) × the applied ${appliedRateUnit} rate snapshot; retail charges are excluded.`} />
           </div>
           <div className="mt-4 grid gap-4 sm:grid-cols-2">
             <div>
