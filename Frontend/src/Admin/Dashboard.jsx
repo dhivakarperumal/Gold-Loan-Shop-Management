@@ -1,6 +1,8 @@
 import React, { useContext, useEffect, useState } from "react";
 import { AuthContext } from "../PrivateRouter/AuthContext";
 import { useAdmin } from "../PrivateRouter/AdminContext";
+import { formatRateDate } from "../PrivateRouter/goldRateUtils";
+import useGoldRates from "../PrivateRouter/useGoldRates";
 import api from "../api";
 import { toast, Toaster } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
@@ -70,6 +72,7 @@ const Dashboard = () => {
     const navigate = useNavigate();
     const { user } = useContext(AuthContext);
     const { dashboardData, setDashboardCached } = useAdmin();
+    const { current: currentGoldRates, loading: goldRatesLoading, error: goldRatesError } = useGoldRates();
     const [loading, setLoading] = useState(!dashboardData);
     const [salesRange, setSalesRange] = useState("week");
 
@@ -266,6 +269,27 @@ const Dashboard = () => {
                     );
                 })}
             </div>
+
+            <section className="rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <h2 className="text-sm font-extrabold text-[#003B3B]">Active Daily Gold Rates</h2>
+                        <p className="mt-1 text-xs text-slate-500">
+                            {goldRatesLoading ? "Refreshing rate information..." : currentGoldRates ? `Effective ${formatRateDate(currentGoldRates.rate_date)} · ${new Date(currentGoldRates.effective_from).toLocaleString()}` : "No active rate set configured."}
+                        </p>
+                    </div>
+                    <button type="button" onClick={() => navigate("/admin/settings/daily-gold-rate")} className="rounded-lg bg-[#003B3B] px-3 py-2 text-xs font-bold text-white hover:bg-[#008577]">Manage rates</button>
+                </div>
+                {currentGoldRates && <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+                    {currentGoldRates.rates.map((rate) => (
+                        <div key={`${rate.metal_type}-${rate.purity}`} className="rounded-lg bg-emerald-50 px-3 py-2">
+                            <p className="text-[10px] font-bold text-slate-500">{rate.metal_type} {rate.purity}</p>
+                            <p className="mt-1 text-sm font-extrabold text-[#003B3B]">₹{Number(rate.rate_per_gram).toLocaleString("en-IN")} / g</p>
+                        </div>
+                    ))}
+                </div>}
+                {goldRatesError && <p role="alert" className="mt-3 text-xs font-semibold text-rose-700">Gold rates could not be refreshed: {goldRatesError}</p>}
+            </section>
 
             {/* Quick Actions */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">

@@ -3,6 +3,8 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { FiArrowLeft, FiCalendar, FiCheck, FiChevronDown, FiSearch, FiUserPlus } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api from "../../api";
+import { formatRateDate, getRateForPurity } from "../../PrivateRouter/goldRateUtils";
+import useGoldRates from "../../PrivateRouter/useGoldRates";
 
 const INTEREST_FREQUENCIES = [
   ["daily", "Daily"], ["weekly", "Weekly"], ["monthly", "Monthly"],
@@ -139,7 +141,7 @@ function calculateEstimate(form, interestType) {
   };
 }
 
-function FormField({ label, name, form, onChange, type = "text", required = false, min, step, help }) {
+function FormField({ label, name, form, onChange, type = "text", required = false, min, step, help, readOnly = false }) {
   return (
     <label className={labelClass}>
       {label}{required && <span className="ml-1 text-rose-500">*</span>}
@@ -152,6 +154,7 @@ function FormField({ label, name, form, onChange, type = "text", required = fals
         required={required}
         min={min}
         step={step}
+        readOnly={readOnly}
       />
       {help && <span className="mt-1 block text-[11px] font-normal text-slate-400">{help}</span>}
     </label>
@@ -185,6 +188,7 @@ export default function CreateLoan() {
   const [saving, setSaving] = useState(false);
   const [loanRecord, setLoanRecord] = useState(null);
   const [loadedFor, setLoadedFor] = useState(null);
+  const { current: activeRateSet, loading: ratesLoading, error: ratesError } = useGoldRates();
 
   useEffect(() => {
     let active = true;
@@ -265,6 +269,14 @@ export default function CreateLoan() {
     () => calculateEstimate(form, form.interest_type),
     [form]
   );
+  const activeGoldRate = getRateForPurity(activeRateSet, form.gold_purity);
+  const savedPurityUnchanged = loanRecord?.gold_purity === form.gold_purity;
+  const appliedGoldRate = loanRecord && savedPurityUnchanged
+    ? (loanRecord.gold_rate_per_gram == null ? null : Number(loanRecord.gold_rate_per_gram))
+    : activeGoldRate?.rate_per_gram;
+  const estimatedGoldValuation = loanRecord && savedPurityUnchanged && loanRecord.gold_rate_per_gram == null
+    ? Number(form.gold_valuation) || 0
+    : Math.max(0, Number(form.gross_weight || 0) - Number(form.stone_weight || 0)) * Number(appliedGoldRate || 0);
 
   const selectCustomer = async (selected) => {
     setCustomer(selected);
@@ -316,12 +328,17 @@ export default function CreateLoan() {
       toast.error("Maturity date must be after the loan date.");
       return;
     }
+    if (!loanRecord && !(appliedGoldRate > 0)) {
+      toast.error("An active daily gold rate for the selected purity is required before creating a loan.");
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
         ...form,
         customer_id: customer.id,
-        net_gold_weight: (gross - stone).toFixed(3)
+        net_gold_weight: (gross - stone).toFixed(3),
+        gold_valuation: estimatedGoldValuation.toFixed(2)
       };
       const response = loanRecord
         ? await api.put(`/loans/${loanRecord.id}`, payload)
@@ -471,17 +488,22 @@ export default function CreateLoan() {
 
         <section className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm sm:p-5">
           <h2 className="mb-4 text-base font-bold text-[#003B3B]">Pledged Jewellery</h2>
+          {activeRateSet && <p className="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
+            Global rate set effective {formatRateDate(activeRateSet.rate_date)}. Loan valuation uses eligible net gold weight × its purity rate; retail making, wastage, stones, and tax are excluded.
+          </p>}
+          {ratesError && <p role="alert" className="mb-4 rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">Could not refresh rates: {ratesError}</p>}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <label className={labelClass}>
               Gold Pledge Number
               <input className={`${fieldClass} bg-slate-50`} value={loanRecord?.gold_pledge_number || "Auto-generated on save"} readOnly />
             </label>
             <FormField label="Jewellery Type" name="jewellery_type" form={form} onChange={handleChange} required />
-            <FormField label="Gold Purity" name="gold_purity" form={form} onChange={handleChange} required help="Example: 22K or 916" />
+            <FormField label="Gold Purity" name="gold_purity" form={form} onChange={handleChange} required readOnly={Boolean(loanRecord && loanRecord.gold_rate_per_gram == null)} help={loanRecord && loanRecord.gold_rate_per_gram == null ? "This legacy loan has no rate snapshot; its existing purity and saved valuation are preserved." : "Example: 22K or 916"} />
             <FormField label="Gross Weight (g)" name="gross_weight" form={form} onChange={handleChange} type="number" min="0.001" step="0.001" required />
             <FormField label="Stone Weight (g)" name="stone_weight" form={form} onChange={handleChange} type="number" min="0" step="0.001" />
             <label className={labelClass}>Net Gold Weight (g)<input className={`${fieldClass} bg-slate-50`} value={Math.max(0, Number(form.gross_weight || 0) - Number(form.stone_weight || 0)).toFixed(3)} readOnly /></label>
-            <FormField label="Gold Valuation (₹)" name="gold_valuation" form={form} onChange={handleChange} type="number" min="0.01" step="0.01" required />
+            <FormField label="Gold Rate / Gram (₹)" name="gold_rate_per_gram" form={{ gold_rate_per_gram: appliedGoldRate ?? "" }} onChange={() => {}} readOnly help={loanRecord && savedPurityUnchanged && loanRecord.gold_rate_per_gram != null ? `Saved loan rate from ${formatRateDate(loanRecord.gold_rate_date)}; today's changes do not alter it.` : loanRecord && savedPurityUnchanged ? "Legacy loan; its saved valuation is preserved." : ratesLoading ? "Loading today's active rate..." : "Selected by the configured purity."} />
+            <FormField label="Gold Valuation (₹)" name="gold_valuation" form={{ gold_valuation: estimatedGoldValuation.toFixed(2) }} onChange={() => {}} readOnly required min="0.01" step="0.01" help="Eligible net gold weight × the applied rate snapshot; not the retail jewellery price." />
             <FormField label="Loan Amount (₹)" name="principal_amount" form={form} onChange={handleChange} type="number" min="0.01" step="0.01" required />
           </div>
         </section>

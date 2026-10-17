@@ -27,7 +27,8 @@ import {
   HandCoins,
   RefreshCw,
   Clock3,
-  Percent
+  Settings as SettingsIcon,
+  Coins
 } from "lucide-react";
 
 import api from "../api";
@@ -88,6 +89,14 @@ const navItems = [
     ],
   },
   { path: "/admin/reports", label: "Reports", icon: BarChart3 },
+  {
+    label: "Settings",
+    icon: SettingsIcon,
+    children: [
+      { path: "/admin/settings", label: "General Settings", icon: SettingsIcon },
+      { path: "/admin/settings/daily-gold-rate", label: "Daily Gold Rate", icon: Coins },
+    ],
+  },
   { path: "/", label: "Back Home", icon: Home },
 ];
 

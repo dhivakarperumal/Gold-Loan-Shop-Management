@@ -62,6 +62,8 @@ export default function LoanDetails() {
           <Detail label="Stone Weight" value={`${loan.stone_weight} g`} />
           <Detail label="Net Gold Weight" value={`${loan.net_gold_weight} g`} />
           <Detail label="Gold Valuation" value={money(loan.gold_valuation)} />
+          {loan.gold_rate_per_gram != null && <Detail label="Applied Rate Snapshot" value={`${money(loan.gold_rate_per_gram)} / g`} />}
+          {loan.gold_rate_date && <Detail label="Rate Date" value={dateText(loan.gold_rate_date)} />}
           <Detail label="Loan Amount" value={money(loan.principal_amount)} />
         </div>
       </section>

@@ -9,6 +9,7 @@ const {
   setInterestType,
   updateLoan
 } = require('../modules/loanModule');
+const { findGoldRateForPurity, getCurrentGoldRates } = require('../modules/goldRateModule');
 
 const INTEREST_FREQUENCIES = new Set([
   'daily', 'weekly', 'monthly', 'quarterly', 'half_yearly', 'yearly', 'custom_period'
@@ -71,8 +72,6 @@ function normalizeLoan(body) {
   }
   const principal = parseAmount(body.principal_amount, 'Loan amount', { min: 0.01 });
   if (principal.error) return principal;
-  const valuation = parseAmount(body.gold_valuation, 'Gold valuation', { min: 0.01 });
-  if (valuation.error) return valuation;
   const rate = body.interest_type === 'fixed' && (body.interest_rate === '' || body.interest_rate == null)
     ? { value: '0.0000' }
     : parseAmount(body.interest_rate, 'Interest rate', { max: 1000 });
@@ -134,7 +133,7 @@ function normalizeLoan(body) {
       gross_weight: gross.value,
       stone_weight: stone.value,
       net_gold_weight: netWeight.toFixed(3),
-      gold_valuation: valuation.value,
+      gold_valuation: '0.00',
       principal_amount: principal.value,
       interest_type: body.interest_type,
       interest_rate: rate.value,
@@ -232,7 +231,18 @@ async function postLoan(req, res, next) {
   const { loan, error } = normalizeLoan(req.body || {});
   if (error) return res.status(400).json({ message: error });
   try {
-    return res.status(201).json(await createLoan({ ...loan, created_by: req.adminUser.user_id }));
+    const activeRateSet = await getCurrentGoldRates();
+    const activeRate = findGoldRateForPurity(activeRateSet, loan.gold_purity);
+    if (!activeRate) return res.status(409).json({ message: 'No active gold rate matches this loan purity. Configure and activate the daily gold rates first.' });
+    const netGoldWeight = Number(loan.net_gold_weight);
+    const goldValuation = netGoldWeight * activeRate.rate_per_gram;
+    return res.status(201).json(await createLoan({
+      ...loan,
+      gold_valuation: goldValuation.toFixed(2),
+      gold_rate_per_gram: activeRate.rate_per_gram,
+      gold_rate_date: activeRateSet.rate_date,
+      created_by: req.adminUser.user_id
+    }));
   } catch (createError) {
     if (createError.code === 'CUSTOMER_NOT_FOUND') return res.status(404).json({ message: createError.message });
     if (createError.code === 'INTEREST_TYPE_UNAVAILABLE') return res.status(400).json({ message: createError.message });
@@ -245,6 +255,27 @@ async function putLoan(req, res, next) {
   const { loan, error } = normalizeLoan(req.body || {});
   if (error) return res.status(400).json({ message: error });
   try {
+    const existingLoan = await getLoanById(req.params.id);
+    if (!existingLoan) return res.status(404).json({ message: 'Loan not found' });
+    if (existingLoan.gold_rate_per_gram != null && existingLoan.gold_purity === loan.gold_purity) {
+      loan.gold_rate_per_gram = existingLoan.gold_rate_per_gram;
+      loan.gold_rate_date = existingLoan.gold_rate_date;
+      loan.gold_valuation = (Number(loan.net_gold_weight) * Number(existingLoan.gold_rate_per_gram)).toFixed(2);
+    } else if (existingLoan.gold_rate_per_gram != null) {
+      const activeRateSet = await getCurrentGoldRates();
+      const activeRate = findGoldRateForPurity(activeRateSet, loan.gold_purity);
+      if (!activeRate) return res.status(409).json({ message: 'No active rate matches the updated loan purity.' });
+      loan.gold_rate_per_gram = activeRate.rate_per_gram;
+      loan.gold_rate_date = activeRateSet.rate_date;
+      loan.gold_valuation = (Number(loan.net_gold_weight) * activeRate.rate_per_gram).toFixed(2);
+    } else {
+      if (existingLoan.gold_purity !== loan.gold_purity) {
+        return res.status(409).json({ message: 'This historical loan has no rate snapshot, so its purity cannot be changed safely.' });
+      }
+      loan.gold_rate_per_gram = null;
+      loan.gold_rate_date = null;
+      loan.gold_valuation = existingLoan.gold_valuation;
+    }
     const updatedLoan = await updateLoan(req.params.id, loan);
     if (!updatedLoan) return res.status(404).json({ message: 'Loan not found' });
     return res.json(updatedLoan);
