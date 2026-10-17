@@ -1,5 +1,6 @@
 import React, { useContext, useState, useRef, useEffect } from "react";
 import { NavLink, Link, useLocation, useNavigate } from "react-router-dom";
+import { toast } from "react-hot-toast";
 import { AuthContext } from "../../PrivateRouter/AuthContext";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 import PageContainer from "./PageContainer";
@@ -40,6 +41,9 @@ const Navbar = () => {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState(false);
   const [mobileCategory, setMobileCategory] = useState(false);
   const [wishlistOpen, setWishlistOpen] = useState(false);
 
@@ -129,6 +133,40 @@ const Navbar = () => {
   }, [searchOpen]);
 
   useEffect(() => {
+    const query = searchTerm.trim();
+    if (!searchOpen || query.length < 2) return undefined;
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setSearching(true);
+      setSearchError(false);
+      try {
+        const response = await api.get("/products", {
+          params: { page: 1, limit: 8, search: query, status: "Active" },
+          signal: controller.signal,
+        });
+        if (!Array.isArray(response.data?.products)) {
+          throw new TypeError("The product search response must contain a products array");
+        }
+        setSearchResults(response.data.products);
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("Failed to search products:", error);
+          setSearchResults([]);
+          setSearchError(true);
+        }
+      } finally {
+        if (!controller.signal.aborted) setSearching(false);
+      }
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [searchOpen, searchTerm]);
+
+  useEffect(() => {
     const controller = new AbortController();
 
     const fetchNavigationData = async () => {
@@ -168,11 +206,77 @@ const Navbar = () => {
     return `${backendUrl}${image.startsWith("/") ? image : `/${image}`}`;
   };
 
-  const handleSearch = (event) => {
+  const getSearchProductImage = (product) => {
+    let images = product.images;
+    if (typeof images === "string") {
+      try {
+        images = JSON.parse(images);
+      } catch {
+        images = [images];
+      }
+    }
+    const firstImage = Array.isArray(images) ? images[0] : images;
+    const imagePath = typeof firstImage === "string"
+      ? firstImage
+      : firstImage?.url || firstImage?.path || firstImage?.src;
+    return imagePath ? getMetalImageUrl(imagePath) : "";
+  };
+
+  const handleSearch = async (event) => {
     event.preventDefault();
     const query = searchTerm.trim();
+    if (!query) {
+    toast.error("Enter a product name or code to search.");
+    searchInputRef.current?.focus();
+    return;
+    }
+
+    setSearching(true);
+    setSearchError(false);
+    try {
+    const response = await api.get("/products", {
+      params: { page: 1, limit: 8, search: query, status: "Active" },
+    });
+    if (!Array.isArray(response.data?.products)) {
+      throw new TypeError("The product search response must contain a products array");
+    }
+
+    const products = response.data.products;
+    setSearchResults(products);
+    if (products.length === 0) {
+      toast.error("No matching active products found.");
+      return;
+    }
+
+    const normalizedQuery = query.toLowerCase();
+    const product = products.find((item) =>
+      [item.name, item.product_code].some(
+        (value) => String(value || "").toLowerCase() === normalizedQuery
+      )
+    ) || products[0];
+    const productId = product.id ?? product.product_id ?? product.productId;
+    if (!productId) {
+      throw new TypeError("The matching product has no valid ID");
+    }
     setSearchOpen(false);
-    navigate(query ? `/shop?search=${encodeURIComponent(query)}` : "/shop");
+    navigate(`/product/${productId}`);
+    } catch (error) {
+    console.error("Failed to search products:", error);
+    setSearchError(true);
+    toast.error(error.response?.data?.message || "Could not search products.");
+    } finally {
+    setSearching(false);
+    }
+  };
+
+  const openProductDetails = (product) => {
+    const productId = product.id ?? product.product_id ?? product.productId;
+    if (!productId) {
+    toast.error("This product cannot be opened because its ID is missing.");
+    return;
+    }
+    setSearchOpen(false);
+    navigate(`/product/${productId}`);
   };
 
   const getCategorySubcategories = (category) =>
@@ -396,22 +500,78 @@ const Navbar = () => {
           className="absolute inset-x-0 top-full z-50 border-t border-[#efe5d4] bg-white px-3 py-4 shadow-lg sm:px-5"
         >
           <PageContainer className="flex items-center gap-3">
-            <form onSubmit={handleSearch} className="mx-auto flex max-w-2xl flex-1 items-center overflow-hidden rounded-lg border border-[#d9d9d9] bg-white shadow-sm">
-              <FaSearch className="ml-3 shrink-0 text-[#174a38]" />
-              <input
-                ref={searchInputRef}
-                type="search"
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search for jewelry, collections..."
-                aria-label="Search jewelry and collections"
-                className="min-w-0 flex-1 px-3 py-3 text-sm outline-none placeholder:text-gray-500"
-              />
-              <button type="submit" className="flex h-11 shrink-0 items-center justify-center gap-2 bg-[#174a38] px-4 text-sm font-semibold text-white transition hover:bg-[#10382b]">
-                <FaSearch />
-                <span>Search</span>
-              </button>
-            </form>
+            <div className="relative mx-auto w-full max-w-2xl flex-1">
+              <form onSubmit={handleSearch} className="flex items-center overflow-hidden rounded-lg border border-[#d9d9d9] bg-white shadow-sm">
+                <FaSearch className="ml-3 shrink-0 text-[#174a38]" />
+                <input
+                  ref={searchInputRef}
+                  type="search"
+                  value={searchTerm}
+                  onChange={(event) => {
+                    setSearchTerm(event.target.value);
+                    setSearchResults([]);
+                    setSearchError(false);
+                  }}
+                  placeholder="Search for jewelry, collections..."
+                  aria-label="Search jewelry and collections"
+                  aria-autocomplete="list"
+                  aria-controls="navbar-product-search-results"
+                  className="min-w-0 flex-1 px-3 py-3 text-sm outline-none placeholder:text-gray-500"
+                />
+                <button type="submit" disabled={searching} className="flex h-11 shrink-0 items-center justify-center gap-2 bg-[#174a38] px-4 text-sm font-semibold text-white transition hover:bg-[#10382b] disabled:cursor-wait disabled:opacity-75">
+                  <FaSearch />
+                  <span>{searching ? "Searching..." : "Search"}</span>
+                </button>
+              </form>
+              {searchTerm.trim().length >= 2 && (
+                <div
+                  id="navbar-product-search-results"
+                  className="absolute inset-x-0 top-full z-50 mt-2 max-h-[min(60vh,420px)] overflow-y-auto rounded-xl border border-[#eadfce] bg-white p-2 shadow-xl"
+                  role="listbox"
+                  aria-label="Matching products"
+                >
+                  {searching ? (
+                    <p className="px-3 py-4 text-sm text-[#746b5d]" role="status">Searching products...</p>
+                  ) : searchError ? (
+                    <p className="px-3 py-4 text-sm text-rose-700" role="alert">Could not load product matches. Try again.</p>
+                  ) : searchResults.length ? (
+                    searchResults.map((product) => {
+                      const productId = product.id ?? product.product_id ?? product.productId;
+                      const image = getSearchProductImage(product);
+                      return (
+                        <button
+                          key={productId || product.product_code || product.name}
+                          type="button"
+                          role="option"
+                          aria-selected="false"
+                          onClick={() => openProductDetails(product)}
+                          className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition hover:bg-[#f5f7f2] focus:bg-[#f5f7f2] focus:outline-none"
+                        >
+                          <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#f6efe4]">
+                            {image ? (
+                              <img src={image} alt="" className="h-full w-full object-cover" loading="lazy" />
+                            ) : (
+                              <FaGem className="text-[#174a38]" aria-hidden="true" />
+                            )}
+                          </span>
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-semibold text-[#30271b]">{product.name}</span>
+                            <span className="mt-0.5 block truncate text-xs text-[#746b5d]">
+                              {[product.category, product.metal_type, product.product_code].filter(Boolean).join(" · ")}
+                            </span>
+                          </span>
+                          <span className="shrink-0 text-sm font-bold text-[#174a38]">
+                            ₹{Number(product.offer_price ?? product.final_selling_price ?? product.mrp ?? 0).toLocaleString("en-IN")}
+                          </span>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <p className="px-3 py-4 text-sm text-[#746b5d]">No matching active products found.</p>
+                  )}
+                </div>
+              )}
+            </div>
             <button
               type="button"
               onClick={() => setSearchOpen(false)}
