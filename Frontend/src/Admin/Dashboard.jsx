@@ -614,54 +614,61 @@ const Dashboard = () => {
       </div>
 
       {/* ── Active daily precious rates banner ── */}
-      <div className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-[#003B3B] text-[#F5C45E] flex items-center justify-center font-bold text-base shrink-0 shadow-sm">
-            <FaGem />
+      <div className="relative isolate overflow-hidden rounded-2xl border border-[#0b5b52] bg-[#003B3B] p-5 text-white shadow-lg shadow-emerald-950/10 sm:p-6">
+        <div className="pointer-events-none absolute -right-10 -top-20 -z-10 h-56 w-56 rounded-full bg-emerald-300/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-24 left-1/3 -z-10 h-48 w-48 rounded-full bg-amber-200/10 blur-3xl" />
+        <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 items-center gap-3.5">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-amber-200/20 bg-white/10 text-lg text-[#F5C45E] shadow-inner backdrop-blur">
+              <FaGem />
+            </div>
+            <div className="min-w-0">
+              <p className="mb-0.5 text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-100/70">Daily market snapshot</p>
+              <h2 className="text-base font-extrabold tracking-wide text-white">
+                Sri Golds Precious Rates
+              </h2>
+              <p className="mt-1 text-xs font-medium text-emerald-50/75">
+                {goldRatesLoading ? "Refreshing rates..." : currentGoldRates ? `Effective ${formatRateDate(currentGoldRates.rate_date)}` : "Live benchmark market rates"}
+              </p>
+            </div>
           </div>
-          <div>
-            <h2 className="text-xs font-extrabold text-[#003B3B] uppercase tracking-wider">
-              Sri Golds Precious Rates
-            </h2>
-            <p className="text-[11px] font-medium text-slate-400">
-              {goldRatesLoading ? "Refreshing rates..." : currentGoldRates ? `Effective ${formatRateDate(currentGoldRates.rate_date)}` : "Live benchmark market rates"}
-            </p>
-          </div>
+          <button
+            type="button"
+            onClick={() => navigate("/admin/settings/daily-gold-rate")}
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl border border-white/15 bg-white px-4 py-2.5 text-xs font-bold text-[#003B3B] shadow-md transition hover:bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-300 focus:ring-offset-2 focus:ring-offset-[#003B3B]"
+          >
+            Manage rates <span aria-hidden="true" className="text-sm">→</span>
+          </button>
         </div>
 
         {currentGoldRates?.rates ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
             {currentGoldRates.rates.map((rate) => (
-              <div key={`${rate.metal_type}-${rate.purity}`} className="rounded-xl bg-emerald-50/60 border border-emerald-100/50 px-3 py-1.5">
-                <span className="text-[10px] font-bold text-slate-500 uppercase">{rate.metal_type} {rate.purity}</span>
-                <p className="text-xs font-black text-[#003B3B]">₹{Number(rate.rate_per_unit ?? rate.rate_per_gram).toLocaleString("en-IN")}/{rate.rate_unit === "carat" ? "ct" : "g"}</p>
+              <div key={`${rate.metal_type}-${rate.purity}`} className="group rounded-xl border border-white/10 bg-white/[0.08] px-3.5 py-3 backdrop-blur-sm transition hover:-translate-y-0.5 hover:border-amber-200/40 hover:bg-white/[0.13]">
+                <span className="block truncate text-[10px] font-bold uppercase tracking-[0.1em] text-emerald-50/70">{rate.metal_type} {rate.purity}</span>
+                <p className="mt-1.5 text-base font-extrabold tabular-nums text-white">
+                  ₹{Number(rate.rate_per_unit ?? rate.rate_per_gram).toLocaleString("en-IN")}
+                  <span className="ml-1 text-xs font-semibold text-emerald-100/70">/{rate.rate_unit === "carat" ? "ct" : "g"}</span>
+                </p>
               </div>
             ))}
           </div>
         ) : (
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="rounded-xl bg-amber-50/80 border border-amber-100 px-3 py-1.5">
-              <span className="text-[10px] font-bold text-amber-700">Gold 22K (916)</span>
-              <p className="text-xs font-black text-amber-900">₹6,850/g</p>
+          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="rounded-xl border border-amber-200/15 bg-white/[0.08] px-3.5 py-3">
+              <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-amber-100/80">Gold 22K (916)</span>
+              <p className="mt-1.5 text-base font-extrabold text-white">₹6,850/g</p>
             </div>
-            <div className="rounded-xl bg-amber-50/80 border border-amber-100 px-3 py-1.5">
-              <span className="text-[10px] font-bold text-amber-700">Gold 24K</span>
-              <p className="text-xs font-black text-amber-900">₹7,472/g</p>
+            <div className="rounded-xl border border-amber-200/15 bg-white/[0.08] px-3.5 py-3">
+              <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-amber-100/80">Gold 24K</span>
+              <p className="mt-1.5 text-base font-extrabold text-white">₹7,472/g</p>
             </div>
-            <div className="rounded-xl bg-slate-100 border border-slate-200 px-3 py-1.5">
-              <span className="text-[10px] font-bold text-slate-600">Silver 999</span>
-              <p className="text-xs font-black text-slate-800">₹98.50/g</p>
+            <div className="rounded-xl border border-white/10 bg-white/[0.08] px-3.5 py-3">
+              <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-emerald-50/70">Silver 999</span>
+              <p className="mt-1.5 text-base font-extrabold text-white">₹98.50/g</p>
             </div>
           </div>
         )}
-
-        <button
-          type="button"
-          onClick={() => navigate("/admin/settings/daily-gold-rate")}
-          className="rounded-xl bg-[#003B3B] px-3.5 py-2 text-xs font-bold text-white hover:bg-[#008577] transition-colors self-start md:self-auto shrink-0"
-        >
-          Manage rates →
-        </button>
       </div>
 
       {/* ── Middle Section: Charts (Sales Overview & Loan Status) ──── */}
