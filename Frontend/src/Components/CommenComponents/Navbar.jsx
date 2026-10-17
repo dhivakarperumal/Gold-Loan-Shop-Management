@@ -8,6 +8,7 @@ import {
   FaBars,
   FaChevronDown,
   FaChevronRight,
+  FaCompass,
   FaFileAlt,
   FaGem,
   FaHeart,
@@ -197,8 +198,8 @@ const Navbar = () => {
                 Home
               </NavLink>
               <NavLink to="/shop" className={({ isActive }) => `flex h-[76px] min-w-[95px] flex-col items-center justify-center gap-1 border-r border-[#efe5d4] px-4 text-sm font-semibold transition hover:text-[#a77525] ${isActive ? "border-b-2 border-b-[#c68c22] text-[#164333]" : "text-[#30271b]"}`}>
-                <FaGem className="text-lg text-[#174a38]" />
-                Explore
+                <FaCompass className="text-lg text-[#a77525]" />
+                <span>Explore</span>
               </NavLink>
 
               <div className="relative h-full">
