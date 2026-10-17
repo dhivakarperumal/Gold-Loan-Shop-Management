@@ -1,7 +1,7 @@
 
 import React, { useRef, useState } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { EffectFade } from "swiper/modules";
+import { Autoplay, EffectFade } from "swiper/modules";
 import {
   ChevronLeft,
   ChevronRight,
@@ -61,13 +61,18 @@ const Hero = () => {
 
         {/* Swiper background images */}
         <Swiper
-          modules={[EffectFade]}
+          modules={[Autoplay, EffectFade]}
           effect="fade"
           slidesPerView={1}
-          speed={700}
-          loop
-          autoplay={false}
+          speed={900}
+          loop={true}
+          autoplay={{
+            delay: 3500,
+            disableOnInteraction: false,
+            pauseOnMouseEnter: true,
+          }}
           pagination={false}
+          navigation={false}
           onSwiper={(swiper) => {
             swiperRef.current = swiper;
           }}
@@ -163,24 +168,24 @@ const Hero = () => {
         </div>
 
         {/* Previous arrow */}
-        <button
+        {/* <button
           type="button"
           aria-label="Previous slide"
           onClick={() => swiperRef.current?.slidePrev()}
           className="absolute left-4 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[#e3cf9b]/70 bg-black/30 text-[#f3dfaa] transition hover:bg-[#d9b45e] hover:text-[#12352a] sm:left-6 sm:h-11 sm:w-11"
         >
           <ChevronLeft size={21} />
-        </button>
+        </button> */}
 
         {/* Next arrow */}
-        <button
+        {/* <button
           type="button"
           aria-label="Next slide"
           onClick={() => swiperRef.current?.slideNext()}
           className="absolute right-4 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[#e3cf9b]/70 bg-black/30 text-[#f3dfaa] transition hover:bg-[#d9b45e] hover:text-[#12352a] sm:right-6 sm:h-11 sm:w-11"
         >
           <ChevronRight size={21} />
-        </button>
+        </button> */}
 
         {/* Decorative tagline */}
         <div className="pointer-events-none absolute bottom-8 right-12 z-[2] hidden font-serif text-sm italic leading-5 text-[#efd38c] drop-shadow-md lg:block">
