@@ -1,5 +1,7 @@
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { EffectFade } from "swiper/modules";
 import {
   ChevronLeft,
   ChevronRight,
@@ -8,6 +10,9 @@ import {
   ShieldCheck,
   Truck,
 } from "lucide-react";
+
+import "swiper/css";
+import "swiper/css/effect-fade";
 
 const slides = [
   {
@@ -45,37 +50,46 @@ const slides = [
 ];
 
 const Hero = () => {
+  const swiperRef = useRef(null);
   const [activeSlide, setActiveSlide] = useState(0);
 
   const slide = slides[activeSlide];
 
-  const previousSlide = () => {
-    setActiveSlide(
-      (prev) => (prev - 1 + slides.length) % slides.length
-    );
-  };
-
-  const nextSlide = () => {
-    setActiveSlide((prev) => (prev + 1) % slides.length);
-  };
-
   return (
     <section className="relative w-full overflow-hidden bg-[#032e25] text-white">
-      <div className="relative isolate flex min-h-[490px] h-[520px] max-h-[650px] w-full items-center justify-center sm:min-h-[500px] md:h-[540px] lg:h-[560px]">
+      <div className="relative isolate h-[520px] min-h-[490px] w-full sm:min-h-[500px] md:h-[540px] lg:h-[560px]">
 
-        {/* Full image: no blur, no cropping */}
-        <div
-          key={slide.image}
-          className="absolute inset-0 bg-contain bg-center bg-no-repeat transition-opacity duration-500"
-          style={{
-            backgroundImage: `url("${slide.image}")`,
+        {/* Swiper background images */}
+        <Swiper
+          modules={[EffectFade]}
+          effect="fade"
+          slidesPerView={1}
+          speed={700}
+          loop
+          autoplay={false}
+          pagination={false}
+          onSwiper={(swiper) => {
+            swiperRef.current = swiper;
           }}
-        />
+          onSlideChange={(swiper) => {
+            setActiveSlide(swiper.realIndex);
+          }}
+          className="absolute inset-0 h-full w-full"
+        >
+          {slides.map((item) => (
+            <SwiperSlide key={item.image} className="h-full w-full">
+              <div
+                className="h-full w-full bg-contain bg-center bg-no-repeat"
+                style={{
+                  backgroundImage: `url("${item.image}")`,
+                }}
+              />
+            </SwiperSlide>
+          ))}
+        </Swiper>
 
-        {/* Subtle left-side overlay for text readability */}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#00271e]/65 via-[#003326]/20 to-transparent" />
-
-        {/* Decorative bottom shading removed to keep jewellery clear */}
+        {/* Subtle overlay on the left only */}
+        <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-r from-[#00271e]/65 via-[#003326]/20 to-transparent" />
 
         {/* Decorative gold border */}
         <div className="pointer-events-none absolute inset-2 z-10 border border-[#d2b56e]/60 sm:inset-3">
@@ -86,8 +100,8 @@ const Hero = () => {
         </div>
 
         {/* Hero content */}
-        <div className="relative z-10 flex h-full w-full items-center px-9 sm:px-14 md:px-16 lg:px-20 xl:px-24">
-          <div className="w-full max-w-[560px] py-10">
+        <div className="pointer-events-none absolute inset-0 z-[2] flex items-center px-9 sm:px-14 md:px-16 lg:px-20 xl:px-24">
+          <div className="pointer-events-auto w-full max-w-[560px] py-10">
 
             <p className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-[9px] font-medium uppercase tracking-[0.18em] text-[#f1dba4] sm:text-[10px] sm:tracking-[0.22em]">
               {slide.eyebrow}
@@ -118,7 +132,6 @@ const Hero = () => {
 
             {/* Trust indicators */}
             <div className="mt-8 flex max-w-[490px] flex-wrap gap-x-5 gap-y-4 sm:gap-x-7">
-
               <div className="flex items-center gap-2.5">
                 <Gem className="h-9 w-9 shrink-0 rounded-full border border-[#d6b65f] p-2 text-[#f0d17e]" />
                 <span className="text-[10px] leading-4 text-[#fff5e2] sm:text-[11px]">
@@ -145,51 +158,32 @@ const Hero = () => {
                   Delivery
                 </span>
               </div>
-
             </div>
           </div>
         </div>
 
-        {/* Previous slide */}
+        {/* Previous arrow */}
         <button
           type="button"
           aria-label="Previous slide"
-          onClick={previousSlide}
+          onClick={() => swiperRef.current?.slidePrev()}
           className="absolute left-4 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[#e3cf9b]/70 bg-black/30 text-[#f3dfaa] transition hover:bg-[#d9b45e] hover:text-[#12352a] sm:left-6 sm:h-11 sm:w-11"
         >
           <ChevronLeft size={21} />
         </button>
 
-        {/* Next slide */}
+        {/* Next arrow */}
         <button
           type="button"
           aria-label="Next slide"
-          onClick={nextSlide}
+          onClick={() => swiperRef.current?.slideNext()}
           className="absolute right-4 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[#e3cf9b]/70 bg-black/30 text-[#f3dfaa] transition hover:bg-[#d9b45e] hover:text-[#12352a] sm:right-6 sm:h-11 sm:w-11"
         >
           <ChevronRight size={21} />
         </button>
 
-        {/* Slide indicators */}
-        <div className="absolute bottom-5 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2.5">
-          {slides.map((item, index) => (
-            <button
-              key={item.image}
-              type="button"
-              aria-label={`Go to slide ${index + 1}`}
-              aria-current={activeSlide === index ? "true" : undefined}
-              onClick={() => setActiveSlide(index)}
-              className={`rounded-full transition-all duration-300 ${
-                activeSlide === index
-                  ? "h-2 w-7 bg-[#f0cf77]"
-                  : "h-2 w-2 bg-white/60 hover:bg-white"
-              }`}
-            />
-          ))}
-        </div>
-
-        {/* Traditional jewellery tagline */}
-        <div className="absolute bottom-8 right-12 z-10 hidden font-serif text-sm italic leading-5 text-[#efd38c] drop-shadow-md lg:block">
+        {/* Decorative tagline */}
+        <div className="pointer-events-none absolute bottom-8 right-12 z-[2] hidden font-serif text-sm italic leading-5 text-[#efd38c] drop-shadow-md lg:block">
           Where
           <br />
           Tradition
