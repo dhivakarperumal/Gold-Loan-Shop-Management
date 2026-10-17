@@ -279,6 +279,18 @@ async function putCustomer(req, res, next) {
   }
 }
 
+async function verifyCustomerKyc(req, res, next) {
+  if (!validId(req.params.id)) return res.status(400).json({ message: 'Customer ID is invalid' });
+  try {
+    const existing = await getLoanCustomerById(req.params.id);
+    if (!existing) return res.status(404).json({ message: 'Customer not found' });
+    if (existing.kyc_status === 'Verified') return res.json(existing);
+    return res.json(await updateLoanCustomer(req.params.id, { kyc_status: 'Verified' }));
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function removeCustomer(req, res, next) {
   if (!validId(req.params.id)) return res.status(400).json({ message: 'Customer ID is invalid' });
   try {
@@ -308,6 +320,7 @@ module.exports = {
   postCustomerDocuments,
   postCustomerPhoto,
   putCustomer,
+  verifyCustomerKyc,
   removeCustomerDocument,
   removeCustomer
 };

@@ -145,6 +145,7 @@ function getKycStyle(status) {
 export default function LoanCustomerManagement() {
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [verifyingCustomerId, setVerifyingCustomerId] = useState(null);
   const [search, setSearch] = useState("");
   const [kycFilter, setKycFilter] = useState("All");
   const [viewMode, setViewMode] = useState("table");
@@ -512,6 +513,22 @@ export default function LoanCustomerManagement() {
     }
   };
 
+  const handleVerifyKyc = async (customer) => {
+    setVerifyingCustomerId(customer.id);
+    try {
+      const response = await api.patch(`/loan-customers/${customer.id}/verify-kyc`);
+      setCustomers((current) => current.map((item) =>
+        String(item.id) === String(customer.id) ? response.data : item
+      ));
+      toast.success(`KYC verified for ${customer.full_name}.`);
+    } catch (error) {
+      console.error("Failed to verify customer KYC:", error);
+      toast.error(error.response?.data?.message || "Could not verify customer KYC.");
+    } finally {
+      setVerifyingCustomerId(null);
+    }
+  };
+
   const verifiedCount = customers.filter((customer) => customer.kyc_status === "Verified").length;
   const pendingCount = customers.filter((customer) => customer.kyc_status === "Pending").length;
 
@@ -633,6 +650,17 @@ export default function LoanCustomerManagement() {
                   <td className="px-4 py-3 text-sm text-slate-500">{customer.created_at ? new Date(customer.created_at).toLocaleDateString("en-IN") : "—"}</td>
                   <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
+                      {customer.kyc_status !== "Verified" && (
+                        <button
+                          type="button"
+                          onClick={() => handleVerifyKyc(customer)}
+                          disabled={verifyingCustomerId !== null}
+                          className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-2.5 py-2 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100 disabled:cursor-wait disabled:opacity-60"
+                        >
+                          <FiCheckCircle />
+                          {verifyingCustomerId === customer.id ? "Verifying..." : "Verify KYC"}
+                        </button>
+                      )}
                       <button type="button" onClick={() => navigate(`/admin/loans/customers/${customer.id}`)} aria-label={`View ${customer.full_name}`} title="View customer" className="rounded-lg p-2 text-slate-600 hover:bg-slate-100"><FiEye /></button>
                       <button type="button" onClick={() => openEditCustomer(customer)} aria-label={`Edit ${customer.full_name}`} className="rounded-lg p-2 text-[#008577] hover:bg-emerald-50"><FiEdit2 /></button>
                       <button type="button" onClick={() => handleDelete(customer)} aria-label={`Delete ${customer.full_name}`} className="rounded-lg p-2 text-rose-500 hover:bg-rose-50"><FiTrash2 /></button>
