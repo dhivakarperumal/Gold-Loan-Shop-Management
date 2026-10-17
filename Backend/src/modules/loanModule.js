@@ -196,6 +196,22 @@ async function createLoan(loan) {
   return getLoanById(loanId);
 }
 
+async function updateLoan(id, loan) {
+  const existingLoan = await getLoanById(id);
+  if (!existingLoan) return null;
+  const fields = Object.keys(loan);
+  await pool.execute(
+    `UPDATE loans SET ${fields.map((field) => `\`${field}\` = ?`).join(', ')} WHERE id = ?`,
+    [...fields.map((field) => loan[field]), id]
+  );
+  return getLoanById(id);
+}
+
+async function deleteLoan(id) {
+  const [result] = await pool.execute('DELETE FROM loans WHERE id = ?', [id]);
+  return result.affectedRows > 0;
+}
+
 async function setInterestType(typeKey, enabled) {
   if (!INTEREST_TYPES.some(([key]) => key === typeKey)) return false;
   return setInterestTypeEnabled(typeKey, enabled);
@@ -203,10 +219,12 @@ async function setInterestType(typeKey, enabled) {
 
 module.exports = {
   createLoan,
+  deleteLoan,
   getLoanById,
   initializeLoanModule,
   listInterestTypes,
   listLoans,
   listLoansForCustomer,
-  setInterestType
+  setInterestType,
+  updateLoan
 };

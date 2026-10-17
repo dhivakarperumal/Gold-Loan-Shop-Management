@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { FiArrowLeft, FiCalendar, FiCheck, FiChevronDown, FiSearch, FiUserPlus } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api from "../../api";
@@ -24,6 +24,16 @@ const labelClass = "block text-xs font-semibold text-slate-600";
 function localDate(date = new Date()) {
   const offset = date.getTimezoneOffset() * 60000;
   return new Date(date.getTime() - offset).toISOString().slice(0, 10);
+}
+
+function formDate(value) {
+  if (value instanceof Date) {
+    return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, "0")}-${String(value.getDate()).padStart(2, "0")}`;
+  }
+  const text = String(value || "");
+  if (/^\d{4}-\d{2}-\d{2}/.test(text)) return text.slice(0, 10);
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.valueOf()) ? "" : formDate(parsed);
 }
 
 function initialLoan() {
@@ -153,13 +163,14 @@ function FormSelect({ label, name, form, onChange, options, required = false }) 
     <label className={labelClass}>
       {label}{required && <span className="ml-1 text-rose-500">*</span>}
       <select className={fieldClass} name={name} value={form[name] ?? ""} onChange={onChange} required={required}>
-        {options.map(([value, text]) => <option key={value} value={value}>{text}</option>)}
+        {options.map(([value, text, disabled]) => <option key={value} value={value} disabled={disabled}>{text}</option>)}
       </select>
     </label>
   );
 }
 
 export default function CreateLoan() {
+  const { id } = useParams();
   const navigate = useNavigate();
   const [customers, setCustomers] = useState([]);
   const [interestTypes, setInterestTypes] = useState([]);
@@ -172,32 +183,75 @@ export default function CreateLoan() {
   const [loadingCustomer, setLoadingCustomer] = useState(false);
   const [showCustomerMenu, setShowCustomerMenu] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [loanRecord, setLoanRecord] = useState(null);
+  const [loadedFor, setLoadedFor] = useState(null);
 
   useEffect(() => {
     let active = true;
-    Promise.all([api.get("/customers"), api.get("/loans/interest-types")])
-      .then(([customerResponse, interestResponse]) => {
+    Promise.all([
+      api.get("/customers"),
+      api.get("/loans/interest-types"),
+      id ? api.get(`/loans/${id}`) : Promise.resolve(null)
+    ])
+      .then(async ([customerResponse, interestResponse, loanResponse]) => {
         if (!active) return;
         if (!Array.isArray(customerResponse.data) || !Array.isArray(interestResponse.data)) {
           throw new Error("The server returned invalid customer or interest-method data.");
         }
         setCustomers(customerResponse.data);
-        setInterestTypes(interestResponse.data.filter((type) => type.enabled));
-        setForm((current) => ({
-          ...current,
-          interest_type: interestResponse.data.find((type) => type.enabled)?.type_key || ""
-        }));
+        setInterestTypes(interestResponse.data.filter((type) => (
+          type.enabled || (loanResponse && type.type_key === loanResponse.data.interest_type)
+        )));
+        if (!loanResponse) {
+          setLoanRecord(null);
+          setCustomer(null);
+          setCustomerQuery("");
+          setCustomerLoans([]);
+          setForm({
+            ...initialLoan(),
+            interest_type: interestResponse.data.find((type) => type.enabled)?.type_key || ""
+          });
+          return;
+        }
+
+        const loan = loanResponse.data;
+        const [customerDetails, customerLoanResponse] = await Promise.all([
+          api.get(`/customers/${loan.customer_id}`),
+          api.get(`/customers/${loan.customer_id}/loans`)
+        ]);
+        if (!active) return;
+        setLoanRecord(loan);
+        setCustomer(customerDetails.data);
+        setCustomerQuery(`${customerDetails.data.customer_code || customerDetails.data.id} · ${customerDetails.data.full_name}`);
+        setCustomerLoans(customerLoanResponse.data);
+        setForm({
+          ...initialLoan(),
+          ...Object.fromEntries(Object.keys(initialLoan()).map((field) => {
+            const value = loan[field];
+            if (value == null) return [field, ""];
+            if (["loan_date", "maturity_date", "interest_calculation_start_date"].includes(field)) {
+              return [field, formDate(value)];
+            }
+            return [field, String(value)];
+          }))
+        });
       })
       .catch((error) => {
         console.error("Failed to load create-loan options:", error);
         if (active) {
+          if (id) setLoanRecord(null);
           setCustomerLoadError(error.response?.data?.message || "Could not load customers or interest methods.");
           toast.error(error.response?.data?.message || "Could not load customers or interest methods.");
         }
       })
-      .finally(() => { if (active) setLoadingCustomers(false); });
+      .finally(() => {
+        if (active) {
+          setLoadingCustomers(false);
+          setLoadedFor(id);
+        }
+      });
     return () => { active = false; };
-  }, []);
+  }, [id]);
 
   const filteredCustomers = useMemo(() => {
     const search = customerQuery.trim().toLowerCase();
@@ -249,7 +303,7 @@ export default function CreateLoan() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!customer || loadingCustomer) {
-      toast.error("Select a registered customer before creating the loan.");
+      toast.error("Select a registered customer before saving the loan.");
       return;
     }
     const gross = Number(form.gross_weight);
@@ -264,22 +318,40 @@ export default function CreateLoan() {
     }
     setSaving(true);
     try {
-      const response = await api.post("/loans", {
+      const payload = {
         ...form,
         customer_id: customer.id,
         net_gold_weight: (gross - stone).toFixed(3)
-      });
-      toast.success(`Loan ${response.data.loan_number} created successfully.`);
+      };
+      const response = loanRecord
+        ? await api.put(`/loans/${loanRecord.id}`, payload)
+        : await api.post("/loans", payload);
+      toast.success(loanRecord
+        ? `Loan ${response.data.loan_number} updated successfully.`
+        : `Loan ${response.data.loan_number} created successfully.`);
       navigate(`/admin/loans/details/${response.data.id}`);
     } catch (error) {
-      console.error("Failed to create loan:", error);
-      toast.error(error.response?.data?.message || "Could not create loan. Please try again.");
+      console.error(loanRecord ? "Failed to update loan:" : "Failed to create loan:", error);
+      toast.error(error.response?.data?.message || `Could not ${loanRecord ? "update" : "create"} loan. Please try again.`);
     } finally {
       setSaving(false);
     }
   };
 
   const activeLoans = customerLoans.filter((loan) => loan.loan_status === "Active");
+
+  const loadingForm = loadingCustomers || loadedFor !== id;
+  if (loadingForm) {
+    return <main className="p-6 text-sm text-slate-500">{id ? "Loading loan details..." : "Loading loan options..."}</main>;
+  }
+  if (id && !loanRecord) {
+    return (
+      <main className="space-y-3 p-6">
+        <p className="text-sm text-rose-600">{customerLoadError || "Loan not found."}</p>
+        <Link to="/admin/loans/allloans" className="inline-flex items-center gap-2 text-sm font-semibold text-[#008577]"><FiArrowLeft /> All Loans</Link>
+      </main>
+    );
+  }
 
   return (
     <main className="space-y-5 p-4 sm:p-6">
@@ -288,8 +360,8 @@ export default function CreateLoan() {
           <Link to="/admin/loans/allloans" className="mb-2 inline-flex items-center gap-2 text-xs font-semibold text-[#008577] hover:text-[#003B3B]">
             <FiArrowLeft /> All Loans
           </Link>
-          <h1 className="text-2xl font-extrabold text-[#003B3B]">Create Gold Loan</h1>
-          <p className="mt-1 text-sm text-slate-500">Select a registered customer and record the pledged gold and agreed terms.</p>
+          <h1 className="text-2xl font-extrabold text-[#003B3B]">{loanRecord ? `Edit Loan ${loanRecord.loan_number}` : "Create Gold Loan"}</h1>
+          <p className="mt-1 text-sm text-slate-500">{loanRecord ? "Update the pledged gold and agreed contract terms." : "Select a registered customer and record the pledged gold and agreed terms."}</p>
         </div>
       </header>
 
@@ -305,6 +377,7 @@ export default function CreateLoan() {
                   className={`${fieldClass} mt-0 pl-9 pr-10`}
                   value={customerQuery}
                   placeholder={loadingCustomers ? "Loading customers..." : "Select a Customer"}
+                  disabled={Boolean(id)}
                   onFocus={() => setShowCustomerMenu(true)}
                   onChange={(event) => {
                     setCustomerQuery(event.target.value);
@@ -319,7 +392,7 @@ export default function CreateLoan() {
                 <FiChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400" />
               </div>
             </label>
-            {showCustomerMenu && (
+            {showCustomerMenu && !id && (
               <div className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white p-1 shadow-xl">
                 {loadingCustomers ? (
                   <p className="p-3 text-sm text-slate-500">Loading registered customers...</p>
@@ -400,8 +473,8 @@ export default function CreateLoan() {
           <h2 className="mb-4 text-base font-bold text-[#003B3B]">Pledged Jewellery</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <label className={labelClass}>
-              Gold Pledge Number*
-              <input className={`${fieldClass} bg-slate-50`} value="Auto-generated on save" readOnly />
+              Gold Pledge Number
+              <input className={`${fieldClass} bg-slate-50`} value={loanRecord?.gold_pledge_number || "Auto-generated on save"} readOnly />
             </label>
             <FormField label="Jewellery Type" name="jewellery_type" form={form} onChange={handleChange} required />
             <FormField label="Gold Purity" name="gold_purity" form={form} onChange={handleChange} required help="Example: 22K or 916" />
@@ -416,7 +489,7 @@ export default function CreateLoan() {
         <section className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm sm:p-5">
           <h2 className="mb-4 text-base font-bold text-[#003B3B]">Interest & Contract Terms</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <FormSelect label="Interest Type" name="interest_type" form={form} onChange={handleChange} required options={[["", "Select interest type"], ...interestTypes.map(({ type_key, label }) => [type_key, label])]} />
+            <FormSelect label="Interest Type" name="interest_type" form={form} onChange={handleChange} required options={[["", "Select interest type"], ...interestTypes.map(({ type_key, label, enabled }) => [type_key, label, !enabled && type_key !== form.interest_type])]} />
             {form.interest_type !== "fixed" && <FormField label="Interest Rate (%)" name="interest_rate" form={form} onChange={handleChange} type="number" min="0" step="0.0001" required />}
             <FormSelect label="Interest Calculation Frequency" name="interest_frequency" form={form} onChange={handleChange} options={INTEREST_FREQUENCIES} required />
             {form.interest_frequency === "custom_period" && <FormField label="Custom Period (days)" name="custom_period_days" form={form} onChange={handleChange} type="number" min="1" max="3650" step="1" required />}
@@ -449,11 +522,11 @@ export default function CreateLoan() {
         <section className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm sm:p-5">
           <h2 className="mb-4 text-base font-bold text-[#003B3B]">Loan Schedule</h2>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <label className={labelClass}>Loan Number<input className={`${fieldClass} bg-slate-50`} value="Auto-generated on save" readOnly /></label>
+            <label className={labelClass}>Loan Number<input className={`${fieldClass} bg-slate-50`} value={loanRecord?.loan_number || "Auto-generated on save"} readOnly /></label>
             <FormField label="Loan Date" name="loan_date" form={form} onChange={handleChange} type="date" required />
             <FormField label="Maturity Date" name="maturity_date" form={form} onChange={handleChange} type="date" required />
             <FormSelect label="Payment Frequency" name="payment_frequency" form={form} onChange={handleChange} options={PAYMENT_FREQUENCIES} required />
-            <FormSelect label="Loan Status" name="loan_status" form={form} onChange={handleChange} options={[["Active", "Active"], ["Pending", "Pending"]]} required />
+            <FormSelect label="Loan Status" name="loan_status" form={form} onChange={handleChange} options={(loanRecord ? ["Active", "Pending", "Inactive", "Completed"] : ["Active", "Pending"]).map((status) => [status, status])} required />
           </div>
           <label className={`${labelClass} mt-4`}>Notes<textarea className={fieldClass} name="notes" rows="3" maxLength="5000" value={form.notes} onChange={handleChange} /></label>
         </section>
@@ -488,9 +561,9 @@ export default function CreateLoan() {
 
         <div className="sticky bottom-0 z-10 flex flex-wrap justify-end gap-2 rounded-xl border border-slate-100 bg-white/95 p-3 shadow-lg backdrop-blur">
           <button type="button" onClick={() => navigate("/admin/loans/allloans")} disabled={saving} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Cancel</button>
-          <button type="button" onClick={handleReset} disabled={saving} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Reset</button>
+          {!loanRecord && <button type="button" onClick={handleReset} disabled={saving} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Reset</button>}
           <button type="submit" disabled={saving || loadingCustomer || !customer || interestTypes.length === 0} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#008577] disabled:cursor-not-allowed disabled:opacity-50">
-            <FiCheck /> {saving ? "Saving Loan..." : "Save Loan"}
+            <FiCheck /> {saving ? (loanRecord ? "Updating Loan..." : "Saving Loan...") : (loanRecord ? "Update Loan" : "Save Loan")}
           </button>
         </div>
       </form>

@@ -64,6 +64,7 @@ const router = createBrowserRouter([
       { path: "loans/customermanagement", element: <LoanCustomerManagement /> },
       { path: "loans/customers/:id", element: <LoanCustomerDetails /> },
       { path: "loans/createloan", element: <CreateLoan /> },
+      { path: "loans/edit/:id", element: <CreateLoan /> },
       { path: "loans/allloans", element: <AllLoans /> },
       { path: "loans/details/:id", element: <LoanDetails /> },
       { path: "loans/interestmanagement", element: <InterestManagement /> },

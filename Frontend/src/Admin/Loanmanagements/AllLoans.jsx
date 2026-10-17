@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { FiCheck, FiCheckCircle, FiGrid, FiLayers, FiList, FiPauseCircle, FiPlus, FiRefreshCw, FiSearch } from "react-icons/fi";
+import { FiCheck, FiCheckCircle, FiEdit2, FiEye, FiGrid, FiLayers, FiList, FiPauseCircle, FiPlus, FiRefreshCw, FiSearch, FiTrash2 } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api from "../../api";
 
@@ -15,8 +15,8 @@ export default function AllLoans() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [viewMode, setViewMode] = useState("table");
-  const loadLoans = async () => {
-    setLoading(true);
+  const loadLoans = async ({ showLoading = true } = {}) => {
+    if (showLoading) setLoading(true);
     try {
       const { data } = await api.get("/loans");
       if (!Array.isArray(data)) throw new Error("The server returned an invalid loan list.");
@@ -28,7 +28,18 @@ export default function AllLoans() {
       setLoading(false);
     }
   };
-  useEffect(() => { loadLoans(); }, []);
+  const handleDeleteLoan = async (loan) => {
+    if (!window.confirm(`Permanently delete loan ${loan.loan_number}? This action cannot be undone.`)) return;
+    try {
+      await api.delete(`/loans/${loan.id}`);
+      setLoans((currentLoans) => currentLoans.filter((item) => item.id !== loan.id));
+      toast.success(`Loan ${loan.loan_number} deleted.`);
+    } catch (error) {
+      console.error("Failed to delete loan:", error);
+      toast.error(error.response?.data?.message || "Could not delete loan.");
+    }
+  };
+  useEffect(() => { loadLoans({ showLoading: false }); }, []);
 
   const loanCounts = loans.reduce((counts, loan) => {
     const status = String(loan.loan_status || "").trim().toLowerCase();
@@ -68,10 +79,13 @@ export default function AllLoans() {
   return (
     <main className="space-y-5 p-4 sm:p-6">
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <div><h1 className="text-2xl font-extrabold text-[#003B3B]">All Loans</h1><p className="mt-1 text-sm text-slate-500">Registered gold loans linked to their customers.</p></div>
-        <div className="flex gap-2">
-          <button type="button" onClick={loadLoans} disabled={loading} aria-label="Refresh loans" title="Refresh loans" className="rounded-lg bg-[#008577] p-3 text-white hover:bg-[#00695C] disabled:opacity-60"><FiRefreshCw className={loading ? "animate-spin" : ""} /></button>
+        <div>
+          <h1 className="text-2xl font-extrabold text-[#003B3B]">All Loans</h1>
+          <p className="mt-1 text-sm text-slate-500">Registered gold loans linked to their customers.</p>
         </div>
+        <button type="button" onClick={loadLoans} disabled={loading} aria-label="Refresh loans" title="Refresh loans" className="rounded-lg bg-[#008577] p-3 text-white hover:bg-[#00695C] disabled:opacity-60">
+          <FiRefreshCw className={loading ? "animate-spin" : ""} />
+        </button>
       </header>
       <section aria-label="Loan summary" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {summaryCards.map(({ label, value, icon: Icon, color }) => (
@@ -84,7 +98,7 @@ export default function AllLoans() {
           </article>
         ))}
       </section>
-      <section aria-label="Loan list controls" className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center">
+      <section aria-label="Loan list controls" className="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <label className="relative min-w-0 sm:w-1/3 sm:flex-none">
           <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true" />
           <span className="sr-only">Search loans</span>
@@ -96,16 +110,16 @@ export default function AllLoans() {
             className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-10 pr-4 text-sm font-medium text-slate-700 outline-none transition focus:border-[#008577] focus:bg-white"
           />
         </label>
-        <select
-          aria-label="Filter loans by status"
-          value={statusFilter}
-          onChange={(event) => setStatusFilter(event.target.value)}
-          className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600 outline-none focus:border-[#008577]"
-        >
-          <option value="All">Select Status</option>
-          {["Active", "Inactive", "Completed", "Pending"].map((status) => <option key={status} value={status}>{status}</option>)}
-        </select>
-        <div className="flex items-center justify-between gap-3 sm:justify-start">
+        <div className="flex flex-wrap items-center justify-between gap-3 sm:ml-auto sm:justify-start">
+          <select
+            aria-label="Filter loans by status"
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+            className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-600 outline-none focus:border-[#008577]"
+          >
+            <option value="All">Select Status</option>
+            {["Active", "Inactive", "Completed", "Pending"].map((status) => <option key={status} value={status}>{status}</option>)}
+          </select>
           <div className="flex rounded-xl border border-slate-200 bg-slate-100 p-1">
             <button type="button" onClick={() => setViewMode("table")} aria-label="List view" aria-pressed={viewMode === "table"} className={`rounded-lg p-2 transition-all ${viewMode === "table" ? "bg-[#003B3B] text-white shadow-sm" : "text-slate-400 hover:text-slate-600"}`}><FiList size={17} /></button>
             <button type="button" onClick={() => setViewMode("grid")} aria-label="Card view" aria-pressed={viewMode === "grid"} className={`rounded-lg p-2 transition-all ${viewMode === "grid" ? "bg-[#003B3B] text-white shadow-sm" : "text-slate-400 hover:text-slate-600"}`}><FiGrid size={17} /></button>
@@ -118,7 +132,7 @@ export default function AllLoans() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[900px] border-separate border-spacing-0 text-left">
               <thead><tr className="bg-[#003B3B] text-xs font-bold uppercase tracking-wide text-white">
-                {["S No", "Loan Number", "Customer", "Mobile", "Loan Amount", "Interest", "Maturity", "Status", ""].map((title) => <th key={title} className="px-4 py-4">{title}</th>)}
+                {["S No", "Loan Number", "Customer", "Mobile", "Loan Amount", "Interest", "Maturity", "Status", "Actions"].map((title) => <th key={title} className="px-4 py-4">{title}</th>)}
               </tr></thead>
               <tbody className="divide-y divide-slate-100">
                 {loading ? <tr><td colSpan="9" className="px-4 py-12 text-center text-sm text-slate-400">Loading loans...</td></tr>
@@ -133,7 +147,13 @@ export default function AllLoans() {
                         <td className="px-4 py-3">{loan.interest_rate}% · {String(loan.interest_type).replaceAll("_", " ")}</td>
                         <td className="px-4 py-3">{dateText(loan.maturity_date)}</td>
                         <td className="px-4 py-3"><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${getStatusStyle(loan.loan_status)}`}>{loan.loan_status}</span></td>
-                        <td className="px-4 py-3"><Link to={`/admin/loans/details/${loan.id}`} className="font-semibold text-[#008577] hover:underline">Details</Link></td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1">
+                            <Link to={`/admin/loans/details/${loan.id}`} aria-label={`View loan ${loan.loan_number}`} title="View loan" className="rounded-lg p-2 text-slate-500 hover:bg-teal-50 hover:text-[#008577]"><FiEye size={16} /></Link>
+                            <Link to={`/admin/loans/edit/${loan.id}`} aria-label={`Edit loan ${loan.loan_number}`} title="Edit loan" className="rounded-lg p-2 text-slate-500 hover:bg-blue-50 hover:text-blue-700"><FiEdit2 size={16} /></Link>
+                            <button type="button" onClick={() => handleDeleteLoan(loan)} aria-label={`Delete loan ${loan.loan_number}`} title="Delete loan" className="rounded-lg p-2 text-slate-500 hover:bg-rose-50 hover:text-rose-700"><FiTrash2 size={16} /></button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
               </tbody>
@@ -158,7 +178,13 @@ export default function AllLoans() {
                       <div><dt className="text-xs text-slate-500">Maturity</dt><dd className="mt-1 font-semibold text-slate-700">{dateText(loan.maturity_date)}</dd></div>
                       <div className="col-span-2"><dt className="text-xs text-slate-500">Interest</dt><dd className="mt-1 font-semibold text-slate-700">{loan.interest_rate}% · {String(loan.interest_type).replaceAll("_", " ")}</dd></div>
                     </dl>
-                    <Link to={`/admin/loans/details/${loan.id}`} className="mt-4 inline-flex text-sm font-bold text-[#008577] hover:underline">View Details</Link>
+                    <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+                      <Link to={`/admin/loans/details/${loan.id}`} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#008577] hover:underline"><FiEye /> View</Link>
+                      <div className="flex items-center gap-1">
+                        <Link to={`/admin/loans/edit/${loan.id}`} aria-label={`Edit loan ${loan.loan_number}`} title="Edit loan" className="rounded-lg p-2 text-slate-500 hover:bg-blue-50 hover:text-blue-700"><FiEdit2 size={16} /></Link>
+                        <button type="button" onClick={() => handleDeleteLoan(loan)} aria-label={`Delete loan ${loan.loan_number}`} title="Delete loan" className="rounded-lg p-2 text-slate-500 hover:bg-rose-50 hover:text-rose-700"><FiTrash2 size={16} /></button>
+                      </div>
+                    </div>
                   </div>
                 </article>
               ))}

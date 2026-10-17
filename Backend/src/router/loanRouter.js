@@ -8,6 +8,8 @@ const {
   getLoan,
   getLoans,
   postLoan,
+  putLoan,
+  removeLoan,
   updateInterestType
 } = require('../controllers/loanController');
 
@@ -22,5 +24,7 @@ router.patch('/loans/interest-types/:typeKey', updateInterestType);
 router.get('/loans', getLoans);
 router.get('/loans/:id', getLoan);
 router.post('/loans', postLoan);
+router.put('/loans/:id', putLoan);
+router.delete('/loans/:id', removeLoan);
 
 module.exports = router;

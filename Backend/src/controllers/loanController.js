@@ -1,11 +1,13 @@
 const { getLoanCustomerById, listLoanCustomers } = require('../modules/loanCustomerModule');
 const {
   createLoan,
+  deleteLoan,
   getLoanById,
   listInterestTypes,
   listLoans,
   listLoansForCustomer,
-  setInterestType
+  setInterestType,
+  updateLoan
 } = require('../modules/loanModule');
 
 const INTEREST_FREQUENCIES = new Set([
@@ -18,7 +20,7 @@ const PAYMENT_FREQUENCIES = new Set([
   'daily', 'weekly', 'monthly', 'quarterly', 'half_yearly', 'yearly', 'bullet'
 ]);
 const DAY_COUNT_CONVENTIONS = new Set(['actual_365', 'actual_360', '30_360']);
-const LOAN_STATUSES = new Set(['Active', 'Pending']);
+const LOAN_STATUSES = new Set(['Active', 'Pending', 'Inactive', 'Completed']);
 const INTEREST_TYPES = new Set([
   'simple', 'compound', 'flat', 'reducing_balance', 'daily', 'monthly',
   'annual', 'fixed', 'slab_based', 'custom'
@@ -238,6 +240,35 @@ async function postLoan(req, res, next) {
   }
 }
 
+async function putLoan(req, res, next) {
+  if (!validId(req.params.id)) return res.status(400).json({ message: 'Loan ID is invalid' });
+  const { loan, error } = normalizeLoan(req.body || {});
+  if (error) return res.status(400).json({ message: error });
+  try {
+    const updatedLoan = await updateLoan(req.params.id, loan);
+    if (!updatedLoan) return res.status(404).json({ message: 'Loan not found' });
+    return res.json(updatedLoan);
+  } catch (updateError) {
+    if (updateError.code === 'ER_NO_REFERENCED_ROW_2') {
+      return res.status(404).json({ message: 'Selected customer does not exist' });
+    }
+    return next(updateError);
+  }
+}
+
+async function removeLoan(req, res, next) {
+  if (!validId(req.params.id)) return res.status(400).json({ message: 'Loan ID is invalid' });
+  try {
+    if (!await deleteLoan(req.params.id)) return res.status(404).json({ message: 'Loan not found' });
+    return res.status(204).end();
+  } catch (error) {
+    if (error.code === 'ER_ROW_IS_REFERENCED_2') {
+      return res.status(409).json({ message: 'This loan cannot be deleted because related records exist.' });
+    }
+    return next(error);
+  }
+}
+
 module.exports = {
   getCustomer,
   getCustomerLoans,
@@ -245,6 +276,8 @@ module.exports = {
   getInterestTypes,
   getLoan,
   getLoans,
+  putLoan,
   postLoan,
+  removeLoan,
   updateInterestType
 };
