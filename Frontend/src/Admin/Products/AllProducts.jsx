@@ -280,7 +280,7 @@ const AllProducts = () => {
                         onClick={() => navigate("/admin/products/add")}
                         className="flex items-center gap-2 bg-[#003B3B] hover:bg-[#008577] text-white px-5 py-3 rounded-xl font-bold text-sm transition-all shadow-lg shadow-[#003B3B]/20 active:scale-95"
                     >
-                        <FiPlus size={16} /> Add New Saree
+                        <FiPlus size={16} /> Add New Jewel
                     </button>
                 </div>
                     </div>
