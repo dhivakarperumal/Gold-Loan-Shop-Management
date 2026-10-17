@@ -70,7 +70,7 @@ const pageTitles = {
   "/admin/users/new": "New Users",
   
   "/admin/banners": "Banners",
-  "/admin/videos": "Reals Videos",
+  "/admin/videos": "Showcase Videos",
   "/admin/dealers": "Dealers",
   "/admin/dealers/add": "Add Dealer",
   "/admin/invoices/add": "Add Invoice",

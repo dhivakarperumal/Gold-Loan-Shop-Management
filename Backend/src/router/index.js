@@ -7,6 +7,7 @@ const loanCustomerRouter = require('./loanCustomerRouter');
 const loanRouter = require('./loanRouter');
 const bannerRouter = require('./bannerRouter');
 const goldRateRouter = require('./goldRateRouter');
+const videoRouter = require('./videoRouter');
 
 const router = express.Router();
 
@@ -17,6 +18,7 @@ router.use('/products', productRouter);
 router.use('/loan-customers', loanCustomerRouter);
 router.use('/banners', bannerRouter);
 router.use('/gold-rates', goldRateRouter);
+router.use('/videos', videoRouter);
 router.use(loanRouter);
 
 module.exports = router;

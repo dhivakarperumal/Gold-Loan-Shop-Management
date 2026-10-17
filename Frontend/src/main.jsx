@@ -34,6 +34,7 @@ const AllLoans = React.lazy(() => import("./Admin/Loanmanagements/AllLoans.jsx")
 const LoanDetails = React.lazy(() => import("./Admin/Loanmanagements/LoanDetails.jsx"));
 const InterestManagement = React.lazy(() => import("./Admin/Loanmanagements/InterestManagement.jsx"));
 const BannerManagement = React.lazy(() => import("./Admin/Marketing/BannerManagement.jsx"));
+const VideoManagement = React.lazy(() => import("./Admin/Marketing/VideoManagement.jsx"));
 const Settings = React.lazy(() => import("./Admin/Pages/Settings.jsx"));
 const DailyGoldRate = React.lazy(() => import("./Admin/Pages/DailyGoldRate.jsx"));
 
@@ -81,6 +82,7 @@ const router = createBrowserRouter([
       { path: "products/:id", element: <ProductDetail /> },
       { path: "metals", element: <Metals /> },
       { path: "banners", element: <BannerManagement /> },
+      { path: "videos", element: <VideoManagement /> },
       { path: "settings", element: <Settings /> },
       { path: "settings/daily-gold-rate", element: <DailyGoldRate /> },
       // { path: "profile", element: <Profile /> },
