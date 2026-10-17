@@ -2,8 +2,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useAdmin } from "../../PrivateRouter/AdminContext";
 import api from "../../api";
-import { formatRateDate, getRateForPurity } from "../../PrivateRouter/goldRateUtils";
-import useGoldRates from "../../PrivateRouter/useGoldRates";
 import { toast, Toaster } from "react-hot-toast";
 import {
     FiBox,
@@ -22,8 +20,6 @@ import { useNavigate } from "react-router-dom";
 const StockDetails = () => {
     const navigate = useNavigate();
     const { stockCache, setStockCached } = useAdmin();
-    const { current: activeRateSet, loading: ratesLoading, error: ratesError } = useGoldRates();
-
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("All");
     const [currentPage, setCurrentPage] = useState(1);
@@ -118,12 +114,6 @@ const StockDetails = () => {
         setLoading(true);
         setCurrentPage(page);
     };
-    const visibleStockMetalValue = products.reduce((total, product) => {
-        const rate = getRateForPurity(activeRateSet, product.purity, product.metal_type || "Gold");
-        const count = Number(product.total_stock ?? product.stock ?? 0);
-        return total + (Number(product.net_gold_weight) || 0) * count * (Number(rate?.rate_per_unit ?? rate?.rate_per_gram) || 0);
-    }, 0);
-
     // Modal Handlers
     const openUpdateModal = async (product) => {
         setIsModalOpen(true);
@@ -279,40 +269,12 @@ const StockDetails = () => {
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10">
             <Toaster position="top-right" />
 
-            <header className="flex flex-wrap items-center justify-between gap-4">
-                <div>
-                    <p className="text-xs font-bold uppercase tracking-[0.16em] text-emerald-700">Inventory</p>
-                    <h1 className="mt-1 text-2xl font-black text-[#003B3B]">Stock Details</h1>
-                    <p className="mt-1 text-sm text-slate-500">Review availability and update product quantities.</p>
-                </div>
-                <button
-                    type="button"
-                    onClick={() => navigate("/admin/products/stock/add")}
-                    className="flex items-center justify-center gap-2 rounded-xl bg-[#006B62] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#00564f]"
-                >
-                    <FiPlus size={17} /> Add Stock
-                </button>
-            </header>
+      
 
-            <section className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div>
-                        <p className="text-xs font-bold uppercase tracking-wide text-emerald-800">Current-page stock value estimate</p>
-                        <p className="mt-1 text-lg font-extrabold text-[#003B3B]">
-                            {ratesLoading ? "Refreshing active rates..." : activeRateSet ? `₹${visibleStockMetalValue.toLocaleString("en-IN", { maximumFractionDigits: 2 })}` : "No active precious metal rates"}
-                        </p>
-                        <p className="text-xs text-slate-500">{activeRateSet ? `Based on listed items' net weight × quantity × current metal purity rate · ${formatRateDate(activeRateSet.rate_date)}` : "Activate global rates to estimate stock value."}</p>
-                    </div>
-                    {ratesError && <p role="alert" className="text-xs font-semibold text-rose-700">Rate refresh failed: {ratesError}</p>}
-                </div>
-            </section>
-
-           
-            
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
-                    { label: "Total Products", value: stats.total || 0, sub: "All products",    icon: <FiBox size={22} />,          gradient: "from-violet-500 to-purple-600" },
+                    { label: "Total Products", value: stats.total || 0, sub: "All products",    icon: <FiBox size={22} />,          gradient: "from-[#003B3B] to-[#008577]" },
                     { label: "Active",         value: stats.active || 0, sub: "Active products",     icon: <FiCheckCircle />,             gradient: "from-emerald-400 to-teal-500" },
                     { label: "Out of Stock",   value: stats.outOfStock || 0, sub: "No units available", icon: <FiAlertCircle />,      gradient: "from-orange-400 to-amber-500" },
                     { label: "Low Stock",      value: stats.lowStock || 0, sub: "Products below 10 units", icon: <FiTrendingDown />,             gradient: "from-rose-400 to-pink-500" },
@@ -337,7 +299,7 @@ const StockDetails = () => {
                     <input
                         type="text"
                         placeholder="Search products by name, SKU, category..."
-                        className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-purple-400 focus:bg-white transition-all text-sm font-medium text-slate-700"
+                        className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-[#008577] focus:bg-white transition-all text-sm font-medium text-slate-700"
                         value={searchTerm}
                         onChange={(e) => {
                             setLoading(true);
@@ -356,7 +318,7 @@ const StockDetails = () => {
                         setCurrentPage(1);
                         setStatusFilter(event.target.value);
                     }}
-                    className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-slate-600 outline-none hover:border-purple-300 transition-all cursor-pointer"
+                    className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-slate-600 outline-none hover:border-[#008577] transition-all cursor-pointer"
                 >
                     <option value="All">All stock statuses</option>
                     <option>In Stock</option>
@@ -368,7 +330,7 @@ const StockDetails = () => {
                     <button
                         type="button"
                         onClick={() => setViewMode("table")}
-                        className={`p-2 rounded-md transition-colors ${viewMode === "table" ? "bg-white text-[#7b2cbf] shadow-sm" : "text-gray-500 hover:text-[#7b2cbf]"}`}
+                        className={`p-2 rounded-md transition-colors ${viewMode === "table" ? "bg-white text-[#006B62] shadow-sm" : "text-gray-500 hover:text-[#006B62]"}`}
                         aria-label="Table mode"
                         title="Table mode"
                     >
@@ -377,14 +339,21 @@ const StockDetails = () => {
                     <button
                         type="button"
                         onClick={() => setViewMode("card")}
-                        className={`p-2 rounded-md transition-colors ${viewMode === "card" ? "bg-white text-[#7b2cbf] shadow-sm" : "text-gray-500 hover:text-[#7b2cbf]"}`}
+                        className={`p-2 rounded-md transition-colors ${viewMode === "card" ? "bg-white text-[#006B62] shadow-sm" : "text-gray-500 hover:text-[#006B62]"}`}
                         aria-label="Card mode"
                         title="Card mode"
                     >
                         <FiGrid size={16} />
                     </button>
+                    
                 </div>
-                
+                <button
+                    type="button"
+                    onClick={() => navigate("/admin/products/stock/add")}
+                    className="flex items-center justify-center gap-2 rounded-xl bg-[#006B62] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#00564f]"
+                >
+                    <FiPlus size={17} /> Add Stock
+                </button>
 
             </div>
 
@@ -393,23 +362,23 @@ const StockDetails = () => {
                 <div className="overflow-x-auto">
                     {loading ? (
                         <div className="flex flex-col items-center justify-center py-20">
-                            <div className="w-8 h-8 border-4 border-purple-500/20 border-t-purple-500 rounded-full animate-spin mb-4"></div>
+                            <div className="w-8 h-8 border-4 border-emerald-500/20 border-t-[#008577] rounded-full animate-spin mb-4"></div>
                             <p className="text-gray-500 font-bold text-sm">Loading stock details...</p>
                         </div>
                     ) : viewMode === "table" ? (
                         <table className="w-full text-left">
                             <thead>
-                                <tr className="bg-gradient-to-r from-[#1F0A3C] to-[#3c096c] border-b border-[#3c096c]">
-                                    <th className="px-4 py-4 text-[11px] font-bold text-[#FCD34D] uppercase tracking-wider w-10">
-                                        <input type="checkbox" className="rounded border-[#FCD34D]/40 accent-[#FCD34D]" />
+                                <tr className="bg-gradient-to-r from-[#003B3B] to-[#006B62] border-b border-[#006B62]">
+                                    <th className="px-4 py-4 text-[11px] font-bold text-[#F5C45E] uppercase tracking-wider w-10">
+                                        <input type="checkbox" className="rounded border-[#F5C45E]/40 accent-[#F5C45E]" />
                                     </th>
-                                    <th className="px-4 py-4 text-[11px] font-bold text-[#FCD34D] uppercase tracking-wider w-12">S.No.</th>
-                                    <th className="px-4 py-4 text-[11px] font-bold text-[#FCD34D] uppercase tracking-wider">Product</th>
-                                    <th className="px-4 py-4 text-[11px] font-bold text-[#FCD34D] uppercase tracking-wider">Category</th>
-                                    <th className="px-4 py-4 text-[11px] font-bold text-[#FCD34D] uppercase tracking-wider">Price</th>
-                                    <th className="px-4 py-4 text-[11px] font-bold text-[#FCD34D] uppercase tracking-wider">Stock</th>
-                                    <th className="px-4 py-4 text-[11px] font-bold text-[#FCD34D] uppercase tracking-wider">Status</th>
-                                    <th className="px-4 py-4 text-[11px] font-bold text-[#FCD34D] uppercase tracking-wider">Actions</th>
+                                    <th className="px-4 py-4 text-[11px] font-bold text-[#F5C45E] uppercase tracking-wider w-12">S.No.</th>
+                                    <th className="px-4 py-4 text-[11px] font-bold text-[#F5C45E] uppercase tracking-wider">Product</th>
+                                    <th className="px-4 py-4 text-[11px] font-bold text-[#F5C45E] uppercase tracking-wider">Category</th>
+                                    <th className="px-4 py-4 text-[11px] font-bold text-[#F5C45E] uppercase tracking-wider">Price</th>
+                                    <th className="px-4 py-4 text-[11px] font-bold text-[#F5C45E] uppercase tracking-wider">Stock</th>
+                                    <th className="px-4 py-4 text-[11px] font-bold text-[#F5C45E] uppercase tracking-wider">Status</th>
+                                    <th className="px-4 py-4 text-[11px] font-bold text-[#F5C45E] uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
@@ -419,7 +388,7 @@ const StockDetails = () => {
                                         const status = deriveStatus(stock);
 
                                         return (
-                                            <tr key={product.id} className="hover:bg-[#240046]/5 transition-colors group">
+                                            <tr key={product.id} className="hover:bg-emerald-50/50 transition-colors group">
                                                 <td className="px-5 py-4">
                                                     <input type="checkbox" className="rounded border-gray-300" />
                                                 </td>
@@ -444,7 +413,7 @@ const StockDetails = () => {
                                                     </div>
                                                 </td>
                                                 <td className="px-4 py-4">
-                                                    <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#240046]/10 text-[#7b2cbf] border border-[#7b2cbf]/20">
+                                                    <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-50 text-[#006B62] border border-emerald-100">
                                                         {product.category || 'Saree'}
                                                     </span>
                                                 </td>
@@ -458,10 +427,10 @@ const StockDetails = () => {
                                                     <button
                                                         onClick={() => openUpdateModal(product)}
                                                         title="Click to update stock"
-                                                        className="flex items-center gap-1.5 text-sm font-black text-slate-800 hover:text-[#7b2cbf] transition-colors group/stock"
+                                                        className="flex items-center gap-1.5 text-sm font-black text-slate-800 hover:text-[#006B62] transition-colors group/stock"
                                                     >
-                                                        <span className="underline decoration-dotted decoration-gray-300 group-hover/stock:decoration-[#7b2cbf]">{stock}</span>
-                                                        <span className="opacity-0 group-hover/stock:opacity-100 transition-opacity text-[10px] bg-[#240046]/10 text-[#7b2cbf] px-1.5 py-0.5 rounded font-bold">edit</span>
+                                                        <span className="underline decoration-dotted decoration-gray-300 group-hover/stock:decoration-[#006B62]">{stock}</span>
+                                                        <span className="opacity-0 group-hover/stock:opacity-100 transition-opacity text-[10px] bg-emerald-50 text-[#006B62] px-1.5 py-0.5 rounded font-bold">edit</span>
                                                     </button>
                                                 </td>
                                                 <td className="px-4 py-4">
@@ -473,7 +442,7 @@ const StockDetails = () => {
                                                     <div className="flex items-center gap-2">
                                                         <button
                                                             onClick={() => openUpdateModal(product)}
-                                                            className="w-8 h-8 rounded-lg bg-amber-50 text-amber-500 flex items-center justify-center hover:bg-amber-500 hover:text-white transition-all"
+                                                            className="w-8 h-8 rounded-lg bg-emerald-50 text-[#006B62] flex items-center justify-center hover:bg-[#006B62] hover:text-white transition-all"
                                                             title="Update Stock"
                                                         >
                                                             <FiEdit2 size={13} />
@@ -514,7 +483,7 @@ const StockDetails = () => {
                                             <div className="min-w-0">
                                                 <p className="text-base font-bold text-slate-800 truncate">{product.name}</p>
                                                 <p className="text-[11px] text-gray-400 font-medium mt-1">SKU: {product.product_code || `SS` + String(product.id).padStart(4, '0')}</p>
-                                                <span className="inline-block mt-3 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#240046]/10 text-[#7b2cbf] border border-[#7b2cbf]/20">
+                                                <span className="inline-block mt-3 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-emerald-50 text-[#006B62] border border-emerald-100">
                                                     {product.category || 'Saree'}
                                                 </span>
                                             </div>
@@ -525,14 +494,14 @@ const StockDetails = () => {
                                                 </div>
                                                 <div className="text-right">
                                                     <p className="text-[11px] text-gray-400 font-medium">Available Stock</p>
-                                                    <button onClick={() => openUpdateModal(product)} className="text-lg font-black text-slate-800 hover:text-[#7b2cbf] transition-colors">
+                                                    <button onClick={() => openUpdateModal(product)} className="text-lg font-black text-slate-800 hover:text-[#006B62] transition-colors">
                                                         {stock}
                                                     </button>
                                                 </div>
                                             </div>
                                             <button
                                                 onClick={() => openUpdateModal(product)}
-                                                className="w-full mt-4 py-2.5 rounded-lg bg-[#240046] text-white hover:bg-[#7b2cbf] transition-all text-xs font-bold flex items-center justify-center gap-2"
+                                                className="w-full mt-4 py-2.5 rounded-lg bg-[#003B3B] text-white hover:bg-[#006B62] transition-all text-xs font-bold flex items-center justify-center gap-2"
                                             >
                                                 <FiEdit2 size={13} /> Update Stock
                                             </button>
@@ -556,7 +525,7 @@ const StockDetails = () => {
                             <button
                                 onClick={() => changePage(Math.max(currentPage - 1, 1))}
                                 disabled={currentPage === 1}
-                                className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-500 hover:border-purple-300 hover:text-purple-600 disabled:opacity-30 transition-all"
+                                className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-500 hover:border-[#008577] hover:text-[#006B62] disabled:opacity-30 transition-all"
                             >‹</button>
                             {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
                                 const firstPage = Math.max(1, Math.min(currentPage - 2, totalPages - 4));
@@ -565,7 +534,7 @@ const StockDetails = () => {
                                     <button
                                         key={page}
                                         onClick={() => changePage(page)}
-                                        className={`w-8 h-8 rounded-lg text-xs font-bold transition-all border ` + (currentPage === page ? "bg-[#8a2be2] border-purple-500 text-white shadow-md" : "bg-white border-gray-200 text-gray-500 hover:border-purple-300")}
+                                        className={`w-8 h-8 rounded-lg text-xs font-bold transition-all border ` + (currentPage === page ? "bg-[#006B62] border-[#006B62] text-white shadow-md" : "bg-white border-gray-200 text-gray-500 hover:border-[#008577]")}
                                     >
                                         {page}
                                     </button>
@@ -575,7 +544,7 @@ const StockDetails = () => {
                             {totalPages > 5 && (
                                 <button
                                     onClick={() => changePage(totalPages)}
-                                    className={`w-8 h-8 rounded-lg text-xs font-bold border ` + (currentPage === totalPages ? "bg-[#8a2be2] border-purple-500 text-white shadow-md" : "bg-white border-gray-200 text-gray-500 hover:border-purple-300")}
+                                    className={`w-8 h-8 rounded-lg text-xs font-bold border ` + (currentPage === totalPages ? "bg-[#006B62] border-[#006B62] text-white shadow-md" : "bg-white border-gray-200 text-gray-500 hover:border-[#008577]")}
                                 >
                                     {totalPages}
                                 </button>
@@ -583,7 +552,7 @@ const StockDetails = () => {
                             <button
                                 onClick={() => changePage(Math.min(currentPage + 1, totalPages))}
                                 disabled={currentPage === totalPages}
-                                className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-500 hover:border-purple-300 hover:text-purple-600 disabled:opacity-30 transition-all"
+                                className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-500 hover:border-[#008577] hover:text-[#006B62] disabled:opacity-30 transition-all"
                             >›</button>
                         </div>
                     </div>
@@ -596,10 +565,10 @@ const StockDetails = () => {
                 <div className="fixed inset-0 z-[99] flex h-screen w-screen items-center justify-center bg-transparent p-4">
                     <div className="absolute inset-0 z-0 bg-slate-900/60 backdrop-blur-[3px] animate-in fade-in duration-200" onClick={closeUpdateModal} />
                     <div className="relative z-10 bg-white rounded-[2rem] w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 text-slate-800">
-                        <div className="bg-gradient-to-r from-[#1F0A3C] to-[#3c096c] p-6 flex items-center justify-between">
+                        <div className="bg-gradient-to-r from-[#003B3B] to-[#006B62] p-6 flex items-center justify-between">
                             <div>
                                 <h3 className="text-lg font-black text-white">Quick Stock Update</h3>
-                                <p className="text-xs font-bold text-[#FCD34D]/70 mt-1">{selectedProduct.name}</p>
+                                <p className="text-xs font-bold text-[#F5C45E] mt-1">{selectedProduct.name}</p>
                             </div>
                             <button onClick={closeUpdateModal} className="p-2 rounded-xl text-white/50 hover:text-white hover:bg-white/10 transition-colors">
                                 <FiX size={20} />
@@ -609,7 +578,7 @@ const StockDetails = () => {
                         <div className="p-6 max-h-[60vh] overflow-y-auto">
                             {fetchingDetail ? (
                                 <div className="py-10 flex flex-col items-center justify-center">
-                                    <div className="w-8 h-8 border-4 border-[#7b2cbf]/20 border-t-[#7b2cbf] rounded-full animate-spin mb-3"></div>
+                                    <div className="w-8 h-8 border-4 border-emerald-500/20 border-t-[#008577] rounded-full animate-spin mb-3"></div>
                                     <p className="text-xs font-bold text-gray-400">Loading variants...</p>
                                 </div>
                             ) : (
@@ -637,7 +606,7 @@ const StockDetails = () => {
                                                                         min="0"
                                                                         value={variantAdditions[`${vIndex}-${size}`] ?? ""}
                                                                         onChange={(e) => handleVariantStockChange(vIndex, size, e.target.value)}
-                                                                        className="w-full text-base font-black text-slate-800 outline-none placeholder:text-gray-300 bg-transparent border-b border-gray-100 focus:border-[#7b2cbf] transition-colors pb-1"
+                                                                        className="w-full text-base font-black text-slate-800 outline-none placeholder:text-gray-300 bg-transparent border-b border-gray-100 focus:border-[#008577] transition-colors pb-1"
                                                                         placeholder="Add"
                                                                     />
                                                                 </div>
@@ -648,7 +617,7 @@ const StockDetails = () => {
                                                     )}
                                                 </div>
                                             ))}
-                                            <p className="text-xs text-center bg-[#240046]/5 text-[#7b2cbf] p-3 rounded-xl font-bold">
+                                            <p className="text-xs text-center bg-emerald-50 text-[#006B62] p-3 rounded-xl font-bold">
                                                 Total stock will be auto-calculated from variants.
                                             </p>
                                         </div>
@@ -660,13 +629,13 @@ const StockDetails = () => {
                                                 <span className="text-[10px] font-black text-gray-500 bg-gray-200 px-2 py-1 rounded-full">Current: {selectedProduct.total_stock ?? 0}</span>
                                             </div>
                                             <div className="relative">
-                                                <FiBox className="absolute left-4 top-1/2 -translate-y-1/2 text-[#7b2cbf]" />
+                                                <FiBox className="absolute left-4 top-1/2 -translate-y-1/2 text-[#006B62]" />
                                                 <input
                                                     type="number"
                                                     min="0"
                                                     value={manualTotalStock}
                                                     onChange={(e) => setManualTotalStock(e.target.value)}
-                                                    className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-xl outline-none focus:border-[#7b2cbf] transition-all text-xl font-black text-slate-800 shadow-sm"
+                                                    className="w-full pl-12 pr-4 py-4 bg-white border border-gray-200 rounded-xl outline-none focus:border-[#008577] transition-all text-xl font-black text-slate-800 shadow-sm"
                                                     placeholder="Enter quantity to add"
                                                 />
                                             </div>
@@ -688,10 +657,10 @@ const StockDetails = () => {
                             <button
                                 onClick={handleSaveStock}
                                 disabled={isUpdating || fetchingDetail}
-                                className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-[#1F0A3C] to-[#7b2cbf] hover:from-[#10002b] hover:to-[#5a189a] text-[#FCD34D] rounded-xl text-sm font-black transition-all shadow-lg active:scale-95 disabled:opacity-50"
+                                className="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-[#003B3B] to-[#006B62] hover:from-[#002e2e] hover:to-[#00564f] text-[#F5C45E] rounded-xl text-sm font-black transition-all shadow-lg active:scale-95 disabled:opacity-50"
                             >
                                 {isUpdating ? (
-                                    <><div className="w-4 h-4 border-2 border-[#FCD34D]/30 border-t-[#FCD34D] rounded-full animate-spin"></div> Saving...</>
+                                    <><div className="w-4 h-4 border-2 border-[#F5C45E]/30 border-t-[#F5C45E] rounded-full animate-spin"></div> Saving...</>
                                 ) : (
                                     <><FiSave /> Save Stock</>
                                 )}
