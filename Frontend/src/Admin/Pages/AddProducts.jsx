@@ -13,7 +13,7 @@ import {
 import api from "../../api";
 
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
-const GOLD_SHOP = "Sri Vengateswara Gold Shop";
+const GOLD_SHOP = "Sri Gold";
 
 const EMPTY_PRODUCT = {
   name: "",
@@ -457,18 +457,37 @@ const AddProducts = () => {
               <div>
                 <p className={`${labelClass} mb-2`}>Product Video</p>
                 {formData.video ? (
-                  <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 p-3">
-                    <a className="truncate text-sm font-semibold text-[#003B3B] underline" href={imageUrl(formData.video)} target="_blank" rel="noreferrer">View uploaded MP4</a>
-                    <button type="button" onClick={() => updateFormField("video", "")} aria-label="Remove video" className="ml-2 text-red-500"><FiX /></button>
+                  <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
+                    <video className="h-32 w-full bg-black object-contain sm:h-40" src={imageUrl(formData.video)} controls preload="metadata">
+                      Your browser does not support video playback.
+                    </video>
+                    <div className="flex justify-end border-t border-gray-200 bg-white px-3 py-2">
+                      <button type="button" onClick={() => updateFormField("video", "")} aria-label="Remove video" className="text-red-500"><FiX /></button>
+                    </div>
                   </div>
                 ) : uploadButton("video", "Upload optional MP4 video", "MP4 up to 25 MB")}
               </div>
               <div>
                 <p className={`${labelClass} mb-2`}>Certificate Upload</p>
                 {formData.certificate ? (
-                  <div className="flex items-center justify-between rounded-xl border border-gray-200 bg-gray-50 p-3">
-                    <a className="truncate text-sm font-semibold text-[#003B3B] underline" href={imageUrl(formData.certificate)} target="_blank" rel="noreferrer">View certificate</a>
-                    <button type="button" onClick={() => updateFormField("certificate", "")} aria-label="Remove certificate" className="ml-2 text-red-500"><FiX /></button>
+                  <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
+                    {/\.pdf(?:$|[?#])/i.test(formData.certificate) ? (
+                      <iframe
+                        className="h-32 w-full sm:h-40"
+                        src={imageUrl(formData.certificate)}
+                        title="Certificate preview"
+                      />
+                    ) : (
+                      <img
+                        className="h-32 w-full bg-white object-contain sm:h-40"
+                        src={imageUrl(formData.certificate)}
+                        alt="Certificate preview"
+                      />
+                    )}
+                    <div className="flex items-center justify-between gap-3 border-t border-gray-200 bg-white px-3 py-2">
+                      <a className="text-sm font-semibold text-[#003B3B] underline" href={imageUrl(formData.certificate)} target="_blank" rel="noreferrer">Open certificate</a>
+                      <button type="button" onClick={() => updateFormField("certificate", "")} aria-label="Remove certificate" className="text-red-500"><FiX /></button>
+                    </div>
                   </div>
                 ) : uploadButton("certificate", "Upload certificate", "PNG, JPG, PDF up to 5 MB")}
               </div>
@@ -485,7 +504,6 @@ const AddProducts = () => {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <Field label="Stock Quantity" name="total_stock" type="number" min="0" step="1" value={formData.total_stock} onChange={handleChange} placeholder="5" />
               <SelectField label="Stock Status" name="stock_status" value={formData.stock_status} onChange={handleChange} options={["In Stock", "Out of Stock", "Low Stock"]} />
-              <Field label="SKU Barcode" name="sku_barcode" value={formData.sku_barcode} onChange={handleChange} placeholder="Optional barcode" />
               <Field label="Warehouse / Location" name="warehouse" value={formData.warehouse} onChange={handleChange} placeholder="Main Shop" />
               <SelectField label="Product Status" name="status" value={formData.status} onChange={handleChange} options={["Active", "Draft", "Inactive"]} />
             </div>
