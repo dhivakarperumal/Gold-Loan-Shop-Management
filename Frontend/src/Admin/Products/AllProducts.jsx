@@ -229,7 +229,7 @@ const AllProducts = () => {
                     {/* Stats Cards */}
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                         {[
-                            { label: "Total Products", value: stats.total, sub: "All saree products",    icon: <FiBox size={22} />,          gradient: "from-[#240046] to-[#7b2cbf]" },
+                            { label: "Total Products", value: stats.total, sub: "All jewelry products",    icon: <FiBox size={22} />,          gradient: "from-[#240046] to-[#7b2cbf]" },
                             { label: "Active",         value: stats.active, sub: "Active products",     icon: <FiCheckCircle />,             gradient: "from-emerald-400 to-teal-500" },
                             { label: "Inactive",       value: stats.outOfStock || 0, sub: "Inactive products", icon: <FiAlertCircle />,      gradient: "from-orange-400 to-amber-500" },
                             { label: "Low Stock",      value: stats.lowStock, sub: "Products low in stock", icon: <FiXCircle />,             gradient: "from-rose-400 to-pink-500" },
@@ -253,7 +253,7 @@ const AllProducts = () => {
                             <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
                             <input
                                 type="text"
-                                placeholder="Search sarees by name, SKU..."
+                                placeholder="Search jewelry by name, SKU..."
                                 className="w-1/2 pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-[#7b2cbf] focus:bg-white transition-all text-sm font-medium text-slate-700"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
@@ -296,7 +296,7 @@ const AllProducts = () => {
                                                 <input type="checkbox" className="rounded border-white/40 accent-white" />
                                             </th>
                                             <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider w-12">S.No.</th>
-                                            <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Saree</th>
+                                            <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Jewelry</th>
                                             <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Category</th>
                                             <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Price</th>
                                             <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Stock</th>
@@ -388,7 +388,7 @@ const AllProducts = () => {
                             {/* Table Footer / Pagination */}
                             <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-between">
                                 <p className="text-xs text-gray-500 font-medium">
-                                    Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, pagination.total)} of {pagination.total} sarees
+                                    Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, pagination.total)} of {pagination.total} jewelry products
                                 </p>
                                 <div className="flex items-center gap-2">
                                     <button

@@ -88,7 +88,7 @@ const WishlistDrawer = ({ isOpen, onClose }) => {
             <div className="flex h-full flex-col items-center justify-center text-center">
               <FiHeart className="mb-4 text-primary-light" size={48} />
               <h3 className="text-lg font-semibold text-gray-700">No favorites yet</h3>
-              <p className="mt-2 text-sm text-gray-500">Save your favorite sarees here.</p>
+              <p className="mt-2 text-sm text-gray-500">Save your favorite jewelry here.</p>
               <button type="button" onClick={() => goTo("/shop")} className="mt-6 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary-dark">
                 Continue Shopping
               </button>

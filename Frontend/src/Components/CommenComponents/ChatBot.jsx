@@ -341,7 +341,7 @@ const ChatBot = ({ isOpen, onClose }) => {
           from: "bot",
           type: "no_products",
           query,
-          text: `😕 No products found for "${query}". Try: Silk Saree, Cotton Saree, Kanjeevaram, Banarasi`,
+          text: `😕 No products found for "${query}". Try: Gold Necklace, Gold Bangles, Silver Chain, Mangalsutra`,
         });
       } else {
         addMessage({ from: "bot", type: "products", products: results, query });
@@ -693,7 +693,7 @@ const MessageBubble = ({ msg, onProductClick, onOrderClick, onActionClick, onSen
             <div>{msg.text}</div>
             <div className="suggestions-label">Popular searches:</div>
             <div className="suggestion-chips">
-              {["Silk Saree", "Cotton Saree", "Banarasi", "Georgette", "Bridal Saree", "Kanjeevaram"].map((s) => (
+              {["Gold Necklace", "Gold Bangles", "Silver Chain", "Mangalsutra", "Gold Ring", "Temple Jewelry"].map((s) => (
                 <span key={s} className="suggestion-chip" onClick={() => onSend && onSend(s)}>{s}</span>
               ))}
             </div>

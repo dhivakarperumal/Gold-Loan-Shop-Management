@@ -265,7 +265,7 @@ const StockDetails = () => {
             {/* Stats Cards */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 {[
-                    { label: "Total Products", value: stats.total || 0, sub: "All saree products",    icon: <FiBox size={22} />,          gradient: "from-violet-500 to-purple-600" },
+                    { label: "Total Products", value: stats.total || 0, sub: "All jewelry products",    icon: <FiBox size={22} />,          gradient: "from-violet-500 to-purple-600" },
                     { label: "Active",         value: stats.active || 0, sub: "Active products",     icon: <FiCheckCircle />,             gradient: "from-emerald-400 to-teal-500" },
                     { label: "Inactive",       value: stats.outOfStock || 0, sub: "Inactive products", icon: <FiAlertCircle />,      gradient: "from-orange-400 to-amber-500" },
                     { label: "Low Stock",      value: stats.lowStock || 0, sub: "Products low in stock", icon: <FiXCircle />,             gradient: "from-rose-400 to-pink-500" },
@@ -289,7 +289,7 @@ const StockDetails = () => {
                     <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
                     <input
                         type="text"
-                        placeholder="Search sarees by name, SKU..."
+                        placeholder="Search jewelry by name, SKU..."
                         className="w-1/2 pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-purple-400 focus:bg-white transition-all text-sm font-medium text-slate-700"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
@@ -351,7 +351,7 @@ const StockDetails = () => {
                                         <input type="checkbox" className="rounded border-[#FCD34D]/40 accent-[#FCD34D]" />
                                     </th>
                                     <th className="px-4 py-4 text-[11px] font-bold text-[#FCD34D] uppercase tracking-wider w-12">S.No.</th>
-                                    <th className="px-4 py-4 text-[11px] font-bold text-[#FCD34D] uppercase tracking-wider">Saree</th>
+                                    <th className="px-4 py-4 text-[11px] font-bold text-[#FCD34D] uppercase tracking-wider">Jewelry</th>
                                     <th className="px-4 py-4 text-[11px] font-bold text-[#FCD34D] uppercase tracking-wider">Category</th>
                                     <th className="px-4 py-4 text-[11px] font-bold text-[#FCD34D] uppercase tracking-wider">Price</th>
                                     <th className="px-4 py-4 text-[11px] font-bold text-[#FCD34D] uppercase tracking-wider">Stock</th>
@@ -392,7 +392,7 @@ const StockDetails = () => {
                                                 </td>
                                                 <td className="px-4 py-4">
                                                     <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#240046]/10 text-[#7b2cbf] border border-[#7b2cbf]/20">
-                                                        {product.category || 'Saree'}
+                                                        {product.category || 'Jewelry'}
                                                     </span>
                                                 </td>
                                                 <td className="px-4 py-4">
@@ -462,7 +462,7 @@ const StockDetails = () => {
                                                 <p className="text-base font-bold text-slate-800 truncate">{product.name}</p>
                                                 <p className="text-[11px] text-gray-400 font-medium mt-1">SKU: {product.product_code || `SS` + String(product.id).padStart(4, '0')}</p>
                                                 <span className="inline-block mt-3 px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#240046]/10 text-[#7b2cbf] border border-[#7b2cbf]/20">
-                                                    {product.category || 'Saree'}
+                                                    {product.category || 'Jewelry'}
                                                 </span>
                                             </div>
                                             <div className="grid grid-cols-2 gap-3 mt-4 pt-3 border-t border-gray-100">
@@ -497,7 +497,7 @@ const StockDetails = () => {
                 {totalPages > 0 && (
                     <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-between bg-white">
                         <p className="text-xs text-gray-500 font-medium">
-                            Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, pagination.total)} of {pagination.total} sarees
+                            Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, pagination.total)} jewelry products
                         </p>
                         <div className="flex items-center gap-2">
                             <button

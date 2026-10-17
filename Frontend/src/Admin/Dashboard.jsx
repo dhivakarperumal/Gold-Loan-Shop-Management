@@ -439,10 +439,10 @@ const Dashboard = () => {
                     </div>
                 </div>
 
-                {/* Top Selling Sarees */}
+                {/* Top Selling Jewelry */}
                 <div className="lg:col-span-4 bg-white p-5 rounded-2xl border border-gray-100 shadow-sm">
                     <div className="flex justify-between items-center mb-5">
-                        <h3 className="text-base font-black text-slate-800">Top Selling Sarees</h3>
+                        <h3 className="text-base font-black text-slate-800">Top Selling Jewelry</h3>
                         <button onClick={() => navigate('/admin/products/all')} className="text-xs font-bold text-purple-600 hover:underline">View All →</button>
                     </div>
                     <div className="space-y-3">

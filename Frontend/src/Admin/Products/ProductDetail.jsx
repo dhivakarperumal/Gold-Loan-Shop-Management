@@ -197,7 +197,7 @@ function ProductDetail() {
     ["Age", product.age],
     ["Material / Fabric", product.material],
     ["Artisan Work", product.work_type],
-    ["Saree Length", product.saree_length],
+    ["Jewelry Length", product.saree_length],
     ["Blouse Length", product.blouse_length],
     ["Top Length", product.top_length],
     ["Bottom Length", product.bottom_length],

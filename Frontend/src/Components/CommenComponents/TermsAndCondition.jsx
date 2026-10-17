@@ -14,7 +14,7 @@ const TermsAndConditions = () => {
           </h1>
 
           <p>
-            Welcome to our online saree store. By accessing, browsing, or using
+            Welcome to our online jewelry store. By accessing, browsing, or using
             this website, you agree to comply with the following Terms &
             Conditions. These terms apply to all visitors, customers, and users
             of our website and services.
@@ -65,14 +65,13 @@ const TermsAndConditions = () => {
           <p>
             We make every effort to ensure product descriptions, images, and
             pricing are accurate. However, slight variations may occur due to
-            fabric textures, weaving methods, and lighting conditions used
+            jewelry finishes, craftsmanship, and lighting conditions used
             during photography.
           </p>
 
           <p className="mt-2">
-            Handwoven sarees and traditional fabrics may have natural
-            irregularities that reflect the authenticity of the craft and
-            should not be considered defects.
+            Handcrafted jewelry may have natural variations that reflect the
+            authenticity of the craft and should not be considered defects.
           </p>
         </section>
 
@@ -81,7 +80,7 @@ const TermsAndConditions = () => {
           <h2 className="text-xl font-semibold mb-2">4. Color Variation Disclaimer</h2>
 
           <p>
-            The color of sarees displayed on our website may vary slightly from
+            The color of jewelry displayed on our website may vary slightly from
             the actual product due to differences in screen resolution,
             lighting conditions, and device display settings.
           </p>
