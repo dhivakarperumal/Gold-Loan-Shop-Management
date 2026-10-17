@@ -560,7 +560,7 @@ export default function CreateLoan() {
                       ["Mobile", customer.mobile],
                       ["KYC Status", customer.kyc_status]
                     ].map(([label, value]) => <div key={label}><p className="text-xs text-slate-500">{label}</p><p className="mt-1 text-sm font-semibold text-slate-800">{value || "—"}</p></div>)}
-                    <div className="sm:col-span-2 lg:col-span-4">
+                    <div className="sm:col-span-2 lg:col-span-2">
                       <p className="text-xs text-slate-500">Address</p>
                       <p className="mt-1 text-sm text-slate-800">{[customer.address, customer.city, customer.district, customer.state, customer.pincode].filter(Boolean).join(", ") || "Address not provided"}</p>
                     </div>
@@ -636,7 +636,9 @@ export default function CreateLoan() {
             <label className={labelClass}>Net Gold Weight (g)<input className={`${fieldClass} bg-slate-50`} value={Math.max(0, Number(form.gross_weight || 0) - Number(form.stone_weight || 0)).toFixed(3)} readOnly placeholder="Calculated from gross and stone weight" /></label>
             <FormField label="Gold Rate / Gram (₹)" name="gold_rate_per_gram" form={{ gold_rate_per_gram: appliedGoldRate ?? "" }} onChange={() => {}} readOnly help={loanRecord && savedPurityUnchanged && loanRecord.gold_rate_per_gram != null ? `Saved loan rate from ${formatRateDate(loanRecord.gold_rate_date)}; today's changes do not alter it.` : loanRecord && savedPurityUnchanged ? "Legacy loan; its saved valuation is preserved." : ratesLoading ? "Loading today's active rate..." : "Selected by the configured purity."} />
             <FormField label="Gold Valuation (₹)" name="gold_valuation" form={{ gold_valuation: estimatedGoldValuation.toFixed(2) }} onChange={() => {}} readOnly required min="0.01" step="0.01" help="Eligible net gold weight × the applied rate snapshot; not the retail jewellery price." />
-            <div className="sm:col-span-2 lg:col-span-4">
+          </div>
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <div>
               <span className={labelClass}>Loan Amount (₹)<span className="ml-1 text-rose-500">*</span></span>
               <div className="mt-1.5 inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1" role="radiogroup" aria-label="Loan amount calculation mode">
                 {[
@@ -664,43 +666,43 @@ export default function CreateLoan() {
                 <FormField label="Loan Amount (₹)" name="principal_amount" form={form} onChange={handleChange} type="number" min="0.01" step="0.01" required placeholder="Enter loan amount" help="Enter the loan amount to disburse." />
               )}
             </div>
-          </div>
-          <div className="mt-5 rounded-xl border border-dashed border-slate-300 p-4">
-            <label className={labelClass}>
-              Gold Image <span className="font-normal text-slate-400">(optional, PNG or JPG up to 5 MB)</span>
-              <input
-                ref={goldImageInput}
-                className="sr-only"
-                type="file"
-                accept="image/png,image/jpeg"
-                title="Choose a PNG or JPG image of the pledged gold"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (!file) return;
-                  if (!["image/png", "image/jpeg"].includes(file.type)) {
-                    toast.error("Choose a PNG or JPG gold image.");
-                    event.target.value = "";
-                    return;
-                  }
-                  if (file.size > 5 * 1024 * 1024) {
-                    toast.error("Gold image must be 5 MB or smaller.");
-                    event.target.value = "";
-                    return;
-                  }
-                  if (selectedGoldImagePreview.current) URL.revokeObjectURL(selectedGoldImagePreview.current);
-                  selectedGoldImagePreview.current = URL.createObjectURL(file);
-                  setGoldImagePreview({ key: file, url: selectedGoldImagePreview.current });
-                  setGoldImageFile(file);
-                }}
-              />
-              <span className="mt-2 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                <FiUploadCloud className="text-[#008577]" />
-                {goldImageFile ? "Choose a different image" : loanRecord?.gold_image_url ? "Replace gold image" : "Upload gold image"}
-              </span>
-            </label>
-            {goldImagePreviewUrl && (
-              <img src={goldImagePreviewUrl} alt="Pledged gold preview" className="mt-3 h-40 w-40 rounded-lg border border-slate-200 object-cover" />
-            )}
+            <div className="rounded-xl border border-dashed border-slate-300 p-4">
+              <p className={labelClass}>Gold Image <span className="font-normal text-slate-400">(optional, PNG or JPG up to 5 MB)</span></p>
+              <label className={labelClass}>
+                <input
+                  ref={goldImageInput}
+                  className="sr-only"
+                  type="file"
+                  accept="image/png,image/jpeg"
+                  title="Choose a PNG or JPG image of the pledged gold"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) return;
+                    if (!["image/png", "image/jpeg"].includes(file.type)) {
+                      toast.error("Choose a PNG or JPG gold image.");
+                      event.target.value = "";
+                      return;
+                    }
+                    if (file.size > 5 * 1024 * 1024) {
+                      toast.error("Gold image must be 5 MB or smaller.");
+                      event.target.value = "";
+                      return;
+                    }
+                    if (selectedGoldImagePreview.current) URL.revokeObjectURL(selectedGoldImagePreview.current);
+                    selectedGoldImagePreview.current = URL.createObjectURL(file);
+                    setGoldImagePreview({ key: file, url: selectedGoldImagePreview.current });
+                    setGoldImageFile(file);
+                  }}
+                />
+                <span className="mt-2 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                  <FiUploadCloud className="text-[#008577]" />
+                  {goldImageFile ? "Choose a different image" : loanRecord?.gold_image_url ? "Replace gold image" : "Upload gold image"}
+                </span>
+              </label>
+              {goldImagePreviewUrl && (
+                <img src={goldImagePreviewUrl} alt="Pledged gold preview" className="mt-3 h-40 w-40 rounded-lg border border-slate-200 object-cover" />
+              )}
+            </div>
           </div>
         </section>
 
