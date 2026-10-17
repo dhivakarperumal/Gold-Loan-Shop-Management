@@ -7,18 +7,21 @@ import {
   X,
   User,
   Heart,
-  Gem
+  Gem,
+  Search,
+  ShoppingBag
 } from "lucide-react";
 import PageContainer from "./PageContainer";
 import api from "../../api";
 import { FiHome, FiShoppingBag, FiGrid, FiFileText, FiPhone, FiChevronDown } from "react-icons/fi";
 import { FiChevronRight, FiTag } from "react-icons/fi";
 import WishlistDrawer from "./WishlistDrawer";
+import CartDrawer from "./CartDrawer";
 
 const Navbar = () => {
 
   const { user, logout } = useContext(AuthContext);
-  const { wishlist } = useContext(StoreContext);
+  const { wishlist, cart } = useContext(StoreContext);
   const [mobilePages, setMobilePages] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -28,12 +31,15 @@ const Navbar = () => {
   const [logoutConfirm, setLogoutConfirm] = useState(false);
   const [categories, setCategories] = useState([]);
   const [metals, setMetals] = useState([]);
-  const [pagesMenu, setPagesMenu] = useState(false);
+  const [openDropdown, setOpenDropdown] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
   const [mobileCategory, setMobileCategory] = useState(false);
   const [wishlistOpen, setWishlistOpen] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
 
   const menuRef = useRef();
-  const pagesRef = useRef();
+  const dropdownRef = useRef();
   const currentPathRef = useRef(location.pathname);
 
   const confirmLogout = () => {
@@ -82,8 +88,9 @@ const Navbar = () => {
         setUserMenu(false);
       }
 
-      if (pagesRef.current && !pagesRef.current.contains(e.target)) {
-        setPagesMenu(false);
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setOpenDropdown("");
+        setSelectedCategory(null);
       }
 
     };
@@ -131,123 +138,206 @@ const Navbar = () => {
     return `${backendUrl}${image.startsWith("/") ? image : `/${image}`}`;
   };
 
+  const handleSearch = (event) => {
+    event.preventDefault();
+    const query = searchTerm.trim();
+    navigate(query ? `/shop?search=${encodeURIComponent(query)}` : "/shop");
+  };
+
+  const getCategorySubcategories = (category) =>
+    Array.isArray(category.subcategory) ? category.subcategory.filter(Boolean) : [];
+
   return (
 
-    <nav className="sticky top-0 z-50 border-b border-slate-100 bg-white/95 py-1 shadow-sm backdrop-blur-lg">
+    <nav className="sticky top-0 z-50 border-b border-[#eadfce] bg-white/95 shadow-sm backdrop-blur-lg">
 
-      <PageContainer className="px-3 sm:px-5 lg:px-[3%]">
-
-        <div className="flex min-h-14 items-center justify-between gap-2 sm:min-h-[68px]">
-
-          {/* Logo */}
-          <Link to="/" className="flex shrink-0 items-center gap-2" aria-label="Sri Golds home">
-            <img
-              src="/images/logo.png"
-              alt="Sri Golds"
-              className="h-11 w-[4.5rem] object-contain sm:h-14 sm:w-24 lg:h-16 lg:w-28"
-            />
+      <PageContainer className="px-3 sm:px-5 lg:px-[2%]">
+        <div className="flex min-h-[76px] items-center gap-3 xl:gap-5">
+          <Link to="/" className="flex shrink-0 items-center" aria-label="Sri Golds home">
+            <img src="/images/logo.png" alt="Sri Golds" className="h-12 w-20 object-contain sm:h-14 sm:w-24" />
           </Link>
 
-          {/* Metals row */}
-          <div className="hidden min-w-0 flex-1 items-center justify-center gap-2 overflow-x-auto px-4 lg:flex xl:gap-3">
-            {metals.map((metal) => (
-              <Link
-                key={metal.id}
-                to={`/shop?metal=${encodeURIComponent(metal.name)}`}
-                className="group flex min-w-[88px] shrink-0 flex-col items-center justify-center gap-1 rounded-xl border border-[#f0e5d1] bg-[#fffdf8] px-3 py-2 text-center transition hover:border-[#d6ad5f] hover:bg-[#fff7e7]"
-              >
-                {metal.image ? (
-                  <img
-                    src={getMetalImageUrl(metal.image)}
-                    alt=""
-                    className="h-8 w-10 object-contain"
-                    loading="lazy"
-                  />
-                ) : (
-                  <Gem className="h-8 w-10 text-[#c99535]" aria-hidden="true" />
+          <div ref={dropdownRef} className="hidden min-w-0 flex-1 items-center justify-center xl:flex">
+            <div className="flex h-full items-center">
+              <NavLink to="/" end className={({ isActive }) => `flex h-[76px] min-w-[90px] flex-col items-center justify-center gap-1 border-r border-[#efe5d4] px-4 text-sm font-semibold transition hover:text-[#a77525] ${isActive ? "border-b-2 border-b-[#c68c22] text-[#164333]" : "text-[#30271b]"}`}>
+                <FiHome className="text-lg text-[#174a38]" />
+                Home
+              </NavLink>
+              <NavLink to="/shop" className={({ isActive }) => `flex h-[76px] min-w-[95px] flex-col items-center justify-center gap-1 border-r border-[#efe5d4] px-4 text-sm font-semibold transition hover:text-[#a77525] ${isActive ? "border-b-2 border-b-[#c68c22] text-[#164333]" : "text-[#30271b]"}`}>
+                <Gem className="h-5 w-5 text-[#c68c22]" />
+                Explore
+              </NavLink>
+
+              <div className="relative h-full">
+                <button
+                  type="button"
+                  aria-expanded={openDropdown === "categories"}
+                  onClick={() => {
+                    setOpenDropdown(openDropdown === "categories" ? "" : "categories");
+                    setSelectedCategory(categories[0] || null);
+                  }}
+                  className={`flex h-[76px] min-w-[110px] flex-col items-center justify-center gap-1 border-r border-[#efe5d4] px-4 text-sm font-semibold transition hover:bg-[#fff9ed] hover:text-[#a77525] ${openDropdown === "categories" ? "bg-[#fff9ed] text-[#8c5e13]" : "text-[#30271b]"}`}
+                >
+                  <FiGrid className="text-lg text-[#c68c22]" />
+                  <span className="flex items-center gap-1">Category <FiChevronDown className={`transition-transform ${openDropdown === "categories" ? "rotate-180" : ""}`} /></span>
+                </button>
+                {openDropdown === "categories" && (
+                  <div className="absolute left-0 top-full z-50 flex min-w-[300px] rounded-xl border border-[#efe5d4] bg-white p-2 shadow-xl">
+                    <div className="max-h-[min(70vh,520px)] w-[275px] overflow-y-auto">
+                      {categories.map((category) => {
+                        const image = Array.isArray(category.images) ? category.images[0] : category.images;
+                        return (
+                          <div key={category.id || category.catId} className={`flex items-center rounded-lg pr-2 transition ${(selectedCategory?.id || selectedCategory?.catId) === (category.id || category.catId) ? "bg-[#fff8e9]" : "hover:bg-[#fffaf0]"}`}>
+                            <Link
+                              to={`/category/${category.slug || category.name}`}
+                              onClick={() => setOpenDropdown("")}
+                              className="flex min-w-0 flex-1 items-center gap-3 px-2 py-2.5 text-sm font-medium text-[#30271b]"
+                            >
+                              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#fbf5e9]">
+                                {image ? <img src={getMetalImageUrl(image)} alt="" className="h-8 w-8 object-contain" loading="lazy" /> : <FiTag className="text-[#c68c22]" />}
+                              </span>
+                              <span className="truncate">{category.name}</span>
+                            </Link>
+                            <button
+                              type="button"
+                              aria-label={`Show ${category.name} subcategories`}
+                              onClick={() => setSelectedCategory(category)}
+                              className="p-2 text-[#b47a25] hover:text-[#7c5318]"
+                            >
+                              <FiChevronRight />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    {selectedCategory && getCategorySubcategories(selectedCategory).length > 0 && (
+                      <div className="ml-2 w-[230px] border-l border-[#efe5d4] py-1 pl-2">
+                        <p className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#9a7a42]">{selectedCategory.name}</p>
+                        {getCategorySubcategories(selectedCategory).map((subcategory) => (
+                          <Link
+                            key={subcategory}
+                            to={`/category/${selectedCategory.slug || selectedCategory.name}?subcategory=${encodeURIComponent(subcategory)}`}
+                            onClick={() => setOpenDropdown("")}
+                            className="block rounded-lg px-3 py-2.5 text-sm text-[#514638] transition hover:bg-[#fff8e9] hover:text-[#8c5e13]"
+                          >
+                            {subcategory}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 )}
-                <span className="text-xs font-semibold text-[#30271b] group-hover:text-[#9c6c1d]">
-                  {metal.name}
-                </span>
+              </div>
+
+              <div className="relative h-full">
+                <button
+                  type="button"
+                  aria-expanded={openDropdown === "metals"}
+                  onClick={() => setOpenDropdown(openDropdown === "metals" ? "" : "metals")}
+                  className={`flex h-[76px] min-w-[95px] flex-col items-center justify-center gap-1 border-r border-[#efe5d4] px-4 text-sm font-semibold transition hover:bg-[#fff9ed] hover:text-[#a77525] ${openDropdown === "metals" ? "bg-[#fff9ed] text-[#8c5e13]" : "text-[#30271b]"}`}
+                >
+                  <Gem className="h-5 w-5 text-[#c68c22]" />
+                  <span className="flex items-center gap-1">Metal <FiChevronDown className={`transition-transform ${openDropdown === "metals" ? "rotate-180" : ""}`} /></span>
+                </button>
+                {openDropdown === "metals" && (
+                  <div className="absolute left-0 top-full z-50 w-[250px] rounded-xl border border-[#efe5d4] bg-white p-2 shadow-xl">
+                    {metals.map((metal) => (
+                      <Link
+                        key={metal.id}
+                        to={`/shop?metal=${encodeURIComponent(metal.name)}`}
+                        onClick={() => setOpenDropdown("")}
+                        className="flex items-center gap-3 rounded-lg px-2 py-2.5 text-sm font-medium text-[#30271b] transition hover:bg-[#fff8e9] hover:text-[#8c5e13]"
+                      >
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#fbf5e9]">
+                          {metal.image ? <img src={getMetalImageUrl(metal.image)} alt="" className="h-8 w-8 object-contain" loading="lazy" /> : <Gem className="h-5 w-5 text-[#c68c22]" />}
+                        </span>
+                        <span className="flex-1">{metal.name}</span>
+                        <FiChevronRight className="text-[#30271b]" />
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <Link to="/contactus" className="flex h-[76px] min-w-[100px] flex-col items-center justify-center gap-1 px-4 text-sm font-semibold text-[#30271b] transition hover:text-[#a77525]">
+                <FiPhone className="text-lg text-[#c68c22]" />
+                Contact Us
               </Link>
-            ))}
+            </div>
           </div>
 
-          {/* Right Icons */}
+          <form onSubmit={handleSearch} className="hidden min-w-[180px] max-w-[340px] flex-1 items-center overflow-hidden rounded-lg border border-[#d9d9d9] bg-white md:flex">
+            <Search className="ml-3 h-5 w-5 shrink-0 text-[#182c29]" />
+            <input
+              type="search"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search for jewelry, collections..."
+              aria-label="Search jewelry and collections"
+              className="min-w-0 flex-1 px-3 py-3 text-sm outline-none placeholder:text-gray-500"
+            />
+            <button type="submit" aria-label="Search" className="flex h-11 w-12 shrink-0 items-center justify-center bg-[#d69b17] text-white transition hover:bg-[#bd850f]">
+              <Search className="h-5 w-5" />
+            </button>
+          </form>
 
-          <div className="flex shrink-0 items-center gap-2 sm:gap-3 lg:gap-4">
+          <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2 xl:ml-0">
 
             <button
               type="button"
               onClick={() => setWishlistOpen(true)}
               aria-label="Open favorites"
-              className="relative rounded-full p-2 text-primary transition hover:bg-emerald-50 hover:text-primary-light"
+              className="relative flex min-w-12 flex-col items-center gap-0.5 rounded-lg px-2 py-2 text-[#172c28] transition hover:bg-[#fff8e9] hover:text-[#a77525]"
             >
-              <Heart className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
+              <Heart className="h-5 w-5" />
+              <span className="hidden text-xs font-semibold sm:block">Wishlist</span>
               {wishlist.length > 0 && (
-                <span className="absolute -top-2 -right-2 bg-rose-500 text-white text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">
+                <span className="absolute right-1 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#d69b17] px-1 text-[9px] font-black text-white">
                   {wishlist.length > 9 ? '9+' : wishlist.length}
                 </span>
               )}
             </button>
 
-            {/* User Dropdown */}
-
             {user ? (
-
               <div className="relative hidden sm:block" ref={menuRef}>
-
                 <button
                   onClick={() => setUserMenu(!userMenu)}
-                  className="w-9 h-9 cursor-pointer rounded-full bg-gradient-to-r from-primary to-primary-light text-white flex items-center justify-center font-semibold shadow-md hover:scale-110 transition"
+                  className="flex min-w-12 cursor-pointer flex-col items-center gap-0.5 rounded-lg px-2 py-2 text-[#172c28] transition hover:bg-[#fff8e9] hover:text-[#a77525]"
                 >
-                  {user.username?.charAt(0).toUpperCase()}
+                  <User className="h-5 w-5" />
+                  <span className="text-xs font-semibold">Account</span>
                 </button>
-
                 {userMenu && (
-
-                  <div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden animate-dropdown">
-
-                    <Link
-                      to="/account"
-                      className="block px-4 py-3 text-sm hover:bg-gray-100"
-                      onClick={() => setUserMenu(false)}
-                    >
-                      My Account
-                    </Link>
-
+                  <div className="absolute right-0 top-full z-50 mt-2 w-44 overflow-hidden rounded-xl border border-[#efe5d4] bg-white shadow-xl">
+                    <Link to="/account" className="block px-4 py-3 text-sm hover:bg-[#fff8e9]" onClick={() => setUserMenu(false)}>My Account</Link>
                     {user.role === "admin" && (
-                      <Link
-                        to="admin"
-                        className="block px-4 py-3 text-sm hover:bg-gray-100"
-                        onClick={() => setUserMenu(false)}
-                      >
-                        Admin Panel
-                      </Link>
+                      <Link to="/admin" className="block px-4 py-3 text-sm hover:bg-[#fff8e9]" onClick={() => setUserMenu(false)}>Admin Panel</Link>
                     )}
-
-                    <button
-                      onClick={() => setLogoutConfirm(true)}
-                      className="w-full cursor-pointer text-left px-4 py-3 text-sm hover:bg-gray-100 text-red-500"
-                    >
-                      Logout
-                    </button>
-
+                    <button onClick={() => setLogoutConfirm(true)} className="w-full px-4 py-3 text-left text-sm text-red-500 hover:bg-red-50">Logout</button>
                   </div>
-
                 )}
-
               </div>
-
             ) : (
-
-              <Link to="/login" aria-label="Sign in" className="hidden rounded-full p-2 text-primary transition hover:bg-emerald-50 hover:text-primary-light sm:block">
-                <User className="h-5 w-5 sm:h-[22px] sm:w-[22px]" />
+              <Link to="/login" aria-label="Account / Sign in" className="hidden min-w-12 flex-col items-center gap-0.5 rounded-lg px-2 py-2 text-[#172c28] transition hover:bg-[#fff8e9] hover:text-[#a77525] sm:flex">
+                <User className="h-5 w-5" />
+                <span className="text-xs font-semibold">Account</span>
               </Link>
-
             )}
 
-            {/* Mobile Menu Button */}
+            <button
+              type="button"
+              onClick={() => setCartOpen(true)}
+              aria-label="Open shopping bag"
+              className="relative flex min-w-12 flex-col items-center gap-0.5 rounded-lg px-2 py-2 text-[#172c28] transition hover:bg-[#fff8e9] hover:text-[#a77525]"
+            >
+              <ShoppingBag className="h-5 w-5" />
+              <span className="hidden text-xs font-semibold sm:block">My Bag</span>
+              {cart.length > 0 && (
+                <span className="absolute right-1 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#d69b17] px-1 text-[9px] font-black text-white">
+                  {cart.length > 9 ? "9+" : cart.length}
+                </span>
+              )}
+            </button>
 
             <button
               type="button"
@@ -259,7 +349,7 @@ const Navbar = () => {
               aria-label={mobileMenu ? "Close navigation menu" : "Open navigation menu"}
               aria-expanded={mobileMenu}
               aria-controls="store-mobile-navigation"
-              className="flex h-10 w-10 items-center justify-center rounded-full text-primary transition hover:bg-emerald-50 lg:hidden"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-[#174a38] transition hover:bg-[#fff8e9] xl:hidden"
             >
               {mobileMenu ? <X size={23} /> : <Menu size={23} />}
             </button>
@@ -269,71 +359,6 @@ const Navbar = () => {
         </div>
 
       </PageContainer>
-
-      {/* Categories row */}
-      <div className="hidden border-t border-[#eadfce] bg-[#fffdf8] lg:block">
-        <PageContainer className="px-3 sm:px-5 lg:px-[3%]">
-          <div className="flex min-h-12 items-center justify-center gap-1 overflow-x-auto">
-            <NavLink
-              to="/"
-              end
-              className={({ isActive }) =>
-                `shrink-0 px-3 py-3 text-sm font-semibold transition hover:text-[#a77525] ${
-                  isActive ? "text-[#a77525]" : "text-[#30271b]"
-                }`
-              }
-            >
-              Home
-            </NavLink>
-            <NavLink
-              to="/shop"
-              className={({ isActive }) =>
-                `shrink-0 px-3 py-3 text-sm font-semibold transition hover:text-[#a77525] ${
-                  isActive ? "text-[#a77525]" : "text-[#30271b]"
-                }`
-              }
-            >
-              Shop
-            </NavLink>
-            {categories.map((category) => (
-              <NavLink
-                key={category.id || category.catId}
-                to={`/category/${category.slug || category.name}`}
-                className={({ isActive }) =>
-                  `shrink-0 border-l border-[#e9d6b0] px-4 py-3 text-sm font-semibold transition hover:bg-[#fff7e7] hover:text-[#a77525] ${
-                    isActive ? "text-[#a77525]" : "text-[#30271b]"
-                  }`
-                }
-              >
-                {category.name}
-              </NavLink>
-            ))}
-            <div className="relative shrink-0 border-l border-[#e9d6b0] px-4 py-2" ref={pagesRef}>
-              <button
-                type="button"
-                onClick={() => setPagesMenu((open) => !open)}
-                className="flex items-center gap-1 text-sm font-semibold text-[#30271b] transition hover:text-[#a77525]"
-              >
-                Pages
-                <FiChevronDown className={`transition-transform ${pagesMenu ? "rotate-180" : ""}`} />
-              </button>
-              {pagesMenu && (
-                <div className="absolute right-0 top-full z-50 w-48 overflow-hidden rounded-xl border border-[#ead8b6] bg-white shadow-xl">
-                  <Link to="/about" onClick={() => setPagesMenu(false)} className="block px-4 py-3 text-sm text-gray-700 transition hover:bg-[#fff7e7] hover:text-[#a77525]">
-                    About
-                  </Link>
-                  <Link to="/termsandconditions" onClick={() => setPagesMenu(false)} className="block px-4 py-3 text-sm text-gray-700 transition hover:bg-[#fff7e7] hover:text-[#a77525]">
-                    Terms and Conditions
-                  </Link>
-                  <Link to="/contactus" onClick={() => setPagesMenu(false)} className="block px-4 py-3 text-sm text-gray-700 transition hover:bg-[#fff7e7] hover:text-[#a77525]">
-                    Contact Us
-                  </Link>
-                </div>
-              )}
-            </div>
-          </div>
-        </PageContainer>
-      </div>
 
       {/* Logout Modal */}
 
@@ -577,6 +602,7 @@ const Navbar = () => {
           </aside>
       </div>
       <WishlistDrawer isOpen={wishlistOpen} onClose={() => setWishlistOpen(false)} />
+      <CartDrawer isOpen={cartOpen} onClose={() => setCartOpen(false)} />
     </nav>
 
   );
