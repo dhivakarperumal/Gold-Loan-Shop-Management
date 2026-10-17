@@ -143,6 +143,7 @@ const ProductDetail = () => {
   const mrp = Number(product.mrp || 0);
   const highlights = parseArray(product.highlights);
   const specs = parseArray(product.specifications);
+  const variants = parseArray(product.variants);
   const sizeGuide = assetUrl(product.size_guide_chart);
   const certificate = assetUrl(product.certificate);
   const video = assetUrl(product.video);
@@ -184,6 +185,29 @@ const ProductDetail = () => {
     ["Care instructions", product.care_instructions],
     ["Wash care", product.wash_care],
     ["Warranty", product.warranty],
+  ];
+  const pricingDetails = [
+    ["Offer", product.offer != null ? `${product.offer}%` : ""],
+    ["Discount", product.discount != null ? `${product.discount}%` : ""],
+    ["GST", product.gst_rate != null ? `${product.gst_rate}%` : ""],
+    ["Making charge", product.making_charge != null
+      ? String(product.making_charge_type).toLowerCase() === "percentage"
+        ? `${product.making_charge}%`
+        : money(product.making_charge)
+      : ""],
+    ["Wastage", product.wastage != null
+      ? String(product.wastage_type).toLowerCase() === "percentage"
+        ? `${product.wastage}%`
+        : `${product.wastage} g`
+      : ""],
+    ["Price includes GST", product.price_includes_gst],
+  ];
+  const variantDetails = [
+    ["Available colors", [...new Set(variants.map((variant) => variant.colorName || variant.color).filter(Boolean))]],
+    ["Variant sizes", [...new Set(variants.flatMap((variant) => [
+      ...parseArray(variant.selectedSizes),
+      ...parseArray(variant.available_sizes),
+    ]))]],
   ];
 
   return (
@@ -273,7 +297,9 @@ const ProductDetail = () => {
             <div className="mt-7 space-y-4">
               <DetailGroup title="Product details" entries={productDetails} />
               <DetailGroup title="Metal & material" entries={materialDetails} />
+              <DetailGroup title="Pricing & charges" entries={pricingDetails} />
               <DetailGroup title="Sizes & measurements" entries={sizeDetails} />
+              <DetailGroup title="Available options" entries={variantDetails} />
               <DetailGroup title="Care & warranty" entries={careDetails} />
               {specs.length > 0 && <DetailGroup title="Specifications" entries={specs.map((item, index) => Array.isArray(item) ? item : [`Specification ${index + 1}`, item])} />}
             </div>
