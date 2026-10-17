@@ -3,8 +3,6 @@ import React, { useRef, useState } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay, EffectFade } from "swiper/modules";
 import {
-  ChevronLeft,
-  ChevronRight,
   ArrowRight,
   Gem,
   ShieldCheck,
@@ -166,26 +164,6 @@ const Hero = () => {
             </div>
           </div>
         </div>
-
-        {/* Previous arrow */}
-        {/* <button
-          type="button"
-          aria-label="Previous slide"
-          onClick={() => swiperRef.current?.slidePrev()}
-          className="absolute left-4 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[#e3cf9b]/70 bg-black/30 text-[#f3dfaa] transition hover:bg-[#d9b45e] hover:text-[#12352a] sm:left-6 sm:h-11 sm:w-11"
-        >
-          <ChevronLeft size={21} />
-        </button> */}
-
-        {/* Next arrow */}
-        {/* <button
-          type="button"
-          aria-label="Next slide"
-          onClick={() => swiperRef.current?.slideNext()}
-          className="absolute right-4 top-1/2 z-20 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[#e3cf9b]/70 bg-black/30 text-[#f3dfaa] transition hover:bg-[#d9b45e] hover:text-[#12352a] sm:right-6 sm:h-11 sm:w-11"
-        >
-          <ChevronRight size={21} />
-        </button> */}
 
         {/* Decorative tagline */}
         <div className="pointer-events-none absolute bottom-8 right-12 z-[2] hidden font-serif text-sm italic leading-5 text-[#efd38c] drop-shadow-md lg:block">
