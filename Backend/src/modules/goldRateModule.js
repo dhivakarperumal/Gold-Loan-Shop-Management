@@ -139,13 +139,21 @@ async function getCurrentGoldRates() {
   return batches[0] || null;
 }
 
-function findGoldRateForPurity(current, purity) {
+function findGoldRateForPurity(current, purity, metalType = 'Gold') {
   if (!current) return null;
   const text = String(purity || '').toLowerCase();
+  const exactRate = current.rates.find((rate) => (
+    rate.metal_type.toLowerCase() === String(metalType).toLowerCase()
+    && rate.purity.toLowerCase() === text
+  ));
+  if (exactRate) return exactRate;
   const purityDigits = text.match(/\d{3}/)?.[0] || ({
     '24k': '999', '22k': '916', '20k': '833', '18k': '750', '14k': '585'
   })[text.match(/\d{2}k/)?.[0]];
-  return current.rates.find((rate) => rate.metal_type === 'Gold' && rate.purity === purityDigits) || null;
+  return current.rates.find((rate) => (
+    rate.metal_type.toLowerCase() === String(metalType).toLowerCase()
+    && rate.purity === purityDigits
+  )) || null;
 }
 
 async function recordHistory(connection, { batchId, rateId, metalType, purity, rateUnit = 'gram', previousRate, newRate, action, reason, userId }) {

@@ -134,8 +134,8 @@ async function postProduct(req, res, next) {
   try {
     if (Number(product.net_gold_weight) > 0) {
       const activeRateSet = await getCurrentGoldRates();
-      const activeRate = findGoldRateForPurity(activeRateSet, product.purity);
-      if (!activeRate) return res.status(409).json({ message: 'No active gold rate matches this product purity. Configure and activate the daily gold rates first.' });
+      const activeRate = findGoldRateForPurity(activeRateSet, product.purity, product.metal_type);
+      if (!activeRate) return res.status(409).json({ message: `No active ${product.metal_type || 'metal'} rate matches this product purity. Configure and activate the daily precious rates first.` });
       product.gold_rate_per_gram = activeRate.rate_per_gram;
       product.gold_rate_date = activeRateSet.rate_date;
     }
@@ -154,10 +154,11 @@ async function putProduct(req, res, next) {
   try {
     const existingProduct = await getProductById(id);
     if (!existingProduct) return res.status(404).json({ message: 'Product not found' });
-    if (Number(product.net_gold_weight) > 0 && existingProduct.purity !== product.purity) {
+    if (Number(product.net_gold_weight) > 0
+      && (existingProduct.purity !== product.purity || existingProduct.metal_type !== product.metal_type)) {
       const activeRateSet = await getCurrentGoldRates();
-      const activeRate = findGoldRateForPurity(activeRateSet, product.purity);
-      if (!activeRate) return res.status(409).json({ message: 'No active gold rate matches the updated product purity.' });
+      const activeRate = findGoldRateForPurity(activeRateSet, product.purity, product.metal_type);
+      if (!activeRate) return res.status(409).json({ message: `No active ${product.metal_type || 'metal'} rate matches the updated product purity.` });
       product.gold_rate_per_gram = activeRate.rate_per_gram;
       product.gold_rate_date = activeRateSet.rate_date;
     } else {

@@ -64,15 +64,21 @@ test('rejects missing, zero, and invalid rate values', () => {
   assert.match(normalizeBatch(invalidDate).error, /rate date/i);
 });
 
-test('matches loan purity labels to the configured gold rate', () => {
+test('matches purity labels to the configured rate for the selected metal', () => {
   const current = {
     rates: [
       { metal_type: 'Gold', purity: '916', rate_per_gram: 9160 },
       { metal_type: 'Gold', purity: '999', rate_per_gram: 10000 },
-      { metal_type: 'Silver', purity: '999', rate_per_gram: 150 }
+      { metal_type: 'Silver', purity: '999', rate_per_gram: 150 },
+      { metal_type: 'Platinum', purity: '950', rate_per_gram: 3500 },
+      { metal_type: 'Diamond', purity: 'D-F / VVS', rate_per_gram: 250000, rate_unit: 'carat' }
     ]
   };
   assert.equal(findGoldRateForPurity(current, '22K')?.rate_per_gram, 9160);
   assert.equal(findGoldRateForPurity(current, '24K / 999')?.rate_per_gram, 10000);
+  assert.equal(findGoldRateForPurity(current, '999', 'Silver')?.rate_per_gram, 150);
+  assert.equal(findGoldRateForPurity(current, '950', 'Platinum')?.rate_per_gram, 3500);
+  assert.equal(findGoldRateForPurity(current, 'D-F / VVS', 'Diamond')?.rate_per_gram, 250000);
+  assert.equal(findGoldRateForPurity(current, 'D-F / VVS', 'Gold'), null);
   assert.equal(findGoldRateForPurity(current, '14K')?.rate_per_gram, undefined);
 });
