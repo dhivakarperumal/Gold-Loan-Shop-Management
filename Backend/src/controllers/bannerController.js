@@ -2,6 +2,7 @@ const {
   createBanner,
   deleteBanner,
   getBannerById,
+  listActiveBanners,
   listBanners,
   updateBanner
 } = require('../modules/bannerModule');
@@ -65,6 +66,14 @@ function uploadedBannerPath(file) {
 async function getBanners(req, res, next) {
   try {
     return res.json(await listBanners());
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function getActiveBanners(req, res, next) {
+  try {
+    return res.json(await listActiveBanners());
   } catch (error) {
     return next(error);
   }
@@ -155,6 +164,7 @@ async function cleanFailedBannerUpload(req, res, next) {
 
 module.exports = {
   cleanFailedBannerUpload,
+  getActiveBanners,
   getBanners,
   postBanner,
   postBannerUpload,

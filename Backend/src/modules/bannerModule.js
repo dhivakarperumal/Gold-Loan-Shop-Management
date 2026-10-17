@@ -31,6 +31,16 @@ async function listBanners() {
   return rows.map((banner) => ({ ...banner, active: Boolean(banner.active) }));
 }
 
+async function listActiveBanners() {
+  const [rows] = await pool.query(`
+    SELECT id, title, subtitle, description, image, mobile_image, link, type, active
+    FROM banners
+    WHERE active = TRUE
+    ORDER BY created_at DESC, id DESC
+  `);
+  return rows.map((banner) => ({ ...banner, active: Boolean(banner.active) }));
+}
+
 async function createBanner(banner) {
   const [result] = await pool.execute(
     `INSERT INTO banners (title, subtitle, description, image, mobile_image, link, type, active, user_id)
@@ -89,6 +99,7 @@ module.exports = {
   deleteBanner,
   getBannerById,
   initializeBannerModule,
+  listActiveBanners,
   listBanners,
   updateBanner
 };

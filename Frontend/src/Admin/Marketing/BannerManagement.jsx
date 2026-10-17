@@ -44,7 +44,7 @@ const BannerManagement = () => {
     const fetchBanners = async () => {
         setLoading(true);
         try {
-            const response = await api.get("/banners");
+            const response = await api.get("/banners/manage");
             setBanners(Array.isArray(response.data) ? response.data : []);
         } catch (error) {
             console.error("Error fetching banners:", error);

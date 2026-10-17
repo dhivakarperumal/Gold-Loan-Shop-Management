@@ -2,6 +2,7 @@ const express = require('express');
 const requireAdmin = require('../middleware/requireAdmin');
 const {
   cleanFailedBannerUpload,
+  getActiveBanners,
   getBanners,
   postBanner,
   postBannerUpload,
@@ -21,7 +22,8 @@ function receiveBannerImage(req, res, next) {
   });
 }
 
-router.get('/', requireAdmin, getBanners);
+router.get('/', getActiveBanners);
+router.get('/manage', requireAdmin, getBanners);
 router.post('/upload', requireAdmin, receiveBannerImage, postBannerUpload);
 router.post('/', requireAdmin, postBanner);
 router.put('/:id', requireAdmin, putBanner);
