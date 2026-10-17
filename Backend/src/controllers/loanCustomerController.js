@@ -73,15 +73,14 @@ function normalizeCustomer(body) {
   }
   const requiredFields = [
     'email', 'gender', 'address', 'city', 'district', 'state', 'pincode',
-    'guarantor_name', 'guarantor_mobile', 'guarantor_email',
-    'guarantor_relationship', 'guarantor_address'
+    'guarantor_name', 'guarantor_mobile', 'guarantor_relationship', 'guarantor_address'
   ];
   const missingField = requiredFields.find((field) => !customer[field]);
   if (missingField) {
     return { error: `${missingField.replaceAll('_', ' ')} is required` };
   }
-  if ([customer.email, customer.guarantor_email].some((email) => email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
-    return { error: 'Enter a valid email address for the customer and guarantor' };
+  if (customer.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email)) {
+    return { error: 'Enter a valid email address' };
   }
   if (!CUSTOMER_TYPES.has(customer.customer_type)) {
     return { error: 'Customer type must be Individual or Business' };

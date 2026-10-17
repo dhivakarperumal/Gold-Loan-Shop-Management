@@ -187,7 +187,6 @@ export default function LoanCustomerDetails() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <Detail label="Guarantor Name" value={customer.guarantor_name} />
           <Detail label="Guarantor Mobile" value={customer.guarantor_mobile} />
-          <Detail label="Guarantor Email" value={customer.guarantor_email} />
           <Detail label="Relationship to Customer" value={customer.guarantor_relationship} />
           <div className="sm:col-span-2 lg:col-span-3">
             <Detail label="Guarantor Address" value={customer.guarantor_address} />

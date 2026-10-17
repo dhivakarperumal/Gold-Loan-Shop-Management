@@ -734,12 +734,11 @@ export default function LoanCustomerManagement() {
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <CustomerField label="Guarantor Name" name="guarantor_name" value={form.guarantor_name} onChange={handleChange} required placeholder="Enter guarantor's full name" />
                     <CustomerField label="Guarantor Mobile" name="guarantor_mobile" value={form.guarantor_mobile} onChange={handleChange} required placeholder="Enter phone number" />
-                    <CustomerField label="Guarantor Email" name="guarantor_email" type="email" value={form.guarantor_email} onChange={handleChange} required placeholder="Enter email address" />
                     <CustomerField label="Relationship to Customer" name="guarantor_relationship" value={form.guarantor_relationship} onChange={handleChange} required placeholder="e.g. Spouse, Parent, Friend" />
+                    <label className={labelClass} htmlFor="guarantor-address">Guarantor Address<span className="ml-1 text-red-500">*</span>
+                      <textarea id="guarantor-address" className={`${inputClass} min-h-20`} name="guarantor_address" value={form.guarantor_address || ""} onChange={handleChange} rows="2" required placeholder="Enter guarantor's full address" />
+                    </label>
                   </div>
-                  <label className={labelClass} htmlFor="guarantor-address">Guarantor Address<span className="ml-1 text-red-500">*</span>
-                    <textarea id="guarantor-address" className={`${inputClass} min-h-20`} name="guarantor_address" value={form.guarantor_address || ""} onChange={handleChange} rows="2" required placeholder="Enter guarantor's full address" />
-                  </label>
                 </section>
                 <div>
                   <p className={labelClass}>Customer Photo</p>
