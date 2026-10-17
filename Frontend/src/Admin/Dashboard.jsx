@@ -288,8 +288,8 @@ const Dashboard = () => {
       id: "active_gold_loans",
       icon: <FaCoins />,
       iconStyle: { background: "linear-gradient(145deg, #F7C84B, #B87500)", color: "#FFFFFF" },
-      cardStyle: { backgroundColor: "#33254A", borderColor: "#7050A2" },
-      chartColor: "#D8B4FE"
+      cardStyle: { backgroundColor: "#3D3019", borderColor: "#8B6D2E" },
+      chartColor: "#FCD36B"
     },
     {
       id: "today_collection",
@@ -308,15 +308,15 @@ const Dashboard = () => {
     {
       id: "total_products",
       icon: <FiBox />,
-      iconStyle: { backgroundColor: "#2563EB", color: "#FFFFFF" },
-      cardStyle: { backgroundColor: "#172B4D", borderColor: "#3B68A5" },
-      chartColor: "#93C5FD"
+      iconStyle: { backgroundColor: "#00838F", color: "#FFFFFF" },
+      cardStyle: { backgroundColor: "#263238", borderColor: "#546E7A" },
+      chartColor: "#80DEEA"
     },
     {
       id: "total_categories",
       icon: <FiLayers />,
       iconStyle: { backgroundColor: "#7C3AED", color: "#FFFFFF" },
-      cardStyle: { backgroundColor: "#32234A", borderColor: "#7350A0" },
+      cardStyle: { backgroundColor: "#252849", borderColor: "#555F9A" },
       chartColor: "#D8B4FE"
     },
     {
@@ -519,12 +519,12 @@ const Dashboard = () => {
         </div>
       </section>
 
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid grid-cols-1 gap-x-2 gap-y-[20px] sm:grid-cols-2 xl:grid-cols-4">
         {summaryCards.map((card) => (
           <article
             key={card.id}
             style={card.cardStyle}
-            className="relative flex h-[132px] min-w-0 items-center gap-3 overflow-hidden rounded-xl border-l-4 border-y border-r p-3 shadow-[0_3px_12px_rgba(30,41,59,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-md"
+            className="relative flex h-[160px] min-w-0 items-center gap-3 overflow-hidden rounded-xl border-l-4 border-y border-r p-3 shadow-[0_3px_12px_rgba(30,41,59,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-md"
           >
             <div style={card.iconStyle} className="z-10 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xl shadow-md">
               {card.icon}
