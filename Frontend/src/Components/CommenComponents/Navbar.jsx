@@ -8,20 +8,18 @@ import {
   User,
   Heart,
   Gem,
-  Search,
-  ShoppingBag
+  Search
 } from "lucide-react";
 import PageContainer from "./PageContainer";
 import api from "../../api";
 import { FiHome, FiShoppingBag, FiGrid, FiFileText, FiPhone, FiChevronDown } from "react-icons/fi";
 import { FiChevronRight, FiTag } from "react-icons/fi";
 import WishlistDrawer from "./WishlistDrawer";
-import CartDrawer from "./CartDrawer";
 
 const Navbar = () => {
 
   const { user, logout } = useContext(AuthContext);
-  const { wishlist, cart } = useContext(StoreContext);
+  const { wishlist } = useContext(StoreContext);
   const [mobilePages, setMobilePages] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
@@ -36,7 +34,6 @@ const Navbar = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [mobileCategory, setMobileCategory] = useState(false);
   const [wishlistOpen, setWishlistOpen] = useState(false);
-  const [cartOpen, setCartOpen] = useState(false);
 
   const menuRef = useRef();
   const dropdownRef = useRef();
@@ -152,10 +149,25 @@ const Navbar = () => {
     <nav className="sticky top-0 z-50 border-b border-[#eadfce] bg-white/95 shadow-sm backdrop-blur-lg">
 
       <PageContainer className="px-3 sm:px-5 lg:px-[2%]">
-        <div className="flex min-h-[76px] items-center gap-3 xl:gap-5">
+        <div className="flex min-h-[76px] items-center gap-2 xl:gap-4">
           <Link to="/" className="flex shrink-0 items-center" aria-label="Sri Golds home">
             <img src="/images/logo.png" alt="Sri Golds" className="h-12 w-20 object-contain sm:h-14 sm:w-24" />
           </Link>
+
+          <form onSubmit={handleSearch} className="hidden w-[clamp(190px,20vw,300px)] shrink-0 items-center overflow-hidden rounded-lg border border-[#d9d9d9] bg-white md:flex">
+            <Search className="ml-3 h-5 w-5 shrink-0 text-[#182c29]" />
+            <input
+              type="search"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search for jewelry, collections..."
+              aria-label="Search jewelry and collections"
+              className="min-w-0 flex-1 px-3 py-3 text-sm outline-none placeholder:text-gray-500"
+            />
+            <button type="submit" aria-label="Search" className="flex h-11 w-12 shrink-0 items-center justify-center bg-[#d69b17] text-white transition hover:bg-[#bd850f]">
+              <Search className="h-5 w-5" />
+            </button>
+          </form>
 
           <div ref={dropdownRef} className="hidden min-w-0 flex-1 items-center justify-center xl:flex">
             <div className="flex h-full items-center">
@@ -266,21 +278,6 @@ const Navbar = () => {
             </div>
           </div>
 
-          <form onSubmit={handleSearch} className="hidden min-w-[180px] max-w-[340px] flex-1 items-center overflow-hidden rounded-lg border border-[#d9d9d9] bg-white md:flex">
-            <Search className="ml-3 h-5 w-5 shrink-0 text-[#182c29]" />
-            <input
-              type="search"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search for jewelry, collections..."
-              aria-label="Search jewelry and collections"
-              className="min-w-0 flex-1 px-3 py-3 text-sm outline-none placeholder:text-gray-500"
-            />
-            <button type="submit" aria-label="Search" className="flex h-11 w-12 shrink-0 items-center justify-center bg-[#d69b17] text-white transition hover:bg-[#bd850f]">
-              <Search className="h-5 w-5" />
-            </button>
-          </form>
-
           <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2 xl:ml-0">
 
             <button
@@ -323,21 +320,6 @@ const Navbar = () => {
                 <span className="text-xs font-semibold">Account</span>
               </Link>
             )}
-
-            <button
-              type="button"
-              onClick={() => setCartOpen(true)}
-              aria-label="Open shopping bag"
-              className="relative flex min-w-12 flex-col items-center gap-0.5 rounded-lg px-2 py-2 text-[#172c28] transition hover:bg-[#fff8e9] hover:text-[#a77525]"
-            >
-              <ShoppingBag className="h-5 w-5" />
-              <span className="hidden text-xs font-semibold sm:block">My Bag</span>
-              {cart.length > 0 && (
-                <span className="absolute right-1 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#d69b17] px-1 text-[9px] font-black text-white">
-                  {cart.length > 9 ? "9+" : cart.length}
-                </span>
-              )}
-            </button>
 
             <button
               type="button"
@@ -602,7 +584,6 @@ const Navbar = () => {
           </aside>
       </div>
       <WishlistDrawer isOpen={wishlistOpen} onClose={() => setWishlistOpen(false)} />
-      <CartDrawer isOpen={cartOpen} onClose={() => setCartOpen(false)} />
     </nav>
 
   );
