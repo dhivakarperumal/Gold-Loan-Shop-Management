@@ -1,9 +1,44 @@
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { FaArrowRight, FaHeart, FaShoppingBag } from "react-icons/fa";
+import api from "../../api";
 import { formatProductPrice, getProductDetails, getProductImageUrl } from "./productDisplay";
 
-const Diamond = ({ products, loading, error }) => {
+const Diamond = () => {
+    const [products, setProducts] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(false);
+
+    useEffect(() => {
+        const controller = new AbortController();
+
+        const fetchProducts = async () => {
+            try {
+                const response = await api.get("/products", {
+                    params: { page: 1, limit: 100, search: "", status: "Active" },
+                    signal: controller.signal,
+                });
+                if (!Array.isArray(response.data?.products)) {
+                    throw new TypeError("The products response must contain a products array");
+                }
+                setProducts(response.data.products.filter((product) =>
+                    [product.name, product.category, product.subcategory, product.metal_type]
+                        .some((value) => String(value || "").toLowerCase().includes("diamond"))
+                ));
+            } catch (fetchError) {
+                if (!controller.signal.aborted) {
+                    console.error("Failed to fetch diamond products:", fetchError);
+                    setError(true);
+                }
+            } finally {
+                if (!controller.signal.aborted) setLoading(false);
+            }
+        };
+
+        fetchProducts();
+        return () => controller.abort();
+    }, []);
+
     return (
         <section className="w-full bg-[#fffdf8] px-3 py-4 sm:px-5 lg:px-7">
             <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-4 lg:grid-cols-[2fr_0.9fr]">
