@@ -1,6 +1,7 @@
 
 import React, { useEffect, useState } from "react";
 import { FaArrowRight, FaHeart, FaShoppingBag } from "react-icons/fa";
+import { Autoplay } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
 import api from "../../api";
 import { formatProductPrice, getProductDetails, getProductImageUrl } from "./productDisplay";
@@ -76,13 +77,21 @@ const Gold = () => {
                         <p className="py-8 text-center text-sm text-[#777066]">No gold products available.</p>
                     ) : (
                         <Swiper
-                            slidesPerView={2.1}
+                            modules={[Autoplay]}
+                            loop={products.length > 1}
+                            autoplay={products.length > 1 ? {
+                                delay: 2200,
+                                disableOnInteraction: false,
+                                pauseOnMouseEnter: true,
+                            } : false}
+                            speed={700}
+                            slidesPerView={Math.max(1, Math.min(2.1, products.length - 1))}
                             spaceBetween={12}
                             breakpoints={{
-                                480: { slidesPerView: 2.5 },
-                                640: { slidesPerView: 3 },
-                                1024: { slidesPerView: 3.5 },
-                                1280: { slidesPerView: 4 },
+                                480: { slidesPerView: Math.max(1, Math.min(2, products.length - 1)) },
+                                640: { slidesPerView: Math.max(1, Math.min(3, products.length - 1)) },
+                                1024: { slidesPerView: Math.max(1, Math.min(3, products.length - 1)) },
+                                1280: { slidesPerView: Math.max(1, Math.min(4, products.length - 1)) },
                             }}
                             grabCursor
                             className="!pb-2"
