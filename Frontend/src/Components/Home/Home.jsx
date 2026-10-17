@@ -1,7 +1,8 @@
 import React from 'react'
-import Category from '../CommenComponents/Category'
-import Products from '../CommenComponents/Products'
-import Hero from '../CommenComponents/Hero'
+import Category from './Category'
+import Products from './Products'
+import Hero from './Hero'
+import Banner from './Banner'
 
 
 const Home = () => {
@@ -9,6 +10,7 @@ const Home = () => {
     <div>
     <Hero/>
     <Category />
+    <Banner />
     <Products/>
     </div>
   )
