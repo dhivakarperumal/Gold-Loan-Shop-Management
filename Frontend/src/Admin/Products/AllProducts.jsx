@@ -298,6 +298,7 @@ const AllProducts = () => {
                                             <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider w-12">S.No.</th>
                                             <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Jewelry</th>
                                             <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Category</th>
+                                            <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Metal</th>
                                             <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Price</th>
                                             <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Stock</th>
                                             <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Status</th>
@@ -334,6 +335,9 @@ const AllProducts = () => {
                                                     <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#240046]/10 text-[#7b2cbf] border border-[#7b2cbf]/20">
                                                         {product.category || '—'}
                                                     </span>
+                                                </td>
+                                                <td className="px-4 py-4 text-sm font-medium text-slate-600">
+                                                    {product.metal_type || '—'}
                                                 </td>
                                                 <td className="px-4 py-4">
                                                     <p className="text-sm font-bold text-slate-800">₹{parseFloat(product.offer_price || product.discount_price || product.mrp || 0).toLocaleString('en-IN')}</p>
@@ -453,7 +457,12 @@ const AllProducts = () => {
                                         </div>
                                     </div>
                                     <div className="p-4">
-                                        <p className="text-[10px] text-[#7b2cbf] font-bold uppercase tracking-widest">{product.category}</p>
+                                        <div className="flex items-center justify-between gap-2">
+                                            <p className="text-[10px] text-[#7b2cbf] font-bold uppercase tracking-widest truncate">{product.category || "Uncategorized"}</p>
+                                            <p className="text-[10px] text-gray-500 font-semibold uppercase tracking-wide shrink-0">
+                                                Metal: {product.metal_type || "—"}
+                                            </p>
+                                        </div>
                                         <h4 className="text-sm font-bold text-slate-800 truncate mt-0.5">{product.name}</h4>
                                         <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-50">
                                             <div>
