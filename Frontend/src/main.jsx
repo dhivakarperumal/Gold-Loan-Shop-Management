@@ -38,6 +38,7 @@ const VideoManagement = React.lazy(() => import("./Admin/Marketing/VideoManageme
 const Reviews = React.lazy(() => import("./Admin/Pages/Reviews.jsx"));
 const Settings = React.lazy(() => import("./Admin/Pages/Settings.jsx"));
 const DailyGoldRate = React.lazy(() => import("./Admin/Pages/DailyGoldRate.jsx"));
+const Dealers = React.lazy(() => import("./Admin/Dealers/Dealers.jsx"));
 
 const ErrorPage = React.lazy(() => import("./Admin/Pages/ErrorPage.jsx"));
 
@@ -85,6 +86,7 @@ const router = createBrowserRouter([
       { path: "banners", element: <BannerManagement /> },
       { path: "videos", element: <VideoManagement /> },
       { path: "reviews", element: <Reviews /> },
+      { path: "dealers/*", element: <Dealers /> },
       { path: "settings", element: <Settings /> },
       { path: "settings/daily-gold-rate", element: <DailyGoldRate /> },
       // { path: "profile", element: <Profile /> },

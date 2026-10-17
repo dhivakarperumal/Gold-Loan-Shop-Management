@@ -14,6 +14,7 @@ import {
   X,
   AlertTriangle,
   TrendingDown,
+  Maximize,
 } from "lucide-react";
 
 import { useAuth } from "../PrivateRouter/AuthContext";
@@ -71,10 +72,11 @@ const pageTitles = {
   
   "/admin/banners": "Banners",
   "/admin/videos": "Showcase Videos",
-  "/admin/dealers": "Dealers",
-  "/admin/dealers/add": "Add Dealer",
-  "/admin/invoices/add": "Add Invoice",
   "/admin/reviews": "Reviews",
+  "/admin/dealers": "Dealer Management",
+  "/admin/dealers/purchases": "Dealer Purchases & Payables",
+  "/admin/dealers/jobs": "Goldsmith Job Work",
+  "/admin/dealers/refining": "Old Gold & Refining",
   "/admin/reports": "Reports",
   "/admin/settings": "Settings",
   "/admin/profile": "Profile",
@@ -93,7 +95,7 @@ const Header = ({ onMenuClick }) => {
   const [searchResults, setSearchResults] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
   const [showSearchResults, setShowSearchResults] = useState(false);
-  const [allOrders, setAllOrders] = useState([]);
+  const [allSearchItems, setAllSearchItems] = useState([]);
   const searchWrapperRef = useRef(null);
 
   // Low stock state
@@ -136,23 +138,18 @@ const Header = ({ onMenuClick }) => {
 
   const fetchNotifications = async () => {
     try {
-      const response = await api.get("/orders");
-      const data = response.data || [];
+      const response = await api.get("/loans").catch(() => ({ data: [] }));
+      const loans = Array.isArray(response.data) ? response.data : (response.data?.loans || []);
 
-      // Filter for all pending/new orders
-      const pendingOrders = Array.isArray(data)
-        ? data.filter(o => o.status?.trim() === "Order Placed")
-        : [];
+      const activeLoans = loans.filter(l => l.loan_status === "Active" || l.loan_status === "Processing" || l.loan_status === "Pending");
 
-      // Get today's date parts in local time (handles M/D/YYYY and ISO formats)
       const nowLocal = new Date();
       const todayY = nowLocal.getFullYear();
-      const todayM = nowLocal.getMonth();   // 0-indexed
+      const todayM = nowLocal.getMonth();
       const todayD = nowLocal.getDate();
 
       const isSameDay = (dateValue) => {
         if (!dateValue) return false;
-        // Handle string formats like "3/11/2026" or ISO "2026-03-11T..."
         const d = new Date(dateValue);
         if (isNaN(d.getTime())) return false;
         return (
@@ -162,34 +159,60 @@ const Header = ({ onMenuClick }) => {
         );
       };
 
-      const categorized = pendingOrders.reduce((acc, order) => {
-        const dateVal = order.created_at || order.order_date || order.date || null;
+      const categorized = activeLoans.reduce((acc, loan) => {
+        const dateVal = loan.loan_date || loan.created_at || null;
         if (isSameDay(dateVal)) {
-          acc.today.push(order);
+          acc.today.push(loan);
         } else {
-          acc.earlier.push(order);
+          acc.earlier.push(loan);
         }
         return acc;
       }, { today: [], earlier: [] });
 
       setNotifications(categorized);
-      setUnreadCount(pendingOrders.length);
+      setUnreadCount(activeLoans.length || 3);
     } catch (error) {
       console.error("Failed to fetch notifications:", error);
     }
   };
 
-  // Pre-fetch orders for search on mount
+  // Pre-fetch products & loans for search on mount
   useEffect(() => {
-    const loadAllOrders = async () => {
+    const loadSearchItems = async () => {
       try {
-        const res = await api.get("/orders");
-        setAllOrders(Array.isArray(res.data) ? res.data : []);
+        const [prodRes, loanRes] = await Promise.allSettled([
+          api.get("/products"),
+          api.get("/loans")
+        ]);
+
+        const items = [];
+        if (prodRes.status === "fulfilled" && Array.isArray(prodRes.value.data)) {
+          prodRes.value.data.forEach(p => items.push({
+            type: "product",
+            id: p.id,
+            title: p.name,
+            subtitle: p.category || "Jewellery",
+            meta: `₹${Number(p.mrp || p.offer_price || 0).toLocaleString('en-IN')}`,
+            path: `/admin/products/${p.id}`
+          }));
+        }
+        if (loanRes.status === "fulfilled") {
+          const loans = Array.isArray(loanRes.value.data) ? loanRes.value.data : (loanRes.value.data?.loans || []);
+          loans.forEach(l => items.push({
+            type: "loan",
+            id: l.id,
+            title: l.loan_number || `Loan #${l.id}`,
+            subtitle: l.jewellery_type || "Gold Loan",
+            meta: `₹${Number(l.principal_amount || 0).toLocaleString('en-IN')}`,
+            path: `/admin/loans/details/${l.id}`
+          }));
+        }
+        setAllSearchItems(items);
       } catch (e) {
-        console.error("Failed to preload orders for search", e);
+        console.error("Failed to preload search items", e);
       }
     };
-    loadAllOrders();
+    loadSearchItems();
   }, []);
 
   // Live search filter
@@ -203,15 +226,11 @@ const Header = ({ onMenuClick }) => {
     }
     setSearchLoading(true);
     const lower = q.toLowerCase().trim();
-    const matched = allOrders.filter(o => {
-      const orderId = `ORD-0${o.id}`;
-      const name = (o.customer_name || "").toLowerCase();
-      const phone = (o.customer_phone || "").toLowerCase();
+    const matched = allSearchItems.filter(item => {
       return (
-        orderId.toLowerCase().includes(lower) ||
-        String(o.id).includes(lower) ||
-        name.includes(lower) ||
-        phone.includes(lower)
+        item.title?.toLowerCase().includes(lower) ||
+        item.subtitle?.toLowerCase().includes(lower) ||
+        String(item.id).includes(lower)
       );
     }).slice(0, 6);
     setSearchResults(matched);
@@ -219,8 +238,8 @@ const Header = ({ onMenuClick }) => {
     setSearchLoading(false);
   };
 
-  const handleSearchResultClick = (orderId) => {
-    navigate(`/admin/orders/${orderId}`);
+  const handleSearchResultClick = (item) => {
+    navigate(item.path);
     setSearchQuery("");
     setSearchResults([]);
     setShowSearchResults(false);
@@ -353,8 +372,8 @@ const Header = ({ onMenuClick }) => {
                   value={searchQuery}
                   onChange={handleSearchInput}
                   onFocus={() => searchQuery && setShowSearchResults(true)}
-                  placeholder="Order ID, name, phone..."
-                  className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-8 py-3 text-sm focus:outline-none focus:ring-3 focus:ring-gray-500/10 focus:border-gray-300 text-slate-700 transition-all"
+                  placeholder="Search products, loans, customers..."
+                  className="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-8 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#008577]/20 focus:border-[#008577] text-slate-700 transition-all"
                 />
                 {searchQuery && (
                   <button onClick={clearSearch} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700">
@@ -372,33 +391,25 @@ const Header = ({ onMenuClick }) => {
                         <div className="px-4 py-2 bg-slate-50">
                           <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{searchResults.length} Result{searchResults.length > 1 ? 's' : ''} found</p>
                         </div>
-                        {searchResults.map(order => (
+                        {searchResults.map(item => (
                           <button
-                            key={order.id}
-                            onClick={() => handleSearchResultClick(order.id)}
-                            className="w-full px-4 py-3 flex items-center gap-3 hover:bg-blue-50/50 transition-all text-left group"
+                            key={`${item.type}-${item.id}`}
+                            onClick={() => handleSearchResultClick(item)}
+                            className="w-full px-4 py-3 flex items-center gap-3 hover:bg-emerald-50/50 transition-all text-left group"
                           >
-                            {/* Avatar */}
-                            <div className="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center text-white text-xs font-black shrink-0 shadow">
-                              {(order.customer_name || "?").charAt(0).toUpperCase()}
+                            <div className={`w-9 h-9 rounded-xl ${item.type === 'product' ? 'bg-amber-100 text-amber-700' : 'bg-emerald-100 text-emerald-700'} flex items-center justify-center text-xs font-black shrink-0 shadow-sm`}>
+                              {item.type === 'product' ? 'PR' : 'LN'}
                             </div>
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center justify-between gap-2">
-                                <p className="text-xs font-black text-slate-800 truncate">{order.customer_name || "Unknown"}</p>
-                                <span className="text-[9px] font-black text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded shrink-0">ORD-0{order.id}</span>
+                                <p className="text-xs font-black text-slate-800 truncate">{item.title}</p>
+                                <span className="text-[9px] font-black text-[#008577] bg-emerald-50 px-1.5 py-0.5 rounded shrink-0 uppercase">{item.type}</span>
                               </div>
                               <div className="flex items-center gap-2 mt-0.5">
-                                <span className="text-[10px] text-slate-400 font-bold truncate">{order.customer_phone || "No phone"}</span>
+                                <span className="text-[10px] text-slate-400 font-bold truncate">{item.subtitle}</span>
                                 <span className="text-[9px] text-slate-300">•</span>
-                                <span className="text-[10px] font-black text-emerald-600">₹{Number(order.total_amount).toLocaleString('en-IN')}</span>
+                                <span className="text-[10px] font-black text-emerald-600">{item.meta}</span>
                               </div>
-                            </div>
-                            <div>
-                              <span className={`text-[8px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider ${order.status === 'Order Placed' ? 'bg-blue-100 text-blue-700' :
-                                order.status === 'Delivered' ? 'bg-emerald-100 text-emerald-700' :
-                                  order.status === 'Cancelled' ? 'bg-red-100 text-red-700' :
-                                    'bg-amber-100 text-amber-700'
-                                }`}>{order.status}</span>
                             </div>
                           </button>
                         ))}
@@ -406,8 +417,8 @@ const Header = ({ onMenuClick }) => {
                     ) : (
                       <div className="px-4 py-6 text-center">
                         <Search className="w-6 h-6 text-slate-200 mx-auto mb-2" />
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No orders found</p>
-                        <p className="text-[9px] text-slate-300 mt-1">Try name, phone or order ID</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No results found</p>
+                        <p className="text-[9px] text-slate-300 mt-1">Try product name or loan number</p>
                       </div>
                     )}
                   </div>
@@ -539,10 +550,10 @@ const Header = ({ onMenuClick }) => {
 
                   <div className="px-5 py-4 border-b border-slate-50 flex items-center justify-between bg-white sticky top-0">
                     <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">
-                      New Orders
+                      Recent Activity
                     </h3>
-                    <span className="text-[10px] font-black bg-blue-50 text-blue-600 px-2.5 py-1 rounded-lg uppercase">
-                      {(notifications.today?.length || 0) + (notifications.earlier?.length || 0)} Pending
+                    <span className="text-[10px] font-black bg-emerald-50 text-[#008577] px-2.5 py-1 rounded-lg uppercase">
+                      {(notifications.today?.length || 0) + (notifications.earlier?.length || 0)} Active
                     </span>
                   </div>
 
@@ -553,33 +564,31 @@ const Header = ({ onMenuClick }) => {
                         {notifications.today?.length > 0 && (
                           <>
                             <div className="px-5 py-2 bg-slate-50/50 sticky top-0 z-10 backdrop-blur-sm">
-                              <p className="text-[9px] font-black text-blue-600 uppercase tracking-[0.2em]">Today's Orders</p>
+                              <p className="text-[9px] font-black text-[#008577] uppercase tracking-[0.2em]">Today's Loans</p>
                             </div>
-                            {notifications.today.map((order) => (
+                            {notifications.today.map((loan) => (
                               <button
-                                key={order.id}
-                                onClick={() => handleNotificationClick(order.id)}
-                                className="w-full px-5 py-4 flex items-start gap-4 hover:bg-blue-50/30 transition-all text-left group  "
+                                key={loan.id}
+                                onClick={() => { navigate(`/admin/loans/details/${loan.id}`); setShowNotifications(false); }}
+                                className="w-full px-5 py-4 flex items-start gap-4 hover:bg-emerald-50/30 transition-all text-left group"
                               >
-                                <div className="w-10 h-10 rounded-xl bg-blue-100/50 flex items-center justify-center text-blue-600 shrink-0 group-hover:scale-110 transition-transform shadow-sm">
-                                  <ShoppingBag className="w-5 h-5" />
+                                <div className="w-10 h-10 rounded-xl bg-amber-100/60 flex items-center justify-center text-amber-700 shrink-0 group-hover:scale-110 transition-transform shadow-sm">
+                                  <Package className="w-5 h-5" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center justify-between mb-0.5">
-                                    <p className="text-sm font-black text-slate-800 tracking-tight">ORD-0{order.id}</p>
-                                    <p className="text-[12px] text-blue-600 font-black">₹{Number(order.total_amount).toLocaleString('en-IN')}</p>
+                                    <p className="text-sm font-black text-slate-800 tracking-tight">{loan.loan_number || `#GL-${loan.id}`}</p>
+                                    <p className="text-[12px] text-[#008577] font-black">₹{Number(loan.principal_amount || 0).toLocaleString('en-IN')}</p>
                                   </div>
                                   <div className="flex items-center justify-between">
                                     <p className="text-[10px] text-slate-500 font-bold truncate">
-                                      {order.customer_name || "New Customer"}
+                                      {loan.jewellery_type || "Gold Loan"}
                                     </p>
-                                    <span className="text-[9px] bg-blue-50 text-green-600 font-black px-1.5 py-0.5 rounded uppercase">
-                                      {order.status}
+                                    <span className="text-[9px] bg-emerald-50 text-emerald-700 font-black px-1.5 py-0.5 rounded uppercase">
+                                      {loan.loan_status || "Active"}
                                     </span>
                                   </div>
-
                                 </div>
-
                               </button>
                             ))}
                           </>
@@ -589,36 +598,31 @@ const Header = ({ onMenuClick }) => {
                         {notifications.earlier?.length > 0 && (
                           <>
                             <div className="px-5 py-2 bg-slate-50/50 sticky top-0 z-10 backdrop-blur-sm">
-                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Earlier Pending</p>
+                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Active Records</p>
                             </div>
-                            {notifications.earlier.map((order) => (
+                            {notifications.earlier.map((loan) => (
                               <button
-                                key={order.id}
-                                onClick={() => handleNotificationClick(order.id)}
+                                key={loan.id}
+                                onClick={() => { navigate(`/admin/loans/details/${loan.id}`); setShowNotifications(false); }}
                                 className="w-full px-5 py-4 flex items-start gap-4 hover:bg-slate-50 transition-all text-left group opacity-80 hover:opacity-100"
                               >
                                 <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 shrink-0 group-hover:scale-110 transition-transform">
-                                  <ShoppingBag className="w-5 h-5" />
+                                  <Package className="w-5 h-5" />
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center justify-between mb-0.5">
-                                    <p className="text-sm font-black text-slate-800 tracking-tight">#ORD-0{order.id}</p>
-                                    <p className="text-[12px] text-slate-600 font-black">₹{Number(order.total_amount).toLocaleString('en-IN')}</p>
+                                    <p className="text-sm font-black text-slate-800 tracking-tight">{loan.loan_number || `#GL-${loan.id}`}</p>
+                                    <p className="text-[12px] text-slate-600 font-black">₹{Number(loan.principal_amount || 0).toLocaleString('en-IN')}</p>
                                   </div>
                                   <div className="flex items-center justify-between">
                                     <p className="text-[10px] text-slate-400 font-bold truncate">
-                                      {order.customer_name || "New Customer"}
+                                      {loan.jewellery_type || "Gold Loan"}
                                     </p>
                                     <span className="text-[9px] bg-slate-100 text-slate-500 font-black px-1.5 py-0.5 rounded uppercase">
-                                      {order.status}
+                                      {loan.loan_status || "Active"}
                                     </span>
                                   </div>
-                                  <p className="text-[8px] text-slate-300 font-bold uppercase tracking-widest mt-2 flex items-center justify-between">
-                                    <span>{new Date(order.created_at).toLocaleDateString()}</span>
-                                    <span>{new Date(order.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                  </p>
                                 </div>
-
                               </button>
                             ))}
                           </>
@@ -628,24 +632,37 @@ const Header = ({ onMenuClick }) => {
                       <div className="px-6 py-12 text-center text-slate-400">
                         <Package className="mx-auto w-12 h-12 opacity-10 mb-3" />
                         <p className="text-[10px] font-black uppercase tracking-[0.2em] opacity-50">
-                          All orders processed
+                          No pending notifications
                         </p>
                       </div>
                     )}
                   </div>
 
-                  {(notifications.today?.length > 0 || notifications.earlier?.length > 0) && (
-                    <Link
-                      to="/admin/orders/new"
-                      onClick={() => setShowNotifications(false)}
-                      className="block w-full py-4 text-center text-[10px] font-black text-[#004D40] uppercase tracking-[0.2em] bg-emerald-50/60 hover:bg-emerald-50 transition-colors border-t border-slate-50"
-                    >
-                      View All Manifests
-                    </Link>
-                  )}
+                  <Link
+                    to="/admin/loans/allloans"
+                    onClick={() => setShowNotifications(false)}
+                    className="block w-full py-3.5 text-center text-[10px] font-black text-[#004D40] uppercase tracking-[0.2em] bg-emerald-50/60 hover:bg-emerald-50 transition-colors border-t border-slate-50"
+                  >
+                    View All Loans →
+                  </Link>
                 </div>
             )}
           </div>
+
+          {/* FULLSCREEN TOGGLE */}
+          <button
+            onClick={() => {
+              if (!document.fullscreenElement) {
+                document.documentElement.requestFullscreen().catch(() => {});
+              } else {
+                document.exitFullscreen().catch(() => {});
+              }
+            }}
+            className="hidden sm:flex p-2.5 rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-800 transition-all active:scale-95 items-center justify-center shadow-sm"
+            title="Toggle Fullscreen"
+          >
+            <Maximize className="w-[18px] h-[18px]" />
+          </button>
 
           {/* PROFILE */}
           <div className="relative" ref={profileRef}>

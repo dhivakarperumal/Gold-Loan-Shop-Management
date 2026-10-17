@@ -84,8 +84,10 @@ const navItems = [
     label: "Dealers",
     icon: Handshake,
     children: [
-      { path: "/admin/dealers", label: "Dealers List", icon: List },
-      { path: "/admin/invoices/add", label: "New Invoice", icon: PlusCircle },
+      { path: "/admin/dealers", label: "Dealer Master", icon: List },
+      { path: "/admin/dealers/purchases", label: "Purchases & Payables", icon: Files },
+      { path: "/admin/dealers/jobs", label: "Goldsmith Job Work", icon: HandCoins },
+      { path: "/admin/dealers/refining", label: "Old Gold & Refining", icon: Gem },
     ],
   },
   { path: "/admin/reports", label: "Reports", icon: BarChart3 },
@@ -103,39 +105,16 @@ const navItems = [
 /* ================= SIDEBAR ================= */
 const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
   const location = useLocation();
-  const [orderCounts, setOrderCounts] = useState({
-    all: 0,
-    new: 0,
-    delivery: 0,
-    cancelled: 0,
-  });
 
-  /* ================= FETCH ORDER COUNTS ================= */
-  useEffect(() => {
-    const fetchOrderCounts = async () => {
-      try {
-        const response = await api.get("/orders");
-        const orders = response.data.data || [];
-
-        const counts = {
-          all: orders.length,
-          new: orders.filter(o => o.status === "New Order" || o.status === "Order Placed").length,
-          delivery: orders.filter(o => o.status === "Delivery" || o.status === "Shipped").length,
-          cancelled: orders.filter(o => o.status === "Cancelled").length,
-        };
-
-        setOrderCounts(counts);
-      } catch (error) {
-        console.error("Error fetching order counts:", error);
-      }
-    };
-
-    fetchOrderCounts();
-    // Refresh counts every 30 seconds
-    const interval = setInterval(fetchOrderCounts, 30000);
-    return () => clearInterval(interval);
-  }, []);
   /* ================= HELPERS & LOGIC ================= */
+  const getActiveChildPath = (item) => {
+    if (!item.children) return null;
+    const matchingChildren = item.children
+      .filter(child => location.pathname === child.path || location.pathname.startsWith(child.path + "/"))
+      .sort((first, second) => second.path.length - first.path.length);
+    return matchingChildren[0]?.path || null;
+  };
+
   const isActiveRoute = (item) => {
     const currentPath = location.pathname;
 
@@ -146,9 +125,7 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
 
     // 2. Dropdown parent check: check if any child is perfectly active or a sub-path
     if (item.children) {
-      return item.children.some(child =>
-        currentPath === child.path || currentPath.startsWith(child.path + "/")
-      );
+      return getActiveChildPath(item) !== null;
     }
 
     // 3. Normal item check: match exact or match as a parent path (with boundary)
@@ -272,7 +249,7 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
                     >
                       {item.children.map((sub) => {
                         const SubIcon = sub.icon;
-                        const isActive = location.pathname === sub.path;
+                        const isActive = getActiveChildPath(item) === sub.path;
 
                         // Get count badge for this item
                         let badgeCount = 0;
@@ -288,13 +265,13 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
                             onClick={() => isOpen && onClose()}
                             className={`
                               flex items-center gap-3 px-4 py-2.5 rounded-md text-xs font-medium tracking-wide transition-all
-                              ${(location.pathname === sub.path || (sub.path !== "/admin" && location.pathname.startsWith(sub.path)))
+                              ${isActive
                                 ? "bg-white/10 text-[#F5C45E] border-l-2 border-[#F5C45E]"
                                 : "text-white/65 hover:text-white hover:bg-white/5"
                               }
                             `}
                           >
-                            <SubIcon className={`w-5 h-6 shrink-0 ${(location.pathname === sub.path || (sub.path !== "/admin" && location.pathname.startsWith(sub.path))) ? "text-white" : ""}`} />
+                            <SubIcon className={`w-5 h-6 shrink-0 ${isActive ? "text-white" : ""}`} />
                             <span className="flex-1">{sub.label}</span>
                             {badgeCount > 0 && (
                               <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full min-w-fit">
