@@ -1,10 +1,10 @@
 
 import React, { useEffect, useState } from "react";
-import { FaArrowRight, FaHeart, FaShoppingBag } from "react-icons/fa";
+import { FaArrowRight } from "react-icons/fa";
 import { Autoplay } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
 import api from "../../api";
-import { formatProductPrice, getProductDetails, getProductImageUrl } from "./productDisplay";
+import ProductCard from "./ProductCard";
 
 import "swiper/css";
 
@@ -96,48 +96,9 @@ const Diamond = () => {
                         >
                             {products.map((product) => (
                                 <SwiperSlide key={product.id} className="h-auto">
-                                    <article className={`group h-full min-w-0 overflow-hidden rounded-md border border-[#eadfce] bg-white transition-all duration-300 hover:-translate-y-1 hover:shadow-md ${products.length === 1 ? "max-w-[280px]" : ""}`}>
-                                        {/* Product image */}
-                                        <div className="relative aspect-[1.12/1] overflow-hidden bg-[#f6efe4]">
-                                            <img
-                                                src={getProductImageUrl(product)}
-                                                alt={product.name}
-                                                loading="lazy"
-                                                className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                                            />
-
-                                            <button
-                                                type="button"
-                                                aria-label={`Add ${product.name} to wishlist`}
-                                                className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-md bg-white/95 text-[#81513b] shadow-sm transition-colors hover:bg-[#fff0e8] hover:text-red-600"
-                                            >
-                                                <FaHeart size={13} />
-                                            </button>
-                                        </div>
-
-                                        {/* Product details */}
-                                        <div className="p-2">
-                                            <h3 className="truncate font-serif text-xs font-semibold text-[#292018] sm:text-sm">
-                                                {product.name}
-                                            </h3>
-
-                                            <p className="mt-1 truncate text-[10px] text-[#777066] sm:text-xs">
-                                                {getProductDetails(product)}
-                                            </p>
-
-                                            <p className="mt-1 text-sm font-bold text-[#9c3218] sm:text-base">
-                                                {formatProductPrice(product)}
-                                            </p>
-
-                                            <button
-                                                type="button"
-                                                className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-sm bg-gradient-to-r from-[#efb640] to-[#ffda78] px-1 py-2 text-[10px] font-bold text-[#35240e] transition-all hover:brightness-95 sm:text-xs"
-                                            >
-                                                <FaShoppingBag size={11} />
-                                                Add to Bag
-                                            </button>
-                                        </div>
-                                    </article>
+                                    <div className={products.length === 1 ? "max-w-[280px]" : ""}>
+                                        <ProductCard product={product} />
+                                    </div>
                                 </SwiperSlide>
                             ))}
                         </Swiper>
