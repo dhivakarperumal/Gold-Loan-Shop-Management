@@ -23,9 +23,12 @@ const Category = () => {
     const fetchCategories = async () => {
       try {
         const response = await api.get("/categories", { signal: controller.signal });
-        const activeCategories = response.data.filter(
-          (category) => (category.status || "Active") === "Active"
-        );
+        if (!Array.isArray(response.data)) {
+          throw new TypeError("Category response must be an array");
+        }
+        const activeCategories = response.data
+          .filter((category) => (category.status || "Active") === "Active")
+          .sort((first, second) => Number(first.id) - Number(second.id));
         setCategories(activeCategories);
       } catch (fetchError) {
         if (!controller.signal.aborted) {

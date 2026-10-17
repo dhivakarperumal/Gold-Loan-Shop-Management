@@ -134,9 +134,11 @@ const Navbar = () => {
         if (!Array.isArray(categoryResponse.data) || !Array.isArray(metalResponse.data)) {
           throw new TypeError("Navigation category and metal responses must be arrays");
         }
-        setCategories(categoryResponse.data.filter(
-          (category) => (category.status || "Active") === "Active"
-        ));
+        setCategories(
+          categoryResponse.data
+            .filter((category) => (category.status || "Active") === "Active")
+            .sort((first, second) => Number(first.id) - Number(second.id))
+        );
         setMetals(metalResponse.data.filter((metal) => metal.status === "Active"));
       } catch (error) {
         if (!controller.signal.aborted) {
@@ -169,6 +171,9 @@ const Navbar = () => {
   const getCategorySubcategories = (category) =>
     Array.isArray(category.subcategory) ? category.subcategory.filter(Boolean) : [];
 
+  const getUserInitial = () =>
+    String(user?.name || user?.username || user?.email || "?").trim().charAt(0).toUpperCase();
+
   return (
 
     <nav className="sticky top-0 z-50 border-b border-[#eadfce] bg-white/95 shadow-sm backdrop-blur-lg">
@@ -186,7 +191,7 @@ const Navbar = () => {
                 Home
               </NavLink>
               <NavLink to="/shop" className={({ isActive }) => `flex h-[76px] min-w-[95px] flex-col items-center justify-center gap-1 border-r border-[#efe5d4] px-4 text-sm font-semibold transition hover:text-[#a77525] ${isActive ? "border-b-2 border-b-[#c68c22] text-[#164333]" : "text-[#30271b]"}`}>
-                <Gem className="h-5 w-5 text-[#c68c22]" />
+                <Gem className="h-5 w-5 text-[#174a38]" />
                 Explore
               </NavLink>
 
@@ -200,7 +205,7 @@ const Navbar = () => {
                   }}
                   className={`flex h-[76px] min-w-[110px] flex-col items-center justify-center gap-1 border-r border-[#efe5d4] px-4 text-sm font-semibold transition hover:bg-[#fff9ed] hover:text-[#a77525] ${openDropdown === "categories" ? "bg-[#fff9ed] text-[#8c5e13]" : "text-[#30271b]"}`}
                 >
-                  <FiGrid className="text-lg text-[#c68c22]" />
+                  <FiGrid className="text-lg text-[#174a38]" />
                   <span className="flex items-center gap-1">Category <FiChevronDown className={`transition-transform ${openDropdown === "categories" ? "rotate-180" : ""}`} /></span>
                 </button>
                 {openDropdown === "categories" && (
@@ -209,14 +214,19 @@ const Navbar = () => {
                       {categories.map((category) => {
                         const image = Array.isArray(category.images) ? category.images[0] : category.images;
                         return (
-                          <div key={category.id || category.catId} className={`flex items-center rounded-lg pr-2 transition ${(selectedCategory?.id || selectedCategory?.catId) === (category.id || category.catId) ? "bg-[#fff8e9]" : "hover:bg-[#fffaf0]"}`}>
+                          <div
+                            key={category.id || category.catId}
+                            onMouseEnter={() => setSelectedCategory(category)}
+                            onFocus={() => setSelectedCategory(category)}
+                            className={`flex items-center rounded-lg pr-2 transition ${(selectedCategory?.id || selectedCategory?.catId) === (category.id || category.catId) ? "bg-[#fff8e9]" : "hover:bg-[#fffaf0]"}`}
+                          >
                             <Link
                               to={`/category/${category.slug || category.name}`}
                               onClick={() => setOpenDropdown("")}
                               className="flex min-w-0 flex-1 items-center gap-3 px-2 py-2.5 text-sm font-medium text-[#30271b]"
                             >
                               <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#fbf5e9]">
-                                {image ? <img src={getMetalImageUrl(image)} alt="" className="h-8 w-8 object-contain" loading="lazy" /> : <FiTag className="text-[#c68c22]" />}
+                                {image ? <img src={getMetalImageUrl(image)} alt="" className="h-8 w-8 object-contain" loading="lazy" /> : <FiTag className="text-[#174a38]" />}
                               </span>
                               <span className="truncate">{category.name}</span>
                             </Link>
@@ -232,10 +242,10 @@ const Navbar = () => {
                         );
                       })}
                     </div>
-                    {selectedCategory && getCategorySubcategories(selectedCategory).length > 0 && (
+                    {selectedCategory && (
                       <div className="ml-2 w-[230px] border-l border-[#efe5d4] py-1 pl-2">
                         <p className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#9a7a42]">{selectedCategory.name}</p>
-                        {getCategorySubcategories(selectedCategory).map((subcategory) => (
+                        {getCategorySubcategories(selectedCategory).length ? getCategorySubcategories(selectedCategory).map((subcategory) => (
                           <Link
                             key={subcategory}
                             to={`/category/${selectedCategory.slug || selectedCategory.name}?subcategory=${encodeURIComponent(subcategory)}`}
@@ -244,7 +254,9 @@ const Navbar = () => {
                           >
                             {subcategory}
                           </Link>
-                        ))}
+                        )) : (
+                          <p className="px-3 py-2 text-sm text-[#8a8174]">No subcategories</p>
+                        )}
                       </div>
                     )}
                   </div>
@@ -258,7 +270,7 @@ const Navbar = () => {
                   onClick={() => setOpenDropdown(openDropdown === "metals" ? "" : "metals")}
                   className={`flex h-[76px] min-w-[95px] flex-col items-center justify-center gap-1 border-r border-[#efe5d4] px-4 text-sm font-semibold transition hover:bg-[#fff9ed] hover:text-[#a77525] ${openDropdown === "metals" ? "bg-[#fff9ed] text-[#8c5e13]" : "text-[#30271b]"}`}
                 >
-                  <Gem className="h-5 w-5 text-[#c68c22]" />
+                  <Gem className="h-5 w-5 text-[#174a38]" />
                   <span className="flex items-center gap-1">Metal <FiChevronDown className={`transition-transform ${openDropdown === "metals" ? "rotate-180" : ""}`} /></span>
                 </button>
                 {openDropdown === "metals" && (
@@ -282,7 +294,7 @@ const Navbar = () => {
               </div>
 
               <Link to="/contactus" className="flex h-[76px] min-w-[100px] flex-col items-center justify-center gap-1 px-4 text-sm font-semibold text-[#30271b] transition hover:text-[#a77525]">
-                <FiPhone className="text-lg text-[#c68c22]" />
+                <FiPhone className="text-lg text-[#174a38]" />
                 Contact Us
               </Link>
             </div>
@@ -327,7 +339,9 @@ const Navbar = () => {
                   onClick={() => setUserMenu((isOpen) => !isOpen)}
                   className="flex min-w-12 cursor-pointer flex-col items-center gap-0.5 rounded-lg px-2 py-2 text-[#172c28] transition hover:bg-[#fff8e9] hover:text-[#a77525]"
                 >
-                  <User className="h-5 w-5" />
+                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#174a38] text-xs font-bold uppercase text-white" aria-hidden="true">
+                    {getUserInitial()}
+                  </span>
                   <span className="text-xs font-semibold">Account</span>
                 </button>
                 {userMenu && (
@@ -564,7 +578,7 @@ const Navbar = () => {
                     {user ? (
                       <>
                         <Link to="/account" onClick={closeMobileMenu} className="flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-[#004D40]">
-                          <User size={18} /> My Account
+                          <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#174a38] text-xs font-bold uppercase text-white">{getUserInitial()}</span> My Account
                         </Link>
                         {user.role === "admin" && (
                           <Link to="/admin" onClick={closeMobileMenu} className="flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-[#004D40]">
