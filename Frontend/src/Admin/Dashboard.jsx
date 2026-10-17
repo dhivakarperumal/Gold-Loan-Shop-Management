@@ -14,7 +14,9 @@ import {
   FiChevronDown,
   FiArrowRight,
   FiMoreHorizontal,
-  FiChevronRight
+  FiChevronRight,
+  FiLayers,
+  FiAlertTriangle
 } from "react-icons/fi";
 import { FaRupeeSign, FaCoins, FaGem, FaHandHoldingUsd, FaShieldAlt } from "react-icons/fa";
 import { Bar, Doughnut } from 'react-chartjs-2';
@@ -90,6 +92,42 @@ const DEFAULT_DASHBOARD_DATA = {
       trendUp: true,
       icon: "gold",
       color: "amber"
+    },
+    {
+      id: "total_products",
+      label: "Total Products",
+      value: "0",
+      trend: "Inventory",
+      trendUp: true,
+      icon: "products",
+      color: "blue"
+    },
+    {
+      id: "total_categories",
+      label: "Total Categories",
+      value: "0",
+      trend: "Categories",
+      trendUp: true,
+      icon: "categories",
+      color: "purple"
+    },
+    {
+      id: "completed_loans",
+      label: "Completed Loans",
+      value: "0",
+      trend: "Closed loans",
+      trendUp: true,
+      icon: "completed",
+      color: "teal"
+    },
+    {
+      id: "low_stock_products",
+      label: "Low Stock Products",
+      value: "0",
+      trend: "Below 10 units",
+      trendUp: false,
+      icon: "low-stock",
+      color: "rose"
     }
   ],
   totalLoansCount: 248,
@@ -241,31 +279,59 @@ const Dashboard = () => {
     {
       id: "total_customers",
       icon: <FiUsers />,
-      iconClass: "bg-[#006D50] text-white",
-      cardClass: "bg-[#E9F6EC] border-[#9BCDA8]",
-      chartColor: "text-[#138447]",
+      iconStyle: { backgroundColor: "#006D50", color: "#FFFFFF" },
+      cardStyle: { backgroundColor: "#123B32", borderColor: "#2C6A55" },
+      chartColor: "#6EE7B7",
       trendUp: true
     },
     {
       id: "active_gold_loans",
       icon: <FaCoins />,
-      iconClass: "bg-gradient-to-br from-[#FFD56A] to-[#D38A00] text-white",
-      cardClass: "bg-[#FFF3D5] border-[#E8C265]",
-      chartColor: "text-[#C88609]"
+      iconStyle: { background: "linear-gradient(145deg, #F7C84B, #B87500)", color: "#FFFFFF" },
+      cardStyle: { backgroundColor: "#33254A", borderColor: "#7050A2" },
+      chartColor: "#D8B4FE"
     },
     {
       id: "today_collection",
       icon: <FaRupeeSign />,
-      iconClass: "bg-[#006D50] text-white",
-      cardClass: "bg-[#E9F6EC] border-[#9BCDA8]",
-      chartColor: "text-[#138447]"
+      iconStyle: { backgroundColor: "#006D50", color: "#FFFFFF" },
+      cardStyle: { backgroundColor: "#14324A", borderColor: "#35719A" },
+      chartColor: "#7DD3FC"
     },
     {
       id: "gold_stock_value",
       icon: <FaGem />,
-      iconClass: "bg-gradient-to-br from-[#FFD56A] to-[#D38A00] text-white",
-      cardClass: "bg-[#FFF3D5] border-[#E8C265]",
-      chartColor: "text-[#C88609]"
+      iconStyle: { background: "linear-gradient(145deg, #F7C84B, #B87500)", color: "#FFFFFF" },
+      cardStyle: { backgroundColor: "#482A24", borderColor: "#9A533D" },
+      chartColor: "#FDBA9A"
+    },
+    {
+      id: "total_products",
+      icon: <FiBox />,
+      iconStyle: { backgroundColor: "#2563EB", color: "#FFFFFF" },
+      cardStyle: { backgroundColor: "#172B4D", borderColor: "#3B68A5" },
+      chartColor: "#93C5FD"
+    },
+    {
+      id: "total_categories",
+      icon: <FiLayers />,
+      iconStyle: { backgroundColor: "#7C3AED", color: "#FFFFFF" },
+      cardStyle: { backgroundColor: "#32234A", borderColor: "#7350A0" },
+      chartColor: "#D8B4FE"
+    },
+    {
+      id: "completed_loans",
+      icon: <FaCoins />,
+      iconStyle: { backgroundColor: "#0F766E", color: "#FFFFFF" },
+      cardStyle: { backgroundColor: "#163B3A", borderColor: "#34736B" },
+      chartColor: "#5EEAD4"
+    },
+    {
+      id: "low_stock_products",
+      icon: <FiAlertTriangle />,
+      iconStyle: { backgroundColor: "#BE123C", color: "#FFFFFF" },
+      cardStyle: { backgroundColor: "#472333", borderColor: "#98445D" },
+      chartColor: "#FDA4AF"
     }
   ].map((card) => {
     const defaultStat = DEFAULT_DASHBOARD_DATA.stats.find((stat) => stat.id === card.id);
@@ -457,33 +523,38 @@ const Dashboard = () => {
         {summaryCards.map((card) => (
           <article
             key={card.id}
-            className={`relative flex h-[106px] min-w-0 items-center gap-3 overflow-hidden rounded-xl border ${card.cardClass} p-3 shadow-[0_3px_12px_rgba(30,41,59,0.08)] transition-shadow hover:shadow-md`}
+            style={card.cardStyle}
+            className="relative flex h-[132px] min-w-0 items-center gap-3 overflow-hidden rounded-xl border-l-4 border-y border-r p-3 shadow-[0_3px_12px_rgba(30,41,59,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-md"
           >
-            <div className={`z-10 flex h-[42px] w-[42px] shrink-0 items-center justify-center rounded-full text-xl shadow-sm ${card.iconClass}`}>
+            <div style={card.iconStyle} className="z-10 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xl shadow-md">
               {card.icon}
             </div>
             <div className="relative z-10 min-w-0 self-center">
-              <p className="truncate text-[10px] font-medium text-slate-700">{card.label}</p>
-              <p className="mt-1 truncate text-[18px] font-extrabold leading-none tracking-tight text-slate-900">{card.value}</p>
-              <div className={`mt-2 flex items-center gap-1 text-[11px] font-extrabold ${card.trendUp ? "text-emerald-700" : "text-rose-600"}`}>
+              <p style={{ color: "#E2E8F0" }} className="truncate text-[11px] font-semibold">{card.label}</p>
+              <p style={{ color: "#FFFFFF" }} className="mt-1 truncate text-[19px] font-black leading-none tracking-tight">{card.value}</p>
+              <div style={{ color: card.trendUp ? "#86EFAC" : "#FDA4AF" }} className="mt-2 flex items-center gap-1 text-[11px] font-extrabold">
                 {card.trendUp ? <FiTrendingUp /> : <FiTrendingDown />}
                 <span>{card.trend}</span>
               </div>
-              <p className="mt-0.5 text-[9px] font-medium text-slate-500">{card.id === "today_collection" ? "vs yesterday" : "vs last month"}</p>
+              <p style={{ color: "#CBD5E1" }} className="mt-0.5 text-[9px] font-medium">{card.id === "today_collection" ? "vs yesterday" : "vs last month"}</p>
             </div>
             <button
               type="button"
               aria-label={`View ${card.label}`}
               onClick={() => navigate({
                 total_customers: "/admin/loans/customermanagement",
-                gold_stock_value: "/admin/products/stock"
+                gold_stock_value: "/admin/products/stock",
+                total_products: "/admin/products/all",
+                total_categories: "/admin/products/category",
+                completed_loans: "/admin/loans/allloans",
+                low_stock_products: "/admin/products/stock"
               }[card.id] || "/admin/loans/allloans")}
               className="absolute right-2 top-2 z-10 flex h-5 w-5 items-center justify-center rounded-full border border-black/5 bg-white/65 text-[10px] text-slate-700 transition hover:bg-white"
             >
               <FiChevronRight />
             </button>
-            <div className={`absolute bottom-3 right-3 flex h-7 items-end gap-[3px] ${card.chartColor}`}>
-              {[12, 19, 15, 25].map((height, index) => (
+            <div style={{ color: card.chartColor }} className="absolute bottom-3 right-3 flex h-7 items-end gap-[3px]">
+              {[11, 17, 13, 23].map((height, index) => (
                 <span key={index} className="w-[4px] rounded-t-sm bg-current" style={{ height: `${height}px` }} />
               ))}
             </div>

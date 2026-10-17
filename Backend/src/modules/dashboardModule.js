@@ -53,6 +53,15 @@ async function getDashboardData(range = 'month') {
       FROM products
       WHERE total_stock > 0
     `);
+    const [[productCounts]] = await pool.query(`
+      SELECT
+        COUNT(*) AS total_products,
+        SUM(CASE WHEN total_stock > 0 AND total_stock < 10 THEN 1 ELSE 0 END) AS low_stock_products
+      FROM products
+    `);
+    const [[{ total_categories }]] = await pool.query(`
+      SELECT COUNT(*) AS total_categories FROM categories
+    `);
 
     const [productRows] = await pool.query(`
       SELECT 
@@ -73,6 +82,9 @@ async function getDashboardData(range = 'month') {
     // Build stats with real DB numbers blended with realistic showroom volume for missing data
     const realLoansCount = Number(loanCounts.total_loans) || 0;
     const realGoldStockValue = Number(total_gold_stock_value) || 0;
+    const totalProducts = Number(productCounts.total_products) || 0;
+    const lowStockProducts = Number(productCounts.low_stock_products) || 0;
+    const totalCategories = Number(total_categories) || 0;
 
     // Status distribution
     const statusMap = {
@@ -80,7 +92,8 @@ async function getDashboardData(range = 'month') {
       Processing: 0,
       Pending: 0,
       Overdue: 0,
-      Closed: 0
+      Closed: 0,
+      Completed: 0
     };
     for (const row of statusRows) {
       if (statusMap[row.loan_status] !== undefined) {
@@ -89,6 +102,7 @@ async function getDashboardData(range = 'month') {
         statusMap.Active += Number(row.count);
       }
     }
+    const completedLoans = Number(statusMap.Completed) || 0;
 
     // Default showcase status counts if DB is fresh
     const finalLoansCount = realLoansCount > 10 ? realLoansCount : 248;
@@ -364,6 +378,42 @@ async function getDashboardData(range = 'month') {
           trendUp: true,
           icon: "gold",
           color: "amber"
+        },
+        {
+          id: "total_products",
+          label: "Total Products",
+          value: totalProducts.toLocaleString('en-IN'),
+          trend: "Inventory items",
+          trendUp: true,
+          icon: "products",
+          color: "blue"
+        },
+        {
+          id: "total_categories",
+          label: "Total Categories",
+          value: totalCategories.toLocaleString('en-IN'),
+          trend: "Product categories",
+          trendUp: true,
+          icon: "categories",
+          color: "purple"
+        },
+        {
+          id: "completed_loans",
+          label: "Completed Loans",
+          value: completedLoans.toLocaleString('en-IN'),
+          trend: "Closed loans",
+          trendUp: true,
+          icon: "completed",
+          color: "teal"
+        },
+        {
+          id: "low_stock_products",
+          label: "Low Stock Products",
+          value: lowStockProducts.toLocaleString('en-IN'),
+          trend: "Below 10 units",
+          trendUp: false,
+          icon: "low-stock",
+          color: "rose"
         }
       ],
       loanStatusCounts,
