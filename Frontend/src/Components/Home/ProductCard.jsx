@@ -1,13 +1,18 @@
-import React from "react";
+import React, { useContext } from "react";
 import { Link } from "react-router-dom";
 import { FaHeart } from "react-icons/fa";
+import { StoreContext } from "../../PrivateRouter/StoreContext";
 import { getProductImageUrl } from "./productDisplay";
 
 const formatPrice = (value) =>
   `₹${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
 
 const ProductCard = ({ product }) => {
+  const { wishlist, toggleWishlist } = useContext(StoreContext);
   const productId = product.id ?? product.product_id ?? product.productId;
+  const isFavorite = wishlist.some(
+    (item) => String(item.product_id ?? item.productId ?? item.id) === String(productId)
+  );
   const mrp = Number(product.mrp || 0);
   const offerPrice = Number(
     product.offer_price ?? product.final_selling_price ?? product.mrp ?? 0
@@ -40,8 +45,10 @@ const ProductCard = ({ product }) => {
         </span>
         <button
           type="button"
-          aria-label={`Add ${product.name} to favorites`}
-          className="absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 text-[#81513b] shadow-md transition-colors hover:bg-[#fff0e8] hover:text-red-600"
+          aria-label={`${isFavorite ? "Remove" : "Add"} ${product.name} ${isFavorite ? "from" : "to"} favorites`}
+          aria-pressed={isFavorite}
+          onClick={() => toggleWishlist(product)}
+          className={`absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 shadow-md transition-colors hover:bg-[#fff0e8] hover:text-red-600 ${isFavorite ? "text-red-600" : "text-[#81513b]"}`}
         >
           <FaHeart size={15} />
         </button>
@@ -50,7 +57,7 @@ const ProductCard = ({ product }) => {
       <div className="flex h-[190px] flex-col p-3 sm:p-4">
         <h3 className="line-clamp-2 min-h-10 font-serif text-sm font-semibold leading-5 text-[#292018] transition-colors hover:text-[#174a38] sm:text-base">
           <Link to={`/product/${productId}`} aria-label={`View ${product.name} details`}>
-          {product.name}
+            {product.name}
           </Link>
         </h3>
 
