@@ -27,8 +27,9 @@ const DOCUMENT_TYPES = new Set([
 ]);
 const DOCUMENT_SIDES = new Set(['front', 'back']);
 const FIELDS = [
-  'customer_type', 'full_name', 'mobile', 'alternate_mobile', 'date_of_birth',
+  'customer_type', 'full_name', 'mobile', 'alternate_mobile', 'email', 'date_of_birth',
   'gender', 'occupation', 'address', 'city', 'district', 'state', 'pincode',
+  'guarantor_name', 'guarantor_mobile', 'guarantor_email', 'guarantor_relationship', 'guarantor_address',
   'kyc_status', 'photo_url', 'notes'
 ];
 const MAX_LENGTHS = {
@@ -36,12 +37,17 @@ const MAX_LENGTHS = {
   full_name: 150,
   mobile: 15,
   alternate_mobile: 15,
+  email: 254,
+  guarantor_email: 254,
   gender: 30,
   occupation: 100,
   city: 100,
   district: 100,
   state: 100,
   pincode: 10,
+  guarantor_name: 150,
+  guarantor_mobile: 15,
+  guarantor_relationship: 100,
   kyc_status: 20
 };
 
@@ -65,13 +71,25 @@ function normalizeCustomer(body) {
   if (!customer.full_name || !customer.mobile) {
     return { error: 'Customer name and primary mobile are required' };
   }
+  const requiredFields = [
+    'email', 'gender', 'address', 'city', 'district', 'state', 'pincode',
+    'guarantor_name', 'guarantor_mobile', 'guarantor_email',
+    'guarantor_relationship', 'guarantor_address'
+  ];
+  const missingField = requiredFields.find((field) => !customer[field]);
+  if (missingField) {
+    return { error: `${missingField.replaceAll('_', ' ')} is required` };
+  }
+  if ([customer.email, customer.guarantor_email].some((email) => email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
+    return { error: 'Enter a valid email address for the customer and guarantor' };
+  }
   if (!CUSTOMER_TYPES.has(customer.customer_type)) {
     return { error: 'Customer type must be Individual or Business' };
   }
   if (!KYC_STATUSES.has(customer.kyc_status)) {
     return { error: 'KYC status must be Pending, Verified, or Rejected' };
   }
-  if (![customer.mobile, customer.alternate_mobile].filter(Boolean).every((phone) => /^[+\d][\d\s()-]{5,14}$/.test(phone))) {
+  if (![customer.mobile, customer.alternate_mobile, customer.guarantor_mobile].filter(Boolean).every((phone) => /^[+\d][\d\s()-]{5,14}$/.test(phone))) {
     return { error: 'Enter a valid mobile number' };
   }
   if (customer.date_of_birth && !/^\d{4}-\d{2}-\d{2}$/.test(customer.date_of_birth)) {

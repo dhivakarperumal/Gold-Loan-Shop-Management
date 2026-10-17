@@ -24,6 +24,7 @@ const EMPTY_CUSTOMER = {
   full_name: "",
   mobile: "",
   alternate_mobile: "",
+  email: "",
   date_of_birth: "",
   gender: "",
   occupation: "",
@@ -32,10 +33,54 @@ const EMPTY_CUSTOMER = {
   district: "",
   state: "",
   pincode: "",
+  guarantor_name: "",
+  guarantor_mobile: "",
+  guarantor_email: "",
+  guarantor_relationship: "",
+  guarantor_address: "",
   kyc_status: "Pending",
   photo_url: "",
   notes: ""
 };
+
+const INDIAN_STATES_AND_UTS = [
+  "Andhra Pradesh",
+  "Arunachal Pradesh",
+  "Assam",
+  "Bihar",
+  "Chhattisgarh",
+  "Goa",
+  "Gujarat",
+  "Haryana",
+  "Himachal Pradesh",
+  "Jharkhand",
+  "Karnataka",
+  "Kerala",
+  "Madhya Pradesh",
+  "Maharashtra",
+  "Manipur",
+  "Meghalaya",
+  "Mizoram",
+  "Nagaland",
+  "Odisha",
+  "Punjab",
+  "Rajasthan",
+  "Sikkim",
+  "Tamil Nadu",
+  "Telangana",
+  "Tripura",
+  "Uttar Pradesh",
+  "Uttarakhand",
+  "West Bengal",
+  "Andaman and Nicobar Islands",
+  "Chandigarh",
+  "Dadra and Nagar Haveli and Daman and Diu",
+  "Delhi",
+  "Jammu and Kashmir",
+  "Ladakh",
+  "Lakshadweep",
+  "Puducherry"
+];
 
 const DOCUMENT_TYPES = [
   { label: "Select Document Type", value: "" },
@@ -76,12 +121,16 @@ function CustomerField({ label, name, value, onChange, type = "text", required =
   );
 }
 
-function CustomerSelect({ label, name, value, onChange, options }) {
+function CustomerSelect({ label, name, value, onChange, options, required = false }) {
   return (
     <label className={labelClass}>
-      {label}
-      <select className={inputClass} name={name} value={value ?? ""} onChange={onChange}>
-        {options.map((option) => <option key={option} value={option}>{option}</option>)}
+      {label}{required && <span className="ml-1 text-red-500">*</span>}
+      <select className={inputClass} name={name} value={value ?? ""} onChange={onChange} required={required}>
+        {options.map((option) => (
+          <option key={option} value={option}>
+            {option || `Select ${label.toLowerCase()}`}
+          </option>
+        ))}
       </select>
     </label>
   );
@@ -185,7 +234,7 @@ export default function LoanCustomerManagement() {
     return customers.filter((customer) => {
       const matchesQuery = !query || [
         customer.customer_code, customer.full_name, customer.mobile,
-        customer.alternate_mobile, customer.city, customer.district
+        customer.alternate_mobile, customer.email, customer.city, customer.district
       ].some((value) => String(value || "").toLowerCase().includes(query));
       return matchesQuery && (kycFilter === "All" || customer.kyc_status === kycFilter);
     });
@@ -574,6 +623,7 @@ export default function LoanCustomerManagement() {
                   <td className="px-4 py-3 text-sm">
                     <p>{customer.mobile}</p>
                     {customer.alternate_mobile && <p className="text-xs text-slate-400">{customer.alternate_mobile}</p>}
+                    {customer.email && <p className="text-xs text-slate-500">{customer.email}</p>}
                   </td>
                   <td className="px-4 py-3 text-sm">{customer.customer_type}</td>
                   <td className="px-4 py-3 text-sm text-slate-600">
@@ -621,6 +671,7 @@ export default function LoanCustomerManagement() {
                     <div className="mt-4 space-y-2 border-t border-slate-100 pt-3 text-sm">
                       <p><span className="text-slate-500">Mobile:</span> <span className="font-medium text-slate-800">{customer.mobile}</span></p>
                       {customer.alternate_mobile && <p><span className="text-slate-500">Alternate:</span> <span className="text-slate-700">{customer.alternate_mobile}</span></p>}
+                      {customer.email && <p className="break-all"><span className="text-slate-500">Email:</span> <span className="text-slate-700">{customer.email}</span></p>}
                       <p><span className="text-slate-500">Type:</span> <span className="text-slate-700">{customer.customer_type}</span></p>
                       <p className="flex items-center gap-1 text-slate-600">
                         <FiMapPin className="shrink-0" />
@@ -659,22 +710,37 @@ export default function LoanCustomerManagement() {
             <form onSubmit={handleSave} className="flex min-h-0 flex-1 flex-col">
               <div className="flex-1 space-y-4 overflow-y-auto p-5">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <CustomerSelect label="Customer Type" name="customer_type" value={form.customer_type} onChange={handleChange} options={["Individual", "Business"]} />
-                  <CustomerField label="Full Name" name="full_name" value={form.full_name} onChange={handleChange} required />
-                  <CustomerField label="Primary Mobile" name="mobile" value={form.mobile} onChange={handleChange} required placeholder="Phone number" />
-                  <CustomerField label="Alternate Mobile" name="alternate_mobile" value={form.alternate_mobile} onChange={handleChange} />
-                  <CustomerField label="Date of Birth" name="date_of_birth" type="date" value={form.date_of_birth} onChange={handleChange} />
-                  <CustomerSelect label="Gender" name="gender" value={form.gender} onChange={handleChange} options={["", "Male", "Female", "Other", "Prefer not to say"]} />
-                  <CustomerField label="Occupation" name="occupation" value={form.occupation} onChange={handleChange} />
+                  <CustomerField label="Full Name" name="full_name" value={form.full_name} onChange={handleChange} required placeholder="Enter full name" />
+                  <CustomerField label="Primary Mobile" name="mobile" value={form.mobile} onChange={handleChange} required placeholder="Enter phone number" />
+                  <CustomerField label="Alternate Mobile" name="alternate_mobile" value={form.alternate_mobile} onChange={handleChange} placeholder="Enter alternate phone number" />
+                  <CustomerField label="Email" name="email" type="email" value={form.email} onChange={handleChange} required placeholder="name@example.com" />
+                  <CustomerField label="Date of Birth" name="date_of_birth" type="date" value={form.date_of_birth} onChange={handleChange} placeholder="dd-mm-yyyy" />
+                  <CustomerSelect label="Gender" name="gender" value={form.gender} onChange={handleChange} options={["", "Male", "Female", "Other", "Prefer not to say"]} required />
+                  <CustomerField label="Occupation" name="occupation" value={form.occupation} onChange={handleChange} placeholder="Enter occupation" />
                   <CustomerSelect label="KYC Status" name="kyc_status" value={form.kyc_status} onChange={handleChange} options={["Pending", "Verified", "Rejected"]} />
-                  <CustomerField label="City / Town" name="city" value={form.city} onChange={handleChange} />
-                  <CustomerField label="District" name="district" value={form.district} onChange={handleChange} />
-                  <CustomerField label="State" name="state" value={form.state} onChange={handleChange} />
-                  <CustomerField label="PIN Code" name="pincode" value={form.pincode} onChange={handleChange} />
+                  <CustomerField label="City / Town" name="city" value={form.city} onChange={handleChange} required placeholder="Enter city or town" />
+                  <CustomerField label="District" name="district" value={form.district} onChange={handleChange} required placeholder="Enter district" />
+                  <CustomerSelect label="State" name="state" value={form.state} onChange={handleChange} options={["", ...INDIAN_STATES_AND_UTS]} required />
+                  <CustomerField label="PIN Code" name="pincode" value={form.pincode} onChange={handleChange} required placeholder="Enter PIN code" />
                 </div>
-                <label className={labelClass}>Residential Address
-                  <textarea className={`${inputClass} min-h-20`} name="address" value={form.address || ""} onChange={handleChange} rows="3" />
+                <label className={labelClass} htmlFor="residential-address">Residential Address<span className="ml-1 text-red-500">*</span>
+                  <textarea id="residential-address" className={`${inputClass} min-h-20`} name="address" value={form.address || ""} onChange={handleChange} rows="3" required placeholder="Enter full residential address" />
                 </label>
+                <section className="space-y-3 rounded-xl border border-slate-200 p-4">
+                  <div>
+                    <h3 className="text-sm font-bold text-[#003B3B]">Guarantor / Surety Details</h3>
+                    <p className="mt-1 text-xs text-slate-500">All guarantor details are required.</p>
+                  </div>
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <CustomerField label="Guarantor Name" name="guarantor_name" value={form.guarantor_name} onChange={handleChange} required placeholder="Enter guarantor's full name" />
+                    <CustomerField label="Guarantor Mobile" name="guarantor_mobile" value={form.guarantor_mobile} onChange={handleChange} required placeholder="Enter phone number" />
+                    <CustomerField label="Guarantor Email" name="guarantor_email" type="email" value={form.guarantor_email} onChange={handleChange} required placeholder="Enter email address" />
+                    <CustomerField label="Relationship to Customer" name="guarantor_relationship" value={form.guarantor_relationship} onChange={handleChange} required placeholder="e.g. Spouse, Parent, Friend" />
+                  </div>
+                  <label className={labelClass} htmlFor="guarantor-address">Guarantor Address<span className="ml-1 text-red-500">*</span>
+                    <textarea id="guarantor-address" className={`${inputClass} min-h-20`} name="guarantor_address" value={form.guarantor_address || ""} onChange={handleChange} rows="2" required placeholder="Enter guarantor's full address" />
+                  </label>
+                </section>
                 <div>
                   <p className={labelClass}>Customer Photo</p>
                   <p className="mt-1 text-xs text-slate-500">Upload a PNG or JPG (up to 5 MB). Photos are stored privately.</p>
