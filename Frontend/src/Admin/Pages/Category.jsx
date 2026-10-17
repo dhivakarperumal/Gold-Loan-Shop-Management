@@ -342,12 +342,12 @@ const Category = () => {
                             <thead>
                                 <tr className="bg-[#003B3B] border-b border-[#008577]">
                                     <th className="px-4 py-4 w-12 text-center "><input type="checkbox" className="rounded accent-[#D4AF37] w-4 h-4 border-amber-300" /></th>
-                                    <th className="px-4 py-4 text-[10px] font-bold text-[#FCD34D] uppercase tracking-wider w-10">S.NO.</th>
-                                    <th className="px-4 py-4 text-[10px] font-bold text-[#FCD34D] uppercase tracking-wider w-10">CATEGORY</th>
-                                    <th className="px-4 py-4 text-[10px] font-bold text-[#FCD34D] uppercase tracking-wider w-10">DESCRIPTION</th>
-                                    <th className="px-4 py-4 text-[10px] font-bold text-[#FCD34D] uppercase tracking-wider w-10">PRODUCTS</th>
-                                    <th className="px-4 py-4 text-[10px] font-bold text-[#FCD34D] uppercase tracking-wider w-10">STATUS</th>
-                                    <th className="px-4 py-4 text-[10px] font-bold text-[#FCD34D] uppercase tracking-wider w-10">ACTIONS</th>
+                                    <th className="px-4 py-4 text-[10px] font-bold text-white uppercase tracking-wider w-10">S.NO.</th>
+                                    <th className="px-4 py-4 text-[10px] font-bold text-white uppercase tracking-wider w-10">CATEGORY</th>
+                                    <th className="px-4 py-4 text-[10px] font-bold text-white uppercase tracking-wider w-10">DESCRIPTION</th>
+                                    <th className="px-4 py-4 text-[10px] font-bold text-white uppercase tracking-wider w-10">PRODUCTS</th>
+                                    <th className="px-4 py-4 text-[10px] font-bold text-white uppercase tracking-wider w-10">STATUS</th>
+                                    <th className="px-4 py-4 text-[10px] font-bold text-white uppercase tracking-wider w-10">ACTIONS</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
