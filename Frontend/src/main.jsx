@@ -23,6 +23,9 @@ const Dashboard = React.lazy(() => import("./Admin/Dashboard.jsx"));
 const Users = React.lazy(() => import("./Admin/Pages/Users.jsx"));
 const Category = React.lazy(() => import("./Admin/Pages/Category.jsx"));
 const Metals = React.lazy(() => import("./Admin/Pages/Metals.jsx"));
+const AddProducts = React.lazy(() => import("./Admin/Pages/AddProducts.jsx"));
+const AllProducts = React.lazy(() => import("./Admin/Pages/AllProducts.jsx"));
+const ProductDetail = React.lazy(() => import("./Admin/Pages/ProductDetail.jsx"));
 
 const ErrorPage = React.lazy(() => import("./Admin/Pages/ErrorPage.jsx"));
 
@@ -53,6 +56,10 @@ const router = createBrowserRouter([
       { index: true, element: <Dashboard /> },
       { path: "users/all", element: <Users /> },
       { path: "products/category", element: <Category /> },
+      { path: "products/add", element: <AddProducts /> },
+      { path: "products/all", element: <AllProducts /> },
+      { path: "products/edit/:id", element: <AddProducts /> },
+      { path: "products/:id", element: <ProductDetail /> },
       { path: "metals", element: <Metals /> },
 
       // { path: "settings", element: <Settings /> },

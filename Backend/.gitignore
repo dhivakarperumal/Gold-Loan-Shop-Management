@@ -1,0 +1,6 @@
+uploads/metals/*
+!uploads/metals/.gitkeep
+uploads/categories/*
+!uploads/categories/.gitkeep
+uploads/products/*
+!uploads/products/.gitkeep

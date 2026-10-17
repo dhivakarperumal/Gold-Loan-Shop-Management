@@ -1,5 +1,24 @@
 const { pool } = require('../config/db');
 
+function parseJsonArray(value) {
+  let parsed = value;
+  while (typeof parsed === 'string') {
+    parsed = JSON.parse(parsed);
+  }
+  if (!Array.isArray(parsed)) {
+    throw new TypeError('Category JSON fields must contain arrays');
+  }
+  return parsed;
+}
+
+function parseCategory(category) {
+  return {
+    ...category,
+    subcategory: parseJsonArray(category.subcategory),
+    images: parseJsonArray(category.images)
+  };
+}
+
 async function initializeCategoryModule() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS categories (
@@ -23,7 +42,17 @@ async function listCategories() {
      FROM categories
      ORDER BY created_at DESC, id DESC`
   );
-  return categories;
+  return categories.map(parseCategory);
+}
+
+async function getCategoryById(catId) {
+  const [categories] = await pool.execute(
+    `SELECT id, catId, name, description, subcategory, images, user_id, status, created_at, updated_at
+     FROM categories
+     WHERE catId = ?`,
+    [catId]
+  );
+  return categories[0] ? parseCategory(categories[0]) : null;
 }
 
 async function createCategory({ catId, name, description, subcategory, images, userId }) {
@@ -38,7 +67,7 @@ async function createCategory({ catId, name, description, subcategory, images, u
      WHERE id = ?`,
     [result.insertId]
   );
-  return categories[0];
+  return parseCategory(categories[0]);
 }
 
 async function updateCategory(catId, { name, description, subcategory, images, userId }) {
@@ -55,7 +84,7 @@ async function updateCategory(catId, { name, description, subcategory, images, u
      WHERE catId = ?`,
     [catId]
   );
-  return categories[0] || null;
+  return categories[0] ? parseCategory(categories[0]) : null;
 }
 
 async function deleteCategory(catId) {
@@ -66,6 +95,7 @@ async function deleteCategory(catId) {
 module.exports = {
   createCategory,
   deleteCategory,
+  getCategoryById,
   initializeCategoryModule,
   listCategories,
   updateCategory

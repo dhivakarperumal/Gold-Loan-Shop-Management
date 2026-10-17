@@ -25,6 +25,13 @@ import imageCompression from "browser-image-compression";
 import { toast, Toaster } from "react-hot-toast";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 
+const backendUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
+
+const getCategoryImageUrl = (image) => {
+    if (!image || /^(https?:|data:|blob:)/i.test(image)) return image || "";
+    return `${backendUrl}${image.startsWith("/") ? image : `/${image}`}`;
+};
+
 const Category = () => {
     const { user } = useAuth();
     // ---- Global State ----
@@ -115,7 +122,24 @@ const Category = () => {
 
     const handleImageUpload = async (e) => {
         try {
-            const files = Array.from(e.target.files);
+            const input = e.currentTarget;
+            const files = Array.from(input.files || []);
+            input.value = "";
+            const remainingSlots = 20 - formData.images.length;
+            if (files.length > remainingSlots) {
+                toast.error(`You can upload up to 20 images per category.`);
+                return;
+            }
+            const unsupportedFile = files.find(file => !["image/png", "image/jpeg"].includes(file.type));
+            if (unsupportedFile) {
+                toast.error("Choose PNG or JPG images only.");
+                return;
+            }
+            const oversizedFile = files.find(file => file.size > 5 * 1024 * 1024);
+            if (oversizedFile) {
+                toast.error("Each image must be 5 MB or smaller.");
+                return;
+            }
             const imagesArray = await Promise.all(
                 files.map(async (file) => {
                     const compressed = await imageCompression(file, {
@@ -147,21 +171,36 @@ const Category = () => {
     const handleSaveCategory = async () => {
         if (!formData.catId || !formData.name) return;
 
-        const newCatData = {
-            ...formData,
-            subcategory: subcategories,
-            user_id: user?.user_id || formData.user_id || null,
-        };
-
         try {
+            const imagesToKeep = formData.images.filter(image => !image.startsWith("data:image/"));
+            const imageUploads = formData.images.filter(image => image.startsWith("data:image/"));
+            const categoryData = new FormData();
+            categoryData.append("catId", formData.catId);
+            categoryData.append("name", formData.name);
+            categoryData.append("description", formData.description || "");
+            categoryData.append("subcategory", JSON.stringify(subcategories));
+            categoryData.append("images", JSON.stringify(imagesToKeep));
+            categoryData.append("user_id", user?.user_id || formData.user_id || "null");
+
+            for (const imageData of imageUploads) {
+                let imageBlob = await (await fetch(imageData)).blob();
+                if (!["image/png", "image/jpeg"].includes(imageBlob.type)) {
+                    imageBlob = await imageCompression(imageBlob, {
+                        maxSizeMB: 0.2,
+                        maxWidthOrHeight: 600,
+                        fileType: "image/jpeg",
+                    });
+                }
+                const extension = imageBlob.type === "image/png" ? "png" : "jpg";
+                categoryData.append("images", imageBlob, `category.${extension}`);
+            }
+
             if (isEditing) {
-                await api.put(`/categories/${formData.catId}`, newCatData);
-                setCategories(categories.map(cat =>
-                    cat.catId === formData.catId ? { ...newCatData, id: cat.id } : cat
-                ));
+                const response = await api.put(`/categories/${formData.catId}`, categoryData);
+                setCategories(categories.map(cat => cat.catId === formData.catId ? response.data : cat));
             } else {
-                const response = await api.post("/categories", newCatData);
-                setCategories([{ ...newCatData, id: response.data.id }, ...categories]);
+                const response = await api.post("/categories", categoryData);
+                setCategories([response.data, ...categories]);
                 toast.success("Category created successfully!");
             }
             setIsModalOpen(false);
@@ -364,7 +403,7 @@ const Category = () => {
                                                 <div className="flex items-center gap-4">
                                                     <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-100 shrink-0 border border-gray-200">
                                                         {cat.images && cat.images.length > 0 ? (
-                                                            <img src={Array.isArray(cat.images) ? cat.images[0] : cat.images} alt={cat.name} className="w-full h-full object-cover" />
+                                                            <img src={getCategoryImageUrl(Array.isArray(cat.images) ? cat.images[0] : cat.images)} alt={cat.name} className="w-full h-full object-cover" />
                                                         ) : (
                                                             <div className="w-full h-full flex items-center justify-center"><FiImage className="text-gray-400" /></div>
                                                         )}
@@ -420,7 +459,7 @@ const Category = () => {
                                 <div className="flex items-start justify-between mb-4">
                                     <div className="w-14 h-14 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 flex items-center justify-center shrink-0">
                                         {cat.images && cat.images.length > 0 ? (
-                                            <img src={Array.isArray(cat.images) ? cat.images[0] : cat.images} alt={cat.name} className="w-full h-full object-cover" />
+                                            <img src={getCategoryImageUrl(Array.isArray(cat.images) ? cat.images[0] : cat.images)} alt={cat.name} className="w-full h-full object-cover" />
                                         ) : (
                                             <FiImage className="text-gray-400 text-xl" />
                                         )}
@@ -591,7 +630,7 @@ const Category = () => {
                                             <div className="grid grid-cols-3 gap-2 mb-2">
                                                 {formData.images.map((imgUrl, idx) => (
                                                     <div key={idx} className="relative group w-full h-20 rounded-xl overflow-hidden border border-gray-200">
-                                                        <img src={imgUrl} alt={`Upload ${idx + 1}`} className="w-full h-full object-cover" />
+                                                        <img src={getCategoryImageUrl(imgUrl)} alt={`Upload ${idx + 1}`} className="w-full h-full object-cover" />
                                                         <button
                                                             onClick={() => removeImage(idx)}
                                                             className="absolute top-1 right-1 p-1 bg-white/90 hover:bg-red-50 text-red-500 rounded opacity-0 group-hover:opacity-100 transition-all shadow-sm"
@@ -603,12 +642,12 @@ const Category = () => {
                                                 <label className="w-full h-20 border-2 border-dashed border-gray-300 hover:border-amber-400 hover:bg-amber-50/50 rounded-xl cursor-pointer flex flex-col items-center justify-center transition-all">
                                                     <FiPlus className="text-lg text-amber-600 mb-0.5" />
                                                     <span className="text-[10px] font-bold text-gray-500">Add More</span>
-                                                    <input type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
+                                                    <input type="file" accept="image/png,image/jpeg" multiple onChange={handleImageUpload} className="hidden" />
                                                 </label>
                                             </div>
                                         ) : (
                                             <label className="relative border-2 border-dashed border-gray-300 bg-gray-50 hover:bg-amber-50/50 hover:border-amber-400 rounded-xl overflow-hidden transition-all cursor-pointer flex flex-col items-center justify-center p-6 text-center min-h-[100px]">
-                                                <input type="file" accept="image/*" multiple onChange={handleImageUpload} className="hidden" />
+                                                <input type="file" accept="image/png,image/jpeg" multiple onChange={handleImageUpload} className="hidden" />
                                                 <div className="w-8 h-8 bg-white shadow-sm rounded-full flex items-center justify-center mb-2 text-amber-600">
                                                     <FiUploadCloud size={16} />
                                                 </div>

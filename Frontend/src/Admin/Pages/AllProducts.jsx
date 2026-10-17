@@ -61,13 +61,15 @@ const AllProducts = () => {
 
         setRapidSaving(true);
         try {
+            const { data: { latestCode } } = await api.get("/products/latest-code");
             await api.post("/products", {
                 ...rapidProd,
-                category: "Saree",
+                product_code: latestCode,
+                category: "Gold Jewellery",
                 total_stock: "0",
                 variants: []
             });
-            toast.success("Boutique addition live!");
+            toast.success("Product added successfully.");
             if (shouldContinue) {
                 setRapidProd({ name: "", mrp: "", status: "Active" });
             } else {

@@ -1,21 +1,30 @@
 import { useEffect, useMemo, useState } from "react";
 import api from "../../api";
 import { toast } from "react-hot-toast";
+import imageCompression from "browser-image-compression";
 import {
   FiAlertCircle,
   FiCheckCircle,
   FiChevronDown,
   FiEdit2,
   FiGrid,
+  FiImage,
   FiLayers,
   FiList,
   FiPlus,
   FiSearch,
   FiTrash2,
+  FiUploadCloud,
   FiX
 } from "react-icons/fi";
 
-const EMPTY_FORM = { name: "", purity: "", description: "", status: "Active" };
+const EMPTY_FORM = { name: "", purity: "", description: "", image: "", status: "Active" };
+const backendUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
+
+const getMetalImageUrl = (image) => {
+  if (!image || /^(https?:|data:|blob:)/i.test(image)) return image || "";
+  return `${backendUrl}${image.startsWith("/") ? image : `/${image}`}`;
+};
 
 const Metals = () => {
   const [metals, setMetals] = useState([]);
@@ -72,6 +81,8 @@ const Metals = () => {
       name: metal.name || "",
       purity: metal.purity || "",
       description: metal.description || "",
+      image: getMetalImageUrl(metal.image),
+      imagePath: metal.image || "",
       status: metal.status || "Active"
     });
     setIsModalOpen(true);
@@ -84,12 +95,44 @@ const Metals = () => {
     setFormData(EMPTY_FORM);
   };
 
+  const handleImageUpload = async (event) => {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    if (!["image/png", "image/jpeg"].includes(file.type)) {
+      toast.error("Choose a PNG or JPG image.");
+      input.value = "";
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Image must be 5 MB or smaller.");
+      input.value = "";
+      return;
+    }
+
+    try {
+      const compressed = await imageCompression(file, {
+        maxSizeMB: 0.2,
+        maxWidthOrHeight: 800
+      });
+      const image = await imageCompression.getDataUrlFromFile(compressed);
+      setFormData((current) => ({ ...current, image }));
+    } catch (error) {
+      console.error("Failed to process metal image:", error);
+      toast.error("Could not process this image. Please try another file.");
+    } finally {
+      input.value = "";
+    }
+  };
+
   const handleSave = async (event) => {
     event.preventDefault();
     const payload = {
       name: formData.name.trim(),
       purity: formData.purity.trim(),
       description: formData.description.trim(),
+      image: formData.imagePath || null,
       status: formData.status
     };
     if (!payload.name) {
@@ -99,6 +142,13 @@ const Metals = () => {
 
     try {
       setSaving(true);
+      if (formData.image?.startsWith("data:image/")) {
+        const imageBlob = await (await fetch(formData.image)).blob();
+        const imageForm = new FormData();
+        imageForm.append("image", imageBlob, imageBlob.type === "image/png" ? "metal.png" : "metal.jpg");
+        const uploaded = await api.post("/metals/images", imageForm);
+        payload.image = uploaded.data.image;
+      }
       if (editingMetal) {
         const response = await api.put(`/metals/${editingMetal.id}`, payload);
         setMetals((current) => current.map((metal) =>
@@ -135,11 +185,6 @@ const Metals = () => {
 
   return (
     <section className="min-h-screen space-y-6 pb-12 font-sans">
-      <div>
-        <h1 className="text-2xl font-black text-slate-800">Metal Catalog</h1>
-        <p className="mt-1 text-sm text-slate-500">Manage the metals and purity details used in your jewellery catalog.</p>
-      </div>
-
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="flex items-center gap-4 rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
           <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#003B3B] text-white">
@@ -253,7 +298,18 @@ const Metals = () => {
               ) : filteredMetals.map((metal, index) => (
                 <tr key={metal.id} className="transition-colors hover:bg-amber-50/30">
                   <td className="px-5 py-4 text-sm font-semibold text-slate-500">{index + 1}</td>
-                  <td className="px-5 py-4 text-sm font-bold text-slate-800">{metal.name}</td>
+                  <td className="px-5 py-4">
+                    <div className="flex items-center gap-3">
+                      {metal.image ? (
+                        <img src={getMetalImageUrl(metal.image)} alt="" className="h-10 w-10 rounded-lg border border-gray-200 object-cover" />
+                      ) : (
+                        <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-amber-50 text-amber-700">
+                          <FiImage size={18} />
+                        </span>
+                      )}
+                      <span className="text-sm font-bold text-slate-800">{metal.name}</span>
+                    </div>
+                  </td>
                   <td className="px-5 py-4 text-sm font-medium text-slate-600">{metal.purity || "—"}</td>
                   <td className="max-w-sm px-5 py-4 text-sm text-slate-500">{metal.description || "—"}</td>
                   <td className="px-5 py-4">
@@ -291,9 +347,13 @@ const Metals = () => {
             <article key={metal.id} className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-md">
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div className="flex min-w-0 items-center gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#003B3B] text-sm font-bold text-white">
-                    {index + 1}
-                  </span>
+                  {metal.image ? (
+                    <img src={getMetalImageUrl(metal.image)} alt="" className="h-12 w-12 shrink-0 rounded-xl border border-gray-200 object-cover" />
+                  ) : (
+                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-[#003B3B] text-sm font-bold text-white">
+                      {index + 1}
+                    </span>
+                  )}
                   <div className="min-w-0">
                     <h2 className="truncate text-base font-bold text-slate-800">{metal.name}</h2>
                     <p className="text-xs text-gray-500">S No: {index + 1}</p>
@@ -328,7 +388,7 @@ const Metals = () => {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
-          <form onSubmit={handleSave} className="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-2xl">
+          <form onSubmit={handleSave} className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-gray-100 px-6 py-5">
               <div>
                 <h2 className="text-xl font-black text-slate-800">{editingMetal ? "Edit Metal" : "Add Metal"}</h2>
@@ -338,50 +398,79 @@ const Metals = () => {
                 <FiX size={20} />
               </button>
             </div>
-            <div className="space-y-4 px-6 py-5">
-              <label className="block text-sm font-semibold text-slate-700">
-                Metal Name <span className="text-red-500">*</span>
-                <input
-                  required
-                  maxLength={100}
-                  autoFocus
-                  value={formData.name}
-                  onChange={(event) => setFormData((current) => ({ ...current, name: event.target.value }))}
-                  placeholder="e.g. Gold"
-                  className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-normal text-slate-800 outline-none transition placeholder:text-gray-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
-                />
-              </label>
-              <label className="block text-sm font-semibold text-slate-700">
-                Purity
-                <input
-                  maxLength={50}
-                  value={formData.purity}
-                  onChange={(event) => setFormData((current) => ({ ...current, purity: event.target.value }))}
-                  placeholder="e.g. 22K or 24K"
-                  className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-normal text-slate-800 outline-none transition placeholder:text-gray-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
-                />
-              </label>
-              <label className="block text-sm font-semibold text-slate-700">
-                Description
-                <textarea
-                  rows={3}
-                  value={formData.description}
-                  onChange={(event) => setFormData((current) => ({ ...current, description: event.target.value }))}
-                  placeholder="Add optional details about this metal..."
-                  className="mt-1.5 w-full resize-y rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-normal text-slate-800 outline-none transition placeholder:text-gray-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
-                />
-              </label>
-              <label className="block text-sm font-semibold text-slate-700">
-                Status
-                <select
-                  value={formData.status}
-                  onChange={(event) => setFormData((current) => ({ ...current, status: event.target.value }))}
-                  className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-normal text-slate-800 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
-                >
-                  <option value="Active">Active</option>
-                  <option value="Inactive">Inactive</option>
-                </select>
-              </label>
+            <div className="overflow-y-auto px-6 py-5">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div className="space-y-4">
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Metal Name <span className="text-red-500">*</span>
+                    <input
+                      required
+                      maxLength={100}
+                      autoFocus
+                      value={formData.name}
+                      onChange={(event) => setFormData((current) => ({ ...current, name: event.target.value }))}
+                      placeholder="e.g. Gold"
+                      className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-normal text-slate-800 outline-none transition placeholder:text-gray-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                    />
+                  </label>
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Purity
+                    <input
+                      maxLength={50}
+                      value={formData.purity}
+                      onChange={(event) => setFormData((current) => ({ ...current, purity: event.target.value }))}
+                      placeholder="e.g. 22K or 24K"
+                      className="mt-1.5 w-full rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-normal text-slate-800 outline-none transition placeholder:text-gray-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                    />
+                  </label>
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Description
+                    <textarea
+                      rows={4}
+                      value={formData.description}
+                      onChange={(event) => setFormData((current) => ({ ...current, description: event.target.value }))}
+                      placeholder="Add optional details about this metal..."
+                      className="mt-1.5 w-full resize-y rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-normal text-slate-800 outline-none transition placeholder:text-gray-400 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                    />
+                  </label>
+                </div>
+                <div className="space-y-4">
+                  <div>
+                    <span className="block text-sm font-semibold text-slate-700">Metal Image</span>
+                    {formData.image ? (
+                      <div className="relative mt-1.5">
+                        <img src={getMetalImageUrl(formData.image)} alt="Metal preview" className="h-52 w-full rounded-xl border border-gray-200 bg-gray-50 object-contain" />
+                        <button
+                          type="button"
+                          onClick={() => setFormData((current) => ({ ...current, image: "" }))}
+                          aria-label="Remove metal image"
+                          className="absolute right-2 top-2 rounded-full bg-white p-1.5 text-red-500 shadow transition hover:bg-red-50"
+                        >
+                          <FiX size={14} />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="mt-1.5 flex min-h-52 cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 px-4 py-5 text-center transition hover:border-amber-400 hover:bg-amber-50/50">
+                        <FiUploadCloud className="mb-2 text-2xl text-amber-600" />
+                        <span className="text-sm font-bold text-slate-700">Upload Metal Image</span>
+                        <span className="mt-1 text-xs text-gray-500">PNG or JPG, up to 5 MB</span>
+                        <input type="file" accept="image/png,image/jpeg" onChange={handleImageUpload} className="sr-only" />
+                      </label>
+                    )}
+                  </div>
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Status
+                    <select
+                      value={formData.status}
+                      onChange={(event) => setFormData((current) => ({ ...current, status: event.target.value }))}
+                      className="mt-1.5 w-full rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-normal text-slate-800 outline-none transition focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20"
+                    >
+                      <option value="Active">Active</option>
+                      <option value="Inactive">Inactive</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
             </div>
             <div className="flex justify-end gap-3 border-t border-gray-100 bg-gray-50/80 px-6 py-4">
               <button type="button" onClick={closeModal} disabled={saving} className="rounded-xl px-5 py-2.5 text-sm font-bold text-gray-600 transition hover:bg-gray-200 disabled:opacity-50">
