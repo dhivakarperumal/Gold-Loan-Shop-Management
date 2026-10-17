@@ -5,7 +5,6 @@ import {
   Package,
   ShoppingCart,
   Users,
-  MessageSquare,
   BarChart3,
   X,
   ChevronDown,
@@ -19,8 +18,9 @@ import {
   XCircle,
   Archive,
   Handshake,
+  Megaphone,
   Video,
-  Image,
+  Star,
   Gem,
   FilePlus,
   Files,
@@ -42,13 +42,13 @@ const navItems = [
     icon: HandCoins,
     children: [
       { path: "/admin/loans/customermanagement", label: "Customer Management", icon: FilePlus },
-      // { path: "/admin/loans/createloan", label: "Create New Loan", icon: FilePlus },
+     
       { path: "/admin/loans/allloans", label: "All Loans", icon: Files },
       { path: "/admin/loans/loanrepayment", label: "Loan Repayment", icon: HandCoins },
       { path: "/admin/loans/loanreniwel", label: "Loan Renewal", icon: RefreshCw },
       { path: "/admin/loans/goldrelease", label: "Gold Release", icon: Gem },
       { path: "/admin/loans/overdueloans", label: "Overdue Loans", icon: Clock3 },
-      { path: "/admin/loans/interestmanagement", label: "Interest Management", icon: Percent },
+      
     ],
   },
 
@@ -69,11 +69,11 @@ const navItems = [
 
   {
     label: "Marketings Management",
-    icon: Handshake,
+    icon: Megaphone,
     children: [
-      { path: "/admin/banners", label: "Offers & Banners", icon: Image },
+      { path: "/admin/banners", label: "Offers & Banners", icon: Tag },
       { path: "/admin/videos", label: "Showcase Videos", icon: Video },
-      { path: "/admin/reviews", label: "Reviews", icon: MessageSquare },
+      { path: "/admin/reviews", label: "Reviews", icon: Star },
       { path: "/admin/users/all", label: "Customers", icon: Users },
     ],
   },

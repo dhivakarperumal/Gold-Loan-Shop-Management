@@ -32,6 +32,7 @@ const CreateLoan = React.lazy(() => import("./Admin/Loanmanagements/CreateLoan.j
 const AllLoans = React.lazy(() => import("./Admin/Loanmanagements/AllLoans.jsx"));
 const LoanDetails = React.lazy(() => import("./Admin/Loanmanagements/LoanDetails.jsx"));
 const InterestManagement = React.lazy(() => import("./Admin/Loanmanagements/InterestManagement.jsx"));
+const BannerManagement = React.lazy(() => import("./Admin/Marketing/BannerManagement.jsx"));
 
 const ErrorPage = React.lazy(() => import("./Admin/Pages/ErrorPage.jsx"));
 
@@ -74,6 +75,7 @@ const router = createBrowserRouter([
       { path: "products/edit/:id", element: <AddProducts /> },
       { path: "products/:id", element: <ProductDetail /> },
       { path: "metals", element: <Metals /> },
+      { path: "banners", element: <BannerManagement /> },
 
       // { path: "settings", element: <Settings /> },
       // { path: "profile", element: <Profile /> },
