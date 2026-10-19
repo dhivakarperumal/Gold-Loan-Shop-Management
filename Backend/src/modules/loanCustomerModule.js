@@ -186,7 +186,7 @@ async function createLoanCustomer(customer, username, password = customer.mobile
     const userId = await insertUser(connection, {
       username,
       name: customer.full_name,
-      email: customer.email.toLowerCase(),
+      email: customer.email?.toLowerCase() || null,
       phone: customer.mobile,
       password,
       status: 'Active',

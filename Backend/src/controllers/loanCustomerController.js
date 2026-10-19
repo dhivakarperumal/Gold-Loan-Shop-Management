@@ -71,9 +71,12 @@ function normalizeCustomer(body) {
   if (!customer.full_name || !customer.mobile) {
     return { error: 'Customer name and primary mobile are required' };
   }
+  if (!customer.photo_url) {
+    return { error: 'Customer photo is required' };
+  }
   const requiredFields = [
-    'email', 'gender', 'address', 'city', 'district', 'state', 'pincode',
-    'guarantor_name', 'guarantor_mobile', 'guarantor_relationship', 'guarantor_address'
+    'gender', 'address', 'city', 'district', 'state', 'pincode',
+    'guarantor_name', 'guarantor_mobile', 'guarantor_relationship'
   ];
   const missingField = requiredFields.find((field) => !customer[field]);
   if (missingField) {
@@ -332,6 +335,7 @@ module.exports = {
   getCustomerDocuments,
   getCustomerPhoto,
   getCustomers,
+  normalizeCustomer,
   normalizeCustomerUsername,
   postCustomer,
   postCustomerDocuments,

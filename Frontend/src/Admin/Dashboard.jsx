@@ -14,7 +14,8 @@ import {
   FiMoreHorizontal,
   FiChevronRight,
   FiLayers,
-  FiAlertTriangle
+  FiAlertTriangle,
+  FiFileText
 } from "react-icons/fi";
 import { FaRupeeSign, FaCoins, FaGem, FaHandHoldingUsd, FaShieldAlt } from "react-icons/fa";
 import { Bar, Doughnut } from 'react-chartjs-2';
@@ -589,14 +590,15 @@ const Dashboard = () => {
           </h3>
           <span className="text-[10px] font-semibold text-slate-400">One-click management</span>
         </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
           {[
             { label: "Add Product", icon: <FiBox size={18} />, color: "from-[#004D40] to-[#008577]", path: "/admin/products/add" },
+            { label: "New Bill", icon: <FiFileText size={18} />, color: "from-[#003B3B] to-[#008577]", path: "/admin/billings?new=1" },
             { label: "New Loan", icon: <FaHandHoldingUsd size={18} />, color: "from-[#0F766E] to-[#14B8A6]", path: "/admin/loans/createloan" },
             { label: "All Loans", icon: <FaCoins size={18} />, color: "from-[#047857] to-[#34D399]", path: "/admin/loans/allloans" },
             { label: "Customers", icon: <FiUsers size={18} />, color: "from-[#B7791F] to-[#F5C45E]", path: "/admin/loans/customermanagement" },
             { label: "Stock Details", icon: <FiBox size={18} />, color: "from-[#B45309] to-[#F59E0B]", path: "/admin/products/stock" },
-            { label: "Daily Precious Rates", icon: <FaGem size={18} />, color: "from-[#003B3B] to-[#008577]", path: "/admin/settings/daily-gold-rate" }
+            { label: "Daily Gold Rate", icon: <FaGem size={18} />, color: "from-[#003B3B] to-[#008577]", path: "/admin/settings/daily-gold-rate" }
           ].map((action) => (
             <button
               key={action.label}
