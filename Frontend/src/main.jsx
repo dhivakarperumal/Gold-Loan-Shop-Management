@@ -1,4 +1,4 @@
-import React, { StrictMode } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.jsx";
@@ -81,9 +81,7 @@ const router = createBrowserRouter([
     element: (
       <PrivateRoute allowedRoles={["admin"]}>
         <AdminProvider>
-          <GoldRatesProvider>
-            <AdminPanel />
-          </GoldRatesProvider>
+          <AdminPanel />
         </AdminProvider>
       </PrivateRoute>
     ),
@@ -123,10 +121,12 @@ createRoot(document.getElementById("root")).render(
   <GoogleOAuthProvider clientId="92181265196-n9a9p26qe601hg7lar8acq6s4f1cknq7.apps.googleusercontent.com">
     <AuthProvider>
       <StoreProvider>
-        <Toaster position="top-left" reverseOrder={false} />
-        <React.Suspense fallback={<Loader />}>
-          <RouterProvider router={router} />
-        </React.Suspense>
+        <GoldRatesProvider>
+          <Toaster position="top-left" reverseOrder={false} />
+          <React.Suspense fallback={<Loader />}>
+            <RouterProvider router={router} />
+          </React.Suspense>
+        </GoldRatesProvider>
       </StoreProvider>
     </AuthProvider>
   </GoogleOAuthProvider>
