@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { FiArrowLeft, FiCalendar, FiChevronRight, FiRefreshCw, FiSearch } from "react-icons/fi";
+import { FiArrowLeft, FiCalendar, FiCheckCircle, FiChevronRight, FiRefreshCw, FiSearch } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api, { getPrivateFile } from "../../api";
 
@@ -101,6 +101,7 @@ export default function LoanRenewal() {
   const canRenew = Boolean(
     loan
     && preview
+    && preview.current_principal > 0
     && loan.loan_status === "Active"
     && Number.isFinite(amount)
     && amount > 0
@@ -116,9 +117,12 @@ export default function LoanRenewal() {
       const { data } = await api.post(`/loans/${id}/renewal`, { payment_amount: amount });
       setRenewalData(data);
       setPaymentAmount("");
-      toast.success(data.loan_status === "Completed"
-        ? "Loan settled successfully."
-        : `Loan renewed through ${dateText(data.preview.next_maturity_date)}.`);
+      if (data.preview.current_principal === 0) {
+        toast.success("Loan paid in full. Complete and record the gold release.");
+        navigate(`/admin/loans/completeloan/${id}`);
+      } else {
+        toast.success(`Payment recorded. Loan renewed through ${dateText(data.loan.maturity_date)}.`);
+      }
     } catch (error) {
       console.error("Failed to renew loan:", error);
       toast.error(error.response?.data?.message || "Could not renew this loan.");
@@ -162,7 +166,7 @@ export default function LoanRenewal() {
                     ? <tr><td colSpan="8" className="px-4 py-14 text-center text-sm text-slate-400">{loans.length ? "No loans match your search." : "No loans are available."}</td></tr>
                     : filteredLoans.map((item) => (
                       <tr key={item.id} className={`text-sm transition-colors ${item.loan_status === "Active" ? "cursor-pointer hover:bg-emerald-50/60" : "opacity-60"}`}
-                        onClick={() => item.loan_status === "Active" && navigate(`/admin/loans/loanreniwel/${item.id}`)}>
+                        onClick={() => item.loan_status === "Active" && navigate(Number(item.outstanding_principal ?? item.principal_amount) === 0 ? `/admin/loans/completeloan/${item.id}` : `/admin/loans/loanreniwel/${item.id}`)}>
                         <td className="whitespace-nowrap px-4 py-4 pl-5 font-bold text-[#064A41]">{item.loan_number}</td>
                         <td className="px-4 py-4"><span className="block font-semibold text-slate-800">{item.customer_name || "—"}</span><span className="text-xs text-slate-400">{item.customer_code || "—"}</span></td>
                         <td className="whitespace-nowrap px-4 py-4 text-slate-600">{item.customer_mobile || "—"}</td>
@@ -171,8 +175,10 @@ export default function LoanRenewal() {
                         <td className="whitespace-nowrap px-4 py-4 text-slate-600">{rateText(item.interest_rate)} / {String(item.interest_frequency || "").replaceAll("_", " ")}</td>
                         <td className="whitespace-nowrap px-4 py-4 text-slate-600">{dateText(item.maturity_date)}</td>
                         <td className="whitespace-nowrap px-4 py-4 pr-5">
-                          {item.loan_status === "Active"
-                            ? <Link to={`/admin/loans/loanreniwel/${item.id}`} onClick={(event) => event.stopPropagation()} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">Renew <FiChevronRight /></Link>
+                          {item.loan_status === "Active" && Number(item.outstanding_principal ?? item.principal_amount) === 0
+                            ? <Link to={`/admin/loans/completeloan/${item.id}`} onClick={(event) => event.stopPropagation()} className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">Complete loan <FiChevronRight /></Link>
+                            : item.loan_status === "Active"
+                              ? <Link to={`/admin/loans/loanreniwel/${item.id}`} onClick={(event) => event.stopPropagation()} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">Renew <FiChevronRight /></Link>
                             : <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-500">{item.loan_status}</span>}
                         </td>
                       </tr>
@@ -243,7 +249,7 @@ export default function LoanRenewal() {
               <Info label="Interest period starts" value={dateText(preview.period_start_date)} />
               <Info label="Loan date" value={dateText(loan.loan_date)} />
               <Info label="Current maturity" value={dateText(loan.maturity_date)} />
-              <Info label="Calculation convention" value={loan.day_count_convention} />
+              <Info label="Renewal date" value={dateText(preview.renewal_date)} />
               <Info label="Compounding frequency" value={loan.compounding_frequency} />
               <Info label="Payment frequency" value={loan.payment_frequency} />
               <Info label="Custom interest period" value={loan.custom_period_days == null ? "—" : `${loan.custom_period_days} days`} />
@@ -271,6 +277,13 @@ export default function LoanRenewal() {
               <p className="pt-1 text-[11px] leading-relaxed text-slate-500">Total due is current principal plus accrued interest. Processing and other charges are not included.</p>
             </div>
             <form onSubmit={handleRenewal} className="mt-4 space-y-3">
+              {preview.current_principal <= 0 ? (
+                <div className="space-y-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                  <p className="text-sm font-semibold text-emerald-900">This loan is paid in full. The loan remains open until its pledged gold is handed back and recorded.</p>
+                  <Link to={`/admin/loans/goldrelease/${id}`} className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#064A41] px-4 py-3 text-sm font-bold text-white hover:bg-[#087263]"><FiCheckCircle /> Continue to Gold Release</Link>
+                </div>
+              ) : (
+                <>
               <label className="block text-sm font-semibold text-slate-700">Payable amount
                 <span className="mt-1.5 flex min-h-12 items-center rounded-xl border border-slate-200 bg-white px-3 focus-within:border-[#008577] focus-within:ring-4 focus-within:ring-emerald-700/10">
                   <span className="mr-2 text-slate-400">₹</span>
@@ -294,6 +307,8 @@ export default function LoanRenewal() {
               {!active && <p className="text-center text-xs font-semibold text-slate-500">This loan is not active and cannot be renewed.</p>}
               {active && amount > preview.total_due && <p className="text-xs text-rose-600">Payment cannot exceed the total due.</p>}
               {active && paymentAmount && amount + 0.001 < preview.minimum_payment && <p className="text-xs text-rose-600">Payment must cover the accrued interest before the loan can renew.</p>}
+                </>
+              )}
             </form>
           </section>
 
