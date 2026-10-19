@@ -76,8 +76,8 @@ const Diamond = () => {
                     ) : (
                         <Swiper
                             modules={[Autoplay]}
-                            loop={products.length > 1}
-                            autoplay={products.length > 1 ? {
+                            loop={products.length > 5}
+                            autoplay={products.length > 5 ? {
                                 delay: 2200,
                                 disableOnInteraction: false,
                                 pauseOnMouseEnter: true,
@@ -85,12 +85,18 @@ const Diamond = () => {
                             speed={700}
                             slidesPerView="auto"
                             spaceBetween={12}
+                            breakpoints={{
+                                640: { slidesPerView: 2 },
+                                900: { slidesPerView: 3 },
+                                1200: { slidesPerView: 4 },
+                                1500: { slidesPerView: 5 },
+                            }}
                             grabCursor
                             centeredSlides={products.length === 1}
                             className="!pb-2"
                         >
                             {products.map((product) => (
-                                <SwiperSlide key={product.id} className="!h-auto !w-[260px] sm:!w-[280px] xl:!w-[300px]">
+                                <SwiperSlide key={product.id} className="h-auto w-[260px] sm:w-[280px] xl:w-[300px]">
                                     <ProductCard product={product} />
                                 </SwiperSlide>
                             ))}
