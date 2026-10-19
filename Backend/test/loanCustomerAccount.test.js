@@ -9,14 +9,18 @@ test('requires a non-empty customer account username', () => {
   assert.deepEqual(normalizeCustomerUsername(null), { error: 'Username is required' });
 });
 
-test('trims customer account usernames and enforces the users table limit', () => {
+test('trims customer account usernames and enforces the full-name limit', () => {
   assert.deepEqual(normalizeCustomerUsername('  gold.customer  '), { username: 'gold.customer' });
-  assert.deepEqual(normalizeCustomerUsername('u'.repeat(101)), {
-    error: 'Username must be 100 characters or fewer'
+  assert.deepEqual(normalizeCustomerUsername('u'.repeat(151)), {
+    error: 'Username must be 150 characters or fewer'
   });
 });
 
-test('creates an active customer user with a bcrypt-hashed mobile password', async () => {
+test('uses the customer full name as the login username', () => {
+  assert.deepEqual(normalizeCustomerUsername('  Full Name  '), { username: 'Full Name' });
+});
+
+test('creates an active customer user with a bcrypt-hashed password', async () => {
   let insertedValues;
   const connection = {
     async execute(_query, values) {
@@ -30,7 +34,7 @@ test('creates an active customer user with a bcrypt-hashed mobile password', asy
     name: 'Gold Customer',
     email: 'customer@example.com',
     phone: '9876543210',
-    password: '9876543210',
+    password: 'customer-pass-123',
     status: 'Active',
     role: 'user'
   });
@@ -40,7 +44,7 @@ test('creates an active customer user with a bcrypt-hashed mobile password', asy
   assert.equal(insertedValues[1], 'Gold Customer');
   assert.equal(insertedValues[2], 'customer@example.com');
   assert.equal(insertedValues[3], '9876543210');
-  assert.equal(await bcrypt.compare('9876543210', insertedValues[4]), true);
+  assert.equal(await bcrypt.compare('customer-pass-123', insertedValues[4]), true);
   assert.equal(insertedValues[5], 'user');
   assert.equal(insertedValues[6], 'Active');
 });

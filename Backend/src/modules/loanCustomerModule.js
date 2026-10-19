@@ -99,7 +99,7 @@ async function getLoanCustomerById(id) {
   return rows[0] || null;
 }
 
-async function createLoanCustomer(customer, username) {
+async function createLoanCustomer(customer, username, password = customer.mobile) {
   const connection = await pool.getConnection();
   let id;
   try {
@@ -118,7 +118,7 @@ async function createLoanCustomer(customer, username) {
       name: customer.full_name,
       email: customer.email.toLowerCase(),
       phone: customer.mobile,
-      password: customer.mobile,
+      password,
       status: 'Active',
       role: 'user'
     });

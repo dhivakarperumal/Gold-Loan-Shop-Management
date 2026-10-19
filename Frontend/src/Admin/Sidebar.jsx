@@ -154,7 +154,7 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
       <aside
         className={`
         fixed top-0 left-0 z-50 h-full
-        bg-[#003B3B] border-r border-white/10
+        bg-[#00695C] border-r border-white/10
         font-sans
         
         flex flex-col transition-all duration-300

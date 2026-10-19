@@ -103,7 +103,7 @@ function normalizeCustomer(body) {
 function normalizeCustomerUsername(value) {
   const username = typeof value === 'string' ? value.trim() : '';
   if (!username) return { error: 'Username is required' };
-  if (username.length > 100) return { error: 'Username must be 100 characters or fewer' };
+  if (username.length > 150) return { error: 'Username must be 150 characters or fewer' };
   return { username };
 }
 
@@ -133,10 +133,14 @@ async function getCustomerById(req, res, next) {
 async function postCustomer(req, res, next) {
   const { customer, error } = normalizeCustomer(req.body || {});
   if (error) return res.status(400).json({ message: error });
-  const { username, error: usernameError } = normalizeCustomerUsername(req.body.username);
+  const { username, error: usernameError } = normalizeCustomerUsername(customer.full_name);
   if (usernameError) return res.status(400).json({ message: usernameError });
+  const password = typeof req.body.password === 'string' ? req.body.password : customer.mobile;
+  if (password.length < 8) {
+    return res.status(400).json({ message: 'Password must be at least 8 characters' });
+  }
   try {
-    return res.status(201).json(await createLoanCustomer(customer, username));
+    return res.status(201).json(await createLoanCustomer(customer, username, password));
   } catch (createError) {
     if (createError.code === 'ER_DUP_ENTRY') {
       return res.status(409).json({ message: 'Username, email, or phone number is already registered' });

@@ -17,7 +17,7 @@ async function initializeAuthModule() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
       user_id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
-      username VARCHAR(100) NOT NULL,
+      username VARCHAR(150) NOT NULL,
       name VARCHAR(150) NOT NULL,
       email VARCHAR(254) NOT NULL UNIQUE,
       phone VARCHAR(32) NULL UNIQUE,
@@ -32,6 +32,11 @@ async function initializeAuthModule() {
   const nameLength = Number(String(nameColumns[0]?.Type || '').match(/^varchar\((\d+)\)$/i)?.[1] || 0);
   if (nameLength < 150) {
     await pool.query('ALTER TABLE users MODIFY COLUMN name VARCHAR(150) NOT NULL');
+  }
+  const [usernameColumns] = await pool.query("SHOW COLUMNS FROM users LIKE 'username'");
+  const usernameLength = Number(String(usernameColumns[0]?.Type || '').match(/^varchar\((\d+)\)$/i)?.[1] || 0);
+  if (usernameLength < 150) {
+    await pool.query('ALTER TABLE users MODIFY COLUMN username VARCHAR(150) NOT NULL');
   }
 }
 

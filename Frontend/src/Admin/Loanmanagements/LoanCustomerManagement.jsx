@@ -5,6 +5,7 @@ import {
   FiDownload,
   FiEdit2,
   FiEye,
+  FiEyeOff,
   FiFilter,
   FiGrid,
   FiList,
@@ -152,7 +153,8 @@ export default function LoanCustomerManagement() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [form, setForm] = useState(EMPTY_CUSTOMER);
-  const [username, setUsername] = useState("");
+  const [accountPassword, setAccountPassword] = useState("");
+  const [showAccountPassword, setShowAccountPassword] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoPreview, setPhotoPreview] = useState({ reference: "", url: "" });
@@ -245,7 +247,8 @@ export default function LoanCustomerManagement() {
   const openAddCustomer = () => {
     setEditingCustomer(null);
     setForm(EMPTY_CUSTOMER);
-    setUsername("");
+    setAccountPassword("");
+    setShowAccountPassword(false);
     setDocuments([]);
     setPendingDocuments([]);
     setDocumentType("");
@@ -264,6 +267,8 @@ export default function LoanCustomerManagement() {
       date_of_birth: customer.date_of_birth ? String(customer.date_of_birth).slice(0, 10) : "",
       photo_url: customer.photo_url || ""
     });
+    setAccountPassword("");
+    setShowAccountPassword(false);
     setIsFormOpen(true);
     try {
       const response = await api.get(`/loan-customers/${customer.id}/documents`);
@@ -300,6 +305,9 @@ export default function LoanCustomerManagement() {
   const handleChange = (event) => {
     const { name, value } = event.target;
     setForm((current) => ({ ...current, [name]: value }));
+    if (name === "mobile") {
+      setAccountPassword((current) => !current || current === form.mobile ? value : current);
+    }
   };
 
   const handlePhotoUpload = async (event) => {
@@ -462,7 +470,10 @@ export default function LoanCustomerManagement() {
         const response = await api.put(`/loan-customers/${editingCustomer.id}`, payload);
         savedCustomer = response.data;
       } else {
-        const response = await api.post("/loan-customers", { ...payload, username: username.trim() });
+        const response = await api.post("/loan-customers", {
+          ...payload,
+          password: accountPassword
+        });
         savedCustomer = response.data;
       }
       customerPersisted = true;
@@ -747,25 +758,71 @@ export default function LoanCustomerManagement() {
                       <input
                         className={inputClass}
                         name="username"
-                        value={username}
-                        onChange={(event) => setUsername(event.target.value)}
+                        value={form.full_name}
+                        readOnly
                         required
-                        maxLength={100}
                         autoComplete="username"
-                        placeholder="Choose a login username"
+                        placeholder="Enter full name"
                       />
                     </label>
                   )}
-                  <CustomerField label="Primary Mobile" name="mobile" value={form.mobile} onChange={handleChange} required placeholder="Enter phone number" />
+                  <CustomerField label="Mobile" name="mobile" value={form.mobile} onChange={handleChange} required placeholder="Enter phone number" />
+                  {!editingCustomer && (
+                    <label className={labelClass}>
+                      Password<span className="ml-1 text-red-500">*</span>
+                      <span className="relative block">
+                        <input
+                          className={`${inputClass} pr-10`}
+                          type={showAccountPassword ? "text" : "password"}
+                          name="password"
+                          value={accountPassword}
+                          onChange={(event) => setAccountPassword(event.target.value)}
+                          required
+                          minLength={8}
+                          autoComplete="new-password"
+                          placeholder="Initial password (defaults to mobile)"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowAccountPassword((visible) => !visible)}
+                          aria-label={showAccountPassword ? "Hide password" : "Show password"}
+                          aria-pressed={showAccountPassword}
+                          className="absolute inset-y-0 right-2 flex items-center px-1 text-slate-500 hover:text-[#008577]"
+                        >
+                          {showAccountPassword ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}
+                        </button>
+                      </span>
+                    </label>
+                  )}
                   <CustomerField label="Alternate Mobile" name="alternate_mobile" value={form.alternate_mobile} onChange={handleChange} placeholder="Enter alternate phone number" />
                   <CustomerField label="Email" name="email" type="email" value={form.email} onChange={handleChange} required placeholder="name@example.com" />
                   {!editingCustomer && (
                     <p className="text-xs text-slate-500 sm:col-span-2">
-                      The customer account will use this email and username. Their initial password will be the primary mobile number.
+                      The initial password defaults to the primary mobile number; you can change it here.
                     </p>
                   )}
                   <CustomerField label="Date of Birth" name="date_of_birth" type="date" value={form.date_of_birth} onChange={handleChange} placeholder="dd-mm-yyyy" />
-                  <CustomerSelect label="Gender" name="gender" value={form.gender} onChange={handleChange} options={["", "Male", "Female", "Other", "Prefer not to say"]} required />
+                  <fieldset className="min-w-0">
+                    <legend className={labelClass}>
+                      Gender<span className="ml-1 text-red-500">*</span>
+                    </legend>
+                    <div className="mt-2 flex flex-wrap gap-3">
+                      {["Male", "Female", "Other"].map((gender) => (
+                        <label key={gender} className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-medium text-slate-700 hover:border-[#008577]">
+                          <input
+                            className="accent-[#008577]"
+                            type="radio"
+                            name="gender"
+                            value={gender}
+                            checked={form.gender === gender}
+                            onChange={handleChange}
+                            required
+                          />
+                          {gender}
+                        </label>
+                      ))}
+                    </div>
+                  </fieldset>
                   <CustomerField label="Occupation" name="occupation" value={form.occupation} onChange={handleChange} placeholder="Enter occupation" />
                   <CustomerSelect label="KYC Status" name="kyc_status" value={form.kyc_status} onChange={handleChange} options={["Pending", "Verified", "Rejected"]} />
                   <CustomerField label="City / Town" name="city" value={form.city} onChange={handleChange} required placeholder="Enter city or town" />
