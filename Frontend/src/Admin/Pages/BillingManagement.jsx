@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiArrowLeft, FiPlus, FiSave, FiSearch, FiTrash2 } from "react-icons/fi";
+import { FiArrowLeft, FiEdit2, FiEye, FiPlus, FiSave, FiSearch, FiTrash2, FiX } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api from "../../api";
 import useGoldRates from "../../PrivateRouter/useGoldRates";
@@ -287,6 +287,8 @@ export default function BillingManagement() {
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [editingBillId, setEditingBillId] = useState(null);
+  const [viewingBill, setViewingBill] = useState(null);
   const [customers, setCustomers] = useState([{ ...EMPTY_CUSTOMER }]);
   const [products, setProducts] = useState([]);
   const [productToAdd, setProductToAdd] = useState({ ...EMPTY_PRODUCT });
@@ -388,6 +390,7 @@ export default function BillingManagement() {
   const total = Math.round((subtotal - discountAmount - exchangeCredit + gst) * 100) / 100;
 
   const resetForm = () => {
+    setEditingBillId(null);
     setCustomers([{ ...EMPTY_CUSTOMER }]);
     setProducts([]);
     setProductToAdd({ ...EMPTY_PRODUCT });
@@ -395,6 +398,51 @@ export default function BillingManagement() {
     setDiscountInput("");
     setExchanges([]);
     setPaymentType("FULL_PAYMENT");
+  };
+
+  const editBill = (bill) => {
+    const billCustomers = decodeArray(bill.customers);
+    const billProducts = decodeArray(bill.products);
+    const billExchanges = decodeArray(bill.exchanges);
+    const billSubtotal = Number(bill.sub_total) || 0;
+    const billDiscount = Number(bill.discount_amount) || 0;
+    const exchangeTotal = billExchanges.reduce((sum, exchange) => sum + (Number(exchange.credit_amount) || 0), 0);
+    const taxableSubtotal = Math.max(0, billSubtotal - billDiscount - exchangeTotal);
+    const savedGstRate = taxableSubtotal > 0
+      ? Math.round((Number(bill.gst_amount || 0) / taxableSubtotal) * 10000) / 100
+      : 0;
+
+    setEditingBillId(bill.id);
+    setCustomers(billCustomers.length ? billCustomers : [{ ...EMPTY_CUSTOMER }]);
+    setProducts(billProducts.map((product) => ({
+      ...product,
+      product_id: String(product.product_id || "")
+    })));
+    setProductToAdd({ ...EMPTY_PRODUCT });
+    setExchanges(billExchanges.map((exchange) => ({
+      ...EMPTY_EXCHANGE,
+      ...exchange,
+      category_is_other: !categories.some((category) => category.name === exchange.category),
+      weight: String(exchange.weight ?? ""),
+      wastage_weight: String(exchange.wastage_weight ?? ""),
+      rate_per_unit: String(exchange.rate_per_unit ?? "")
+    })));
+    setPaymentType(bill.payment_type);
+    setGstRateInput(String(savedGstRate));
+    setDiscountInput(billDiscount ? String(billDiscount) : "");
+    setShowForm(true);
+  };
+
+  const deleteBill = async (bill) => {
+    if (!window.confirm(`Delete bill ${bill.invoice_no}? This cannot be undone.`)) return;
+    try {
+      await api.delete(`/billings/${bill.id}`);
+      toast.success("Bill deleted.");
+      await loadBills();
+    } catch (error) {
+      console.error("Failed to delete bill:", error);
+      toast.error(error.response?.data?.message || "Could not delete bill.");
+    }
   };
 
   const updateRow = (setter, rows, index, field, value) => {
@@ -478,7 +526,7 @@ export default function BillingManagement() {
     }
     setSaving(true);
     try {
-      await api.post("/billings", {
+      const billingPayload = {
         customers,
         products: products.map((product) => ({ product_id: Number(product.product_id) })),
         exchanges: paymentType === "EXCHANGE_GOLD"
@@ -498,8 +546,14 @@ export default function BillingManagement() {
         payment_type: paymentType,
         gst_rate: gstRate,
         discount_amount: discountAmount
-      });
-      toast.success("Bill saved.");
+      };
+      if (editingBillId) {
+        await api.put(`/billings/${editingBillId}`, billingPayload);
+        toast.success("Bill updated.");
+      } else {
+        await api.post("/billings", billingPayload);
+        toast.success("Bill saved.");
+      }
       resetForm();
       setShowForm(false);
       await loadBills();
@@ -527,7 +581,7 @@ export default function BillingManagement() {
           </header>
           <section className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px] text-left">
+              <table className="w-full min-w-[900px] text-left">
                 <thead className="bg-[#00695C] text-xs uppercase tracking-wide text-white">
                   <tr>
                     <th className="px-4 py-3">S.No.</th>
@@ -537,13 +591,14 @@ export default function BillingManagement() {
                     <th className="px-4 py-3">Payment</th>
                     <th className="px-4 py-3">Date</th>
                     <th className="px-4 py-3 text-right">Total</th>
+                    <th className="px-4 py-3 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {loading ? (
-                    <tr><td colSpan="7" className="px-4 py-12 text-center text-sm text-slate-500">Loading bills...</td></tr>
+                    <tr><td colSpan="8" className="px-4 py-12 text-center text-sm text-slate-500">Loading bills...</td></tr>
                   ) : bills.length === 0 ? (
-                    <tr><td colSpan="7" className="px-4 py-12 text-center text-sm text-slate-500">No bills yet. Create your first bill.</td></tr>
+                    <tr><td colSpan="8" className="px-4 py-12 text-center text-sm text-slate-500">No bills yet. Create your first bill.</td></tr>
                   ) : bills.map((bill, index) => {
                     const billCustomers = decodeArray(bill.customers);
                     const billProducts = decodeArray(bill.products);
@@ -556,6 +611,13 @@ export default function BillingManagement() {
                         <td className="px-4 py-3 text-slate-600">{bill.payment_type === "EXCHANGE_GOLD" ? "Exchange Gold" : "Full Payment"}</td>
                         <td className="px-4 py-3 text-slate-500">{bill.created_at ? new Date(bill.created_at).toLocaleDateString("en-IN") : "—"}</td>
                         <td className="px-4 py-3 text-right font-bold text-slate-900">{currency(bill.total_amount)}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex justify-end gap-1">
+                            <button type="button" onClick={() => setViewingBill(bill)} className="rounded-md p-2 text-sky-700 hover:bg-sky-50" aria-label={`View bill ${bill.invoice_no}`} title="View"><FiEye /></button>
+                            <button type="button" onClick={() => editBill(bill)} className="rounded-md p-2 text-amber-700 hover:bg-amber-50" aria-label={`Edit bill ${bill.invoice_no}`} title="Edit"><FiEdit2 /></button>
+                            <button type="button" onClick={() => deleteBill(bill)} className="rounded-md p-2 text-rose-600 hover:bg-rose-50" aria-label={`Delete bill ${bill.invoice_no}`} title="Delete"><FiTrash2 /></button>
+                          </div>
+                        </td>
                       </tr>
                     );
                   })}
@@ -570,7 +632,7 @@ export default function BillingManagement() {
             <button type="button" onClick={() => { setShowForm(false); resetForm(); }} className="rounded-lg border border-slate-200 bg-white p-2.5 text-slate-600 hover:bg-slate-50" aria-label="Back to bills"><FiArrowLeft /></button>
             <div>
               <p className="text-xs font-medium text-slate-500">Admin / Billing / New Bill</p>
-              <h1 className="mt-1 text-2xl font-extrabold text-slate-900">New Bill</h1>
+              <h1 className="mt-1 text-2xl font-extrabold text-slate-900">{editingBillId ? "Edit Bill" : "New Bill"}</h1>
             </div>
           </header>
 
@@ -745,9 +807,68 @@ export default function BillingManagement() {
             {paymentType === "EXCHANGE_GOLD" && exchangeCredit > subtotal && <p className="text-xs font-semibold text-rose-600">Exchange amount cannot exceed subtotal.</p>}
           </section>
           <footer className="flex justify-end">
-            <button type="submit" disabled={saving || !validGst || !validDiscount || (paymentType === "EXCHANGE_GOLD" && exchangeCredit > subtotal)} className="inline-flex items-center gap-2 rounded-lg bg-[#00695C] px-5 py-3 text-sm font-bold text-white hover:bg-[#008577] disabled:cursor-not-allowed disabled:opacity-60"><FiSave />{saving ? "Saving Bill..." : "Save Bill"}</button>
+            <button type="submit" disabled={saving || !validGst || !validDiscount || (paymentType === "EXCHANGE_GOLD" && exchangeCredit > subtotal)} className="inline-flex items-center gap-2 rounded-lg bg-[#00695C] px-5 py-3 text-sm font-bold text-white hover:bg-[#008577] disabled:cursor-not-allowed disabled:opacity-60"><FiSave />{saving ? (editingBillId ? "Updating Bill..." : "Saving Bill...") : (editingBillId ? "Update Bill" : "Save Bill")}</button>
           </footer>
         </form>
+      )}
+      {viewingBill && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setViewingBill(null);
+        }}>
+          <section role="dialog" aria-modal="true" aria-labelledby="bill-view-title" className="max-h-[90vh] w-full max-w-3xl space-y-5 overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl">
+            <header className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-xs font-medium text-slate-500">Bill Details</p>
+                <h2 id="bill-view-title" className="mt-1 text-xl font-extrabold text-slate-900">{viewingBill.invoice_no}</h2>
+              </div>
+              <button type="button" onClick={() => setViewingBill(null)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label="Close bill details"><FiX /></button>
+            </header>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="rounded-lg bg-slate-50 p-4">
+                <h3 className="mb-2 text-sm font-bold text-slate-800">Customer(s)</h3>
+                {decodeArray(viewingBill.customers).map((customer, index) => (
+                  <div key={`${customer.email || customer.name}-${index}`} className="mb-3 text-sm text-slate-600 last:mb-0">
+                    <p className="font-semibold text-slate-800">{customer.name}</p>
+                    {customer.phone && <p>{customer.phone}</p>}
+                    {customer.email && <p>{customer.email}</p>}
+                    {customer.address && <p>{customer.address}</p>}
+                  </div>
+                ))}
+              </div>
+              <div className="rounded-lg bg-slate-50 p-4 text-sm text-slate-600">
+                <h3 className="mb-2 font-bold text-slate-800">Bill Information</h3>
+                <p>Payment: {viewingBill.payment_type === "EXCHANGE_GOLD" ? "Exchange Gold" : "Full Payment"}</p>
+                <p>Date: {viewingBill.created_at ? new Date(viewingBill.created_at).toLocaleDateString("en-IN") : "—"}</p>
+              </div>
+            </div>
+            <div className="overflow-x-auto rounded-lg border border-slate-200">
+              <table className="w-full min-w-[600px] text-left text-sm">
+                <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                  <tr><th className="px-3 py-2">Item</th><th className="px-3 py-2">Category</th><th className="px-3 py-2">Purity</th><th className="px-3 py-2 text-right">Amount</th></tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {decodeArray(viewingBill.products).map((product, index) => (
+                    <tr key={`view-product-${index}`}>
+                      <td className="px-3 py-2">{product.product_name}</td><td className="px-3 py-2">{product.category || "—"}</td><td className="px-3 py-2">{product.purity || "—"}</td><td className="px-3 py-2 text-right">{currency(product.price)}</td>
+                    </tr>
+                  ))}
+                  {decodeArray(viewingBill.exchanges).map((exchange, index) => (
+                    <tr key={`view-exchange-${index}`}>
+                      <td className="px-3 py-2">{exchange.product_name}</td><td className="px-3 py-2">{exchange.category || "—"}</td><td className="px-3 py-2">{exchange.metal_type} {exchange.purity}</td><td className="px-3 py-2 text-right text-amber-700">−{currency(exchange.credit_amount)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="ml-auto max-w-sm space-y-2 text-sm">
+              <div className="flex justify-between text-slate-600"><span>Sub-Total</span><span>{currency(viewingBill.sub_total)}</span></div>
+              {Number(viewingBill.discount_amount) > 0 && <div className="flex justify-between text-emerald-700"><span>Discount</span><span>−{currency(viewingBill.discount_amount)}</span></div>}
+              {decodeArray(viewingBill.exchanges).length > 0 && <div className="flex justify-between text-amber-700"><span>Exchange Amount</span><span>−{currency(decodeArray(viewingBill.exchanges).reduce((sum, item) => sum + (Number(item.credit_amount) || 0), 0))}</span></div>}
+              <div className="flex justify-between text-slate-600"><span>GST</span><span>{currency(viewingBill.gst_amount)}</span></div>
+              <div className="flex justify-between border-t border-slate-200 pt-2 text-lg font-extrabold text-slate-900"><span>Total</span><span>{currency(viewingBill.total_amount)}</span></div>
+            </div>
+          </section>
+        </div>
       )}
     </main>
   );

@@ -1,8 +1,11 @@
 const { randomUUID } = require('node:crypto');
 const {
   createBilling,
+  deleteBilling,
+  getBillingById,
   getBillingProductsByIds,
-  listBillings
+  listBillings,
+  updateBilling
 } = require('../modules/billingModule');
 const { findGoldRateForPurity, getCurrentGoldRates } = require('../modules/goldRateModule');
 
@@ -297,11 +300,50 @@ async function postBilling(req, res, next) {
   }
 }
 
+function validBillingId(value) {
+  const id = Number(value);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+async function putBilling(req, res, next) {
+  const id = validBillingId(req.params.id);
+  if (!id) return res.status(400).json({ message: 'Invalid bill ID' });
+  try {
+    const existing = await getBillingById(id);
+    if (!existing) return res.status(404).json({ message: 'Bill not found' });
+    const { products, error: productsError } = await resolveSelectedProducts(req.body?.products);
+    if (productsError) return res.status(400).json({ message: productsError });
+    const currentRateSet = req.body?.payment_type === 'EXCHANGE_GOLD' ? await getCurrentGoldRates() : null;
+    const { billing, error } = normalizeBilling({ ...req.body, products }, currentRateSet);
+    if (error) return res.status(400).json({ message: error });
+    billing.invoice_no = existing.invoice_no;
+    const updated = await updateBilling(id, billing);
+    if (!updated) return res.status(404).json({ message: 'Bill not found' });
+    return res.json(updated);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function removeBilling(req, res, next) {
+  const id = validBillingId(req.params.id);
+  if (!id) return res.status(400).json({ message: 'Invalid bill ID' });
+  try {
+    const deleted = await deleteBilling(id);
+    if (!deleted) return res.status(404).json({ message: 'Bill not found' });
+    return res.status(204).end();
+  } catch (error) {
+    return next(error);
+  }
+}
+
 module.exports = {
   getBillings,
   mapSelectedProducts,
   normalizeExchangeItems,
   normalizeBilling,
+  putBilling,
   postBilling,
+  removeBilling,
   resolveSelectedProducts
 };

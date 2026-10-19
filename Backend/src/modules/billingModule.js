@@ -32,6 +32,16 @@ async function listBillings() {
   return rows;
 }
 
+async function getBillingById(id) {
+  const [rows] = await pool.execute(
+    `SELECT id, invoice_no, customers, products, exchanges, payment_type,
+      sub_total, discount_amount, gst_amount, total_amount, created_at
+     FROM billings WHERE id = ?`,
+    [id]
+  );
+  return rows[0] || null;
+}
+
 async function getBillingProductsByIds(productIds) {
   if (productIds.length === 0) return [];
   const placeholders = productIds.map(() => '?').join(', ');
@@ -61,18 +71,41 @@ async function createBilling(billing) {
       billing.total_amount
     ]
   );
-  const [rows] = await pool.execute(
-    `SELECT id, invoice_no, customers, products, exchanges, payment_type,
-      sub_total, discount_amount, gst_amount, total_amount, created_at
-     FROM billings WHERE id = ?`,
-    [result.insertId]
+  return getBillingById(result.insertId);
+}
+
+async function updateBilling(id, billing) {
+  await pool.execute(
+    `UPDATE billings
+     SET customers = ?, products = ?, exchanges = ?, payment_type = ?,
+       sub_total = ?, discount_amount = ?, gst_amount = ?, total_amount = ?
+     WHERE id = ?`,
+    [
+      JSON.stringify(billing.customers),
+      JSON.stringify(billing.products),
+      JSON.stringify(billing.exchanges),
+      billing.payment_type,
+      billing.sub_total,
+      billing.discount_amount,
+      billing.gst_amount,
+      billing.total_amount,
+      id
+    ]
   );
-  return rows[0];
+  return getBillingById(id);
+}
+
+async function deleteBilling(id) {
+  const [result] = await pool.execute('DELETE FROM billings WHERE id = ?', [id]);
+  return result.affectedRows > 0;
 }
 
 module.exports = {
   createBilling,
+  deleteBilling,
+  getBillingById,
   getBillingProductsByIds,
   initializeBillingModule,
-  listBillings
+  listBillings,
+  updateBilling
 };
