@@ -8,6 +8,75 @@ const CUSTOMER_COLUMNS = `
   kyc_status, photo_url, notes, created_at, updated_at
 `;
 
+async function linkExistingCustomerAccounts() {
+  const [customers] = await pool.query(`
+    SELECT id, full_name, mobile, email
+    FROM loan_customers
+    WHERE user_id IS NULL AND email IS NOT NULL AND mobile IS NOT NULL
+    ORDER BY id
+  `);
+  let linkedCount = 0;
+
+  for (const customer of customers) {
+    const username = String(customer.full_name || '').trim();
+    const email = String(customer.email || '').trim().toLowerCase();
+    const phone = String(customer.mobile || '').trim();
+    if (!username || username.length > 150 || !email || !phone) {
+      console.error(`Could not create a user account for loan customer ${customer.id}: name, email, or mobile is invalid.`);
+      continue;
+    }
+
+    const connection = await pool.getConnection();
+    try {
+      await connection.beginTransaction();
+      const [existingUsers] = await connection.execute(
+        `SELECT user_id, email, phone
+         FROM users
+         WHERE email = ? OR phone = ? OR username = ?
+         FOR UPDATE`,
+        [email, phone, username]
+      );
+      if (existingUsers.length > 0) {
+        const matchingUser = existingUsers.find((user) =>
+          String(user.email || '').toLowerCase() === email && String(user.phone || '') === phone
+        );
+        if (!matchingUser) {
+          throw new Error('an account already uses the customer name, email, or mobile');
+        }
+        await connection.execute(
+          'UPDATE loan_customers SET user_id = ? WHERE id = ? AND user_id IS NULL',
+          [matchingUser.user_id, customer.id]
+        );
+      } else {
+        const userId = await insertUser(connection, {
+          username,
+          name: username,
+          email,
+          phone,
+          password: phone,
+          status: 'Active',
+          role: 'user'
+        });
+        await connection.execute(
+          'UPDATE loan_customers SET user_id = ? WHERE id = ? AND user_id IS NULL',
+          [userId, customer.id]
+        );
+      }
+      await connection.commit();
+      linkedCount += 1;
+    } catch (error) {
+      await connection.rollback();
+      console.error(`Could not link a user account to loan customer ${customer.id}: ${error.message}`);
+    } finally {
+      connection.release();
+    }
+  }
+
+  if (linkedCount > 0) {
+    console.info(`Linked user accounts to ${linkedCount} existing loan customer record(s).`);
+  }
+}
+
 async function initializeLoanCustomerModule() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS loan_customers (
@@ -57,6 +126,7 @@ async function initializeLoanCustomerModule() {
       await pool.query(`ALTER TABLE loan_customers ADD COLUMN \`${column}\` ${definition}`);
     }
   }
+  await linkExistingCustomerAccounts();
   await pool.query(`
     CREATE TABLE IF NOT EXISTS loan_customer_documents (
       id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,

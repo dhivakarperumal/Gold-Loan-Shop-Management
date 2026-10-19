@@ -14,6 +14,7 @@ const { initializeGoldRateModule } = require('./src/modules/goldRateModule');
 const { initializeVideoModule } = require('./src/modules/videoModule');
 const { initializeReviewModule } = require('./src/modules/reviewModule');
 const { initializeDealerModule } = require('./src/modules/dealerModule');
+const { initializeStoreModule } = require('./src/modules/storeModule');
 const apiRouter = require('./src/router');
 const { pool } = require('./src/config/db');
 
@@ -60,6 +61,7 @@ async function startServer() {
   await initializeVideoModule();
   await initializeReviewModule();
   await initializeDealerModule();
+  await initializeStoreModule();
   const server = app.listen(PORT, () => {
     console.log(`Backend server is running on port ${PORT}`);
   });

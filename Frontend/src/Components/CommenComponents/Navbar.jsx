@@ -22,6 +22,7 @@ import {
   FaTimes,
   FaUser,
 } from "react-icons/fa";
+import { FiFileText } from "react-icons/fi";
 import WishlistDrawer from "./WishlistDrawer";
 
 const Navbar = () => {
