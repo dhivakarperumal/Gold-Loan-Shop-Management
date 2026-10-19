@@ -101,7 +101,7 @@ const Gold = () => {
                             }}
                             grabCursor
                             centeredSlides={products.length === 1}
-                            className="!pb-2"
+                            className="!pt-2 !pb-2"
                         >
                             {products.map((product) => (
                                 <SwiperSlide key={product.id} className="h-auto w-[260px] sm:w-[280px] xl:w-[300px]">
