@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { FiArrowLeft, FiSearch, FiSave, FiLayers, FiBox, FiPlus, FiCheck } from "react-icons/fi";
+import { createPortal } from "react-dom";
+import { FiArrowLeft, FiSearch, FiSave, FiLayers, FiBox, FiPlus, FiCheck, FiX } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import api from "../../api";
 import { toast, Toaster } from "react-hot-toast";
@@ -12,7 +13,7 @@ const getImageUrl = (imagePath) => {
   return `${BACKEND_URL}${imagePath}`;
 };
 
-const AddStock = () => {
+const AddStock = ({ onClose }) => {
     const navigate = useNavigate();
     const [products, setProducts] = useState([]);
     const [search, setSearch] = useState("");
@@ -128,7 +129,10 @@ const AddStock = () => {
 
             await api.put(`/products/${selectedProduct.id}`, payload);
             toast.success(`Successfully added ${addedTotal} to stock!`);
-            setTimeout(() => navigate(-1), 1500);
+            setTimeout(() => {
+                if (onClose) onClose();
+                else navigate(-1);
+            }, 1500);
         } catch (error) {
             console.error("Failed to add stock:", error);
             toast.error(error.response?.data?.message || "Failed to add stock.");
@@ -139,14 +143,14 @@ const AddStock = () => {
 
     const hasSizes = selectedProduct && selectedProduct.variants && selectedProduct.variants.some(v => v.sizesStock && Object.keys(v.sizesStock).length > 0);
 
-    return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
-            <Toaster position="top-right" />
+    const stockForm = (
+        <div className={`space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 ${onClose ? "max-h-[88vh] overflow-y-auto p-4 pb-8 sm:p-6" : "pb-20"}`}>
+            {!onClose && <Toaster position="top-right" />}
 
             {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6 pb-2">
                 <div className="flex items-center gap-3 sm:gap-4">
-                    <button onClick={() => navigate(-1)} className="p-3 bg-white border border-gray-100 rounded-2xl text-gray-400 hover:text-blue-600 transition-all shadow-sm active:scale-95 shadow-blue-500/5">
+                    <button onClick={() => onClose ? onClose() : navigate(-1)} disabled={isSaving} className="p-3 bg-white border border-gray-100 rounded-2xl text-gray-400 hover:text-blue-600 transition-all shadow-sm active:scale-95 shadow-blue-500/5 disabled:opacity-50">
                         <FiArrowLeft size={20} />
                     </button>
                     <div>
@@ -156,6 +160,17 @@ const AddStock = () => {
                         <p className="text-sm font-bold text-gray-400 mt-1">Select a product and top up your inventory securely.</p>
                     </div>
                 </div>
+                {onClose && (
+                    <button
+                        type="button"
+                        onClick={onClose}
+                        disabled={isSaving}
+                        aria-label="Close Add Stock popup"
+                        className="rounded-full border border-gray-200 p-2 text-gray-500 transition hover:bg-gray-100 hover:text-slate-800 disabled:opacity-50"
+                    >
+                        <FiX size={20} />
+                    </button>
+                )}
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -354,6 +369,19 @@ const AddStock = () => {
             </div>
         </div>
     );
+
+    if (onClose) {
+        return createPortal(
+            <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 p-4 backdrop-blur-sm">
+                <div role="dialog" aria-modal="true" aria-label="Add new stock" className="h-full max-h-[calc(100vh-2rem)] w-4xl max-w-[calc(100vw-2rem)] overflow-y-auto rounded-2xl bg-white shadow-2xl">
+                    {stockForm}
+                </div>
+            </div>,
+            document.body
+        );
+    }
+
+    return stockForm;
 };
 
 export default AddStock;
