@@ -6,7 +6,7 @@ import useGoldRates from "../../PrivateRouter/useGoldRates";
 
 const EMPTY_CUSTOMER = { name: "", phone: "", email: "", address: "" };
 const EMPTY_PRODUCT = { product_id: "", product_name: "", category: "", purity: "", price: "" };
-const EMPTY_EXCHANGE = { product_name: "", category: "", category_is_other: false, metal_type: "Gold", purity: "22K", credit_amount: "" };
+const EMPTY_EXCHANGE = { product_name: "", category: "", category_is_other: false, metal_type: "Gold", purity: "22K", weight: "", wastage_weight: "" };
 const PURITY_LABELS = { "999": "24K", "916": "22K", "833": "20K", "750": "18K", "585": "14K" };
 const inputClass = "mt-1 block w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-[#008577] focus:ring-2 focus:ring-emerald-100";
 const labelClass = "block text-xs font-semibold text-slate-600";
@@ -27,7 +27,7 @@ function decodeArray(value) {
   }
 }
 
-function TextField({ label, value, onChange, type = "text", required = false, placeholder = "", min, step }) {
+function TextField({ label, value, onChange, type = "text", required = false, placeholder = "", min, step, readOnly = false }) {
   return (
     <label className={labelClass}>
       {label}{required && <span className="ml-1 text-rose-500">*</span>}
@@ -40,9 +40,19 @@ function TextField({ label, value, onChange, type = "text", required = false, pl
         placeholder={placeholder}
         min={min}
         step={step}
+        readOnly={readOnly}
       />
     </label>
   );
+}
+
+function findItemRate(metalRates, metalType, purity) {
+  const goldPurity = { "24k": "999", "22k": "916", "20k": "833", "18k": "750", "14k": "585" };
+  const normalizedPurity = metalType === "Gold" ? goldPurity[purity.toLowerCase()] || purity : purity;
+  return metalRates.find((rate) => (
+    rate.metal_type.toLowerCase() === metalType.toLowerCase()
+    && rate.purity.toLowerCase() === String(normalizedPurity).toLowerCase()
+  ));
 }
 
 function ItemFields({ item, onChange, onCategorySelect, onMetalSelect, categories, metalRates, exchange = false }) {
@@ -58,10 +68,17 @@ function ItemFields({ item, onChange, onCategorySelect, onMetalSelect, categorie
   const selectedMetalRate = selectedMetalRates.find((rate) => (
     purityLabel(rate.purity).toLowerCase() === item.purity.toLowerCase()
   ));
+  const weightUnit = selectedMetalRate?.rate_unit === "carat" ? "carat" : "g";
+  const weight = Math.round((Number(item.weight) || 0) * 1000) / 1000;
+  const wastageWeight = Math.round((Number(item.wastage_weight) || 0) * 1000) / 1000;
+  const netWeight = Math.round(Math.max(0, weight - wastageWeight) * 1000) / 1000;
+  const exchangeAmount = selectedMetalRate
+    ? Math.round(netWeight * Number(selectedMetalRate.rate_per_unit ?? selectedMetalRate.rate_per_gram) * 100) / 100
+    : 0;
 
   return (
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
-      <TextField label="Product Name" value={item.product_name} onChange={(value) => onChange("product_name", value)} required placeholder="Enter product name" />
+    <div className={`grid gap-3 md:grid-cols-2 ${exchange ? "xl:grid-cols-4" : "xl:grid-cols-4"}`}>
+      {!exchange && <TextField label="Product Name" value={item.product_name} onChange={(value) => onChange("product_name", value)} required placeholder="Enter product name" />}
       {exchange ? (
         <div>
           <label className={labelClass}>
@@ -129,16 +146,16 @@ function ItemFields({ item, onChange, onCategorySelect, onMetalSelect, categorie
             : "Today's rate is unavailable for this purity"}
         </span>}
       </label>
-      <TextField
-        label={exchange ? "Exchange Credit (₹)" : "Unit Price (₹)"}
-        type="number"
-        value={exchange ? item.credit_amount : item.price}
-        onChange={(value) => onChange(exchange ? "credit_amount" : "price", value)}
-        required
-        min="0"
-        step="0.01"
-        placeholder="0.00"
-      />
+      {exchange ? (
+        <>
+          <TextField label={`Weight (${weightUnit})`} type="number" value={item.weight} onChange={(value) => onChange("weight", value)} required min="0" step="0.001" placeholder="Enter weight" />
+          <TextField label={`Wastage Weight (${weightUnit})`} type="number" value={item.wastage_weight} onChange={(value) => onChange("wastage_weight", value)} min="0" step="0.001" placeholder="0.000" />
+          <TextField label={`Net Weight (${weightUnit})`} type="number" value={weight > 0 ? netWeight.toFixed(3) : ""} onChange={() => {}} readOnly placeholder="Calculated weight" />
+          <TextField label="Exchange Amount (₹)" type="number" value={weight > 0 && selectedMetalRate ? exchangeAmount.toFixed(2) : ""} onChange={() => {}} readOnly placeholder="Calculated from daily rate" />
+        </>
+      ) : (
+        <TextField label="Unit Price (₹)" type="number" value={item.price} onChange={(value) => onChange("price", value)} required min="0" step="0.01" placeholder="0.00" />
+      )}
     </div>
   );
 }
@@ -342,9 +359,16 @@ export default function BillingManagement() {
   );
   const exchangeCredit = useMemo(
     () => paymentType === "EXCHANGE_GOLD"
-      ? exchanges.reduce((sum, exchange) => sum + (Number(exchange.credit_amount) || 0), 0)
+      ? exchanges.reduce((sum, exchange) => {
+        const rate = findItemRate(metalRates, exchange.metal_type, exchange.purity);
+        const weight = Math.round((Number(exchange.weight) || 0) * 1000) / 1000;
+        const wastageWeight = Math.round((Number(exchange.wastage_weight) || 0) * 1000) / 1000;
+        const netWeight = Math.round(Math.max(0, weight - wastageWeight) * 1000) / 1000;
+        const credit = rate ? netWeight * Number(rate.rate_per_unit ?? rate.rate_per_gram) : 0;
+        return sum + (Number.isFinite(credit) ? Math.round(credit * 100) / 100 : 0);
+      }, 0)
       : 0,
-    [exchanges, paymentType]
+    [exchanges, metalRates, paymentType]
   );
   const discountAmount = discountInput.trim() === "" ? 0 : Number(discountInput);
   const validDiscount = Number.isFinite(discountAmount)
@@ -415,8 +439,22 @@ export default function BillingManagement() {
       toast.error("Add at least one exchange item.");
       return;
     }
+    if (paymentType === "EXCHANGE_GOLD" && exchanges.some((exchange) => (
+      !Number.isFinite(Number(exchange.weight))
+      || Number(exchange.weight) <= 0
+      || !Number.isFinite(Number(exchange.wastage_weight || 0))
+      || Number(exchange.wastage_weight || 0) < 0
+      || Number(exchange.wastage_weight || 0) > Number(exchange.weight)
+    ))) {
+      toast.error("Enter a valid weight and wastage weight for each exchange item.");
+      return;
+    }
+    if (paymentType === "EXCHANGE_GOLD" && exchanges.some((exchange) => !findItemRate(metalRates, exchange.metal_type, exchange.purity))) {
+      toast.error("A current daily rate is unavailable for an exchange item purity.");
+      return;
+    }
     if (exchangeCredit > subtotal) {
-      toast.error("Exchange credit cannot exceed the purchased products subtotal.");
+      toast.error("Exchange amount cannot exceed the purchased products subtotal.");
       return;
     }
     if (!validDiscount) {
@@ -433,7 +471,14 @@ export default function BillingManagement() {
         customers,
         products: products.map((product) => ({ product_id: Number(product.product_id) })),
         exchanges: paymentType === "EXCHANGE_GOLD"
-          ? exchanges.map((exchange) => ({ ...exchange, credit_amount: Number(exchange.credit_amount) }))
+          ? exchanges.map((exchange) => ({
+            product_name: exchange.product_name,
+            category: exchange.category,
+            metal_type: exchange.metal_type,
+            purity: exchange.purity,
+            weight: Number(exchange.weight),
+            wastage_weight: Number(exchange.wastage_weight || 0)
+          }))
           : [],
         payment_type: paymentType,
         gst_rate: gstRate,
@@ -612,7 +657,7 @@ export default function BillingManagement() {
             {paymentType === "EXCHANGE_GOLD" && (
               <div className="space-y-4 rounded-lg border border-amber-200 bg-amber-50/40 p-4">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div><h3 className="font-bold text-slate-800">Exchange Gold Items</h3><p className="text-xs text-slate-500">Enter the credit value for each trade-in.</p></div>
+                  <div><h3 className="font-bold text-slate-800">Exchange Gold Items</h3><p className="text-xs text-slate-500">Exchange amount is calculated from net weight and today's rate.</p></div>
                   <button type="button" onClick={() => setExchanges((rows) => [...rows, { ...EMPTY_EXCHANGE }])} className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 px-3 py-2 text-xs font-bold text-amber-800 hover:bg-amber-100"><FiPlus /> Add Multiple Exchange Items</button>
                 </div>
                 {exchanges.map((exchange, index) => (
@@ -659,7 +704,7 @@ export default function BillingManagement() {
               />
             </label>
             {!validDiscount && <p className="text-xs font-semibold text-rose-600">Discount and exchange credit cannot exceed the products subtotal.</p>}
-            {paymentType === "EXCHANGE_GOLD" && <div className="flex justify-between text-sm text-amber-700"><span>Exchange Credit</span><span>−{currency(exchangeCredit)}</span></div>}
+            {paymentType === "EXCHANGE_GOLD" && <div className="flex justify-between text-sm text-amber-700"><span>Exchange Amount</span><span>−{currency(exchangeCredit)}</span></div>}
             <label className="flex items-center justify-between gap-4 text-sm font-medium text-slate-600">
               GST Rate (%)
               <input
@@ -679,7 +724,7 @@ export default function BillingManagement() {
               <span>{validDiscount && validGst ? currency(gst) : "—"}</span>
             </div>
             <div className="flex justify-between border-t border-slate-100 pt-3 text-lg font-extrabold text-slate-900"><span>Total Bill</span><span>{validDiscount && validGst ? currency(total) : "—"}</span></div>
-            {paymentType === "EXCHANGE_GOLD" && exchangeCredit > subtotal && <p className="text-xs font-semibold text-rose-600">Exchange credit cannot exceed subtotal.</p>}
+            {paymentType === "EXCHANGE_GOLD" && exchangeCredit > subtotal && <p className="text-xs font-semibold text-rose-600">Exchange amount cannot exceed subtotal.</p>}
           </section>
           <footer className="flex justify-end">
             <button type="submit" disabled={saving || !validGst || !validDiscount || (paymentType === "EXCHANGE_GOLD" && exchangeCredit > subtotal)} className="inline-flex items-center gap-2 rounded-lg bg-[#00695C] px-5 py-3 text-sm font-bold text-white hover:bg-[#008577] disabled:cursor-not-allowed disabled:opacity-60"><FiSave />{saving ? "Saving Bill..." : "Save Bill"}</button>

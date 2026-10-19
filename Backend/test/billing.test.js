@@ -18,6 +18,23 @@ const billingInput = (overrides = {}) => ({
   ...overrides
 });
 
+const currentRates = {
+  rates: [
+    { metal_type: 'Gold', purity: '916', rate_per_gram: 1000, rate_per_unit: 1000, rate_unit: 'gram' },
+    { metal_type: 'Silver', purity: '999', rate_per_gram: 80, rate_per_unit: 80, rate_unit: 'gram' }
+  ]
+};
+const exchangeItem = (overrides = {}) => ({
+  product_name: 'Old chain',
+  category: 'Chain',
+  metal_type: 'Gold',
+  purity: '22K',
+  weight: 4,
+  wastage_weight: 2,
+  credit_amount: 1,
+  ...overrides
+});
+
 test('defaults GST to 0% for full-payment billing totals', () => {
   const result = normalizeBilling(billingInput());
   assert.equal(result.error, undefined);
@@ -36,13 +53,46 @@ test('deducts exchange credit before calculating entered GST', () => {
   const result = normalizeBilling(billingInput({
     payment_type: 'EXCHANGE_GOLD',
     gst_rate: 3,
-    exchanges: [{ product_name: 'Old chain', category: 'Chain', metal_type: 'Gold', purity: '22K', credit_amount: 2000 }]
-  }));
+    exchanges: [exchangeItem()]
+  }), currentRates);
   assert.equal(result.error, undefined);
   assert.equal(result.billing.sub_total, 15000);
   assert.equal(result.billing.exchanges[0].metal_type, 'Gold');
+  assert.equal(result.billing.exchanges[0].weight, 4);
+  assert.equal(result.billing.exchanges[0].wastage_weight, 2);
+  assert.equal(result.billing.exchanges[0].net_weight, 2);
+  assert.equal(result.billing.exchanges[0].credit_amount, 2000);
   assert.equal(result.billing.gst_amount, 390);
   assert.equal(result.billing.total_amount, 13390);
+});
+
+test('values exchange credit using active daily rate and rejects wastage above weight', () => {
+  const invalid = normalizeBilling(billingInput({
+    payment_type: 'EXCHANGE_GOLD',
+    exchanges: [exchangeItem({ weight: 2, wastage_weight: 3 })]
+  }), currentRates);
+  assert.match(invalid.error, /wastage weight cannot exceed/i);
+});
+
+test('generates an exchange item name when none is provided', () => {
+  const { product_name, ...unnamedItem } = exchangeItem();
+  const result = normalizeBilling(billingInput({
+    payment_type: 'EXCHANGE_GOLD',
+    exchanges: [unnamedItem]
+  }), currentRates);
+  assert.equal(result.error, undefined);
+  assert.equal(result.billing.exchanges[0].product_name, 'Gold 22K exchange item');
+});
+
+test('uses the selected metal purity daily rate for exchange credit', () => {
+  const result = normalizeBilling(billingInput({
+    payment_type: 'EXCHANGE_GOLD',
+    exchanges: [exchangeItem({ metal_type: 'Silver', purity: '999', weight: 5, wastage_weight: 1 })]
+  }), currentRates);
+  assert.equal(result.error, undefined);
+  assert.equal(result.billing.exchanges[0].net_weight, 4);
+  assert.equal(result.billing.exchanges[0].credit_amount, 320);
+  assert.equal(result.billing.exchanges[0].weight_unit, 'gram');
 });
 
 test('accepts a custom GST rate and calculates the GST amount and total', () => {
@@ -57,8 +107,8 @@ test('applies a fixed discount before exchange credit and GST', () => {
     discount_amount: 1000,
     gst_rate: 3,
     payment_type: 'EXCHANGE_GOLD',
-    exchanges: [{ product_name: 'Old chain', category: 'Chain', metal_type: 'Gold', purity: '22K', credit_amount: 2000 }]
-  }));
+    exchanges: [exchangeItem()]
+  }), currentRates);
   assert.equal(result.error, undefined);
   assert.equal(result.billing.discount_amount, 1000);
   assert.equal(result.billing.gst_amount, 360);
@@ -70,8 +120,8 @@ test('rejects discounts and exchange credits that exceed the products subtotal',
   assert.match(normalizeBilling(billingInput({
     discount_amount: 14000,
     payment_type: 'EXCHANGE_GOLD',
-    exchanges: [{ product_name: 'Old chain', category: 'Chain', metal_type: 'Gold', purity: '22K', credit_amount: 2000 }]
-  })).error, /cannot exceed/i);
+    exchanges: [exchangeItem()]
+  }), currentRates).error, /cannot exceed/i);
 });
 
 test('rejects invalid GST rates', () => {
@@ -83,8 +133,8 @@ test('rejects invalid GST rates', () => {
 test('rejects exchange credits over subtotal and missing exchange items', () => {
   assert.match(normalizeBilling(billingInput({
     payment_type: 'EXCHANGE_GOLD',
-    exchanges: [{ product_name: 'Old chain', category: 'Chain', purity: '22K', credit_amount: 16000 }]
-  })).error, /cannot exceed/i);
+    exchanges: [exchangeItem({ weight: 20, wastage_weight: 0 })]
+  }), currentRates).error, /cannot exceed/i);
   assert.match(normalizeBilling(billingInput({ payment_type: 'EXCHANGE_GOLD' })).error, /at least one exchange/i);
 });
 

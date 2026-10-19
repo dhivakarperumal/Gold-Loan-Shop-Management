@@ -4,6 +4,7 @@ const {
   getBillingProductsByIds,
   listBillings
 } = require('../modules/billingModule');
+const { findGoldRateForPurity, getCurrentGoldRates } = require('../modules/goldRateModule');
 
 const PAYMENT_TYPES = new Set(['FULL_PAYMENT', 'EXCHANGE_GOLD']);
 const MAX_ITEMS = 100;
@@ -29,6 +30,20 @@ function normalizeMoney(value, field, required = true) {
     return { error: `${field} must be a valid non-negative amount` };
   }
   return { value: Math.round((amount + Number.EPSILON) * 100) / 100 };
+}
+
+function normalizeWeight(value, field, required = true) {
+  if (value === '' || value == null) {
+    return required ? { error: `${field} is required` } : { value: 0 };
+  }
+  if (!['number', 'string'].includes(typeof value) || (typeof value === 'string' && !value.trim())) {
+    return { error: `${field} must be a valid non-negative weight` };
+  }
+  const weight = Number(value);
+  if (!Number.isFinite(weight) || weight < 0 || weight > 999999999.999) {
+    return { error: `${field} must be a valid non-negative weight` };
+  }
+  return { value: Math.round((weight + Number.EPSILON) * 1000) / 1000 };
 }
 
 function normalizePeople(value, field) {
@@ -80,9 +95,6 @@ function normalizeItems(value, field, withCredit = false) {
     };
     if (withCredit) {
       entry.metal_type = metalType.value;
-      const credit = normalizeMoney(item.credit_amount, `${field} ${index + 1} exchange credit`);
-      if (credit.error) return { error: credit.error };
-      entry.credit_amount = credit.value;
     } else {
       const price = normalizeMoney(item.price, `${field} ${index + 1} price`);
       if (price.error) return { error: price.error };
@@ -93,7 +105,59 @@ function normalizeItems(value, field, withCredit = false) {
   return { value: entries };
 }
 
-function normalizeBilling(body) {
+function normalizeExchangeItems(value, currentRateSet) {
+  if (!Array.isArray(value) || value.length < 1 || value.length > MAX_ITEMS) {
+    return { error: `Add between 1 and ${MAX_ITEMS} exchange items` };
+  }
+  if (!currentRateSet) return { error: 'No active daily rates are available for exchange valuation' };
+  const entries = [];
+  for (const [index, item] of value.entries()) {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      return { error: `exchange items ${index + 1} is invalid` };
+    }
+    const exchangeProductName = typeof item.product_name === 'string' && item.product_name.trim()
+      ? item.product_name
+      : `${item.metal_type || 'Gold'} ${item.purity || ''} exchange item`.trim();
+    const details = normalizeItems([{
+      product_name: exchangeProductName,
+      category: item.category,
+      metal_type: item.metal_type,
+      purity: item.purity
+    }], 'exchange items', true);
+    if (details.error) return { error: details.error.replace('exchange items 1', `exchange items ${index + 1}`) };
+    const weight = normalizeWeight(item.weight, `exchange item ${index + 1} weight`);
+    const wastageWeight = normalizeWeight(item.wastage_weight, `exchange item ${index + 1} wastage weight`, false);
+    if (weight.error || wastageWeight.error) return { error: weight.error || wastageWeight.error };
+    if (wastageWeight.value > weight.value) {
+      return { error: `Exchange item ${index + 1} wastage weight cannot exceed its weight` };
+    }
+
+    const exchange = details.value[0];
+    const rate = findGoldRateForPurity(currentRateSet, exchange.purity, exchange.metal_type);
+    if (!rate) {
+      return { error: `No active daily rate exists for exchange item ${index + 1} (${exchange.metal_type} ${exchange.purity})` };
+    }
+    if (weight.value <= 0) return { error: `Exchange item ${index + 1} weight must be greater than zero` };
+    const netWeight = Math.round((weight.value - wastageWeight.value) * 1000) / 1000;
+    const ratePerUnit = Number(rate.rate_per_unit ?? rate.rate_per_gram);
+    if (!Number.isFinite(ratePerUnit) || ratePerUnit <= 0) {
+      return { error: `The daily rate for exchange item ${index + 1} is invalid` };
+    }
+    entries.push({
+      ...exchange,
+      weight: weight.value,
+      wastage_weight: wastageWeight.value,
+      net_weight: netWeight,
+      weight_unit: rate.rate_unit === 'carat' ? 'carat' : 'gram',
+      rate_per_unit: ratePerUnit,
+      rate_unit: rate.rate_unit || 'gram',
+      credit_amount: Math.round((netWeight * ratePerUnit + Number.EPSILON) * 100) / 100
+    });
+  }
+  return { value: entries };
+}
+
+function normalizeBilling(body, currentRateSet = null) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) {
     return { error: 'Billing details are required' };
   }
@@ -114,7 +178,7 @@ function normalizeBilling(body) {
   }
   let exchanges = [];
   if (rawExchanges.length > 0) {
-    const normalizedExchanges = normalizeItems(rawExchanges, 'exchange items', true);
+    const normalizedExchanges = normalizeExchangeItems(rawExchanges, currentRateSet);
     if (normalizedExchanges.error) return normalizedExchanges;
     exchanges = normalizedExchanges.value;
   }
@@ -214,7 +278,8 @@ async function postBilling(req, res, next) {
   try {
     const { products, error: productsError } = await resolveSelectedProducts(req.body?.products);
     if (productsError) return res.status(400).json({ message: productsError });
-    const { billing, error } = normalizeBilling({ ...req.body, products });
+    const currentRateSet = req.body?.payment_type === 'EXCHANGE_GOLD' ? await getCurrentGoldRates() : null;
+    const { billing, error } = normalizeBilling({ ...req.body, products }, currentRateSet);
     if (error) return res.status(400).json({ message: error });
     return res.status(201).json(await createBilling(billing));
   } catch (error) {
@@ -225,6 +290,7 @@ async function postBilling(req, res, next) {
 module.exports = {
   getBillings,
   mapSelectedProducts,
+  normalizeExchangeItems,
   normalizeBilling,
   postBilling,
   resolveSelectedProducts
