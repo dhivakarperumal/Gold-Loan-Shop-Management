@@ -308,11 +308,86 @@ const BannerManagement = () => {
                                 <p className="text-gray-400 font-bold tracking-tight">No creative banners discovered.</p>
                             </div>
                         )}
-                    </div> : <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 p-4">
+                    </div> : <div className="grid grid-cols-1 gap-5 p-4 sm:grid-cols-2 xl:grid-cols-3">
                         {filteredBanners.length === 0 ? <div className="col-span-full text-center py-16 text-gray-400 font-bold">No creative banners discovered.</div> : filteredBanners.map((banner, index) => (
-                            <article key={banner.id} className="border border-gray-100 rounded-xl overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow">
-                                <div className="h-36 bg-gray-100 relative"><img src={resolveAssetUrl(banner.image)} alt={banner.title || "Banner"} className="w-full h-full object-cover" /><span className="absolute top-3 left-3 bg-white/90 text-[10px] px-2 py-1 rounded font-black text-[#008577]">S No. {index + 1}</span></div>
-                                <div className="p-4 space-y-3"><div><h3 className="font-black text-slate-800 truncate">{banner.title || "Untitled Banner"}</h3><p className="text-xs text-gray-400 truncate">{banner.subtitle || "No subtitle"}</p></div><div className="flex items-center justify-between"><span className="px-2 py-1 rounded-full text-[9px] font-black uppercase bg-amber-50 text-amber-600">{banner.type} section</span><span className="text-[10px] font-bold text-gray-500">{banner.active ? "Published" : "Draft"}</span></div><div className="flex gap-2"><button onClick={() => handleOpenModal(banner)} className="flex-1 py-2 rounded-lg bg-[#008577] text-white text-xs font-bold hover:bg-[#003B3B]"><FiEdit2 className="inline mr-1" />Edit</button><button onClick={() => handleDelete(banner.id)} className="flex-1 py-2 rounded-lg bg-rose-600 text-white text-xs font-bold hover:bg-rose-700"><FiTrash2 className="inline mr-1" />Delete</button></div></div>
+                            <article key={banner.id} className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
+                                <div className="relative aspect-[16/9] overflow-hidden bg-slate-100">
+                                    {banner.image ? (
+                                        <img
+                                            src={resolveAssetUrl(banner.image)}
+                                            alt={banner.title || "Banner"}
+                                            className="h-full w-full object-cover"
+                                            onError={(event) => {
+                                                event.currentTarget.style.display = "none";
+                                                const fallback = event.currentTarget.nextElementSibling;
+                                                fallback?.classList.remove("hidden");
+                                                fallback?.classList.add("flex");
+                                            }}
+                                        />
+                                    ) : null}
+                                    <div className={`absolute inset-0 items-center justify-center text-slate-300 ${banner.image ? "hidden" : "flex"}`}>
+                                        <FiImage size={36} aria-hidden="true" />
+                                    </div>
+                                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-slate-950/40 to-transparent" />
+                                    <span className="absolute left-3 top-3 rounded-full border border-white/70 bg-white/95 px-2.5 py-1 text-[10px] font-bold text-slate-600 shadow-sm">
+                                        Banner {index + 1}
+                                    </span>
+                                    <span className={`absolute right-3 top-3 rounded-full px-2.5 py-1 text-[10px] font-bold capitalize shadow-sm ${banner.type === "hero" ? "bg-amber-100 text-amber-800" : "bg-rose-100 text-rose-700"}`}>
+                                        {banner.type || "banner"}
+                                    </span>
+                                    {banner.mobile_image && (
+                                        <div className="absolute bottom-3 right-3 h-14 w-10 overflow-hidden rounded-md border-2 border-white bg-white shadow-md">
+                                            <img
+                                                src={resolveAssetUrl(banner.mobile_image)}
+                                                alt={`${banner.title || "Banner"} mobile preview`}
+                                                className="h-full w-full object-cover"
+                                            />
+                                            <span className="absolute inset-x-0 bottom-0 bg-slate-950/70 py-0.5 text-center text-[8px] font-bold uppercase tracking-wide text-white">
+                                                Mobile
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex flex-1 flex-col p-4 sm:p-5">
+                                    <div className="min-h-16">
+                                        <h3 className="line-clamp-2 text-base font-bold leading-snug text-slate-800">
+                                            {banner.title || "Untitled Banner"}
+                                        </h3>
+                                        <p className="mt-1 line-clamp-2 text-sm text-slate-500">
+                                            {banner.subtitle || "No subtitle"}
+                                        </p>
+                                    </div>
+                                    {banner.description && (
+                                        <p className="mt-3 line-clamp-2 text-xs leading-relaxed text-slate-500">
+                                            {banner.description}
+                                        </p>
+                                    )}
+                                    <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
+                                        <span className="inline-flex items-center gap-2 text-xs font-semibold text-slate-600">
+                                            <span className={`h-2 w-2 rounded-full ${banner.active ? "bg-emerald-500" : "bg-slate-300"}`} />
+                                            {banner.active ? "Published" : "Draft"}
+                                        </span>
+                                        <span className="text-[10px] font-medium uppercase tracking-wide text-slate-400">
+                                            {banner.mobile_image ? "Desktop + mobile" : "Desktop creative"}
+                                        </span>
+                                    </div>
+                                    <div className="mt-4 flex gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => handleOpenModal(banner)}
+                                            className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#008577] px-3 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#003B3B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#008577] focus-visible:ring-offset-2"
+                                        >
+                                            <FiEdit2 aria-hidden="true" /> Edit
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDelete(banner.id)}
+                                            className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-rose-200 bg-white px-3 py-2.5 text-sm font-semibold text-rose-600 transition-colors hover:border-rose-600 hover:bg-rose-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2"
+                                        >
+                                            <FiTrash2 aria-hidden="true" /> Delete
+                                        </button>
+                                    </div>
+                                </div>
                             </article>
                         ))}
                     </div>}
