@@ -48,6 +48,7 @@ const Dealers = React.lazy(() => import("./Admin/Dealers/Dealers.jsx"));
 const CustomerKyc = React.lazy(() => import("./Components/Account/CustomerKyc.jsx"));
 const AdminKyc = React.lazy(() => import("./Admin/Kyc/AdminKyc.jsx"));
 const BillingManagement = React.lazy(() => import("./Admin/Pages/BillingManagement.jsx"));
+const Reports = React.lazy(() => import("./Admin/Pages/Reports.jsx"));
 
 const ErrorPage = React.lazy(() => import("./Admin/Pages/ErrorPage.jsx"));
 
@@ -107,6 +108,7 @@ const router = createBrowserRouter([
       { path: "banners", element: <BannerManagement /> },
       { path: "videos", element: <VideoManagement /> },
       { path: "reviews", element: <Reviews /> },
+      { path: "reports", element: <Reports /> },
       { path: "dealers/*", element: <Dealers /> },
       { path: "settings", element: <Settings /> },
       { path: "settings/daily-gold-rate", element: <DailyGoldRate /> },
