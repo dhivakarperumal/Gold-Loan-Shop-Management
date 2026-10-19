@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   FiUser, FiMail, FiPhone, FiShield, FiHeart,
-  FiShoppingBag, FiLogOut, FiEdit2, FiCheckCircle,
+  FiLogOut, FiEdit2, FiCheckCircle,
   FiAlertCircle, FiClock, FiPackage,
 } from "react-icons/fi";
 import { FaRegGem } from "react-icons/fa";
@@ -148,7 +148,7 @@ const LoanCard = ({ loan }) => {
 /* ── main component ───────────────────────────── */
 const UserProfile = () => {
   const { user, logout } = useAuth();
-  const { wishlist, cart } = useContext(StoreContext);
+  const { wishlist } = useContext(StoreContext);
   const navigate = useNavigate();
 
   const [loans, setLoans]       = useState([]);
@@ -192,10 +192,10 @@ const UserProfile = () => {
   const completedLoans = loans.filter((l) => l.loan_status === "Completed").length;
 
   return (
-    <div className="min-h-screen pb-16" style={{ background: "#fffdf8" }}>
+    <div className="min-h-screen pb-16" style={{ background: "#f8f7f2" }}>
 
       {/* ── Hero banner ── */}
-      <div className="relative w-full py-14"
+      <div className="relative w-full py-10 sm:py-12"
         style={{ background: "linear-gradient(135deg,#003D2E 0%,#004D40 60%,#1a5c42 100%)" }}>
         <div className="absolute bottom-0 left-0 right-0 h-[3px]"
           style={{ background: "linear-gradient(90deg,transparent,#D4A017 30%,#F5C45E 50%,#D4A017 70%,transparent)" }} />
@@ -238,8 +238,16 @@ const UserProfile = () => {
         </PageContainer>
       </div>
 
+      <PageContainer className="relative z-10 -mt-4">
+        <section aria-label="Account activity" className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <StatCard icon={FiHeart} label="Wishlist" value={wishlist.length} onClick={() => navigate("/")} />
+          <StatCard icon={FiPackage} label="Active Loans" value={loansLoading ? "—" : activeLoans} onClick={() => document.getElementById("profile-loans")?.scrollIntoView({ behavior: "smooth" })} />
+          <StatCard icon={FiCheckCircle} label="Completed Loans" value={loansLoading ? "—" : completedLoans} onClick={() => document.getElementById("profile-loans")?.scrollIntoView({ behavior: "smooth" })} />
+        </section>
+      </PageContainer>
+
       <PageContainer>
-        <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div className="mt-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
 
           {/* ── Left col ── */}
           <div className="lg:col-span-2 space-y-6">
@@ -280,7 +288,7 @@ const UserProfile = () => {
             </div>
 
             {/* ── Loans section ── */}
-            <div className="space-y-4">
+            <div id="profile-loans" className="space-y-4 scroll-mt-6">
               <div className="flex items-center justify-between">
                 <div>
                   <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-[#a67b2e]">Gold Loan</span>
@@ -331,21 +339,6 @@ const UserProfile = () => {
 
           {/* ── Right col ── */}
           <div className="space-y-4">
-            <div>
-              <span className="text-[9px] font-bold uppercase tracking-[0.3em] text-[#a67b2e]">Overview</span>
-              <h2 className="font-serif text-xl font-bold text-[#201a13]">My Activity</h2>
-              <div className="mt-1 flex items-center gap-2">
-                <span className="h-px w-8 bg-gradient-to-r from-transparent to-[#d9a441]" />
-                <span className="h-1 w-1 rotate-45 bg-[#d9a441]" />
-                <span className="h-px w-8 bg-gradient-to-l from-transparent to-[#d9a441]" />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
-              <StatCard icon={FiHeart}       label="Wishlist"   value={wishlist.length} onClick={() => navigate("/")} />
-              <StatCard icon={FiShoppingBag} label="Cart Items" value={cart.length}     onClick={() => navigate("/")} />
-            </div>
-
             {/* Loan summary stat */}
             {!loansLoading && loans.length > 0 && (
               <div className="rounded-2xl bg-white p-5 shadow-sm space-y-3"
