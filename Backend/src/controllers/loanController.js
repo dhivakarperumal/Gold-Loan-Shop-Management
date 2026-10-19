@@ -3,9 +3,12 @@ const {
   createLoan,
   deleteLoan,
   getLoanById,
+  getLoanRenewal,
+  getLoanRenewalHistory,
   listInterestTypes,
   listLoans,
   listLoansForCustomer,
+  renewLoan,
   setInterestType,
   updateLoan
 } = require('../modules/loanModule');
@@ -249,6 +252,47 @@ async function getLoan(req, res, next) {
   }
 }
 
+async function getLoanRenewalDetails(req, res, next) {
+  if (!validId(req.params.id)) return res.status(400).json({ message: 'Loan ID is invalid' });
+  try {
+    const renewal = await getLoanRenewal(req.params.id);
+    if (!renewal) return res.status(404).json({ message: 'Loan not found' });
+    return res.json(renewal);
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function postLoanRenewal(req, res, next) {
+  if (!validId(req.params.id)) return res.status(400).json({ message: 'Loan ID is invalid' });
+  const amount = parseAmount(req.body?.payment_amount, 'Payment amount', { min: 0.01 });
+  if (amount.error) return res.status(400).json({ message: amount.error });
+  try {
+    return res.json(await renewLoan(req.params.id, amount.value, req.adminUser.user_id));
+  } catch (error) {
+    if (error.code === 'LOAN_NOT_FOUND') return res.status(404).json({ message: error.message });
+    if (error.code === 'LOAN_NOT_ACTIVE') return res.status(409).json({ message: error.message });
+    if ([
+      'INVALID_RENEWAL_PAYMENT',
+      'RENEWAL_PAYMENT_BELOW_INTEREST',
+      'RENEWAL_PAYMENT_EXCEEDS_DUE'
+    ].includes(error.code)) {
+      return res.status(400).json({ message: error.message });
+    }
+    return next(error);
+  }
+}
+
+async function getLoanRenewalHistoryList(req, res, next) {
+  if (!validId(req.params.id)) return res.status(400).json({ message: 'Loan ID is invalid' });
+  try {
+    if (!await getLoanById(req.params.id)) return res.status(404).json({ message: 'Loan not found' });
+    return res.json(await getLoanRenewalHistory(req.params.id));
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function getLoanGoldImage(req, res, next) {
   const imagePath = getLoanGoldImagePath(`/api/loans/gold-images/${req.params.filename}`);
   if (!imagePath) return res.status(400).json({ message: 'Gold image reference is invalid' });
@@ -423,6 +467,8 @@ module.exports = {
   getCustomers,
   getInterestTypes,
   getLoan,
+  getLoanRenewalDetails,
+  getLoanRenewalHistoryList,
   getLoanGoldImage,
   getLoans,
   calculateLoanAmount,
@@ -430,6 +476,7 @@ module.exports = {
   normalizeLoan,
   putLoan,
   postLoan,
+  postLoanRenewal,
   removeLoan,
   updateInterestType
 };

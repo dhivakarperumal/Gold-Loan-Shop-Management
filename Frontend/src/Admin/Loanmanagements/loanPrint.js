@@ -1,5 +1,5 @@
 import { toast } from "react-hot-toast";
-import api from "../../api";
+import api, { getPrivateFile } from "../../api";
 
 const SHOP_NAME = "Sri Golds";
 const SHOP_ADDRESS = "No.58 Vaitheeshwaran Nagar, Tirupattur - 635653";
@@ -31,8 +31,38 @@ const titleCase = (value) => String(value || "—")
   .replaceAll("_", " ")
   .replace(/\b\w/g, (character) => character.toUpperCase());
 
+const rateText = (value) => {
+  if (value == null || value === "") return "—";
+  const rate = Number(value);
+  return Number.isFinite(rate) ? rate.toFixed(2) : "—";
+};
+
 function detail(label, value) {
   return `<div class="detail"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
+}
+
+function readAsDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(reader.result);
+    reader.onerror = () => reject(reader.error || new Error("Could not read the pledged gold image."));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function prepareLoanImage(loan) {
+  if (!loan.gold_image_url) return loan;
+  if (typeof loan.gold_image_url === "string" && loan.gold_image_url.startsWith("data:image/")) {
+    return { ...loan, gold_image_data_url: loan.gold_image_url };
+  }
+
+  const imageBlob = typeof Blob !== "undefined" && loan.gold_image_url instanceof Blob
+    ? loan.gold_image_url
+    : (await getPrivateFile(loan.gold_image_url, { responseType: "blob" })).data;
+  if (!imageBlob.type.startsWith("image/")) {
+    throw new Error("The pledged gold attachment is not a supported image.");
+  }
+  return { ...loan, gold_image_data_url: await readAsDataUrl(imageBlob) };
 }
 
 function createDocument(loan) {
@@ -57,7 +87,7 @@ function createDocument(loan) {
     ["Compounding Frequency", loan.compounding_frequency ? titleCase(loan.compounding_frequency) : "—"],
     ["Grace Period", `${loan.grace_period_days || 0} days`],
     ["Interest-Free Period", `${loan.interest_free_days || 0} days`],
-    ["Late Payment Rate", loan.late_payment_interest_rate == null ? "Not set" : `${loan.late_payment_interest_rate}%`],
+    ["Late Payment Rate", loan.late_payment_interest_rate == null ? "Not set" : `${rateText(loan.late_payment_interest_rate)}%`],
     ["Minimum Interest", loan.minimum_interest_amount == null ? "—" : money(loan.minimum_interest_amount)],
     ["Maximum Interest", loan.maximum_interest_amount == null ? "—" : money(loan.maximum_interest_amount)]
   ];
@@ -90,6 +120,8 @@ function createDocument(loan) {
     .wide { grid-column: span 2; }
     .detail span { display: block; margin-bottom: 3px; color: #71817c; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; }
     .detail strong { display: block; overflow-wrap: anywhere; color: #1e302b; font-size: 12px; }
+    .pledged-image-detail { grid-column: 1 / -1; }
+    .pledged-image { display: block; max-width: 100%; max-height: 320px; margin-top: 10px; border: 1px solid #dce8e3; border-radius: 8px; object-fit: contain; object-position: left; }
     .notes { min-height: 36px; white-space: pre-wrap; }
     .acknowledgment { margin-top: 22px; padding: 12px 14px; border: 1px solid #dce8e3; border-radius: 7px; color: #52625e; font-size: 11px; }
     .draft { margin: 16px 0; padding: 9px 12px; border: 1px solid #f5c45e; border-radius: 7px; background: #fff8e7; color: #805400; font-weight: 700; text-align: center; }
@@ -98,11 +130,34 @@ function createDocument(loan) {
     .signature strong { display: block; }
     .signature span { display: block; margin-top: 3px; color: #71817c; font-size: 10px; }
     .footer { margin-top: 28px; padding-top: 10px; border-top: 1px solid #e3ebe7; color: #71817c; text-align: center; font-size: 10px; }
-    @page { size: A4; margin: 12mm; }
+    @page { size: A4; margin: 6mm; }
     @media print {
-      body { padding: 0; background: white; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      body { padding: 0; background: white; font-size: 10px; line-height: 1.22; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
       .toolbar { display: none !important; }
-      .page { max-width: none; padding: 0; box-shadow: none; }
+      .page { width: 100%; max-width: none; padding: 0; box-shadow: none; }
+      .shop { padding-bottom: 4px; gap: 12px; }
+      .brand { font-size: 22px; }
+      .shop p, .meta p { margin-top: 2px; font-size: 9px; }
+      .doc-title h2 { font-size: 15px; }
+      .doc-title p { margin-top: 4px; }
+      .meta { margin: 4px 0; padding: 4px 7px; }
+      .section { margin-top: 6px; }
+      .section h3 { margin-bottom: 3px; padding-bottom: 3px; font-size: 10px; }
+      .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px 8px; }
+      .detail { padding: 0; }
+      .detail span { margin-bottom: 1px; font-size: 8px; }
+      .detail strong { font-size: 9px; line-height: 1.18; }
+      .pledged-image-detail { grid-column: span 2; }
+      .pledged-image { max-height: 58px; max-width: 140px; margin-top: 2px; border-radius: 4px; }
+      .notes { min-height: 0; }
+      .acknowledgment { margin-top: 6px; padding: 5px 7px; font-size: 9px; line-height: 1.2; }
+      .signatures { gap: 12px 24px; margin-top: 12px; }
+      .signature { padding-top: 3px; }
+      .signature strong { font-size: 9px; }
+      .signature span, .footer { font-size: 8px; }
+      .signature span { margin-top: 2px; }
+      .footer { margin-top: 6px; padding-top: 4px; }
+      .acknowledgment, .signatures, .footer { break-inside: avoid; page-break-inside: avoid; }
     }
     @media (max-width: 650px) {
       body { padding: 10px; }
@@ -171,7 +226,9 @@ function createDocument(loan) {
         ${detail("Rate snapshot", rateSnapshot)}
         ${detail("Rate effective date", dateText(loan.gold_rate_date))}
         ${detail("Pledged metal valuation", money(loan.gold_valuation))}
-        ${detail("Pledged photo", loan.gold_image_url ? "Image on file" : "No image attached")}
+        ${loan.gold_image_data_url
+          ? `<div class="detail pledged-image-detail"><span>Pledged gold image</span><img class="pledged-image" src="${escapeHtml(loan.gold_image_data_url)}" alt="Pledged gold item"></div>`
+          : detail("Pledged photo", "No image attached")}
       </div>
     </section>
     <section class="section">
@@ -179,7 +236,7 @@ function createDocument(loan) {
       <div class="grid">
         ${detail("Principal amount", money(loan.principal_amount))}
         ${detail("Interest method", titleCase(loan.interest_type))}
-        ${detail("Interest rate", `${loan.interest_rate}% per ${titleCase(loan.interest_frequency)}`)}
+        ${detail("Interest rate", `${rateText(loan.interest_rate)}% per ${titleCase(loan.interest_frequency)}`)}
         ${detail("Calculation start date", dateText(loan.interest_calculation_start_date))}
         ${detail("Day-count convention", titleCase(loan.day_count_convention))}
         ${detail("Payment frequency", titleCase(loan.payment_frequency))}
@@ -216,7 +273,7 @@ export async function printLoanAgreement(loanId) {
   try {
     const { data: loan } = await api.get(`/loans/${loanId}`);
     if (!loan || !loan.id) throw new Error("The server returned invalid loan details.");
-    showPrintDocument(printWindow, loan);
+    showPrintDocument(printWindow, await prepareLoanImage(loan));
   } catch (error) {
     console.error("Failed to prepare loan document:", error);
     printWindow.close();
@@ -234,14 +291,31 @@ function showPrintDocument(printWindow, loan) {
   printWindow.document.open();
   printWindow.document.write(createDocument(loan));
   printWindow.document.close();
-  window.setTimeout(() => {
+  const printWhenReady = () => {
     if (printWindow.closed) return;
     printWindow.focus();
     printWindow.print();
-  }, 250);
+  };
+  const images = Array.from(printWindow.document.images);
+  if (images.every((image) => image.complete && image.naturalWidth > 0)) {
+    window.setTimeout(printWhenReady, 100);
+    return;
+  }
+  Promise.all(images.map((image) => new Promise((resolve, reject) => {
+    if (image.complete) {
+      image.naturalWidth > 0 ? resolve() : reject(new Error("The pledged gold image could not be displayed."));
+      return;
+    }
+    image.addEventListener("load", resolve, { once: true });
+    image.addEventListener("error", () => reject(new Error("The pledged gold image could not be displayed.")), { once: true });
+  }))).then(printWhenReady).catch((error) => {
+    console.error("Failed to display pledged gold image:", error);
+    printWindow.close();
+    toast.error(error.message || "Could not display the pledged gold image.");
+  });
 }
 
-export function printLoanDraft(loan) {
+export async function printLoanDraft(loan) {
   const printWindow = window.open("", "_blank");
   if (!printWindow) {
     toast.error("Allow pop-ups for this site to print or download the loan document.");
@@ -249,5 +323,11 @@ export function printLoanDraft(loan) {
   }
 
   showLoading(printWindow);
-  showPrintDocument(printWindow, loan);
+  try {
+    showPrintDocument(printWindow, await prepareLoanImage(loan));
+  } catch (error) {
+    console.error("Failed to prepare pledged gold image:", error);
+    printWindow.close();
+    toast.error(error.response?.data?.message || error.message || "Could not load the pledged gold image.");
+  }
 }
