@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { FiActivity, FiChevronLeft, FiChevronRight, FiEdit2, FiEye, FiPlus, FiSave, FiX } from "react-icons/fi";
+import { FiChevronLeft, FiChevronRight, FiEdit2, FiEye, FiPlus, FiSave, FiX } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api from "../../api";
 import { formatRateDate } from "../../PrivateRouter/goldRateUtils";
@@ -123,6 +123,7 @@ export default function DailyGoldRate() {
   const [historyLoading, setHistoryLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
+  const [reasonOption, setReasonOption] = useState("");
   const [batchPage, setBatchPage] = useState(1);
   const [changePage, setChangePage] = useState(1);
 
@@ -193,25 +194,7 @@ export default function DailyGoldRate() {
   const handleSave = async (event) => {
     event.preventDefault();
     if (!form.reason.trim()) {
-      toast.error("Enter a reason for this rate change.");
-      return;
-    }
-    setSaving(true);
-    try {
-      await persistDraft();
-      toast.success(form.id ? "Draft rates updated." : "Draft rates saved.");
-      setFormOpen(false);
-    } catch (error) {
-      console.error("Failed to save gold rate draft:", error);
-      toast.error(error.response?.data?.message || "Could not save these rates.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleActivate = async () => {
-    if (!form.reason.trim()) {
-      toast.error("Enter a reason before activating the rates.");
+      toast.error("Select or enter a reason for this rate change.");
       return;
     }
     const missingRate = RATE_FIELDS.find(({ key }) => !form.rates[key] || Number(form.rates[key]) <= 0);
@@ -219,7 +202,7 @@ export default function DailyGoldRate() {
       toast.error(`Enter a valid positive rate for ${missingRate.label}.`);
       return;
     }
-    if (!window.confirm("Activate these rates? Pending work may use the new rates. Previously saved bills, products and loans will not be recalculated.")) return;
+    if (!window.confirm("Save and activate these rates? Pending work may use the new rates. Previously saved bills, products and loans will not be recalculated.")) return;
     setSaving(true);
     try {
       const batch = await persistDraft();
@@ -232,8 +215,8 @@ export default function DailyGoldRate() {
         toast.error("Rates were activated, but the active rate display could not be refreshed. Retry the rate refresh.");
       }
     } catch (error) {
-      console.error("Failed to activate gold rates:", error);
-      toast.error(error.response?.data?.message || "Could not activate these rates.");
+      console.error("Failed to save and activate gold rates:", error);
+      toast.error(error.response?.data?.message || "Could not save and activate these rates.");
     } finally {
       setSaving(false);
     }
@@ -241,6 +224,7 @@ export default function DailyGoldRate() {
 
   const handleEditDraft = (batch) => {
     setForm({ ...formFromBatch(batch), reason: "" });
+    setReasonOption("");
     setFormOpen(true);
   };
 
@@ -256,7 +240,7 @@ export default function DailyGoldRate() {
             <h1 className="mt-1 text-2xl font-black sm:text-3xl">Daily Precious Rates</h1>
             <p className="mt-2 max-w-2xl text-sm text-white/75">Manage audited Gold, Silver, Platinum and Diamond rates. Activation applies to new calculations only.</p>
           </div>
-          <button type="button" onClick={() => { setForm(blankForm()); setFormOpen(true); }} className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-white/20">
+          <button type="button" onClick={() => { setForm(blankForm()); setReasonOption(""); setFormOpen(true); }} className="inline-flex items-center gap-2 rounded-xl border border-white/25 bg-white/10 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-white/20">
             <FiPlus /> New Rate Set
           </button>
         </div>
@@ -279,17 +263,22 @@ export default function DailyGoldRate() {
             const rate = current.rates.find((item) => item.metal_type.toLowerCase() === metal.toLowerCase() && item.purity === purity);
             return <div key={key} className="rounded-xl border border-white/10 bg-white/10 p-3 backdrop-blur-sm"><p className="text-[11px] font-semibold text-white/70">{label}</p><p className="mt-1 text-base font-extrabold text-white">{rate ? <>{currency(rate.rate_per_unit ?? rate.rate_per_gram)}<span className="ml-1 text-[11px] font-medium text-white/70">/ {unit === "carat" ? "ct" : "g"}</span></> : <span className="text-sm font-semibold text-white/60">Not set</span>}</p></div>;
           })}
-          <div className="rounded-xl border border-white/10 bg-white/10 p-3 backdrop-blur-sm">
-            <p className="text-[11px] font-semibold text-white/70">Default Making Charge</p>
-            <p className="mt-1 text-base font-extrabold text-white">
-              {current.making_charge_type === "Percentage"
-                ? `${Number(current.making_charge_value).toLocaleString("en-IN")}%`
-                : currency(current.making_charge_value)}
-            </p>
-          </div>
-          <div className="rounded-xl border border-white/10 bg-white/10 p-3 backdrop-blur-sm">
-            <p className="text-[11px] font-semibold text-white/70">Wastage</p>
-            <p className="mt-1 text-base font-extrabold text-white">{Number(current.wastage_percentage).toLocaleString("en-IN")}%</p>
+        </div>}
+        {current && <div className="mt-5 border-t border-white/15 pt-5">
+          <p className="mb-3 text-xs font-bold uppercase tracking-[0.14em] text-emerald-200">Making & wastage charges</p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-white/10 bg-white/10 p-4 backdrop-blur-sm">
+              <p className="text-[11px] font-semibold text-white/70">Default Making Charge</p>
+              <p className="mt-1 text-base font-extrabold text-white">
+                {current.making_charge_type === "Percentage"
+                  ? `${Number(current.making_charge_value).toLocaleString("en-IN")}%`
+                  : currency(current.making_charge_value)}
+              </p>
+            </div>
+            <div className="rounded-xl border border-white/10 bg-white/10 p-4 backdrop-blur-sm">
+              <p className="text-[11px] font-semibold text-white/70">Wastage</p>
+              <p className="mt-1 text-base font-extrabold text-white">{Number(current.wastage_percentage).toLocaleString("en-IN")}%</p>
+            </div>
           </div>
         </div>}
       </section>
@@ -350,7 +339,37 @@ export default function DailyGoldRate() {
               <span className="grid h-9 w-9 place-items-center rounded-xl bg-sky-50 text-sm font-black text-sky-700">03</span>
               <div><h3 className="font-bold text-slate-900">Audit & activation</h3><p className="text-xs text-slate-500">Record why the rate set is changing for a clear audit trail.</p></div>
             </div>
-            <label className="block text-xs font-bold text-slate-600">Reason for change<input className={inputClassName} maxLength="500" required value={form.reason} onChange={(event) => setField("reason", event.target.value)} placeholder="e.g. Daily market price update" /></label>
+            <label className="block text-xs font-bold text-slate-600">
+              Reason for change
+              <select
+                className={inputClassName}
+                required
+                value={reasonOption}
+                onChange={(event) => {
+                  const option = event.target.value;
+                  setReasonOption(option);
+                  setField("reason", option === "Other" ? "" : option);
+                }}
+              >
+                <option value="">Select a reason</option>
+                <option value="Daily market price update">Daily market price update</option>
+                <option value="Market price correction">Market price correction</option>
+                <option value="Other">Other</option>
+              </select>
+            </label>
+            {reasonOption === "Other" && (
+              <label className="mt-4 block text-xs font-bold text-slate-600">
+                Enter reason
+                <input
+                  className={inputClassName}
+                  maxLength="500"
+                  required
+                  value={form.reason}
+                  onChange={(event) => setField("reason", event.target.value)}
+                  placeholder="Enter the reason for this rate change"
+                />
+              </label>
+            )}
             <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-950">
               Review pending work before activation. The system cannot identify open transactions automatically. Previously saved product and loan valuations are not recalculated.
             </p>
@@ -363,10 +382,9 @@ export default function DailyGoldRate() {
             {form.id && <span>Last updated: <strong>{new Date(form.updated_at || form.expected_updated_at).toLocaleString()}</strong></span>}
             {form.id && <span>Updated by: <strong>{form.updated_by_name || `Admin ${form.updated_by}`}</strong></span>}
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap justify-end gap-2">
             <button type="button" disabled={saving} onClick={() => setFormOpen(false)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50">Cancel</button>
-            <button type="submit" disabled={saving} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#006B62] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#00564f] disabled:cursor-not-allowed disabled:opacity-50"><FiSave />{saving ? "Saving..." : form.id ? "Update Draft" : "Save as Draft"}</button>
-            <button type="button" disabled={saving} onClick={handleActivate} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#003B3B] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#002e2e] disabled:cursor-not-allowed disabled:opacity-50"><FiActivity />Activate Rates</button>
+            <button type="submit" disabled={saving} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#006B62] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#00564f] disabled:cursor-not-allowed disabled:opacity-50"><FiSave />{saving ? "Saving..." : "Save"}</button>
           </div>
         </div>
       </form>
