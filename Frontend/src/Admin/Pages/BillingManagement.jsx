@@ -496,6 +496,7 @@ export default function BillingManagement() {
     `).join("");
     const exchangeTotal = billExchanges.reduce((sum, item) => sum + (Number(item.credit_amount) || 0), 0);
     const date = bill.created_at ? new Date(bill.created_at).toLocaleDateString("en-IN") : "—";
+    const logoUrl = new URL("/images/logo.png", window.location.origin).href;
 
     try {
       printWindow.document.open();
@@ -507,11 +508,14 @@ export default function BillingManagement() {
           <style>
             * { box-sizing: border-box; }
             body { margin: 0; padding: 36px; color: #1e293b; font: 14px Arial, sans-serif; }
-            header { display: flex; justify-content: space-between; gap: 24px; padding-bottom: 20px; border-bottom: 2px solid #00695c; }
-            h1 { margin: 0 0 8px; color: #00695c; font-size: 24px; }
+            header { display: flex; flex-direction: column; align-items: center; gap: 12px; padding-bottom: 20px; border-bottom: 2px solid #00695c; text-align: center; }
+            .brand { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+            .logo { display: block; width: 96px; height: 76px; object-fit: contain; }
+            h1 { margin: 0 0 6px; color: #00695c; font-size: 26px; }
+            .address { max-width: 620px; color: #475569; line-height: 1.5; }
+            .invoice-meta { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 24px; }
             h2 { margin: 24px 0 10px; font-size: 16px; }
             p { margin: 4px 0; }
-            .meta { text-align: right; }
             .customers { display: flex; flex-wrap: wrap; gap: 20px; }
             .customer { min-width: 200px; line-height: 1.6; }
             table { width: 100%; margin-top: 12px; border-collapse: collapse; }
@@ -523,13 +527,26 @@ export default function BillingManagement() {
             .totals { width: min(100%, 340px); margin: 20px 0 0 auto; }
             .total-row { display: flex; justify-content: space-between; gap: 20px; padding: 6px 0; }
             .grand-total { margin-top: 6px; padding-top: 12px; border-top: 2px solid #cbd5e1; font-size: 18px; font-weight: 700; }
+            footer { margin-top: 36px; padding-top: 16px; border-top: 1px solid #cbd5e1; color: #475569; text-align: center; line-height: 1.6; }
+            footer strong { display: block; margin-bottom: 4px; color: #00695c; font-size: 15px; }
+            footer .thanks { color: #1e293b; font-weight: 600; }
             @media print { body { padding: 12mm; } }
           </style>
         </head>
         <body>
           <header>
-            <div><h1>Invoice</h1><p>Invoice No: <strong>${escapeHtml(bill.invoice_no || "—")}</strong></p></div>
-            <div class="meta"><p>Date: ${escapeHtml(date)}</p><p>Payment: ${bill.payment_type === "EXCHANGE_GOLD" ? "Exchange Gold" : "Full Payment"}</p></div>
+            <div class="brand">
+              <img id="shop-logo" class="logo" src="${escapeHtml(logoUrl)}" alt="Sri Golds logo" />
+              <div>
+                <h1>Sri Golds</h1>
+                <p class="address">Tirupattur – Singarapet Road, Tirupattur, Tirupathur, Tirupattur, Tamil Nadu, 635600, India</p>
+              </div>
+            </div>
+            <div class="invoice-meta">
+              <p>Invoice No: <strong>${escapeHtml(bill.invoice_no || "—")}</strong></p>
+              <p>Date: ${escapeHtml(date)}</p>
+              <p>Payment: ${bill.payment_type === "EXCHANGE_GOLD" ? "Exchange Gold" : "Full Payment"}</p>
+            </div>
           </header>
           <h2>Customer${billCustomers.length === 1 ? "" : "s"}</h2>
           <div class="customers">${customerDetails || "<p>No customer details</p>"}</div>
@@ -545,13 +562,29 @@ export default function BillingManagement() {
             <div class="total-row"><span>GST</span><span>${currency(bill.gst_amount)}</span></div>
             <div class="total-row grand-total"><span>Total</span><span>${currency(bill.total_amount)}</span></div>
           </div>
+          <footer>
+            <strong>Sri Golds</strong>
+            <div class="thanks">Thank you for choosing us. We value your trust and look forward to serving you again.</div>
+            <div>Tirupattur – Singarapet Road, Tirupattur, Tirupathur, Tirupattur, Tamil Nadu, 635600, India</div>
+          </footer>
         </body>
       </html>`);
       printWindow.document.close();
       printWindow.focus();
-      printWindow.setTimeout(() => {
-        if (!printWindow.closed) printWindow.print();
-      }, 250);
+      let printStarted = false;
+      const startPrint = () => {
+        if (printStarted || printWindow.closed) return;
+        printStarted = true;
+        printWindow.focus();
+        printWindow.print();
+      };
+      const logo = printWindow.document.getElementById("shop-logo");
+      if (logo?.complete) startPrint();
+      else {
+        logo?.addEventListener("load", startPrint, { once: true });
+        logo?.addEventListener("error", startPrint, { once: true });
+        printWindow.setTimeout(startPrint, 1000);
+      }
     } catch (error) {
       printWindow.close();
       console.error("Failed to open bill print dialog:", error);
