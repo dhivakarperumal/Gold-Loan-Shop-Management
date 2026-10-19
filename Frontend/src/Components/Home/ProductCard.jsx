@@ -22,8 +22,8 @@ const ProductCard = ({ product }) => {
       ? Number(product.discount)
       : Math.round(((mrp - offerPrice) / mrp) * 100)
     : 0;
-  const weight = product.gross_weight != null && product.gross_weight !== ""
-    ? `${Number(product.gross_weight)} g`
+  const weight = product.net_gold_weight != null && product.net_gold_weight !== ""
+    ? `${Number(product.net_gold_weight)} g`
     : "-";
   const purity = product.purity || "-";
   const rating = Number(product.rating) || 0;
@@ -119,7 +119,7 @@ const ProductCard = ({ product }) => {
         <div className="flex min-w-0 items-center gap-2 border-r border-[#deddd8] pr-2">
           <Weight size={16} className="shrink-0 text-[#9b742e]" aria-hidden="true" />
           <div className="min-w-0">
-            <dt className="leading-3 text-[#77766f]">Weight</dt>
+            <dt className="leading-3 text-[#77766f]">Net Weight</dt>
             <dd className="truncate font-semibold leading-4 text-[#3f403c]" title={weight}>
               {weight}
             </dd>
