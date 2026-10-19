@@ -48,6 +48,8 @@ const ReceiptSettings = React.lazy(() => import("./Admin/Pages/ReceiptSettings.j
 const HomeSections = React.lazy(() => import("./Admin/Pages/HomeSections.jsx"));
 const Dealers = React.lazy(() => import("./Admin/Dealers/Dealers.jsx"));
 const CustomerKyc = React.lazy(() => import("./Components/Account/CustomerKyc.jsx"));
+const UserProfile  = React.lazy(() => import("./Components/Account/UserProfile.jsx"));
+
 const AdminKyc = React.lazy(() => import("./Admin/Kyc/AdminKyc.jsx"));
 const BillingManagement = React.lazy(() => import("./Admin/Pages/BillingManagement.jsx"));
 const Reports = React.lazy(() => import("./Admin/Pages/Reports.jsx"));
@@ -74,7 +76,14 @@ const router = createBrowserRouter([
           </PrivateRoute>
         )
       },
-     
+      {
+        path: "/profile",
+        element: (
+          <PrivateRoute allowedRoles={["user", "admin", "manager", "dealer"]}>
+            <UserProfile />
+          </PrivateRoute>
+        )
+      },
 
     ],
   },
