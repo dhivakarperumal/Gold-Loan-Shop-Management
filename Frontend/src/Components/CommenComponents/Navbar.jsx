@@ -256,7 +256,7 @@ const Navbar = () => {
 
   return (
     <>
-    <header className="relative z-50 w-full">
+    <header className="sticky top-0 z-50 w-full">
 
       
 
