@@ -75,7 +75,8 @@ test('values exchange credit using active daily rate and rejects wastage above w
 });
 
 test('generates an exchange item name when none is provided', () => {
-  const { product_name, ...unnamedItem } = exchangeItem();
+  const unnamedItem = exchangeItem({ product_name: '' });
+  delete unnamedItem.credit_amount;
   const result = normalizeBilling(billingInput({
     payment_type: 'EXCHANGE_GOLD',
     exchanges: [unnamedItem]

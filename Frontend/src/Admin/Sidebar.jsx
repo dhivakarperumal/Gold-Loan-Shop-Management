@@ -38,7 +38,7 @@ const navItems = [
   { path: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
 
   { path: "/admin/settings/daily-gold-rate", label: "Daily Gold Rate", icon: Coins },
-  { path: "/admin/billings", label: "Show All Bills", icon: Files },
+  { path: "/admin/billings", label: "Billing", icon: Files },
   {
     label: "Loan Management",
     icon: HandCoins,

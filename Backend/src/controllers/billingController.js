@@ -79,7 +79,13 @@ function normalizeItems(value, field, withCredit = false) {
     if (!item || typeof item !== 'object' || Array.isArray(item)) {
       return { error: `${field} ${index + 1} is invalid` };
     }
-    const productName = normalizeText(item.product_name, `${field} ${index + 1} product name`, 150, true);
+    const defaultProductName = withCredit
+      ? `${item.metal_type || 'Gold'} ${item.purity || ''} exchange item`.trim()
+      : '';
+    const rawProductName = withCredit && (typeof item.product_name !== 'string' || !item.product_name.trim())
+      ? defaultProductName
+      : item.product_name;
+    const productName = normalizeText(rawProductName, `${field} ${index + 1} product name`, 150, true);
     const category = normalizeText(item.category, `${field} ${index + 1} category`, 100, true);
     const purity = normalizeText(item.purity, `${field} ${index + 1} purity`, 30, withCredit);
     const metalType = withCredit

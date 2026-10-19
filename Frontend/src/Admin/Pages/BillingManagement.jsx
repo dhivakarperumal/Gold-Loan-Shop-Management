@@ -483,7 +483,7 @@ export default function BillingManagement() {
         products: products.map((product) => ({ product_id: Number(product.product_id) })),
         exchanges: paymentType === "EXCHANGE_GOLD"
           ? exchanges.map((exchange) => ({
-            product_name: exchange.product_name,
+            product_name: `${exchange.metal_type || "Gold"} ${exchange.purity || ""} exchange item`.trim(),
             category: exchange.category,
             metal_type: exchange.metal_type,
             purity: exchange.purity,
@@ -530,6 +530,7 @@ export default function BillingManagement() {
               <table className="w-full min-w-[760px] text-left">
                 <thead className="bg-[#00695C] text-xs uppercase tracking-wide text-white">
                   <tr>
+                    <th className="px-4 py-3">S.No.</th>
                     <th className="px-4 py-3">Invoice</th>
                     <th className="px-4 py-3">Customer(s)</th>
                     <th className="px-4 py-3">Items</th>
@@ -540,14 +541,15 @@ export default function BillingManagement() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {loading ? (
-                    <tr><td colSpan="6" className="px-4 py-12 text-center text-sm text-slate-500">Loading bills...</td></tr>
+                    <tr><td colSpan="7" className="px-4 py-12 text-center text-sm text-slate-500">Loading bills...</td></tr>
                   ) : bills.length === 0 ? (
-                    <tr><td colSpan="6" className="px-4 py-12 text-center text-sm text-slate-500">No bills yet. Create your first bill.</td></tr>
-                  ) : bills.map((bill) => {
+                    <tr><td colSpan="7" className="px-4 py-12 text-center text-sm text-slate-500">No bills yet. Create your first bill.</td></tr>
+                  ) : bills.map((bill, index) => {
                     const billCustomers = decodeArray(bill.customers);
                     const billProducts = decodeArray(bill.products);
                     return (
                       <tr key={bill.id} className="text-sm">
+                        <td className="px-4 py-3 text-slate-500">{index + 1}</td>
                         <td className="px-4 py-3 font-bold text-[#00695C]">{bill.invoice_no}</td>
                         <td className="px-4 py-3 text-slate-700">{billCustomers.map((customer) => customer.name).join(", ")}</td>
                         <td className="px-4 py-3 text-slate-600">{billProducts.length} item{billProducts.length === 1 ? "" : "s"}</td>
