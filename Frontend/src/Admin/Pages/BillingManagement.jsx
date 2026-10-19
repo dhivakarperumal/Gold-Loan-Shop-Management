@@ -5,7 +5,7 @@ import api from "../../api";
 
 const EMPTY_CUSTOMER = { name: "", phone: "", email: "", address: "" };
 const EMPTY_PRODUCT = { product_id: "", product_name: "", category: "", purity: "", price: "" };
-const EMPTY_EXCHANGE = { product_name: "", category: "", purity: "22K", credit_amount: "" };
+const EMPTY_EXCHANGE = { product_name: "", category: "", category_is_other: false, purity: "22K", credit_amount: "" };
 const inputClass = "mt-1 block w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-[#008577] focus:ring-2 focus:ring-emerald-100";
 const labelClass = "block text-xs font-semibold text-slate-600";
 
@@ -43,11 +43,43 @@ function TextField({ label, value, onChange, type = "text", required = false, pl
   );
 }
 
-function ItemFields({ item, onChange, exchange = false }) {
+function ItemFields({ item, onChange, onCategorySelect, categories, exchange = false }) {
   return (
     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
       <TextField label="Product Name" value={item.product_name} onChange={(value) => onChange("product_name", value)} required placeholder="Enter product name" />
-      <TextField label="Category" value={item.category} onChange={(value) => onChange("category", value)} required placeholder="e.g. Necklace" />
+      {exchange ? (
+        <div>
+          <label className={labelClass}>
+            Category<span className="ml-1 text-rose-500">*</span>
+            <select
+              className={inputClass}
+              value={item.category_is_other ? "__other__" : item.category}
+              onChange={(event) => {
+                const isOther = event.target.value === "__other__";
+                onCategorySelect(event.target.value, isOther);
+              }}
+              required={!item.category_is_other}
+            >
+              <option value="">Choose category</option>
+              {categories.map((category) => <option key={category.id || category.name} value={category.name}>{category.name}</option>)}
+              <option value="__other__">Other</option>
+            </select>
+          </label>
+          {item.category_is_other && (
+            <input
+              className={inputClass}
+              value={item.category}
+              onChange={(event) => onChange("category", event.target.value)}
+              required
+              maxLength={100}
+              placeholder="Enter category"
+              aria-label="Enter other category"
+            />
+          )}
+        </div>
+      ) : (
+        <TextField label="Category" value={item.category} onChange={(value) => onChange("category", value)} required placeholder="e.g. Necklace" />
+      )}
       <label className={labelClass}>
         Gold Purity<span className="ml-1 text-rose-500">*</span>
         <select className={inputClass} value={item.purity} onChange={(event) => onChange("purity", event.target.value)} required>
@@ -187,6 +219,7 @@ function CatalogProductFields({ product, catalogProducts, loading, onSelect, sel
 export default function BillingManagement() {
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState([]);
   const [catalogProducts, setCatalogProducts] = useState([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -241,6 +274,19 @@ export default function BillingManagement() {
 
   useEffect(() => { loadBills(); }, [loadBills]);
   useEffect(() => { loadCatalogProducts(); }, [loadCatalogProducts]);
+  useEffect(() => {
+    let active = true;
+    api.get("/categories")
+      .then((response) => {
+        if (!Array.isArray(response.data)) throw new Error("The server returned an invalid category list.");
+        if (active) setCategories(response.data.filter((category) => category.status === "Active"));
+      })
+      .catch((error) => {
+        console.error("Failed to load exchange item categories:", error);
+        toast.error(error.response?.data?.message || error.message || "Could not load categories.");
+      });
+    return () => { active = false; };
+  }, []);
 
   const subtotal = useMemo(
     () => products.reduce((sum, product) => sum + (Number(product.price) || 0), 0),
@@ -524,7 +570,17 @@ export default function BillingManagement() {
                 {exchanges.map((exchange, index) => (
                   <div key={`exchange-${index}`} className="space-y-3 rounded-lg border border-amber-100 bg-white p-4">
                     <div className="flex items-center justify-between"><h4 className="text-sm font-bold text-slate-700">Exchange Item {index + 1}</h4><button type="button" onClick={() => setExchanges((rows) => rows.filter((_, rowIndex) => rowIndex !== index))} className="text-rose-500" aria-label={`Remove exchange item ${index + 1}`}><FiTrash2 /></button></div>
-                    <ItemFields item={exchange} exchange onChange={(field, value) => updateRow(setExchanges, exchanges, index, field, value)} />
+                    <ItemFields
+                      item={exchange}
+                      categories={categories}
+                      exchange
+                      onChange={(field, value) => updateRow(setExchanges, exchanges, index, field, value)}
+                      onCategorySelect={(value, isOther) => setExchanges((rows) => rows.map((row, rowIndex) => rowIndex === index ? {
+                        ...row,
+                        category_is_other: isOther,
+                        category: isOther ? "" : value
+                      } : row))}
+                    />
                   </div>
                 ))}
               </div>
