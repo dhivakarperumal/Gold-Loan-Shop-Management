@@ -613,20 +613,6 @@ const Navbar = () => {
 
               <button
                 type="button"
-                onClick={() => navigate("/cart")}
-                aria-label="Cart"
-                className="relative rounded-full p-2 text-[#064638] hover:bg-[#eee3cc]"
-              >
-                <ShoppingBag size={21} />
-                {cartCount > 0 && (
-                  <span className="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#c78b20] px-1 text-[9px] text-white">
-                    {cartCount}
-                  </span>
-                )}
-              </button>
-
-              <button
-                type="button"
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                 aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
                 aria-expanded={mobileMenuOpen}
