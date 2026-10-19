@@ -18,16 +18,16 @@ const ProductCard = ({ product }) => {
     product.offer_price ?? product.final_selling_price ?? product.mrp ?? 0
   );
   const details = [
-    ["Metal", product.metal_type],
-    ["Purity", product.purity],
-    ["Weight", product.gross_weight ? `${Number(product.gross_weight)} g` : null],
-    ["Category", product.category],
-    ["Type", product.product_type],
-  ].filter(([, value]) => value);
+    ["Metal", product.metal_type || "-"],
+    ["Purity", product.purity || "-"],
+    ["Weight", product.gross_weight ? `${Number(product.gross_weight)} g` : "-"],
+    ["Category", product.category || "-"],
+    ["Type", product.product_type || "-"],
+  ];
 
   return (
     <article className="group h-full overflow-hidden rounded-xl border border-[#eadfce] bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#d8b46c] hover:shadow-lg">
-      <div className="relative aspect-[1.12/1] overflow-hidden bg-[#f6efe4]">
+      <div className="relative aspect-[1.14/1] overflow-hidden bg-[#f6efe4]">
         <Link
           to={`/product/${productId}`}
           aria-label={`View ${product.name} details`}
