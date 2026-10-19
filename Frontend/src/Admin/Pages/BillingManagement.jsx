@@ -289,6 +289,7 @@ export default function BillingManagement() {
   const [showForm, setShowForm] = useState(false);
   const [editingBillId, setEditingBillId] = useState(null);
   const [viewingBill, setViewingBill] = useState(null);
+  const [todayKey] = useState(() => new Date().toLocaleDateString("en-CA"));
   const [customers, setCustomers] = useState([{ ...EMPTY_CUSTOMER }]);
   const [products, setProducts] = useState([]);
   const [productToAdd, setProductToAdd] = useState({ ...EMPTY_PRODUCT });
@@ -388,6 +389,20 @@ export default function BillingManagement() {
     ? Math.round(Math.max(0, subtotal - discountAmount - exchangeCredit) * gstRate) / 100
     : 0;
   const total = Math.round((subtotal - discountAmount - exchangeCredit + gst) * 100) / 100;
+  const totalBilled = bills.reduce((sum, bill) => sum + (Number(bill.total_amount) || 0), 0);
+  const todayBilled = bills.reduce((sum, bill) => {
+    if (!bill.created_at || new Date(bill.created_at).toLocaleDateString("en-CA") !== todayKey) return sum;
+    return sum + (Number(bill.total_amount) || 0);
+  }, 0);
+  const totalExchangeAmount = bills.reduce((sum, bill) => {
+    if (bill.payment_type !== "EXCHANGE_GOLD") return sum;
+    return sum + decodeArray(bill.exchanges).reduce((exchangeSum, exchange) => (
+      exchangeSum + (Number(exchange.credit_amount) || 0)
+    ), 0);
+  }, 0);
+  const fullPaymentAmount = bills.reduce((sum, bill) => (
+    bill.payment_type === "FULL_PAYMENT" ? sum + (Number(bill.total_amount) || 0) : sum
+  ), 0);
 
   const resetForm = () => {
     setEditingBillId(null);
@@ -579,6 +594,19 @@ export default function BillingManagement() {
               <FiPlus /> New Bill
             </button>
           </header>
+          <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Billing totals">
+            {[
+              { label: "Total Amount", value: totalBilled, style: "border-emerald-100 bg-emerald-50 text-emerald-800" },
+              { label: "Today's Amount", value: todayBilled, style: "border-sky-100 bg-sky-50 text-sky-800" },
+              { label: "Exchange Amount", value: totalExchangeAmount, style: "border-amber-100 bg-amber-50 text-amber-800" },
+              { label: "Full Payment Amount", value: fullPaymentAmount, style: "border-violet-100 bg-violet-50 text-violet-800" }
+            ].map((card) => (
+              <article key={card.label} className={`rounded-xl border p-5 shadow-sm ${card.style}`}>
+                <h2 className="text-sm font-semibold">{card.label}</h2>
+                <p className="mt-2 text-2xl font-extrabold">{currency(card.value)}</p>
+              </article>
+            ))}
+          </section>
           <section className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full min-w-[900px] text-left">
