@@ -52,21 +52,23 @@ const Gold = () => {
             <PageContainer>
 
                 <div className="min-w-0">
-                    <div className="mb-5 flex flex-col items-center text-center">
-                        <span className="mb-1 text-[9px] font-bold uppercase tracking-[0.3em] text-[#a67b2e]">
-                            Curated Collection
-                        </span>
-                        <h2 className="font-serif text-2xl font-bold tracking-wide text-[#201a13] sm:text-3xl">
-                            Gold Jewellery
-                        </h2>
-                        <div className="mt-2 flex items-center justify-center gap-3" aria-hidden="true">
-                            <span className="h-px w-12 bg-gradient-to-r from-transparent to-[#d9a441]" />
-                            <span className="h-1.5 w-1.5 rotate-45 bg-[#d9a441]" />
-                            <span className="h-px w-12 bg-gradient-to-l from-transparent to-[#d9a441]" />
+                    <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                        <div className="flex flex-col items-start text-left">
+                            <span className="mb-1 text-[9px] font-bold uppercase tracking-[0.3em] text-[#a67b2e]">
+                                Curated Collection
+                            </span>
+                            <h2 className="font-serif text-2xl font-bold tracking-wide text-[#201a13] sm:text-3xl">
+                                Gold Jewellery
+                            </h2>
+                            <div className="mt-2 flex items-center justify-start gap-3" aria-hidden="true">
+                                <span className="h-px w-12 bg-gradient-to-r from-transparent to-[#d9a441]" />
+                                <span className="h-1.5 w-1.5 rotate-45 bg-[#d9a441]" />
+                                <span className="h-px w-12 bg-gradient-to-l from-transparent to-[#d9a441]" />
+                            </div>
                         </div>
                         <a
                             href="/category/gold-jewellery"
-                            className="mt-2 inline-flex items-center gap-2 text-xs font-semibold text-[#6f5426] transition-colors hover:text-[#b47a16]"
+                            className="inline-flex items-center gap-2 self-end text-xs font-semibold text-[#6f5426] transition-colors hover:text-[#b47a16]"
                         >
                             View All
                             <FaArrowRight className="text-[10px] text-[#b47a16]" />
