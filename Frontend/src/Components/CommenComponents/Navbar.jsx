@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
   Search,
@@ -20,10 +20,15 @@ import {
   User,
 } from "lucide-react";
 import PageContainer from "./PageContainer";
+import WishlistDrawer from "./WishlistDrawer";
+import { useAuth } from "../../PrivateRouter/AuthContext";
+import { StoreContext } from "../../PrivateRouter/StoreContext";
 import api from "../../api";
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const { user, logout, profileName } = useAuth();
+  const { cart, wishlist } = useContext(StoreContext);
 
   const [search, setSearch] = useState("");
   const [searchResults, setSearchResults] = useState([]);
@@ -32,14 +37,13 @@ const Navbar = () => {
   const [openDropdown, setOpenDropdown] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [wishlistOpen, setWishlistOpen] = useState(false);
   const [categories, setCategories] = useState([]);
   const [metals, setMetals] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
 
-  // Connect these values to your existing application state/API.
-  const wishlistCount = 0;
-  const cartCount = 0;
-  const user = null;
+  const wishlistCount = wishlist.length;
+  const cartCount = cart.length;
 
   useEffect(() => {
     const query = search.trim();
@@ -213,6 +217,16 @@ const Navbar = () => {
     setAccountOpen(false);
   };
 
+  const handleLogout = async () => {
+    try {
+      await logout();
+      closeMenus();
+      navigate("/login", { replace: true });
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
+
   const handleCategoryClick = (category, subcategory) => {
     closeMenus();
     navigate(`/shop?search=${encodeURIComponent(subcategory || category.name)}`);
@@ -242,6 +256,7 @@ const Navbar = () => {
     Array.isArray(category?.subcategory) ? category.subcategory.filter(Boolean) : [];
 
   return (
+    <>
     <header className="relative z-50 w-full">
 
       
@@ -489,7 +504,7 @@ const Navbar = () => {
               {/* Wishlist */}
               <button
                 type="button"
-                onClick={() => navigate("/wishlist")}
+                onClick={() => setWishlistOpen(true)}
                 className="group relative flex min-w-[48px] flex-col items-center gap-1 text-[#173f33] transition hover:text-[#b77b19]"
                 aria-label={`Wishlist, ${wishlistCount} items`}
               >
@@ -521,7 +536,9 @@ const Navbar = () => {
                       <UserRound size={21} />
                     )}
                   </span>
-                  <span className="text-xs font-medium">Account</span>
+                  <span className="max-w-20 truncate text-xs font-medium">
+                    {user ? profileName : "Account"}
+                  </span>
                 </button>
 
                 {accountOpen && (
@@ -550,10 +567,7 @@ const Navbar = () => {
                         </button>
                         <button
                           type="button"
-                          onClick={() => {
-                            // Connect your existing logout handler here.
-                            setAccountOpen(false);
-                          }}
+                          onClick={handleLogout}
                           className="flex w-full items-center gap-2 rounded-lg px-3 py-2.5 text-left text-sm text-red-600 hover:bg-red-50"
                         >
                           <LogOut size={16} />
@@ -581,7 +595,10 @@ const Navbar = () => {
             <div className="flex items-center gap-2 lg:hidden">
               <button
                 type="button"
-                onClick={() => navigate("/wishlist")}
+                onClick={() => {
+                  closeMenus();
+                  setWishlistOpen(true);
+                }}
                 aria-label="Wishlist"
                 className="relative rounded-full p-2 text-[#064638] hover:bg-[#eee3cc]"
               >
@@ -772,6 +789,8 @@ const Navbar = () => {
         <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#b8872e]/30 via-[#e8c574] to-[#b8872e]/30" />
       </nav>
     </header>
+    <WishlistDrawer isOpen={wishlistOpen} onClose={() => setWishlistOpen(false)} />
+    </>
   );
 };
 
