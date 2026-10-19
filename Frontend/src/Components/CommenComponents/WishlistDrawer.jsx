@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiHeart, FiX, FiTrash2 } from "react-icons/fi";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
