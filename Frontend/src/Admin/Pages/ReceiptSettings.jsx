@@ -19,6 +19,10 @@ const fields = [
 
 const ReceiptSettings = () => {
   const [settings, setSettings] = useState(getReceiptSettings);
+  const [previewDate] = useState(() => new Date().toLocaleDateString("en-IN"));
+  const [previewInvoiceNumber] = useState(() => (
+    `BILL-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`
+  ));
 
   const updateField = (key, value) => {
     setSettings((current) => ({ ...current, [key]: value }));
@@ -91,7 +95,7 @@ const ReceiptSettings = () => {
   };
 
   return (
-    <main className="mx-auto max-w-5xl space-y-6">
+    <main className="mx-auto max-w-7xl space-y-6">
       <header className="rounded-2xl bg-gradient-to-r from-[#003B3B] via-[#00594f] to-[#087568] px-5 py-6 text-white shadow-lg sm:px-7">
         <Link to="/admin/settings" className="inline-flex items-center gap-2 text-sm font-semibold text-white/80 transition hover:text-white">
           <FiArrowLeft /> All Settings
@@ -101,8 +105,9 @@ const ReceiptSettings = () => {
         <p className="mt-2 max-w-2xl text-sm text-white/75">Set the shop logo, name, contact details, address, and footer shown on printed bills.</p>
       </header>
 
-      <form onSubmit={saveSettings} className="space-y-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-        <section className="grid gap-5 sm:grid-cols-2">
+      <div className="grid items-start gap-6 xl:grid-cols-2">
+        <form onSubmit={saveSettings} className="space-y-6 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+        <section className="space-y-5">
           <div className="space-y-3">
             <label className="block text-sm font-semibold text-slate-700" htmlFor="receipt-logo-upload">Shop Logo</label>
             <div className="flex flex-wrap items-center gap-4 rounded-xl border border-dashed border-slate-300 bg-slate-50 p-4">
@@ -161,7 +166,91 @@ const ReceiptSettings = () => {
             <FiSave /> Save Receipt Settings
           </button>
         </div>
-      </form>
+        </form>
+
+        <aside className="space-y-3 xl:sticky xl:top-6">
+          <div>
+            <h2 className="text-lg font-extrabold text-slate-900">Receipt Preview</h2>
+            <p className="mt-1 text-xs text-slate-500">Preview updates as you edit. Example customer, items, and amounts are for illustration.</p>
+          </div>
+          <section aria-label="Live receipt preview" className="overflow-hidden rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+            <header className="flex flex-col items-center gap-2 text-center">
+              {settings.logoUrl ? (
+                <img src={settings.logoUrl} alt="" className="h-[76px] w-24 object-contain" />
+              ) : (
+                <span className="flex h-[76px] w-24 items-center justify-center text-slate-300"><FiImage size={30} /></span>
+              )}
+              <h3 className="text-2xl font-black text-[#00695C]">{settings.shopName || "Shop Name"}</h3>
+              {settings.address && <p className="max-w-lg whitespace-pre-line text-xs leading-relaxed text-slate-600">{settings.address}</p>}
+              {settings.gstNumber && <p className="text-xs text-slate-600"><strong>GSTIN:</strong> {settings.gstNumber}</p>}
+              <div className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-slate-600">
+                {settings.phone && <span>Phone: {settings.phone}</span>}
+                {settings.email && <span>Email: {settings.email}</span>}
+              </div>
+            </header>
+            <div className="mt-4 flex flex-wrap items-start justify-between gap-3 border-y border-slate-200 py-3 text-xs text-slate-600">
+              <p>Invoice No: <strong className="text-slate-800">{previewInvoiceNumber}</strong></p>
+              <div className="text-left sm:text-right">
+                <p>Date: {previewDate}</p>
+                <p className="mt-1">Payment: Full Payment</p>
+              </div>
+            </div>
+
+            <div className="py-4">
+              <h4 className="mb-2 text-sm font-bold text-slate-800">Customer</h4>
+              <p className="text-sm font-semibold text-slate-800">Sample Customer</p>
+              <p className="text-xs text-slate-500">Customer contact details appear here</p>
+            </div>
+
+            <div className="overflow-x-auto rounded-lg border border-slate-200">
+              <table className="w-full min-w-[740px] text-left text-xs">
+                <thead className="bg-slate-50 uppercase text-slate-500">
+                  <tr>
+                    <th className="px-2 py-2">S.No.</th>
+                    <th className="px-2 py-2">Item</th>
+                    <th className="px-2 py-2">Category / Purity</th>
+                    <th className="px-2 py-2 text-right">Making Charge</th>
+                    <th className="px-2 py-2 text-right">Weight in gross</th>
+                    <th className="px-2 py-2 text-right">Rate</th>
+                    <th className="px-2 py-2 text-right">Amount</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-t border-slate-100">
+                    <td className="px-2 py-2">1</td>
+                    <td className="px-2 py-2">Gold Necklace</td>
+                    <td className="px-2 py-2">Necklace · 22K</td>
+                    <td className="px-2 py-2 text-right">₹2,500.00</td>
+                    <td className="px-2 py-2 text-right">10 g</td>
+                    <td className="px-2 py-2 text-right">₹8,250.00 / g</td>
+                    <td className="px-2 py-2 text-right">₹85,000.00</td>
+                  </tr>
+                  <tr className="border-t border-slate-100 text-rose-700">
+                    <td className="px-2 py-2">2</td>
+                    <td className="px-2 py-2">Exchange Gold</td>
+                    <td className="px-2 py-2">Gold · 22K · 10 g</td>
+                    <td className="px-2 py-2 text-right">—</td>
+                    <td className="px-2 py-2 text-right">—</td>
+                    <td className="px-2 py-2 text-right">₹2,000.00 / g</td>
+                    <td className="px-2 py-2 text-right">−₹20,000.00</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="ml-auto mt-4 max-w-xs space-y-2 text-sm">
+              <div className="flex justify-between text-slate-600"><span>Sub-Total</span><span>₹85,000.00</span></div>
+              <div className="flex justify-between text-rose-700"><span>Exchange Amount</span><span>−₹20,000.00</span></div>
+              <div className="flex justify-between text-slate-600"><span>GST</span><span>₹1,950.00</span></div>
+              <div className="flex justify-between border-t border-slate-200 pt-2 text-base font-extrabold text-slate-900"><span>Total</span><span>₹66,950.00</span></div>
+            </div>
+
+            <footer className="mt-6 border-t border-slate-200 pt-4 text-center text-xs leading-relaxed text-slate-600">
+              {settings.footerMessage && <p className="font-semibold text-slate-800">{settings.footerMessage}</p>}
+            </footer>
+          </section>
+        </aside>
+      </div>
     </main>
   );
 };

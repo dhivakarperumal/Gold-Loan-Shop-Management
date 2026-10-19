@@ -37,15 +37,9 @@ import api from "../api";
 const navItems = [
   { path: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
 
-  {
-    label: "Settings",
-    icon: SettingsIcon,
-    children: [
-      { path: "/admin/settings", label: "All Settings", icon: SettingsIcon },
-      { path: "/admin/settings/daily-gold-rate", label: "Daily Gold Rate", icon: Coins },
-      { path: "/admin/settings/receipt", label: "Receipt Settings", icon: Files }
-    ]
-  },
+
+   { path: "/admin/settings/daily-gold-rate", label: "Daily Gold Rate", icon: Coins },
+ 
 
   { path: "/admin/billings", label: "Billing", icon: Files },
   {

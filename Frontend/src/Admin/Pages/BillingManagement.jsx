@@ -44,6 +44,13 @@ function formatWeight(value, unit = "") {
   return unit ? `${formatted} ${unit}` : formatted;
 }
 
+function formatMakingCharge(product) {
+  if (product.making_charge == null || product.making_charge === "") return "—";
+  const value = Number(product.making_charge);
+  if (!Number.isFinite(value)) return "—";
+  return product.making_charge_type === "Percentage" ? `${value}%` : currency(value);
+}
+
 function TextField({ label, value, onChange, type = "text", required = false, placeholder = "", min, step, readOnly = false }) {
   return (
     <label className={labelClass}>
@@ -301,6 +308,7 @@ export default function BillingManagement() {
   const [categories, setCategories] = useState([]);
   const { current: currentGoldRates } = useGoldRates();
   const [catalogProducts, setCatalogProducts] = useState([]);
+  const [catalogProductDetails, setCatalogProductDetails] = useState([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(() => new URLSearchParams(window.location.search).get("new") === "1");
@@ -321,6 +329,18 @@ export default function BillingManagement() {
     () => currentGoldRates?.rates || [],
     [currentGoldRates]
   );
+  const getProductWithCatalogDetails = (product) => {
+    const catalogProduct = catalogProductDetails.find(
+      (item) => String(item.id) === String(product.product_id)
+    );
+    return {
+      ...product,
+      gross_weight: product.gross_weight ?? catalogProduct?.gross_weight,
+      making_charge_type: product.making_charge_type || catalogProduct?.making_charge_type,
+      making_charge: product.making_charge ?? catalogProduct?.making_charge,
+      rate_per_gram: product.rate_per_gram ?? catalogProduct?.gold_rate_per_gram
+    };
+  };
 
   const loadBills = useCallback(async () => {
     setLoading(true);
@@ -344,7 +364,7 @@ export default function BillingManagement() {
       const productsFromCatalog = [];
       do {
         const response = await api.get("/products", {
-          params: { page, limit: 100, status: "Active" }
+          params: { page, limit: 100 }
         });
         if (!Array.isArray(response.data?.products)) {
           throw new Error("The server returned an invalid product catalog.");
@@ -353,7 +373,8 @@ export default function BillingManagement() {
         totalPages = Math.max(1, Number(response.data.pagination?.totalPages) || 1);
         page += 1;
       } while (page <= totalPages);
-      setCatalogProducts(productsFromCatalog);
+      setCatalogProductDetails(productsFromCatalog);
+      setCatalogProducts(productsFromCatalog.filter((product) => product.status === "Active"));
     } catch (error) {
       console.error("Failed to load billing product catalog:", error);
       toast.error(error.response?.data?.message || error.message || "Could not load catalog products.");
@@ -446,18 +467,20 @@ export default function BillingManagement() {
     }
 
     const billCustomers = decodeArray(bill.customers);
-    const billProducts = decodeArray(bill.products);
+    const billProducts = decodeArray(bill.products).map(getProductWithCatalogDetails);
     const billExchanges = decodeArray(bill.exchanges);
     const lineItems = [
       ...billProducts.map((product) => ({
         name: product.product_name,
         category: product.category,
         purity: product.purity,
+        makingCharge: formatMakingCharge(product),
+        grossWeight: product.gross_weight,
         weight: null,
         wastageWeight: null,
         netWeight: null,
-        rate: null,
-        rateUnit: "",
+        rate: product.rate_per_gram,
+        rateUnit: "gram",
         amount: Number(product.price) || 0,
         isExchange: false
       })),
@@ -465,6 +488,8 @@ export default function BillingManagement() {
         name: exchange.product_name || "Exchange item",
         category: exchange.category,
         purity: `${exchange.metal_type || ""} ${exchange.purity || ""}`.trim(),
+        makingCharge: "—",
+        grossWeight: null,
         weight: exchange.weight,
         wastageWeight: exchange.wastage_weight,
         netWeight: exchange.net_weight,
@@ -480,10 +505,12 @@ export default function BillingManagement() {
         <td class="${item.isExchange ? "exchange" : ""}">${escapeHtml(item.name || "—")}</td>
         <td>${escapeHtml(item.category || "—")}</td>
         <td>${escapeHtml(item.purity || "—")}</td>
+        <td>${escapeHtml(item.makingCharge)}</td>
+        <td>${item.grossWeight == null ? "—" : formatWeight(item.grossWeight, "g")}</td>
         <td>${item.isExchange ? formatWeight(item.weight, item.rateUnit === "carat" ? "carat" : "g") : "—"}</td>
         <td>${item.isExchange ? formatWeight(item.wastageWeight, item.rateUnit === "carat" ? "carat" : "g") : "—"}</td>
         <td>${item.isExchange ? formatWeight(item.netWeight, item.rateUnit === "carat" ? "carat" : "g") : "—"}</td>
-        <td class="amount">${item.isExchange ? `${currency(item.rate)} / ${escapeHtml(item.rateUnit)}` : "—"}</td>
+        <td class="amount">${item.rate == null || item.rate === "" ? "—" : `${currency(item.rate)} / ${escapeHtml(item.rateUnit)}`}</td>
         <td class="amount ${item.isExchange ? "exchange" : ""}">${item.isExchange ? "−" : ""}${currency(Math.abs(item.amount))}</td>
       </tr>
     `).join("");
@@ -520,8 +547,6 @@ export default function BillingManagement() {
     const shopName = escapeHtml(receiptSettings.shopName);
     const shopAddress = escapeHtml(receiptSettings.address);
     const shopGstNumber = escapeHtml(receiptSettings.gstNumber);
-    const shopPhone = escapeHtml(receiptSettings.phone);
-    const shopEmail = escapeHtml(receiptSettings.email);
     const footerMessage = escapeHtml(receiptSettings.footerMessage);
 
     try {
@@ -534,12 +559,13 @@ export default function BillingManagement() {
           <style>
             * { box-sizing: border-box; }
             body { margin: 0; padding: 36px; color: #1e293b; font: 14px Arial, sans-serif; }
-            header { display: flex; flex-direction: column; align-items: center; gap: 12px; padding-bottom: 20px; border-bottom: 2px solid #00695c; text-align: center; }
+            header { display: flex; flex-direction: column; align-items: center; gap: 12px; padding-bottom: 12px; text-align: center; }
             .brand { display: flex; flex-direction: column; align-items: center; gap: 6px; }
             .logo { display: block; width: 96px; height: 76px; object-fit: contain; }
             h1 { margin: 0 0 6px; color: #00695c; font-size: 26px; }
             .address { max-width: 620px; color: #475569; line-height: 1.5; }
-            .invoice-meta { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 24px; }
+            .invoice-meta { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 12px 0; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #00695c; }
+            .invoice-meta-right { text-align: right; }
             h2 { margin: 24px 0 10px; font-size: 16px; }
             p { margin: 4px 0; }
             .customers { display: flex; flex-wrap: wrap; gap: 20px; }
@@ -556,6 +582,7 @@ export default function BillingManagement() {
             footer { margin-top: 36px; padding-top: 16px; border-top: 1px solid #cbd5e1; color: #475569; text-align: center; line-height: 1.6; }
             footer strong { display: block; margin-bottom: 4px; color: #00695c; font-size: 15px; }
             footer .thanks { color: #1e293b; font-weight: 600; }
+            @page { margin: 0; }
             @media print { body { padding: 12mm; } }
           </style>
         </head>
@@ -569,18 +596,20 @@ export default function BillingManagement() {
                 ${shopGstNumber ? `<p class="address"><strong>GSTIN:</strong> ${shopGstNumber}</p>` : ""}
               </div>
             </div>
-            <div class="invoice-meta">
-              <p>Invoice No: <strong>${escapeHtml(bill.invoice_no || "—")}</strong></p>
+          </header>
+          <div class="invoice-meta">
+            <p>Invoice No: <strong>${escapeHtml(bill.invoice_no || "—")}</strong></p>
+            <div class="invoice-meta-right">
               <p>Date: ${escapeHtml(date)}</p>
               <p>Payment: ${bill.payment_type === "EXCHANGE_GOLD" ? "Exchange Gold" : "Full Payment"}</p>
             </div>
-          </header>
+          </div>
           <h2>Customer${billCustomers.length === 1 ? "" : "s"}</h2>
           <div class="customers">${customerDetails || "<p>No customer details</p>"}</div>
           <h2>Items</h2>
           <table>
-            <thead><tr><th>S.No.</th><th>Item</th><th>Category</th><th>Purity</th><th>Weight</th><th>Wastage</th><th>Net Weight</th><th class="amount">Rate</th><th class="amount">Amount</th></tr></thead>
-            <tbody>${rows || '<tr><td colspan="9">No items</td></tr>'}</tbody>
+            <thead><tr><th>S.No.</th><th>Item</th><th>Category</th><th>Purity</th><th>Making Charge</th><th>Weight in gross</th><th>Weight</th><th>Wastage</th><th>Net Weight</th><th class="amount">Rate</th><th class="amount">Amount</th></tr></thead>
+            <tbody>${rows || '<tr><td colspan="11">No items</td></tr>'}</tbody>
           </table>
           <div class="totals">
             <div class="total-row"><span>Sub-Total</span><span>${currency(bill.sub_total)}</span></div>
@@ -590,12 +619,7 @@ export default function BillingManagement() {
             <div class="total-row grand-total"><span>Total</span><span>${currency(bill.total_amount)}</span></div>
           </div>
           <footer>
-            <strong>${shopName}</strong>
             ${footerMessage ? `<div class="thanks">${footerMessage}</div>` : ""}
-            ${shopAddress ? `<div>${shopAddress}</div>` : ""}
-            ${shopGstNumber ? `<div>GSTIN: ${shopGstNumber}</div>` : ""}
-            ${shopPhone ? `<div>Phone: ${shopPhone}</div>` : ""}
-            ${shopEmail ? `<div>Email: ${shopEmail}</div>` : ""}
           </footer>
         </body>
       </html>`);
@@ -1198,13 +1222,15 @@ export default function BillingManagement() {
               </div>
             </div>
             <div className="overflow-x-auto rounded-lg border border-slate-200">
-              <table className="w-full min-w-[1150px] text-left text-sm">
+              <table className="w-full min-w-[1450px] text-left text-sm">
                 <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                   <tr>
                     <th className="px-3 py-2">S.No.</th>
                     <th className="px-3 py-2">Item</th>
                     <th className="px-3 py-2">Category</th>
                     <th className="px-3 py-2">Purity</th>
+                    <th className="px-3 py-2 text-right">Making Charge</th>
+                    <th className="px-3 py-2 text-right">Weight in gross</th>
                     <th className="px-3 py-2 text-right">Weight</th>
                     <th className="px-3 py-2 text-right">Wastage</th>
                     <th className="px-3 py-2 text-right">Net Weight</th>
@@ -1213,25 +1239,32 @@ export default function BillingManagement() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {decodeArray(viewingBill.products).map((product, index) => (
-                    <tr key={`view-product-${index}`}>
-                      <td className="px-3 py-2 text-slate-500">{index + 1}</td>
-                      <td className="px-3 py-2">{product.product_name}</td>
-                      <td className="px-3 py-2">{product.category || "—"}</td>
-                      <td className="px-3 py-2">{product.purity || "—"}</td>
-                      <td className="px-3 py-2 text-right">—</td>
-                      <td className="px-3 py-2 text-right">—</td>
-                      <td className="px-3 py-2 text-right">—</td>
-                      <td className="px-3 py-2 text-right">—</td>
-                      <td className="px-3 py-2 text-right">{currency(product.price)}</td>
-                    </tr>
-                  ))}
+                  {decodeArray(viewingBill.products).map((savedProduct, index) => {
+                    const product = getProductWithCatalogDetails(savedProduct);
+                    return (
+                      <tr key={`view-product-${index}`}>
+                        <td className="px-3 py-2 text-slate-500">{index + 1}</td>
+                        <td className="px-3 py-2">{product.product_name}</td>
+                        <td className="px-3 py-2">{product.category || "—"}</td>
+                        <td className="px-3 py-2">{product.purity || "—"}</td>
+                        <td className="px-3 py-2 text-right">{formatMakingCharge(product)}</td>
+                        <td className="px-3 py-2 text-right">{product.gross_weight == null ? "—" : formatWeight(product.gross_weight, "g")}</td>
+                        <td className="px-3 py-2 text-right">—</td>
+                        <td className="px-3 py-2 text-right">—</td>
+                        <td className="px-3 py-2 text-right">—</td>
+                        <td className="px-3 py-2 text-right">{product.rate_per_gram == null ? "—" : `${currency(product.rate_per_gram)} / gram`}</td>
+                        <td className="px-3 py-2 text-right">{currency(product.price)}</td>
+                      </tr>
+                    );
+                  })}
                   {decodeArray(viewingBill.exchanges).map((exchange, index) => (
                     <tr key={`view-exchange-${index}`} className="text-rose-700">
                       <td className="px-3 py-2 text-slate-500">{decodeArray(viewingBill.products).length + index + 1}</td>
                       <td className="px-3 py-2">{exchange.product_name || "Exchange item"}</td>
                       <td className="px-3 py-2">{exchange.category || "—"}</td>
                       <td className="px-3 py-2">{exchange.metal_type} {exchange.purity}</td>
+                      <td className="px-3 py-2 text-right">—</td>
+                      <td className="px-3 py-2 text-right">—</td>
                       <td className="px-3 py-2 text-right">{formatWeight(exchange.weight, exchange.weight_unit === "carat" ? "carat" : "g")}</td>
                       <td className="px-3 py-2 text-right">{formatWeight(exchange.wastage_weight, exchange.weight_unit === "carat" ? "carat" : "g")}</td>
                       <td className="px-3 py-2 text-right">{formatWeight(exchange.net_weight, exchange.weight_unit === "carat" ? "carat" : "g")}</td>
