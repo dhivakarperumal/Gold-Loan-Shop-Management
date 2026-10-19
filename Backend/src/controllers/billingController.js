@@ -116,10 +116,21 @@ function normalizeBilling(body) {
   }
 
   const subTotal = Math.round(products.value.reduce((sum, product) => sum + product.price, 0) * 100) / 100;
+  const discount = normalizeMoney(body.discount_amount, 'Discount amount', false);
+  if (discount.error) return discount;
+  if (discount.value > subTotal) return { error: 'Discount cannot exceed the products subtotal' };
   const exchangeCredit = Math.round(exchanges.reduce((sum, exchange) => sum + exchange.credit_amount, 0) * 100) / 100;
-  if (exchangeCredit > subTotal) return { error: 'Exchange credit cannot exceed the purchased products subtotal' };
-  const gstAmount = Math.round((subTotal - exchangeCredit) * GST_RATE) / 100;
-  const totalAmount = Math.round((subTotal - exchangeCredit + gstAmount) * 100) / 100;
+  if (exchangeCredit > subTotal - discount.value) {
+    return { error: 'Discount and exchange credit cannot exceed the purchased products subtotal' };
+  }
+  const rawGstRate = body.gst_rate == null || body.gst_rate === '' ? GST_RATE : Number(body.gst_rate);
+  if (!Number.isFinite(rawGstRate) || rawGstRate < 0 || rawGstRate > 100) {
+    return { error: 'GST rate must be a valid percentage between 0 and 100' };
+  }
+  const gstRate = Math.round(rawGstRate * 100) / 100;
+  const netSubtotal = subTotal - discount.value - exchangeCredit;
+  const gstAmount = Math.round(netSubtotal * gstRate) / 100;
+  const totalAmount = Math.round((netSubtotal + gstAmount) * 100) / 100;
   if (subTotal > 9999999999.99 || totalAmount > 9999999999.99) {
     return { error: 'Bill total exceeds the supported limit' };
   }
@@ -132,6 +143,7 @@ function normalizeBilling(body) {
       exchanges,
       payment_type: paymentType,
       sub_total: subTotal,
+      discount_amount: discount.value,
       gst_amount: gstAmount,
       total_amount: totalAmount
     }

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiArrowLeft, FiPlus, FiSave, FiTrash2 } from "react-icons/fi";
+import { FiArrowLeft, FiPlus, FiSave, FiSearch, FiTrash2 } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api from "../../api";
 
@@ -46,7 +46,7 @@ function TextField({ label, value, onChange, type = "text", required = false, pl
 function ItemFields({ item, onChange, exchange = false }) {
   return (
     <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-      <TextField label="Product Name" value={item.product_name} onChange={(value) => onChange("product_name", value)} required />
+      <TextField label="Product Name" value={item.product_name} onChange={(value) => onChange("product_name", value)} required placeholder="Enter product name" />
       <TextField label="Category" value={item.category} onChange={(value) => onChange("category", value)} required placeholder="e.g. Necklace" />
       <label className={labelClass}>
         Gold Purity<span className="ml-1 text-rose-500">*</span>
@@ -68,47 +68,119 @@ function ItemFields({ item, onChange, exchange = false }) {
   );
 }
 
-function CatalogProductFields({ product, catalogProducts, loading, onSelect }) {
+function CatalogProductFields({ product, catalogProducts, loading, onSelect, selectionId }) {
+  const [selectionMode, setSelectionMode] = useState("select");
+  const [searchTerm, setSearchTerm] = useState("");
+  const filteredProducts = catalogProducts.filter((catalogProduct) =>
+    [catalogProduct.name, catalogProduct.category, catalogProduct.purity, catalogProduct.product_code]
+      .some((value) => String(value || "").toLowerCase().includes(searchTerm.trim().toLowerCase()))
+  );
+
   return (
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-      <label className={`${labelClass} xl:col-span-2`}>
-        Select Existing Product<span className="ml-1 text-rose-500">*</span>
-        <select
-          className={inputClass}
-          value={product.product_id}
-          onChange={(event) => onSelect(event.target.value)}
-          required
-          disabled={loading}
-        >
-          <option value="">{loading ? "Loading products..." : "Choose a catalog product"}</option>
-          {catalogProducts.map((catalogProduct) => {
-            const price = Number(catalogProduct.offer_price) > 0
-              ? Number(catalogProduct.offer_price)
-              : Number(catalogProduct.final_selling_price) > 0
-                ? Number(catalogProduct.final_selling_price)
-                : Number(catalogProduct.mrp || 0);
-            return (
-              <option key={catalogProduct.id} value={catalogProduct.id}>
-                {catalogProduct.name} · {catalogProduct.category} · {catalogProduct.purity || "Purity not set"} · {currency(price)}
-              </option>
-            );
-          })}
-        </select>
-      </label>
-      <div className="grid grid-cols-2 gap-3 xl:col-span-2">
-        <div className="rounded-lg bg-slate-50 px-3 py-2.5">
-          <p className="text-[11px] font-semibold text-slate-500">Category</p>
-          <p className="mt-1 truncate text-sm font-medium text-slate-800">{product.category || "Select a product"}</p>
-        </div>
-        <div className="rounded-lg bg-slate-50 px-3 py-2.5">
-          <p className="text-[11px] font-semibold text-slate-500">Purity</p>
-          <p className="mt-1 text-sm font-medium text-slate-800">{product.purity || "—"}</p>
-        </div>
-        <div className="rounded-lg bg-emerald-50 px-3 py-2.5 sm:col-span-2">
-          <p className="text-[11px] font-semibold text-emerald-700">Catalog Unit Price</p>
-          <p className="mt-1 text-sm font-bold text-emerald-900">{product.product_id ? currency(product.price) : "—"}</p>
+    <div className="min-w-[280px] space-y-2">
+      <div>
+        <span className={labelClass}>
+          Choose Existing Product<span className="ml-1 text-rose-500">*</span>
+        </span>
+        <div className="mt-2 flex w-full rounded-lg border border-slate-200 bg-slate-50 p-1" role="group" aria-label="Product selection method">
+          {[
+            { value: "select", label: "Select" },
+            { value: "search", label: "Search" }
+          ].map((option) => (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setSelectionMode(option.value)}
+              aria-pressed={selectionMode === option.value}
+              className={`flex-1 rounded-md px-4 py-2 text-xs font-semibold transition ${selectionMode === option.value ? "bg-[#00695C] text-white shadow-sm" : "text-slate-600 hover:bg-white"}`}
+            >
+              {option.label}
+            </button>
+          ))}
         </div>
       </div>
+      {selectionMode === "select" ? (
+        <label className={labelClass}>
+          Select from catalog
+          <select
+            className={inputClass}
+            value={product.product_id}
+            onChange={(event) => onSelect(event.target.value)}
+            required
+            disabled={loading}
+          >
+            <option value="">{loading ? "Loading products..." : "Choose a catalog product"}</option>
+            {catalogProducts.map((catalogProduct) => {
+              const price = Number(catalogProduct.offer_price) > 0
+                ? Number(catalogProduct.offer_price)
+                : Number(catalogProduct.final_selling_price) > 0
+                  ? Number(catalogProduct.final_selling_price)
+                  : Number(catalogProduct.mrp || 0);
+              return (
+                <option key={catalogProduct.id} value={catalogProduct.id}>
+                  {catalogProduct.name} · {catalogProduct.category} · {catalogProduct.purity || "Purity not set"} · {currency(price)}
+                </option>
+              );
+            })}
+          </select>
+        </label>
+      ) : (
+        <div>
+          <label className={labelClass} htmlFor={`product-search-${selectionId}`}>
+            Search catalog
+            <span className="relative block">
+              <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+              <input
+                id={`product-search-${selectionId}`}
+                className={`${inputClass} pl-9`}
+                type="search"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                disabled={loading}
+                placeholder={loading ? "Loading products..." : "Search by name, category, purity, or SKU"}
+                autoComplete="off"
+              />
+            </span>
+          </label>
+          {searchTerm.trim() && (
+            <div className="mt-2 max-h-56 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-sm" role="listbox" aria-label="Matching catalog products">
+              {filteredProducts.length > 0 ? filteredProducts.map((catalogProduct) => {
+                const price = Number(catalogProduct.offer_price) > 0
+                  ? Number(catalogProduct.offer_price)
+                  : Number(catalogProduct.final_selling_price) > 0
+                    ? Number(catalogProduct.final_selling_price)
+                    : Number(catalogProduct.mrp || 0);
+                const selected = String(catalogProduct.id) === product.product_id;
+                return (
+                  <button
+                    key={catalogProduct.id}
+                    type="button"
+                    role="option"
+                    aria-selected={selected}
+                    onClick={() => {
+                      onSelect(String(catalogProduct.id));
+                      setSearchTerm("");
+                    }}
+                    className={`block w-full border-b border-slate-100 px-3 py-2.5 text-left text-sm last:border-b-0 hover:bg-emerald-50 ${selected ? "bg-emerald-50 text-[#00695C]" : "text-slate-700"}`}
+                  >
+                    <span className="block font-semibold">{catalogProduct.name}</span>
+                    <span className="mt-0.5 block text-xs text-slate-500">
+                      {catalogProduct.category} · {catalogProduct.purity || "Purity not set"} · {currency(price)}
+                    </span>
+                  </button>
+                );
+              }) : (
+                <p className="px-3 py-3 text-sm text-slate-500" role="status">No matching catalog products.</p>
+              )}
+            </div>
+          )}
+          {!searchTerm.trim() && product.product_id && (
+            <p className="mt-2 text-xs text-slate-500">
+              Selected: {product.product_name}. Search above to choose a different product.
+            </p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -121,7 +193,10 @@ export default function BillingManagement() {
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [customers, setCustomers] = useState([{ ...EMPTY_CUSTOMER }]);
-  const [products, setProducts] = useState([{ ...EMPTY_PRODUCT }]);
+  const [products, setProducts] = useState([]);
+  const [productToAdd, setProductToAdd] = useState({ ...EMPTY_PRODUCT });
+  const [gstRateInput, setGstRateInput] = useState("3");
+  const [discountInput, setDiscountInput] = useState("");
   const [exchanges, setExchanges] = useState([]);
   const [paymentType, setPaymentType] = useState("FULL_PAYMENT");
 
@@ -178,12 +253,24 @@ export default function BillingManagement() {
       : 0,
     [exchanges, paymentType]
   );
-  const gst = Math.round(Math.max(0, subtotal - exchangeCredit) * 3) / 100;
-  const total = Math.round((subtotal - exchangeCredit + gst) * 100) / 100;
+  const discountAmount = discountInput.trim() === "" ? 0 : Number(discountInput);
+  const validDiscount = Number.isFinite(discountAmount)
+    && discountAmount >= 0
+    && discountAmount <= subtotal
+    && discountAmount + exchangeCredit <= subtotal;
+  const gstRate = gstRateInput.trim() === "" ? 3 : Number(gstRateInput);
+  const validGst = Number.isFinite(gstRate) && gstRate >= 0 && gstRate <= 100;
+  const gst = validGst
+    ? Math.round(Math.max(0, subtotal - discountAmount - exchangeCredit) * gstRate) / 100
+    : 0;
+  const total = Math.round((subtotal - discountAmount - exchangeCredit + gst) * 100) / 100;
 
   const resetForm = () => {
     setCustomers([{ ...EMPTY_CUSTOMER }]);
-    setProducts([{ ...EMPTY_PRODUCT }]);
+    setProducts([]);
+    setProductToAdd({ ...EMPTY_PRODUCT });
+    setGstRateInput("3");
+    setDiscountInput("");
     setExchanges([]);
     setPaymentType("FULL_PAYMENT");
   };
@@ -192,14 +279,59 @@ export default function BillingManagement() {
     setter(rows.map((row, rowIndex) => rowIndex === index ? { ...row, [field]: value } : row));
   };
 
+  const selectCatalogProduct = (productId) => {
+    const selected = catalogProducts.find((item) => String(item.id) === productId);
+    if (!selected) {
+      setProductToAdd({ ...EMPTY_PRODUCT });
+      return;
+    }
+    const price = Number(selected.offer_price) > 0
+      ? Number(selected.offer_price)
+      : Number(selected.final_selling_price) > 0
+        ? Number(selected.final_selling_price)
+        : Number(selected.mrp || 0);
+    setProductToAdd({
+      product_id: String(selected.id),
+      product_name: selected.name,
+      category: selected.category,
+      purity: selected.purity || "",
+      price
+    });
+  };
+
+  const addSelectedProduct = () => {
+    if (!productToAdd.product_id) {
+      toast.error("Choose a catalog product before adding it.");
+      return;
+    }
+    setProducts((rows) => [...rows, productToAdd]);
+    setProductToAdd({ ...EMPTY_PRODUCT });
+  };
+
   const saveBill = async (event) => {
     event.preventDefault();
+    if (products.length === 0) {
+      toast.error("Add at least one product.");
+      return;
+    }
+    if (products.some((product) => !product.product_id)) {
+      toast.error("Select a catalog product for each product row.");
+      return;
+    }
     if (paymentType === "EXCHANGE_GOLD" && exchanges.length === 0) {
       toast.error("Add at least one exchange item.");
       return;
     }
     if (exchangeCredit > subtotal) {
       toast.error("Exchange credit cannot exceed the purchased products subtotal.");
+      return;
+    }
+    if (!validDiscount) {
+      toast.error("Discount and exchange credit cannot exceed the purchased products subtotal.");
+      return;
+    }
+    if (!validGst) {
+      toast.error("Enter a valid GST percentage between 0 and 100.");
       return;
     }
     setSaving(true);
@@ -210,7 +342,9 @@ export default function BillingManagement() {
         exchanges: paymentType === "EXCHANGE_GOLD"
           ? exchanges.map((exchange) => ({ ...exchange, credit_amount: Number(exchange.credit_amount) }))
           : [],
-        payment_type: paymentType
+        payment_type: paymentType,
+        gst_rate: gstRate,
+        discount_amount: discountAmount
       });
       toast.success("Bill saved.");
       resetForm();
@@ -285,67 +419,92 @@ export default function BillingManagement() {
             </div>
           </header>
 
-          <section className="space-y-4 rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div><h2 className="font-bold text-slate-900">Customer Details</h2><p className="text-xs text-slate-500">Add everyone associated with this invoice.</p></div>
-            </div>
-            {customers.map((customer, index) => (
-              <div key={`customer-${index}`} className="space-y-3 rounded-lg border border-slate-100 p-4">
-                <div className="flex items-center justify-between"><h3 className="text-sm font-bold text-slate-700">Customer {index + 1}</h3>{customers.length > 1 && <button type="button" onClick={() => setCustomers((rows) => rows.filter((_, rowIndex) => rowIndex !== index))} className="text-rose-500" aria-label={`Remove customer ${index + 1}`}><FiTrash2 /></button>}</div>
-                <div className="grid gap-3 md:grid-cols-2">
-                  <TextField label="Customer Name" value={customer.name} onChange={(value) => updateRow(setCustomers, customers, index, "name", value)} required />
-                  <TextField label="Phone Number" value={customer.phone} onChange={(value) => updateRow(setCustomers, customers, index, "phone", value)} type="tel" />
-                  <TextField label="Email Address" value={customer.email} onChange={(value) => updateRow(setCustomers, customers, index, "email", value)} type="email" />
-                  <label className={labelClass}>
-                    Address
-                    <textarea
-                      className={`${inputClass} min-h-20`}
-                      value={customer.address}
-                      onChange={(event) => updateRow(setCustomers, customers, index, "address", event.target.value)}
-                      rows="2"
-                      maxLength={500}
-                      placeholder="Enter customer address"
-                    />
-                  </label>
+          <div className="grid items-start gap-5 lg:grid-cols-2">
+            <section className="space-y-4 rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div><h2 className="font-bold text-slate-900">Customer Details</h2><p className="text-xs text-slate-500">Add everyone associated with this invoice.</p></div>
+              </div>
+              {customers.map((customer, index) => (
+                <div key={`customer-${index}`} className="space-y-3 rounded-lg border border-slate-100 p-4">
+                  {customers.length > 1 && <div className="flex justify-end"><button type="button" onClick={() => setCustomers((rows) => rows.filter((_, rowIndex) => rowIndex !== index))} className="text-rose-500" aria-label={`Remove customer ${index + 1}`}><FiTrash2 /></button></div>}
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <TextField label="Customer Name" value={customer.name} onChange={(value) => updateRow(setCustomers, customers, index, "name", value)} required placeholder="Enter customer name" />
+                    <TextField label="Phone Number" value={customer.phone} onChange={(value) => updateRow(setCustomers, customers, index, "phone", value)} type="tel" placeholder="Enter phone number" />
+                    <TextField label="Email Address" value={customer.email} onChange={(value) => updateRow(setCustomers, customers, index, "email", value)} type="email" placeholder="Enter email address" />
+                    <label className={labelClass}>
+                      Address
+                      <textarea
+                        className={`${inputClass} min-h-20`}
+                        value={customer.address}
+                        onChange={(event) => updateRow(setCustomers, customers, index, "address", event.target.value)}
+                        rows="2"
+                        maxLength={500}
+                        placeholder="Enter customer address"
+                      />
+                    </label>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </section>
+              ))}
+            </section>
 
-          <section className="space-y-4 rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <div><h2 className="font-bold text-slate-900">Purchased Products</h2><p className="text-xs text-slate-500">Enter selling price for each item.</p></div>
-              <button type="button" onClick={() => setProducts((rows) => [...rows, { ...EMPTY_PRODUCT }])} className="inline-flex items-center gap-1.5 rounded-lg border border-emerald-200 px-3 py-2 text-xs font-bold text-[#00695C] hover:bg-emerald-50"><FiPlus /> Add Product</button>
-            </div>
-            {products.map((product, index) => (
-              <div key={`product-${index}`} className="space-y-3 rounded-lg border border-slate-100 p-4">
-                <div className="flex items-center justify-between"><h3 className="text-sm font-bold text-slate-700">Product {index + 1}</h3>{products.length > 1 && <button type="button" onClick={() => setProducts((rows) => rows.filter((_, rowIndex) => rowIndex !== index))} className="text-rose-500" aria-label={`Remove product ${index + 1}`}><FiTrash2 /></button>}</div>
+            <div className="space-y-4">
+              <section className="flex min-h-[300px] flex-col space-y-4 rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
+                <div>
+                  <h2 className="font-bold text-slate-900">Add Product</h2>
+                  <p className="text-xs text-slate-500">Choose a catalog product, then add it to this bill.</p>
+                </div>
                 <CatalogProductFields
-                product={product}
-                catalogProducts={catalogProducts}
-                loading={catalogLoading}
-                onSelect={(productId) => {
-                  const selected = catalogProducts.find((item) => String(item.id) === productId);
-                  if (!selected) {
-                    updateRow(setProducts, products, index, "product_id", "");
-                    return;
-                  }
-                  const price = Number(selected.offer_price) > 0
-                    ? Number(selected.offer_price)
-                    : Number(selected.final_selling_price) > 0
-                      ? Number(selected.final_selling_price)
-                      : Number(selected.mrp || 0);
-                  setProducts((rows) => rows.map((row, rowIndex) => rowIndex === index ? {
-                    product_id: String(selected.id),
-                    product_name: selected.name,
-                    category: selected.category,
-                    purity: selected.purity || "",
-                    price
-                  } : row));
-                }}
+                  product={productToAdd}
+                  catalogProducts={catalogProducts}
+                  loading={catalogLoading}
+                  selectionId="new"
+                  onSelect={selectCatalogProduct}
                 />
+                <div className="mt-auto flex justify-end">
+                  <button type="button" onClick={addSelectedProduct} disabled={!productToAdd.product_id} className="inline-flex items-center gap-1.5 rounded-lg bg-[#00695C] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#008577] disabled:cursor-not-allowed disabled:opacity-50">
+                    <FiPlus /> Add Product
+                  </button>
+                </div>
+              </section>
+
+            </div>
+          </div>
+
+          <section className="w-full space-y-4 rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
+            <div>
+              <h2 className="font-bold text-slate-900">Products in Bill</h2>
+              <p className="text-xs text-slate-500">Products you add will appear in this table.</p>
+            </div>
+            {products.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">No products have been added to this bill.</p>
+            ) : (
+              <div className="w-full overflow-x-auto rounded-lg border border-slate-200">
+                <table className="w-full min-w-[700px] border-collapse text-left">
+                  <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                    <tr>
+                      <th className="px-4 py-3 font-semibold">Product</th>
+                      <th className="px-4 py-3 font-semibold">Category</th>
+                      <th className="px-4 py-3 font-semibold">Purity</th>
+                      <th className="px-4 py-3 font-semibold">Unit Price</th>
+                      <th className="px-4 py-3 text-right font-semibold">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {products.map((product, index) => (
+                      <tr key={`${product.product_id}-${index}`}>
+                        <td className="px-4 py-3 text-sm font-medium text-slate-800">{product.product_name}</td>
+                        <td className="px-4 py-3 text-sm text-slate-700">{product.category || "—"}</td>
+                        <td className="px-4 py-3 text-sm text-slate-700">{product.purity || "—"}</td>
+                        <td className="px-4 py-3 text-sm font-semibold text-slate-800">{currency(product.price)}</td>
+                        <td className="px-4 py-3 text-right">
+                          <button type="button" onClick={() => setProducts((rows) => rows.filter((_, rowIndex) => rowIndex !== index))} className="rounded-md p-2 text-rose-500 hover:bg-rose-50" aria-label={`Remove product ${index + 1}`}><FiTrash2 /></button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            ))}
+            )}
           </section>
 
           <section className="space-y-4 rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
@@ -376,13 +535,43 @@ export default function BillingManagement() {
           <section className="ml-auto max-w-lg space-y-3 rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
             <h2 className="font-bold text-slate-900">Bill Summary</h2>
             <div className="flex justify-between text-sm text-slate-600"><span>Sub-Total</span><span>{currency(subtotal)}</span></div>
+            <label className="block text-sm font-medium text-slate-600">
+              Discount (₹)
+              <input
+                className={inputClass}
+                type="number"
+                min="0"
+                max={subtotal}
+                step="0.01"
+                value={discountInput}
+                onChange={(event) => setDiscountInput(event.target.value)}
+                placeholder="0.00"
+                aria-invalid={!validDiscount}
+              />
+            </label>
+            {discountAmount > 0 && <div className="flex justify-between text-sm text-emerald-700"><span>Discount</span><span>−{currency(discountAmount)}</span></div>}
             {paymentType === "EXCHANGE_GOLD" && <div className="flex justify-between text-sm text-amber-700"><span>Exchange Credit</span><span>−{currency(exchangeCredit)}</span></div>}
-            <div className="flex justify-between text-sm text-slate-600"><span>GST (3% of net subtotal)</span><span>{currency(gst)}</span></div>
+            <label className="block text-sm font-medium text-slate-600">
+              GST Rate (%)
+              
+              <input
+                className={inputClass}
+                type="number"
+                min="0"
+                max="100"
+                step="0.01"
+                value={gstRateInput}
+                onChange={(event) => setGstRateInput(event.target.value)}
+                placeholder="3"
+                aria-invalid={!validGst}
+              
+              />
+            </label>
             <div className="flex justify-between border-t border-slate-100 pt-3 text-lg font-extrabold text-slate-900"><span>Total Bill</span><span>{currency(total)}</span></div>
             {paymentType === "EXCHANGE_GOLD" && exchangeCredit > subtotal && <p className="text-xs font-semibold text-rose-600">Exchange credit cannot exceed subtotal.</p>}
           </section>
           <footer className="flex justify-end">
-            <button type="submit" disabled={saving || (paymentType === "EXCHANGE_GOLD" && exchangeCredit > subtotal)} className="inline-flex items-center gap-2 rounded-lg bg-[#00695C] px-5 py-3 text-sm font-bold text-white hover:bg-[#008577] disabled:cursor-not-allowed disabled:opacity-60"><FiSave />{saving ? "Saving Bill..." : "Save Bill"}</button>
+            <button type="submit" disabled={saving || !validGst || !validDiscount || (paymentType === "EXCHANGE_GOLD" && exchangeCredit > subtotal)} className="inline-flex items-center gap-2 rounded-lg bg-[#00695C] px-5 py-3 text-sm font-bold text-white hover:bg-[#008577] disabled:cursor-not-allowed disabled:opacity-60"><FiSave />{saving ? "Saving Bill..." : "Save Bill"}</button>
           </footer>
         </form>
       )}

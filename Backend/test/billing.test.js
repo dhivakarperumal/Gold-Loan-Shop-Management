@@ -43,6 +43,41 @@ test('deducts exchange credit before calculating GST', () => {
   assert.equal(result.billing.total_amount, 13390);
 });
 
+test('accepts a custom GST rate and calculates the GST amount and total', () => {
+  const result = normalizeBilling(billingInput({ gst_rate: 3.33 }));
+  assert.equal(result.error, undefined);
+  assert.equal(result.billing.gst_amount, 499.5);
+  assert.equal(result.billing.total_amount, 15499.5);
+});
+
+test('applies a fixed discount before exchange credit and GST', () => {
+  const result = normalizeBilling(billingInput({
+    discount_amount: 1000,
+    gst_rate: 3,
+    payment_type: 'EXCHANGE_GOLD',
+    exchanges: [{ product_name: 'Old chain', category: 'Chain', purity: '22K', credit_amount: 2000 }]
+  }));
+  assert.equal(result.error, undefined);
+  assert.equal(result.billing.discount_amount, 1000);
+  assert.equal(result.billing.gst_amount, 360);
+  assert.equal(result.billing.total_amount, 12360);
+});
+
+test('rejects discounts and exchange credits that exceed the products subtotal', () => {
+  assert.match(normalizeBilling(billingInput({ discount_amount: 15001 })).error, /discount/i);
+  assert.match(normalizeBilling(billingInput({
+    discount_amount: 14000,
+    payment_type: 'EXCHANGE_GOLD',
+    exchanges: [{ product_name: 'Old chain', category: 'Chain', purity: '22K', credit_amount: 2000 }]
+  })).error, /cannot exceed/i);
+});
+
+test('rejects invalid GST rates', () => {
+  assert.match(normalizeBilling(billingInput({ gst_rate: -1 })).error, /GST rate/i);
+  assert.match(normalizeBilling(billingInput({ gst_rate: 101 })).error, /GST rate/i);
+  assert.match(normalizeBilling(billingInput({ gst_rate: 'not-a-number' })).error, /GST rate/i);
+});
+
 test('rejects exchange credits over subtotal and missing exchange items', () => {
   assert.match(normalizeBilling(billingInput({
     payment_type: 'EXCHANGE_GOLD',
