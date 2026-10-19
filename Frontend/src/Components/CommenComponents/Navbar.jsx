@@ -26,6 +26,9 @@ const Navbar = () => {
   const navigate = useNavigate();
 
   const [search, setSearch] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState(false);
   const [openDropdown, setOpenDropdown] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
@@ -37,6 +40,41 @@ const Navbar = () => {
   const wishlistCount = 0;
   const cartCount = 0;
   const user = null;
+
+  useEffect(() => {
+    const query = search.trim();
+    if (query.length < 2) return undefined;
+
+    const controller = new AbortController();
+    const timer = window.setTimeout(async () => {
+      setSearching(true);
+      setSearchError(false);
+
+      try {
+        const response = await api.get("/products", {
+          params: { page: 1, limit: 8, search: query, status: "Active" },
+          signal: controller.signal,
+        });
+        if (!Array.isArray(response.data?.products)) {
+          throw new TypeError("The product search response must contain a products array");
+        }
+        setSearchResults(response.data.products);
+      } catch (error) {
+        if (!controller.signal.aborted) {
+          console.error("Failed to search products:", error);
+          setSearchResults([]);
+          setSearchError(true);
+        }
+      } finally {
+        if (!controller.signal.aborted) setSearching(false);
+      }
+    }, 250);
+
+    return () => {
+      window.clearTimeout(timer);
+      controller.abort();
+    };
+  }, [search]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -97,6 +135,76 @@ const Navbar = () => {
 
     // Keep this route aligned with your existing shop search implementation.
     navigate(`/shop?search=${encodeURIComponent(query)}`);
+  };
+
+  const getSearchProductImage = (product) => {
+    const variantImage = product.variants?.find(
+      (variant) => Array.isArray(variant.images) && variant.images.length > 0
+    )?.images?.[0];
+    const productImage = Array.isArray(product.images) ? product.images[0] : null;
+    return getImageUrl(variantImage || productImage);
+  };
+
+  const openProductDetails = (product) => {
+    const productId = product.id ?? product.product_id ?? product.productId;
+    if (!productId) {
+      console.error("Cannot open a search result without a product ID:", product);
+      return;
+    }
+    navigate(`/product/${productId}`);
+  };
+
+  const renderSearchResults = (id) => {
+    if (search.trim().length < 2) return null;
+
+    return (
+      <div
+        id={id}
+        className="absolute inset-x-0 top-full z-[70] mt-2 max-h-[min(60vh,420px)] overflow-y-auto rounded-xl border border-[#eadfce] bg-white p-2 text-left shadow-xl"
+        role="listbox"
+        aria-label="Matching products"
+      >
+        {searching ? (
+          <p className="px-3 py-4 text-sm text-[#746b5d]" role="status">Searching products...</p>
+        ) : searchError ? (
+          <p className="px-3 py-4 text-sm text-rose-700" role="alert">Could not load product matches. Try again.</p>
+        ) : searchResults.length ? (
+          searchResults.map((product) => {
+            const productId = product.id ?? product.product_id ?? product.productId;
+            const image = getSearchProductImage(product);
+            return (
+              <button
+                key={productId || product.product_code || product.name}
+                type="button"
+                role="option"
+                aria-selected="false"
+                onClick={() => openProductDetails(product)}
+                className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition hover:bg-[#f5f7f2] focus:bg-[#f5f7f2] focus:outline-none"
+              >
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#f6efe4]">
+                  {image ? (
+                    <img src={image} alt="" className="h-full w-full object-cover" loading="lazy" />
+                  ) : (
+                    <Gem size={18} className="text-[#174a38]" aria-hidden="true" />
+                  )}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold text-[#30271b]">{product.name}</span>
+                  <span className="mt-0.5 block truncate text-xs text-[#746b5d]">
+                    {[product.category, product.metal_type, product.product_code].filter(Boolean).join(" · ")}
+                  </span>
+                </span>
+                <span className="shrink-0 text-sm font-bold text-[#174a38]">
+                  ₹{Number(product.offer_price ?? product.final_selling_price ?? product.mrp ?? 0).toLocaleString("en-IN")}
+                </span>
+              </button>
+            );
+          })
+        ) : (
+          <p className="px-3 py-4 text-sm text-[#746b5d]">No matching active products found.</p>
+        )}
+      </div>
+    );
   };
 
   const closeMenus = () => {
@@ -341,32 +449,42 @@ const Navbar = () => {
             {/* Desktop search and actions */}
             <div className="hidden shrink-0 items-center gap-3 lg:flex xl:gap-5">
 
-              <form
-                onSubmit={handleSearch}
-                className="flex w-[210px] items-center overflow-hidden rounded-full border border-[#d4aa59] bg-white/80 p-1 shadow-sm transition focus-within:ring-2 focus-within:ring-[#d4aa59]/20 xl:w-[260px] 2xl:w-[300px]"
-              >
-                <Search
-                  size={20}
-                  className="ml-2 shrink-0 text-[#174638]"
-                />
-
-                <input
-                  type="search"
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Search for jewellery..."
-                  aria-label="Search jewellery"
-                  className="min-w-0 flex-1 bg-transparent px-2 py-2.5 text-xs text-[#173f33] outline-none placeholder:text-[#8a8d81]"
-                />
-
-                <button
-                  type="submit"
-                  aria-label="Submit search"
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#064638] text-[#f3d795] transition hover:bg-[#0b5948]"
+              <div className="relative">
+                <form
+                  onSubmit={handleSearch}
+                  className="flex w-[210px] items-center overflow-hidden rounded-full border border-[#d4aa59] bg-white/80 p-1 shadow-sm transition focus-within:ring-2 focus-within:ring-[#d4aa59]/20 xl:w-[260px] 2xl:w-[300px]"
                 >
-                  <Search size={20} />
-                </button>
-              </form>
+                  <Search
+                    size={20}
+                    className="ml-2 shrink-0 text-[#174638]"
+                  />
+
+                  <input
+                    type="search"
+                    value={search}
+                    onChange={(event) => {
+                      setSearch(event.target.value);
+                      setSearchResults([]);
+                      setSearchError(false);
+                      setSearching(event.target.value.trim().length >= 2);
+                    }}
+                    placeholder="Search for jewellery..."
+                    aria-label="Search jewellery"
+                    aria-controls="desktop-product-search-results"
+                    aria-autocomplete="list"
+                    className="min-w-0 flex-1 bg-transparent px-2 py-2.5 text-xs text-[#173f33] outline-none placeholder:text-[#8a8d81]"
+                  />
+
+                  <button
+                    type="submit"
+                    aria-label="Submit search"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#064638] text-[#f3d795] transition hover:bg-[#0b5948]"
+                  >
+                    <Search size={20} />
+                  </button>
+                </form>
+                {renderSearchResults("desktop-product-search-results")}
+              </div>
 
               {/* Wishlist */}
               <button
@@ -502,27 +620,37 @@ const Navbar = () => {
           </div>
 
           {/* Mobile search */}
-          <form
-            onSubmit={handleSearch}
-            className="relative z-10 mb-3 flex items-center overflow-hidden rounded-full border border-[#d4aa59] bg-white/90 p-1 lg:hidden"
-          >
-            <Search size={19} className="ml-3 shrink-0 text-[#174638]" />
-            <input
-              type="search"
-              value={search}
-              onChange={(event) => setSearch(event.target.value)}
-              placeholder="Search for jewellery..."
-              aria-label="Search jewellery"
-              className="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm text-[#173f33] outline-none placeholder:text-[#8a8d81]"
-            />
-            <button
-              type="submit"
-              aria-label="Submit search"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#064638] text-[#f3d795]"
+          <div className="relative z-30 mb-3 lg:hidden">
+            <form
+              onSubmit={handleSearch}
+              className="flex items-center overflow-hidden rounded-full border border-[#d4aa59] bg-white/90 p-1"
             >
-              <Search size={18} />
-            </button>
-          </form>
+              <Search size={19} className="ml-3 shrink-0 text-[#174638]" />
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setSearchResults([]);
+                  setSearchError(false);
+                  setSearching(event.target.value.trim().length >= 2);
+                }}
+                placeholder="Search for jewellery..."
+                aria-label="Search jewellery"
+                aria-controls="mobile-product-search-results"
+                aria-autocomplete="list"
+                className="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm text-[#173f33] outline-none placeholder:text-[#8a8d81]"
+              />
+              <button
+                type="submit"
+                aria-label="Submit search"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#064638] text-[#f3d795]"
+              >
+                <Search size={18} />
+              </button>
+            </form>
+            {renderSearchResults("mobile-product-search-results")}
+          </div>
 
           {/* Mobile menu */}
           {mobileMenuOpen && (
