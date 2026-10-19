@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { FiArrowLeft, FiCalendar, FiUser } from "react-icons/fi";
+import { FiArrowLeft, FiCalendar, FiPrinter, FiUser } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api, { getPrivateFile } from "../../api";
+import { printLoanAgreement } from "./loanPrint";
 
 const money = (value) => new Intl.NumberFormat("en-IN", {
   style: "currency", currency: "INR", maximumFractionDigits: 2
@@ -61,7 +62,12 @@ export default function LoanDetails() {
       <Link to="/admin/loans/allloans" className="inline-flex items-center gap-2 text-sm font-semibold text-[#008577]"><FiArrowLeft /> All Loans</Link>
       <header className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-[#003B3B] p-5 text-white shadow-sm">
         <div><p className="text-xs font-semibold uppercase tracking-widest text-emerald-100">Gold Loan</p><h1 className="mt-1 text-2xl font-extrabold">{loan.loan_number}</h1><p className="mt-1 text-sm text-white/75">Created {dateText(loan.created_at)}</p></div>
-        <span className="rounded-full bg-white/15 px-3 py-1.5 text-sm font-bold">{loan.loan_status}</span>
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="rounded-full bg-white/15 px-3 py-1.5 text-sm font-bold">{loan.loan_status}</span>
+          <button type="button" onClick={() => printLoanAgreement(loan.id)} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-bold text-white transition hover:bg-white/20 focus:outline-none focus:ring-4 focus:ring-white/20">
+            <FiPrinter /> Print / Download PDF
+          </button>
+        </div>
       </header>
 
       <section className="rounded-xl border border-slate-100 bg-white p-5 shadow-sm">

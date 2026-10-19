@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { FiArrowLeft, FiCalendar, FiCamera, FiCheck, FiChevronDown, FiSearch, FiUploadCloud, FiUserPlus } from "react-icons/fi";
+import { FiArrowLeft, FiCalendar, FiCamera, FiCheck, FiChevronDown, FiPrinter, FiSearch, FiUploadCloud, FiUserPlus } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api, { getPrivateFile } from "../../api";
 import { formatRateDate, getRateForPurity } from "../../PrivateRouter/goldRateUtils";
 import useGoldRates from "../../PrivateRouter/useGoldRates";
+import { printLoanAgreement, printLoanDraft } from "./loanPrint";
 
 const INTEREST_FREQUENCIES = [
   ["daily", "Daily"], ["weekly", "Weekly"], ["monthly", "Monthly"],
@@ -43,8 +44,8 @@ const JEWELLERY_TYPE_OPTIONS = [
   ["Coins & Bars", "Coins & Bars"],
   ["Other", "Other"]
 ];
-const fieldClass = "mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-[#008577] focus:ring-2 focus:ring-emerald-100";
-const labelClass = "block text-xs font-semibold text-slate-600";
+const fieldClass = "mt-1.5 min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-800 outline-none transition placeholder:font-normal placeholder:text-slate-400 hover:border-slate-300 focus:border-[#008577] focus:ring-4 focus:ring-emerald-700/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-500";
+const labelClass = "block text-[13px] font-semibold leading-5 text-slate-700";
 
 function localDate(date = new Date()) {
   const offset = date.getTimezoneOffset() * 60000;
@@ -496,6 +497,52 @@ export default function CreateLoan() {
     }
   };
 
+  const handlePrintLoan = () => {
+    if (loanRecord) {
+      printLoanAgreement(loanRecord.id);
+      return;
+    }
+    if (!customer) {
+      toast.error("Select a registered customer before printing the loan draft.");
+      return;
+    }
+
+    printLoanDraft({
+      ...form,
+      id: null,
+      loan_number: "Draft - number assigned after saving",
+      gold_pledge_number: "Assigned after saving",
+      jewellery_type: form.jewellery_type === "Other" ? otherJewelleryType : form.jewellery_type,
+      principal_amount: loanAmountMode === "auto" ? calculatedLoanAmount : form.principal_amount,
+      gold_valuation: estimatedGoldValuation,
+      net_gold_weight: Math.max(0, Number(form.gross_weight || 0) - Number(form.stone_weight || 0)).toFixed(3),
+      gold_rate_per_gram: appliedGoldRate,
+      gold_rate_date: activeRateSet?.rate_date,
+      rate_unit: appliedRateUnit,
+      gold_image_url: goldImageFile || loanRecord?.gold_image_url,
+      customer_id: customer.id,
+      customer_code: customer.customer_code,
+      customer_name: customer.full_name,
+      customer_mobile: customer.mobile,
+      customer_alternate_mobile: customer.alternate_mobile,
+      customer_email: customer.email,
+      customer_date_of_birth: customer.date_of_birth,
+      customer_gender: customer.gender,
+      customer_occupation: customer.occupation,
+      customer_address: customer.address,
+      customer_city: customer.city,
+      customer_district: customer.district,
+      customer_state: customer.state,
+      customer_pincode: customer.pincode,
+      customer_kyc_status: customer.kyc_status,
+      guarantor_name: customer.guarantor_name,
+      guarantor_mobile: customer.guarantor_mobile,
+      guarantor_email: customer.guarantor_email,
+      guarantor_relationship: customer.guarantor_relationship,
+      guarantor_address: customer.guarantor_address
+    });
+  };
+
   const activeLoans = customerLoans.filter((loan) => loan.loan_status === "Active");
 
   const loadingForm = loadingCustomers || loadedFor !== id;
@@ -512,22 +559,28 @@ export default function CreateLoan() {
   }
 
   return (
-    <main className="mx-auto max-w-[1440px] space-y-6 bg-slate-50/60 p-4 sm:p-6 lg:p-8">
-      <header className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#003B3B] via-[#00594f] to-[#087568] px-5 py-6 text-white shadow-lg sm:px-7">
-        <div className="pointer-events-none absolute -right-12 -top-24 h-64 w-64 rounded-full border-[30px] border-white/5" />
-        <div>
-          <Link to="/admin/loans/allloans" className="relative mb-3 inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/90 transition hover:bg-white/20">
-            <FiArrowLeft /> Back to All Loans
-          </Link>
-          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-200">Loan Management</p>
-          <h1 className="mt-1 text-2xl font-extrabold sm:text-3xl">{loanRecord ? `Edit Loan ${loanRecord.loan_number}` : "Create Gold Loan"}</h1>
-          <p className="mt-2 max-w-2xl text-sm text-white/75">{loanRecord ? "Update the customer, pledged jewellery and agreed loan terms." : "Add customer details, record pledged jewellery and define the loan terms."}</p>
+    <main className="mx-auto w-full max-w-[1600px] space-y-6 p-4 sm:p-6 lg:p-8">
+      <header className="relative isolate overflow-hidden rounded-3xl bg-gradient-to-br from-[#064A41] via-[#056458] to-[#087568] px-5 py-7 text-white shadow-lg shadow-emerald-950/10 sm:px-8 sm:py-8">
+        <div className="pointer-events-none absolute -right-12 -top-24 -z-10 h-64 w-64 rounded-full border-[30px] border-white/5" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 -z-10 w-1/2 bg-gradient-to-l from-white/[0.06] to-transparent" />
+        <div className="relative flex flex-col items-start justify-between gap-5 sm:flex-row sm:items-end">
+          <div>
+            <Link to="/admin/loans/allloans" className="relative mb-4 inline-flex min-h-9 items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-3.5 py-2 text-xs font-semibold text-white/90 transition hover:border-white/35 hover:bg-white/15">
+              <FiArrowLeft /> Back to All Loans
+            </Link>
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-200">Loan Management</p>
+            <h1 className="mt-1 text-2xl font-extrabold tracking-tight sm:text-3xl">{loanRecord ? `Edit Loan ${loanRecord.loan_number}` : "Create Gold Loan"}</h1>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-white/75">{loanRecord ? "Update the customer, pledged jewellery and agreed loan terms." : "Add customer details, record pledged jewellery and define the loan terms."}</p>
+          </div>
+          <button type="button" onClick={handlePrintLoan} className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-white/20 focus:outline-none focus:ring-4 focus:ring-white/20">
+            <FiPrinter /> {loanRecord ? "Print / Download PDF" : "Print Draft / Download PDF"}
+          </button>
         </div>
       </header>
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
-        <div className="space-y-6">
-        <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2 lg:gap-6">
+        <div className="contents">
+        <section className="order-1 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_2px_12px_rgba(15,23,42,0.04)] sm:p-6 lg:col-span-2">
           <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-50 text-sm font-black text-[#006b62]">01</span>
             <div>
@@ -636,7 +689,7 @@ export default function CreateLoan() {
           )}
         </section>
 
-        <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
+        <section className="order-3 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_2px_12px_rgba(15,23,42,0.04)] sm:p-6 lg:col-start-1 lg:row-start-3">
           <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-sky-50 text-sm font-black text-sky-700">03</span>
             <div>
@@ -668,7 +721,7 @@ export default function CreateLoan() {
             </p>
           )}
         </section>
-        <section className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-5 shadow-sm sm:p-6">
+        <section className="order-5 rounded-2xl border border-amber-200/80 bg-gradient-to-br from-amber-50/70 to-white p-5 shadow-[0_2px_12px_rgba(15,23,42,0.04)] sm:p-6 lg:col-span-2">
           <div className="mb-5 flex items-center gap-3 border-b border-amber-100 pb-4">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-100 text-sm font-black text-amber-800">05</span>
             <div>
@@ -713,8 +766,8 @@ export default function CreateLoan() {
         </section>
         </div>
 
-        <div className="space-y-6">
-        <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
+        <div className="contents">
+        <section className="order-2 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_2px_12px_rgba(15,23,42,0.04)] sm:p-6 lg:col-span-2 lg:row-start-2">
           <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-50 text-sm font-black text-amber-700">02</span>
             <div>
@@ -726,7 +779,7 @@ export default function CreateLoan() {
             Global rate set effective {formatRateDate(activeRateSet.rate_date)}. Valuation uses eligible net {form.metal_type.toLowerCase()} weight × its configured rate; retail charges are excluded.
           </p>}
           {ratesError && <p role="alert" className="mb-4 rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">Could not refresh rates: {ratesError}</p>}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
             <FormSelect
               label="Jewellery Type"
               name="jewellery_type"
@@ -842,7 +895,7 @@ export default function CreateLoan() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
+        <section className="order-4 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_2px_12px_rgba(15,23,42,0.04)] sm:p-6 lg:col-start-2 lg:row-start-3">
           <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-violet-50 text-sm font-black text-violet-700">04</span>
             <div>
@@ -860,10 +913,10 @@ export default function CreateLoan() {
         </section>
         </div>
 
-        <div className="sticky bottom-0 z-10 flex flex-wrap justify-end gap-2 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl shadow-slate-900/10 backdrop-blur-md sm:p-4 lg:col-span-2">
-          <button type="button" onClick={() => navigate("/admin/loans/allloans")} disabled={saving} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Cancel</button>
-          {!loanRecord && <button type="button" onClick={handleReset} disabled={saving} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Reset</button>}
-          <button type="submit" disabled={saving || loadingCustomer || !customer || interestTypes.length === 0} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#008577] disabled:cursor-not-allowed disabled:opacity-50">
+        <div className="sticky bottom-3 z-10 order-6 flex flex-wrap justify-end gap-2 rounded-2xl border border-slate-200/90 bg-white/95 p-3 shadow-xl shadow-slate-900/10 backdrop-blur-md sm:p-4 lg:col-span-2">
+          <button type="button" onClick={() => navigate("/admin/loans/allloans")} disabled={saving} className="min-h-11 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50">Cancel</button>
+          {!loanRecord && <button type="button" onClick={handleReset} disabled={saving} className="min-h-11 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50">Reset</button>}
+          <button type="submit" disabled={saving || loadingCustomer || !customer || interestTypes.length === 0} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#064A41] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#087263] focus:outline-none focus:ring-4 focus:ring-emerald-700/20 disabled:cursor-not-allowed disabled:opacity-50">
             <FiCheck /> {saving ? (loanRecord ? "Updating Loan..." : "Saving Loan...") : (loanRecord ? "Update Loan" : "Save Loan")}
           </button>
         </div>
