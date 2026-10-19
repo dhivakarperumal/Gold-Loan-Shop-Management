@@ -24,6 +24,12 @@ import { useAuth } from "../../PrivateRouter/AuthContext";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 import api from "../../api";
 
+const INFO_PAGES = [
+  { label: "About Us", to: "/about" },
+  { label: "Contact Us", to: "/contactus" },
+  { label: "Privacy Policy", to: "/privacy-policy" },
+];
+
 const Navbar = () => {
   const navigate = useNavigate();
   const { user, logout, profileName } = useAuth();
@@ -483,11 +489,7 @@ const Navbar = () => {
                 </button>
                 {openDropdown === "pages" && (
                   <div className="absolute left-0 top-full z-50 w-[210px] rounded-xl border border-[#e6d5b2] bg-[#fffdf7] p-2 shadow-[0_12px_28px_rgba(30,50,35,0.16)]">
-                    {[
-                      { label: "About Us", to: "/about" },
-                      { label: "Contact Us", to: "/contactus" },
-                      { label: "Privacy Policy", to: "/privacy-policy" },
-                    ].map((page) => (
+                    {INFO_PAGES.map((page) => (
                       <NavLink
                         key={page.to}
                         to={page.to}
@@ -812,11 +814,7 @@ const Navbar = () => {
 
               {openDropdown === "pages" && (
                 <div className="ml-4 border-l-2 border-[#d4aa59] pl-3">
-                  {[
-                    { label: "About Us", to: "/about" },
-                    { label: "Contact Us", to: "/contactus" },
-                    { label: "Privacy Policy", to: "/privacy-policy" },
-                  ].map((page) => (
+                  {INFO_PAGES.map((page) => (
                     <NavLink
                       key={page.to}
                       to={page.to}
