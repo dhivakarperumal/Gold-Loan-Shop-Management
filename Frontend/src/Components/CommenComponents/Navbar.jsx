@@ -22,17 +22,19 @@ import {
   FaUser,
 } from "react-icons/fa";
 import WishlistDrawer from "./WishlistDrawer";
+import CartDrawer from "./CartDrawer";
 
 const Navbar = () => {
 
   const { user, logout } = useContext(AuthContext);
-  const { wishlist } = useContext(StoreContext);
+  const { cart, wishlist } = useContext(StoreContext);
   const [mobilePages, setMobilePages] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
 
   const [mobileMenu, setMobileMenu] = useState(false);
   const [userMenu, setUserMenu] = useState(false);
+  const [cartOpen, setCartOpen] = useState(false);
   const [logoutConfirm, setLogoutConfirm] = useState(false);
   const [categories, setCategories] = useState([]);
   const [metals, setMetals] = useState([]);
@@ -283,23 +285,24 @@ const Navbar = () => {
 
   const getUserInitial = () =>
     String(user?.name || user?.username || user?.email || "?").trim().charAt(0).toUpperCase();
+  const cartItemCount = cart.reduce((total, item) => total + Number(item.quantity || 0), 0);
 
   return (
 
-    <nav className="sticky top-0 z-50 border-b border-[#eadfce] bg-white/95 shadow-sm backdrop-blur-lg">
+    <nav className="sticky top-0 z-50 border-b-2 border-[#d7a640] bg-gradient-to-r from-[#fffaf0] via-[#fffdf8] to-[#fff8e9] shadow-[0_4px_16px_rgba(74,49,17,0.12)]">
 
-      <PageContainer className="px-3 sm:px-5 lg:px-[2%]">
-        <div className="flex min-h-[76px] items-center gap-2 lg:gap-3">
+      <PageContainer className="px-3 sm:px-5 lg:px-[3%]">
+        <div className="flex min-h-[76px] items-center gap-2 xl:min-h-[104px] xl:gap-5">
           <Link to="/" className="flex shrink-0 items-center" aria-label="Sri Golds home">
-            <img src="/images/logo.png" alt="Sri Golds" className="h-12 w-20 object-contain sm:h-14 sm:w-24" />
+            <img src="/images/logo.png" alt="Sri Golds" className="h-12 w-20 object-contain sm:h-14 sm:w-24 xl:h-[76px] xl:w-32" />
           </Link>
 
-          <div ref={dropdownRef} className="hidden min-w-0 flex-1 items-center justify-center lg:flex">
+          <div ref={dropdownRef} className="hidden min-w-0 flex-1 items-center justify-center xl:flex">
             <div className="flex h-full min-w-0 items-center">
-              <NavLink to="/" end className={({ isActive }) => `flex h-[76px] items-center justify-center border-r border-[#efe5d4] px-3 text-sm font-semibold transition hover:bg-[#fff9ed] ${isActive ? "border-b-2 border-b-[#c68c22]" : ""}`}>
+              <NavLink to="/" end className={({ isActive }) => `flex h-[76px] items-center justify-center border-r border-[#e9dfca]/70 px-3 text-sm font-semibold transition hover:text-[#b77912] 2xl:px-5 ${isActive ? "text-[#b77912]" : ""}`}>
                 <span className="text-[#174a38]">Home</span>
               </NavLink>
-              <NavLink to="/shop" className={({ isActive }) => `flex h-[76px] items-center justify-center border-r border-[#efe5d4] px-3 text-sm font-semibold transition hover:bg-[#fff9ed] ${isActive ? "border-b-2 border-b-[#c68c22]" : ""}`}>
+              <NavLink to="/shop" className={({ isActive }) => `flex h-[76px] items-center justify-center border-r border-[#e9dfca]/70 px-3 text-sm font-semibold transition hover:text-[#b77912] 2xl:px-5 ${isActive ? "text-[#b77912]" : ""}`}>
                 <span className="text-[#174a38]">Explore</span>
               </NavLink>
 
@@ -311,7 +314,7 @@ const Navbar = () => {
                     setOpenDropdown(openDropdown === "categories" ? "" : "categories");
                     setSelectedCategory(categories[0] || null);
                   }}
-                  className={`flex h-[76px] items-center justify-center border-r border-[#efe5d4] px-3 text-sm font-semibold transition hover:bg-[#fff9ed] ${openDropdown === "categories" ? "bg-[#fff9ed]" : ""}`}
+                  className={`flex h-[76px] items-center justify-center border-r border-[#e9dfca]/70 px-3 text-sm font-semibold transition hover:text-[#b77912] 2xl:px-5 ${openDropdown === "categories" ? "text-[#b77912]" : ""}`}
                 >
                   <span className="flex items-center gap-1 text-[#174a38]">Category <FaChevronDown className={`text-[#174a38] transition-transform ${openDropdown === "categories" ? "rotate-180" : ""}`} /></span>
                 </button>
@@ -375,10 +378,10 @@ const Navbar = () => {
                   type="button"
                   aria-expanded={openDropdown === "metals"}
                   onClick={() => setOpenDropdown(openDropdown === "metals" ? "" : "metals")}
-                  className={`flex h-[76px] items-center justify-center border-r border-[#efe5d4] px-3 text-sm font-semibold transition hover:bg-[#fff9ed] ${openDropdown === "metals" ? "bg-[#fff9ed]" : ""}`}
+                  className={`flex h-[76px] items-center justify-center border-r border-[#e9dfca]/70 px-3 text-sm font-semibold transition hover:text-[#b77912] 2xl:px-5 ${openDropdown === "metals" ? "text-[#b77912]" : ""}`}
                 >
                   <span className="flex items-center gap-2 text-[#174a38]">
-                    {/* <FaGem className="text-[#a77525]" /> */}
+                    <FaGem className="text-[#a77525]" />
                     Metal
                   </span>
                 </button>
@@ -401,13 +404,37 @@ const Navbar = () => {
                 )}
               </div>
 
-              <Link to="/contactus" className="flex h-[76px] items-center justify-center px-3 text-sm font-semibold transition hover:bg-[#fff9ed]">
+              <Link to="/contactus" className="flex h-[76px] items-center justify-center px-3 text-sm font-semibold transition hover:text-[#b77912] 2xl:px-5">
                 <span className="text-[#174a38]">Contact Us</span>
               </Link>
             </div>
           </div>
 
           <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2 xl:ml-0">
+
+            <form onSubmit={handleSearch} className="hidden min-w-0 items-center overflow-hidden rounded-full border border-[#d3a342] bg-white/80 shadow-sm xl:flex xl:w-[220px] 2xl:w-[300px]">
+              <FaSearch className="ml-4 shrink-0 text-[#174a38]" />
+              <input
+                type="search"
+                value={searchTerm}
+                onChange={(event) => {
+                  setSearchTerm(event.target.value);
+                  setSearchResults([]);
+                  setSearchError(false);
+                }}
+                placeholder="Search for jewellery..."
+                aria-label="Search jewellery"
+                className="min-w-0 flex-1 bg-transparent px-3 py-3 text-xs outline-none placeholder:text-[#827b70]"
+              />
+              <button
+                type="submit"
+                aria-label="Submit product search"
+                disabled={searching}
+                className="mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#00483d] text-[#f1c454] transition hover:bg-[#006052] disabled:opacity-60"
+              >
+                <FaSearch />
+              </button>
+            </form>
 
             <button
               ref={searchButtonRef}
@@ -416,22 +443,23 @@ const Navbar = () => {
               aria-label={searchOpen ? "Close search" : "Open search"}
               aria-expanded={searchOpen}
               aria-controls="navbar-search-panel"
-              className="flex min-w-12 flex-col items-center gap-0.5 rounded-lg px-2 py-2 text-[#172c28] transition hover:bg-[#fff8e9] hover:text-[#a77525]"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-[#173a32] transition hover:bg-[#f2ead8] xl:hidden"
             >
               <FaSearch className="text-lg" />
-              <span className="hidden text-xs font-semibold sm:block">Search</span>
             </button>
 
             <button
               type="button"
               onClick={() => setWishlistOpen(true)}
               aria-label="Open favorites"
-              className="relative flex min-w-12 flex-col items-center gap-0.5 rounded-lg px-2 py-2 text-[#172c28] transition hover:bg-[#fff8e9] hover:text-[#a77525]"
+              className="relative flex min-w-10 flex-col items-center gap-1 rounded-lg px-1.5 py-1.5 text-[#173a32] transition hover:text-[#a77525] sm:min-w-[58px] sm:px-2 xl:min-w-[62px]"
             >
-              <FaHeart className="text-lg" />
-              <span className="hidden text-xs font-semibold sm:block">Wishlist</span>
+              <span className="relative flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-[0_2px_8px_rgba(55,45,29,0.12)] sm:h-10 sm:w-10">
+                <FaHeart className="text-lg" />
+              </span>
+              <span className="hidden text-[11px] font-medium sm:block">Wishlist</span>
               {wishlist.length > 0 && (
-                <span className="absolute right-1 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#d69b17] px-1 text-[9px] font-black text-white">
+                <span className="absolute right-1 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#d69b17] px-1 text-[9px] font-black text-white sm:right-2">
                   {wishlist.length > 9 ? '9+' : wishlist.length}
                 </span>
               )}
@@ -444,12 +472,12 @@ const Navbar = () => {
                   aria-expanded={userMenu}
                   aria-haspopup="menu"
                   onClick={() => setUserMenu((isOpen) => !isOpen)}
-                  className="flex min-w-12 cursor-pointer flex-col items-center gap-0.5 rounded-lg px-2 py-2 text-[#172c28] transition hover:bg-[#fff8e9] hover:text-[#a77525]"
+                  className="flex min-w-10 cursor-pointer flex-col items-center gap-1 rounded-lg px-1.5 py-1.5 text-[#173a32] transition hover:text-[#a77525] sm:min-w-[58px] sm:px-2 xl:min-w-[62px]"
                 >
-                  <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#174a38] text-xs font-bold uppercase text-white" aria-hidden="true">
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-[#00483d] text-sm font-bold uppercase text-white shadow-[0_2px_8px_rgba(55,45,29,0.12)] sm:h-10 sm:w-10" aria-hidden="true">
                     {getUserInitial()}
                   </span>
-                  <span className="text-xs font-semibold">Account</span>
+                  <span className="text-[11px] font-medium">Account</span>
                 </button>
                 {userMenu && (
                   <div role="menu" className="absolute right-0 top-full z-50 mt-2 w-44 overflow-hidden rounded-xl border border-[#efe5d4] bg-white shadow-xl">
@@ -462,9 +490,11 @@ const Navbar = () => {
                 )}
               </div>
             ) : (
-              <Link to="/login" aria-label="Account / Sign in" className="hidden min-w-12 flex-col items-center gap-0.5 rounded-lg px-2 py-2 text-[#172c28] transition hover:bg-[#fff8e9] hover:text-[#a77525] sm:flex">
-                <FaUser className="text-lg" />
-                <span className="text-xs font-semibold">Account</span>
+              <Link to="/login" aria-label="Account / Sign in" className="hidden min-w-10 flex-col items-center gap-1 rounded-lg px-1.5 py-1.5 text-[#173a32] transition hover:text-[#a77525] sm:flex sm:min-w-[58px] sm:px-2 xl:min-w-[62px]">
+                <span className="flex h-9 w-9 items-center justify-center rounded-full bg-white shadow-[0_2px_8px_rgba(55,45,29,0.12)] sm:h-10 sm:w-10">
+                  <FaUser className="text-lg" />
+                </span>
+                <span className="text-[11px] font-medium">Account</span>
               </Link>
             )}
 
@@ -478,7 +508,7 @@ const Navbar = () => {
               aria-label={mobileMenu ? "Close navigation menu" : "Open navigation menu"}
               aria-expanded={mobileMenu}
               aria-controls="store-mobile-navigation"
-              className="flex h-10 w-10 items-center justify-center rounded-full text-[#174a38] transition hover:bg-[#fff8e9] lg:hidden"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-[#174a38] transition hover:bg-[#fff8e9] xl:hidden"
             >
               {mobileMenu ? <FaTimes size={21} /> : <FaBars size={21} />}
             </button>
@@ -493,7 +523,7 @@ const Navbar = () => {
         <div
           ref={searchPanelRef}
           id="navbar-search-panel"
-          className="absolute inset-x-0 top-full z-50 border-t border-[#efe5d4] bg-white px-3 py-4 shadow-lg sm:px-5"
+          className="absolute inset-x-0 top-full z-50 border-t border-[#efe5d4] bg-white px-3 py-4 shadow-lg sm:px-5 xl:hidden"
         >
           <PageContainer className="flex items-center gap-3">
             <div className="relative mx-auto w-full max-w-2xl flex-1">
@@ -822,6 +852,7 @@ const Navbar = () => {
           </aside>
       </div>
       <WishlistDrawer isOpen={wishlistOpen} onClose={() => setWishlistOpen(false)} />
+      <CartDrawer isOpen={cartOpen} onClose={() => setCartOpen(false)} />
     </nav>
 
   );
