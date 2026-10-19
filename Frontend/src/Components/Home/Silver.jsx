@@ -4,6 +4,7 @@ import { FaArrowRight } from "react-icons/fa";
 import { Autoplay } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
 import api from "../../api";
+import PageContainer from "../CommenComponents/PageContainer";
 import ProductCard from "./ProductCard";
 
 import "swiper/css";
@@ -43,8 +44,8 @@ const Silver = () => {
   }, []);
 
   return (
-    <section className="w-full bg-[#fffdf8] px-3 py-4 sm:px-5 lg:px-7">
-      <div className="mx-auto max-w-[1600px]">
+    <section className="w-full bg-[#fffdf8] py-4">
+      <PageContainer>
         <div className="min-w-0">
           <div className="mb-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -93,7 +94,7 @@ const Silver = () => {
             </Swiper>
           )}
         </div>
-      </div>
+      </PageContainer>
     </section>
   );
 };
