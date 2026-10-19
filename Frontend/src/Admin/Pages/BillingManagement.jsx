@@ -260,7 +260,7 @@ export default function BillingManagement() {
     && discountAmount + exchangeCredit <= subtotal;
   const gstRate = gstRateInput.trim() === "" ? 3 : Number(gstRateInput);
   const validGst = Number.isFinite(gstRate) && gstRate >= 0 && gstRate <= 100;
-  const gst = validGst
+  const gst = validGst && validDiscount
     ? Math.round(Math.max(0, subtotal - discountAmount - exchangeCredit) * gstRate) / 100
     : 0;
   const total = Math.round((subtotal - discountAmount - exchangeCredit + gst) * 100) / 100;
@@ -550,6 +550,7 @@ export default function BillingManagement() {
               />
             </label>
             {discountAmount > 0 && <div className="flex justify-between text-sm text-emerald-700"><span>Discount</span><span>−{currency(discountAmount)}</span></div>}
+            {!validDiscount && <p className="text-xs font-semibold text-rose-600">Discount and exchange credit cannot exceed the products subtotal.</p>}
             {paymentType === "EXCHANGE_GOLD" && <div className="flex justify-between text-sm text-amber-700"><span>Exchange Credit</span><span>−{currency(exchangeCredit)}</span></div>}
             <label className="block text-sm font-medium text-slate-600">
               GST Rate (%)
@@ -567,7 +568,11 @@ export default function BillingManagement() {
               
               />
             </label>
-            <div className="flex justify-between border-t border-slate-100 pt-3 text-lg font-extrabold text-slate-900"><span>Total Bill</span><span>{currency(total)}</span></div>
+            <div className="flex justify-between text-sm text-slate-600">
+              <span>GST Amount ({gstRateInput || "0"}%)</span>
+              <span>{validDiscount && validGst ? currency(gst) : "—"}</span>
+            </div>
+            <div className="flex justify-between border-t border-slate-100 pt-3 text-lg font-extrabold text-slate-900"><span>Total Bill</span><span>{validDiscount && validGst ? currency(total) : "—"}</span></div>
             {paymentType === "EXCHANGE_GOLD" && exchangeCredit > subtotal && <p className="text-xs font-semibold text-rose-600">Exchange credit cannot exceed subtotal.</p>}
           </section>
           <footer className="flex justify-end">

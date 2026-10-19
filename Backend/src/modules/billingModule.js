@@ -10,17 +10,22 @@ async function initializeBillingModule() {
       exchanges JSON NOT NULL,
       payment_type ENUM('FULL_PAYMENT', 'EXCHANGE_GOLD') NOT NULL,
       sub_total DECIMAL(12,2) NOT NULL,
+      discount_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
       gst_amount DECIMAL(12,2) NOT NULL,
       total_amount DECIMAL(12,2) NOT NULL,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
   `);
+  const [discountColumns] = await pool.query("SHOW COLUMNS FROM billings LIKE 'discount_amount'");
+  if (discountColumns.length === 0) {
+    await pool.query('ALTER TABLE billings ADD COLUMN discount_amount DECIMAL(12,2) NOT NULL DEFAULT 0 AFTER sub_total');
+  }
 }
 
 async function listBillings() {
   const [rows] = await pool.query(`
     SELECT id, invoice_no, customers, products, exchanges, payment_type,
-      sub_total, gst_amount, total_amount, created_at
+      sub_total, discount_amount, gst_amount, total_amount, created_at
     FROM billings
     ORDER BY created_at DESC, id DESC
   `);
@@ -42,8 +47,8 @@ async function getBillingProductsByIds(productIds) {
 async function createBilling(billing) {
   const [result] = await pool.execute(
     `INSERT INTO billings
-      (invoice_no, customers, products, exchanges, payment_type, sub_total, gst_amount, total_amount)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      (invoice_no, customers, products, exchanges, payment_type, sub_total, discount_amount, gst_amount, total_amount)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       billing.invoice_no,
       JSON.stringify(billing.customers),
@@ -51,13 +56,14 @@ async function createBilling(billing) {
       JSON.stringify(billing.exchanges),
       billing.payment_type,
       billing.sub_total,
+      billing.discount_amount,
       billing.gst_amount,
       billing.total_amount
     ]
   );
   const [rows] = await pool.execute(
     `SELECT id, invoice_no, customers, products, exchanges, payment_type,
-      sub_total, gst_amount, total_amount, created_at
+      sub_total, discount_amount, gst_amount, total_amount, created_at
      FROM billings WHERE id = ?`,
     [result.insertId]
   );

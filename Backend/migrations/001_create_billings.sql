@@ -6,6 +6,7 @@ CREATE TABLE IF NOT EXISTS billings (
   exchanges JSON NOT NULL,
   payment_type ENUM('FULL_PAYMENT', 'EXCHANGE_GOLD') NOT NULL,
   sub_total DECIMAL(12,2) NOT NULL,
+  discount_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
   gst_amount DECIMAL(12,2) NOT NULL,
   total_amount DECIMAL(12,2) NOT NULL,
   created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
