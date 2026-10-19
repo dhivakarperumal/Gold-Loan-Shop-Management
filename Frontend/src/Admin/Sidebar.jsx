@@ -292,7 +292,7 @@ const Sidebar = ({ isOpen, onClose, collapsed, onToggleCollapse }) => {
                   {/* ===== SUB MENU ===== */}
                   {!collapsed && (
                     <div
-                      className={`hide-scrollbar ml-3 space-y-1 overflow-y-auto border-l border-white/10 pl-3 transition-all duration-300
+                      className={`hide-scrollbar ml-3 space-y-1 overflow-y-auto  pl-3 transition-all duration-300
                       ${isMenuOpen ? "max-h-80 py-1 opacity-100" : "max-h-0 opacity-0"}`}
                     >
                       {item.children.map((sub) => {
