@@ -126,13 +126,13 @@ const Silver = () => {
                 pauseOnMouseEnter: true,
               } : false}
               speed={700}
-              slidesPerView={Math.max(1, Math.min(2.1, products.length - 1))}
+              slidesPerView={Math.max(1, Math.min(2.1, products.length))}
               spaceBetween={12}
               breakpoints={{
-                480: { slidesPerView: Math.max(1, Math.min(2, products.length - 1)) },
-                640: { slidesPerView: Math.max(1, Math.min(3, products.length - 1)) },
-                1024: { slidesPerView: Math.max(1, Math.min(3, products.length - 1)) },
-                1280: { slidesPerView: Math.max(1, Math.min(4, products.length - 1)) },
+                480: { slidesPerView: Math.max(1, Math.min(2, products.length)) },
+                640: { slidesPerView: Math.max(1, Math.min(3, products.length)) },
+                1024: { slidesPerView: Math.max(1, Math.min(3, products.length)) },
+                1280: { slidesPerView: Math.max(1, Math.min(4, products.length)) },
               }}
               grabCursor
               centeredSlides={false}
@@ -140,7 +140,7 @@ const Silver = () => {
             >
               {products.map((product) => (
                 <SwiperSlide key={product.id} className="h-auto">
-                  <div className={products.length === 1 ? "max-w-[280px]" : ""}>
+                  <div className={products.length === 1 ? "mx-auto w-full max-w-[300px]" : ""}>
                     <ProductCard product={product} />
                   </div>
                 </SwiperSlide>
