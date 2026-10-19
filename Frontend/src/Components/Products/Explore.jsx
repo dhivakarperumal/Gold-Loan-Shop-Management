@@ -234,7 +234,7 @@ const Explore = () => {
   const paginatedProducts = filteredProducts.slice(pageStart, pageStart + PRODUCTS_PER_PAGE);
   const visiblePageNumbers = Array.from(
     { length: Math.min(5, totalPages) },
-    (_, index) => Math.min(Math.max(activePage - 2, 1), totalPages - 4) + index
+    (_, index) => Math.max(1, Math.min(activePage - 2, totalPages - 4)) + index
   );
 
   const clearFilters = () => {
