@@ -805,7 +805,7 @@ export default function LoanCustomerManagement() {
                     </label>
                   </div>
                 </section>
-                <div>
+                <div className="rounded-xl border border-slate-200 p-4">
                   <p className={labelClass}>Customer Photo<span className="ml-1 text-red-500">*</span></p>
                   <p className="mt-1 text-xs text-slate-500">Required. Upload a PNG or JPG (up to 5 MB). Photos are stored privately.</p>
                   {photoPreview.reference === form.photo_url && photoPreview.url && (
