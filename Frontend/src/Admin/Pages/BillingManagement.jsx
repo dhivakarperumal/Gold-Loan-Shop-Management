@@ -37,6 +37,12 @@ function escapeHtml(value) {
   })[character]);
 }
 
+function formatWeight(value, unit = "") {
+  if (value == null || value === "") return "—";
+  const formatted = Number(value).toLocaleString("en-IN", { maximumFractionDigits: 3 });
+  return unit ? `${formatted} ${unit}` : formatted;
+}
+
 function TextField({ label, value, onChange, type = "text", required = false, placeholder = "", min, step, readOnly = false }) {
   return (
     <label className={labelClass}>
@@ -446,6 +452,11 @@ export default function BillingManagement() {
         name: product.product_name,
         category: product.category,
         purity: product.purity,
+        weight: null,
+        wastageWeight: null,
+        netWeight: null,
+        rate: null,
+        rateUnit: "",
         amount: Number(product.price) || 0,
         isExchange: false
       })),
@@ -453,16 +464,26 @@ export default function BillingManagement() {
         name: exchange.product_name || "Exchange item",
         category: exchange.category,
         purity: `${exchange.metal_type || ""} ${exchange.purity || ""}`.trim(),
+        weight: exchange.weight,
+        wastageWeight: exchange.wastage_weight,
+        netWeight: exchange.net_weight,
+        rate: exchange.rate_per_unit,
+        rateUnit: exchange.rate_unit || "gram",
         amount: -(Number(exchange.credit_amount) || 0),
         isExchange: true
       }))
     ];
-    const rows = lineItems.map((item) => `
+    const rows = lineItems.map((item, index) => `
       <tr>
-        <td>${escapeHtml(item.name || "—")}</td>
+        <td>${index + 1}</td>
+        <td class="${item.isExchange ? "exchange" : ""}">${escapeHtml(item.name || "—")}</td>
         <td>${escapeHtml(item.category || "—")}</td>
         <td>${escapeHtml(item.purity || "—")}</td>
-        <td class="amount">${item.isExchange ? "−" : ""}${currency(Math.abs(item.amount))}</td>
+        <td>${item.isExchange ? formatWeight(item.weight, item.rateUnit === "carat" ? "carat" : "g") : "—"}</td>
+        <td>${item.isExchange ? formatWeight(item.wastageWeight, item.rateUnit === "carat" ? "carat" : "g") : "—"}</td>
+        <td>${item.isExchange ? formatWeight(item.netWeight, item.rateUnit === "carat" ? "carat" : "g") : "—"}</td>
+        <td class="amount">${item.isExchange ? `${currency(item.rate)} / ${escapeHtml(item.rateUnit)}` : "—"}</td>
+        <td class="amount ${item.isExchange ? "exchange" : ""}">${item.isExchange ? "−" : ""}${currency(Math.abs(item.amount))}</td>
       </tr>
     `).join("");
     const customerDetails = billCustomers.map((customer) => `
@@ -497,6 +518,7 @@ export default function BillingManagement() {
             th, td { padding: 10px 8px; border-bottom: 1px solid #e2e8f0; text-align: left; }
             th { background: #f1f5f9; font-size: 11px; text-transform: uppercase; }
             .amount { text-align: right; white-space: nowrap; }
+            .exchange { color: #be123c; font-weight: 600; }
             th.amount { text-align: right; }
             .totals { width: min(100%, 340px); margin: 20px 0 0 auto; }
             .total-row { display: flex; justify-content: space-between; gap: 20px; padding: 6px 0; }
@@ -513,8 +535,8 @@ export default function BillingManagement() {
           <div class="customers">${customerDetails || "<p>No customer details</p>"}</div>
           <h2>Items</h2>
           <table>
-            <thead><tr><th>Item</th><th>Category</th><th>Purity</th><th class="amount">Amount</th></tr></thead>
-            <tbody>${rows || '<tr><td colspan="4">No items</td></tr>'}</tbody>
+            <thead><tr><th>S.No.</th><th>Item</th><th>Category</th><th>Purity</th><th>Weight</th><th>Wastage</th><th>Net Weight</th><th class="amount">Rate</th><th class="amount">Amount</th></tr></thead>
+            <tbody>${rows || '<tr><td colspan="9">No items</td></tr>'}</tbody>
           </table>
           <div class="totals">
             <div class="total-row"><span>Sub-Total</span><span>${currency(bill.sub_total)}</span></div>
@@ -1113,19 +1135,45 @@ export default function BillingManagement() {
               </div>
             </div>
             <div className="overflow-x-auto rounded-lg border border-slate-200">
-              <table className="w-full min-w-[600px] text-left text-sm">
+              <table className="w-full min-w-[1150px] text-left text-sm">
                 <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-                  <tr><th className="px-3 py-2">Item</th><th className="px-3 py-2">Category</th><th className="px-3 py-2">Purity</th><th className="px-3 py-2 text-right">Amount</th></tr>
+                  <tr>
+                    <th className="px-3 py-2">S.No.</th>
+                    <th className="px-3 py-2">Item</th>
+                    <th className="px-3 py-2">Category</th>
+                    <th className="px-3 py-2">Purity</th>
+                    <th className="px-3 py-2 text-right">Weight</th>
+                    <th className="px-3 py-2 text-right">Wastage</th>
+                    <th className="px-3 py-2 text-right">Net Weight</th>
+                    <th className="px-3 py-2 text-right">Rate</th>
+                    <th className="px-3 py-2 text-right">Amount</th>
+                  </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {decodeArray(viewingBill.products).map((product, index) => (
                     <tr key={`view-product-${index}`}>
-                      <td className="px-3 py-2">{product.product_name}</td><td className="px-3 py-2">{product.category || "—"}</td><td className="px-3 py-2">{product.purity || "—"}</td><td className="px-3 py-2 text-right">{currency(product.price)}</td>
+                      <td className="px-3 py-2 text-slate-500">{index + 1}</td>
+                      <td className="px-3 py-2">{product.product_name}</td>
+                      <td className="px-3 py-2">{product.category || "—"}</td>
+                      <td className="px-3 py-2">{product.purity || "—"}</td>
+                      <td className="px-3 py-2 text-right">—</td>
+                      <td className="px-3 py-2 text-right">—</td>
+                      <td className="px-3 py-2 text-right">—</td>
+                      <td className="px-3 py-2 text-right">—</td>
+                      <td className="px-3 py-2 text-right">{currency(product.price)}</td>
                     </tr>
                   ))}
                   {decodeArray(viewingBill.exchanges).map((exchange, index) => (
-                    <tr key={`view-exchange-${index}`}>
-                      <td className="px-3 py-2">{exchange.product_name}</td><td className="px-3 py-2">{exchange.category || "—"}</td><td className="px-3 py-2">{exchange.metal_type} {exchange.purity}</td><td className="px-3 py-2 text-right text-amber-700">−{currency(exchange.credit_amount)}</td>
+                    <tr key={`view-exchange-${index}`} className="text-rose-700">
+                      <td className="px-3 py-2 text-slate-500">{decodeArray(viewingBill.products).length + index + 1}</td>
+                      <td className="px-3 py-2">{exchange.product_name || "Exchange item"}</td>
+                      <td className="px-3 py-2">{exchange.category || "—"}</td>
+                      <td className="px-3 py-2">{exchange.metal_type} {exchange.purity}</td>
+                      <td className="px-3 py-2 text-right">{formatWeight(exchange.weight, exchange.weight_unit === "carat" ? "carat" : "g")}</td>
+                      <td className="px-3 py-2 text-right">{formatWeight(exchange.wastage_weight, exchange.weight_unit === "carat" ? "carat" : "g")}</td>
+                      <td className="px-3 py-2 text-right">{formatWeight(exchange.net_weight, exchange.weight_unit === "carat" ? "carat" : "g")}</td>
+                      <td className="px-3 py-2 text-right">{currency(exchange.rate_per_unit)} / {exchange.rate_unit || "gram"}</td>
+                      <td className="px-3 py-2 text-right font-semibold">−{currency(exchange.credit_amount)}</td>
                     </tr>
                   ))}
                 </tbody>
