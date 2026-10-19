@@ -20,6 +20,7 @@ import {
     FiX,
 } from "react-icons/fi";
 import { toast } from "react-hot-toast";
+import { Link } from "react-router-dom";
 
 const PAGE_SIZE = 8;
 
@@ -218,9 +219,12 @@ const Users = () => {
             <div className="mx-auto max-w-[1600px] space-y-4">
                 <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
                     <div>
-                        <p className="mb-1 text-xs font-medium text-slate-500">⌂　›　Customers</p>
-                        <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Customers</h1>
-                        <p className="mt-1 text-sm text-slate-500">Manage customer accounts and contact details.</p>
+                        <Link
+                            to="/admin/settings"
+                            className="mb-3 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 transition hover:border-emerald-300 hover:text-[#00695C]"
+                        >
+                            <FiChevronLeft size={16} /> Back to Settings
+                        </Link>
                     </div>
                     <button
                         type="button"
