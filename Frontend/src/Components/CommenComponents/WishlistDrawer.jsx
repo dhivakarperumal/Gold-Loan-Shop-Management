@@ -258,16 +258,7 @@ const WishlistDrawer = ({ isOpen, onClose }) => {
               Continue Shopping
             </button>
 
-            {/* View All Wishlist — secondary */}
-            {/* <button
-              type="button"
-              onClick={() => goTo("/explore")}
-              className="flex w-full items-center justify-center gap-2 rounded-full border py-3 text-sm font-bold transition hover:bg-gray-50 active:scale-[0.98]"
-              style={{ borderColor: "#004D40", color: "#004D40" }}
-            >
-              View All Wishlist Items
-              <FiShare2 size={15} />
-            </button> */}
+            
           </div>
         )}
       </aside>
