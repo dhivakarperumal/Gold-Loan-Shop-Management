@@ -136,17 +136,7 @@ const DEFAULT_DASHBOARD_DATA = {
     Pending: 0,
     Overdue: 0
   },
-  revenueTrends: [
-    { label: "Oct 01", revenue: 42000, date: "Oct 01, 2026" },
-    { label: "Oct 03", revenue: 62000, date: "Oct 03, 2026" },
-    { label: "Oct 05", revenue: 78000, date: "Oct 05, 2026" },
-    { label: "Oct 07", revenue: 68000, date: "Oct 07, 2026" },
-    { label: "Oct 09", revenue: 124560, date: "Oct 09, 2026" },
-    { label: "Oct 11", revenue: 104000, date: "Oct 11, 2026" },
-    { label: "Oct 13", revenue: 138000, date: "Oct 13, 2026" },
-    { label: "Oct 15", revenue: 145000, date: "Oct 15, 2026" },
-    { label: "Oct 16", revenue: 98000, date: "Oct 16, 2026" }
-  ],
+  revenueTrends: [],
   recentLoans: [
     {
       id: "#SG1001",
@@ -286,7 +276,7 @@ const Dashboard = () => {
   const recentLoans = data.recentLoans?.length ? data.recentLoans : DEFAULT_DASHBOARD_DATA.recentLoans;
   const topProducts = data.topProducts?.length ? data.topProducts : DEFAULT_DASHBOARD_DATA.topProducts;
   const loanStatusCounts = data.loanStatusCounts || DEFAULT_DASHBOARD_DATA.loanStatusCounts;
-  const revenueTrends = data.revenueTrends?.length ? data.revenueTrends : DEFAULT_DASHBOARD_DATA.revenueTrends;
+  const revenueTrends = Array.isArray(dashboardData?.revenueTrends) ? dashboardData.revenueTrends : [];
   const totalLoansCount = data.totalLoansCount ?? 0;
   const summaryCards = [
     {
@@ -377,7 +367,7 @@ const Dashboard = () => {
 
   // ── Bar Chart Data & Options ──────────────────────────────────────
   const barLabels = revenueTrends.map(t => t.label || t.month || "");
-  const barValues = revenueTrends.map(t => t.revenue || t.amount || 0);
+  const barValues = revenueTrends.map(t => Number(t.revenue) || 0);
 
   const barChartData = {
     labels: barLabels,
@@ -691,7 +681,10 @@ const Dashboard = () => {
         {/* Left: Sales Overview (65% width) */}
         <div className="lg:col-span-8 bg-white p-5 sm:p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base sm:text-lg font-bold text-slate-800">Sales Overview</h3>
+            <div>
+              <h3 className="text-base sm:text-lg font-bold text-slate-800">Sales Overview</h3>
+              <p className="mt-0.5 text-[11px] text-slate-400">Live billing data · refreshes every 30 seconds</p>
+            </div>
             <div className="relative">
               <select
                 value={salesRange}
@@ -708,8 +701,14 @@ const Dashboard = () => {
               <FiChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs" />
             </div>
           </div>
-          <div className="h-[260px] sm:h-[280px] w-full pt-2">
-            <Bar data={barChartData} options={barChartOptions} />
+          <div className="relative h-[260px] sm:h-[280px] w-full pt-2">
+            {metricsLoading
+              ? <div className="flex h-full items-center justify-center text-sm font-medium text-slate-400">Loading sales data…</div>
+              : metricsError && !dashboardData
+                ? <div className="flex h-full items-center justify-center text-sm font-medium text-rose-500">Sales data is unavailable.</div>
+                : revenueTrends.length > 0
+                  ? <Bar data={barChartData} options={barChartOptions} />
+                  : <div className="flex h-full items-center justify-center text-sm font-medium text-slate-400">No sales recorded for this period.</div>}
           </div>
         </div>
 

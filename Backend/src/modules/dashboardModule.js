@@ -271,55 +271,48 @@ async function getDashboardData(range = 'month') {
       }
     }
 
-    // Sales / Business Overview Chart Trends (matching the screenshot)
-    let revenueTrends = [];
-    if (range === 'week') {
-      revenueTrends = [
-        { label: "Mon", revenue: 85000, date: "Oct 12, 2026" },
-        { label: "Tue", revenue: 110000, date: "Oct 13, 2026" },
-        { label: "Wed", revenue: 95000, date: "Oct 14, 2026" },
-        { label: "Thu", revenue: 140000, date: "Oct 15, 2026" },
-        { label: "Fri", revenue: 124560, date: "Oct 16, 2026" },
-        { label: "Sat", revenue: 165000, date: "Oct 17, 2026" },
-        { label: "Sun", revenue: 75000, date: "Oct 18, 2026" }
-      ];
-    } else if (range === 'year') {
-      revenueTrends = [
-        { label: "Jan", revenue: 1850000 },
-        { label: "Feb", revenue: 2100000 },
-        { label: "Mar", revenue: 1950000 },
-        { label: "Apr", revenue: 2400000 },
-        { label: "May", revenue: 2200000 },
-        { label: "Jun", revenue: 2600000 },
-        { label: "Jul", revenue: 2450000 },
-        { label: "Aug", revenue: 2750000 },
-        { label: "Sep", revenue: 2900000 },
-        { label: "Oct", revenue: 2456800 },
-        { label: "Nov", revenue: 2800000 },
-        { label: "Dec", revenue: 3200000 }
-      ];
-    } else {
-      // "month" / default matching the screenshot bars:
-      // Oct 01, Oct 02, Oct 03, Oct 04, Oct 05, Oct 06, Oct 07, Oct 08, Oct 09, Oct 10, Oct 11, Oct 12, Oct 13, Oct 14, Oct 15, Oct 16
-      revenueTrends = [
-        { label: "Oct 01", revenue: 42000, date: "Oct 01, 2026" },
-        { label: "Oct 02", revenue: 62000, date: "Oct 02, 2026" },
-        { label: "Oct 03", revenue: 58000, date: "Oct 03, 2026" },
-        { label: "Oct 04", revenue: 78000, date: "Oct 04, 2026" },
-        { label: "Oct 05", revenue: 112000, date: "Oct 05, 2026" },
-        { label: "Oct 06", revenue: 82000, date: "Oct 06, 2026" },
-        { label: "Oct 07", revenue: 72000, date: "Oct 07, 2026" },
-        { label: "Oct 08", revenue: 94000, date: "Oct 08, 2026" },
-        { label: "Oct 09", revenue: 124560, date: "Oct 09, 2026" },
-        { label: "Oct 10", revenue: 104000, date: "Oct 10, 2026" },
-        { label: "Oct 11", revenue: 120000, date: "Oct 11, 2026" },
-        { label: "Oct 12", revenue: 88000, date: "Oct 12, 2026" },
-        { label: "Oct 13", revenue: 138000, date: "Oct 13, 2026" },
-        { label: "Oct 14", revenue: 118000, date: "Oct 14, 2026" },
-        { label: "Oct 15", revenue: 145000, date: "Oct 15, 2026" },
-        { label: "Oct 16", revenue: 98000, date: "Oct 16, 2026" }
-      ];
-    }
+    const salesRange = ['week', 'month', 'year'].includes(range) ? range : 'month';
+    const revenueQueries = {
+      week: `
+        SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS period_key,
+          MIN(DATE_FORMAT(created_at, '%a')) AS label,
+          MIN(DATE_FORMAT(created_at, '%b %d, %Y')) AS date,
+          SUM(total_amount) AS revenue
+        FROM billings
+        WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
+          AND created_at < DATE_ADD(DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY), INTERVAL 7 DAY)
+        GROUP BY DATE(created_at)
+        ORDER BY DATE(created_at)
+      `,
+      month: `
+        SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS period_key,
+          MIN(DATE_FORMAT(created_at, '%b %d')) AS label,
+          MIN(DATE_FORMAT(created_at, '%b %d, %Y')) AS date,
+          SUM(total_amount) AS revenue
+        FROM billings
+        WHERE created_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
+          AND created_at < DATE_ADD(LAST_DAY(CURDATE()), INTERVAL 1 DAY)
+        GROUP BY DATE(created_at)
+        ORDER BY DATE(created_at)
+      `,
+      year: `
+        SELECT DATE_FORMAT(created_at, '%Y-%m-01') AS period_key,
+          MIN(DATE_FORMAT(created_at, '%b')) AS label,
+          MIN(DATE_FORMAT(created_at, '%b %Y')) AS date,
+          SUM(total_amount) AS revenue
+        FROM billings
+        WHERE created_at >= MAKEDATE(YEAR(CURDATE()), 1)
+          AND created_at < MAKEDATE(YEAR(CURDATE()) + 1, 1)
+        GROUP BY YEAR(created_at), MONTH(created_at)
+        ORDER BY YEAR(created_at), MONTH(created_at)
+      `
+    };
+    const [revenueRows] = await pool.query(revenueQueries[salesRange]);
+    const revenueTrends = revenueRows.map((row) => ({
+      label: row.label,
+      date: row.date,
+      revenue: Number(row.revenue) || 0
+    }));
 
     const totalCustomersFormatted = totalCustomers.toLocaleString('en-IN');
     const goldStockValueFormatted = `₹ ${realGoldStockValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
