@@ -135,7 +135,7 @@ const Navbar = () => {
 
   useEffect(() => {
     const query = searchTerm.trim();
-    if (!searchOpen || query.length < 2) return undefined;
+    if (query.length < 2) return undefined;
 
     const controller = new AbortController();
     const timer = window.setTimeout(async () => {
@@ -165,7 +165,7 @@ const Navbar = () => {
       window.clearTimeout(timer);
       controller.abort();
     };
-  }, [searchOpen, searchTerm]);
+  }, [searchTerm]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -278,6 +278,59 @@ const Navbar = () => {
     }
     setSearchOpen(false);
     navigate(`/product/${productId}`);
+  };
+
+  const renderProductSearchResults = (id, className = "") => {
+    if (searchTerm.trim().length < 2) return null;
+
+    return (
+      <div
+        id={id}
+        className={`absolute inset-x-0 top-full z-50 mt-2 max-h-[min(60vh,420px)] overflow-y-auto rounded-xl border border-[#eadfce] bg-white p-2 shadow-xl ${className}`}
+        role="listbox"
+        aria-label="Matching products"
+      >
+        {searching ? (
+          <p className="px-3 py-4 text-sm text-[#746b5d]" role="status">Searching products...</p>
+        ) : searchError ? (
+          <p className="px-3 py-4 text-sm text-rose-700" role="alert">Could not load product matches. Try again.</p>
+        ) : searchResults.length ? (
+          searchResults.map((product) => {
+            const productId = product.id ?? product.product_id ?? product.productId;
+            const image = getSearchProductImage(product);
+            return (
+              <button
+                key={productId || product.product_code || product.name}
+                type="button"
+                role="option"
+                aria-selected="false"
+                onClick={() => openProductDetails(product)}
+                className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition hover:bg-[#f5f7f2] focus:bg-[#f5f7f2] focus:outline-none"
+              >
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#f6efe4]">
+                  {image ? (
+                    <img src={image} alt="" className="h-full w-full object-cover" loading="lazy" />
+                  ) : (
+                    <FaGem className="text-[#174a38]" aria-hidden="true" />
+                  )}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-sm font-semibold text-[#30271b]">{product.name}</span>
+                  <span className="mt-0.5 block truncate text-xs text-[#746b5d]">
+                    {[product.category, product.metal_type, product.product_code].filter(Boolean).join(" · ")}
+                  </span>
+                </span>
+                <span className="shrink-0 text-sm font-bold text-[#174a38]">
+                  ₹{Number(product.offer_price ?? product.final_selling_price ?? product.mrp ?? 0).toLocaleString("en-IN")}
+                </span>
+              </button>
+            );
+          })
+        ) : (
+          <p className="px-3 py-4 text-sm text-[#746b5d]">No matching active products found.</p>
+        )}
+      </div>
+    );
   };
 
   const getCategorySubcategories = (category) =>
@@ -412,29 +465,34 @@ const Navbar = () => {
 
           <div className="ml-auto flex shrink-0 items-center gap-1 sm:gap-2 xl:ml-0">
 
-            <form onSubmit={handleSearch} className="hidden min-w-0 items-center overflow-hidden rounded-full border border-[#d3a342] bg-white/80 shadow-sm xl:flex xl:w-[220px] 2xl:w-[300px]">
-              <FaSearch className="ml-4 shrink-0 text-[#174a38]" />
-              <input
-                type="search"
-                value={searchTerm}
-                onChange={(event) => {
-                  setSearchTerm(event.target.value);
-                  setSearchResults([]);
-                  setSearchError(false);
-                }}
-                placeholder="Search for jewellery..."
-                aria-label="Search jewellery"
-                className="min-w-0 flex-1 bg-transparent px-3 py-3 text-xs outline-none placeholder:text-[#827b70]"
-              />
-              <button
-                type="submit"
-                aria-label="Submit product search"
-                disabled={searching}
-                className="mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#00483d] text-[#f1c454] transition hover:bg-[#006052] disabled:opacity-60"
-              >
-                <FaSearch />
-              </button>
-            </form>
+            <div className="relative hidden min-w-0 xl:block xl:w-[220px] 2xl:w-[300px]">
+              <form onSubmit={handleSearch} className="flex min-w-0 items-center overflow-hidden rounded-full border border-[#d3a342] bg-white/80 shadow-sm">
+                <FaSearch className="ml-4 shrink-0 text-[#174a38]" />
+                <input
+                  type="search"
+                  value={searchTerm}
+                  onChange={(event) => {
+                    setSearchTerm(event.target.value);
+                    setSearchResults([]);
+                    setSearchError(false);
+                  }}
+                  placeholder="Search for jewellery..."
+                  aria-label="Search jewellery"
+                  aria-autocomplete="list"
+                  aria-controls="navbar-product-search-results-desktop"
+                  className="min-w-0 flex-1 bg-transparent px-3 py-3 text-xs outline-none placeholder:text-[#827b70]"
+                />
+                <button
+                  type="submit"
+                  aria-label="Submit product search"
+                  disabled={searching}
+                  className="mr-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#00483d] text-[#f1c454] transition hover:bg-[#006052] disabled:opacity-60"
+                >
+                  <FaSearch />
+                </button>
+              </form>
+              {renderProductSearchResults("navbar-product-search-results-desktop")}
+            </div>
 
             <button
               ref={searchButtonRef}
@@ -541,7 +599,7 @@ const Navbar = () => {
                   placeholder="Search for jewelry, collections..."
                   aria-label="Search jewelry and collections"
                   aria-autocomplete="list"
-                  aria-controls="navbar-product-search-results"
+                  aria-controls="navbar-product-search-results-mobile"
                   className="min-w-0 flex-1 px-3 py-3 text-sm outline-none placeholder:text-gray-500"
                 />
                 <button type="submit" disabled={searching} className="flex h-11 shrink-0 items-center justify-center gap-2 bg-[#174a38] px-4 text-sm font-semibold text-white transition hover:bg-[#10382b] disabled:cursor-wait disabled:opacity-75">
@@ -549,54 +607,7 @@ const Navbar = () => {
                   <span>{searching ? "Searching..." : "Search"}</span>
                 </button>
               </form>
-              {searchTerm.trim().length >= 2 && (
-                <div
-                  id="navbar-product-search-results"
-                  className="absolute inset-x-0 top-full z-50 mt-2 max-h-[min(60vh,420px)] overflow-y-auto rounded-xl border border-[#eadfce] bg-white p-2 shadow-xl"
-                  role="listbox"
-                  aria-label="Matching products"
-                >
-                  {searching ? (
-                    <p className="px-3 py-4 text-sm text-[#746b5d]" role="status">Searching products...</p>
-                  ) : searchError ? (
-                    <p className="px-3 py-4 text-sm text-rose-700" role="alert">Could not load product matches. Try again.</p>
-                  ) : searchResults.length ? (
-                    searchResults.map((product) => {
-                      const productId = product.id ?? product.product_id ?? product.productId;
-                      const image = getSearchProductImage(product);
-                      return (
-                        <button
-                          key={productId || product.product_code || product.name}
-                          type="button"
-                          role="option"
-                          aria-selected="false"
-                          onClick={() => openProductDetails(product)}
-                          className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left transition hover:bg-[#f5f7f2] focus:bg-[#f5f7f2] focus:outline-none"
-                        >
-                          <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[#f6efe4]">
-                            {image ? (
-                              <img src={image} alt="" className="h-full w-full object-cover" loading="lazy" />
-                            ) : (
-                              <FaGem className="text-[#174a38]" aria-hidden="true" />
-                            )}
-                          </span>
-                          <span className="min-w-0 flex-1">
-                            <span className="block truncate text-sm font-semibold text-[#30271b]">{product.name}</span>
-                            <span className="mt-0.5 block truncate text-xs text-[#746b5d]">
-                              {[product.category, product.metal_type, product.product_code].filter(Boolean).join(" · ")}
-                            </span>
-                          </span>
-                          <span className="shrink-0 text-sm font-bold text-[#174a38]">
-                            ₹{Number(product.offer_price ?? product.final_selling_price ?? product.mrp ?? 0).toLocaleString("en-IN")}
-                          </span>
-                        </button>
-                      );
-                    })
-                  ) : (
-                    <p className="px-3 py-4 text-sm text-[#746b5d]">No matching active products found.</p>
-                  )}
-                </div>
-              )}
+              {renderProductSearchResults("navbar-product-search-results-mobile")}
             </div>
             <button
               type="button"

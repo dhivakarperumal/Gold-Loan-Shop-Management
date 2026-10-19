@@ -6,17 +6,17 @@ import {
   FaInstagram,
   FaWhatsapp,
   FaPinterestP,
+  FaYoutube,
 } from "react-icons/fa";
 import {
   ArrowRight,
-  ArrowUpRight,
   Mail,
   Phone,
   MapPin,
   Gem,
   ShieldCheck,
   Truck,
-  RotateCcw,
+  Headset,
   ChevronRight,
 } from "lucide-react";
 import PageContainer from "./PageContainer";
@@ -27,372 +27,399 @@ const Footer = () => {
 
   const handleSubscribe = (event) => {
     event.preventDefault();
-
     if (!email.trim()) return;
 
-    // Connect your newsletter API here to save subscriptions.
+    // Connect your newsletter API here.
     setSubscribed(true);
     setEmail("");
   };
 
-  const linkClass =
-    "group flex items-center justify-between gap-3 text-sm text-white/65 transition-all duration-300 hover:translate-x-1 hover:text-[#e8c77b]";
+  const links = [
+    { label: "Home", to: "/" },
+    { label: "About Us", to: "/about" },
+    { label: "Shop", to: "/shop" },
+    { label: "Metal Rates", to: "/metal" },
+    { label: "Contact Us", to: "/contactus" },
+  ];
 
-  const socialClass =
-    "flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-white/5 text-white/80 transition-all duration-300 hover:border-[#d7b56d] hover:bg-[#d7b56d] hover:text-[#063c32] hover:-translate-y-1";
+  const collections = [
+    { label: "Gold Jewellery", to: "/shop" },
+    { label: "Diamond Jewellery", to: "/shop" },
+    { label: "Silver Jewellery", to: "/shop" },
+    { label: "Bridal Collection", to: "/shop" },
+    { label: "Earrings & Pendants", to: "/shop" },
+    { label: "New Arrivals", to: "/shop" },
+  ];
+
+  const socialLinks = [
+    {
+      label: "Facebook",
+      href: "https://www.facebook.com/",
+      icon: <FaFacebookF />,
+    },
+    {
+      label: "Instagram",
+      href: "https://www.instagram.com/",
+      icon: <FaInstagram />,
+    },
+    {
+      label: "WhatsApp",
+      href: "https://wa.me/919876543210",
+      icon: <FaWhatsapp />,
+    },
+    {
+      label: "Pinterest",
+      href: "https://www.pinterest.com/",
+      icon: <FaPinterestP />,
+    },
+    {
+      label: "YouTube",
+      href: "https://www.youtube.com/",
+      icon: <FaYoutube />,
+    },
+  ];
+
+  const columnHeading =
+    "font-serif text-xl font-semibold text-[#f5d994]";
+
+  const goldDivider =
+    "relative mb-6 mt-4 h-px w-full bg-gradient-to-r from-[#b88a37]/20 via-[#e5c477] to-[#b88a37]/20";
+
+  const footerLink =
+    "group flex items-center gap-2.5 text-[14px] text-white/75 transition-all duration-300 hover:translate-x-1 hover:text-[#f5d994]";
 
   return (
-    <footer className="relative mt-24 overflow-hidden bg-[#063c32] text-white">
+    <footer className="relative mt-24 overflow-hidden bg-[#003b30] text-white">
 
-      {/* Decorative background */}
-      <div className="pointer-events-none absolute -right-28 -top-32 h-96 w-96 rounded-full border border-[#d7b56d]/10" />
-      <div className="pointer-events-none absolute -right-16 -top-20 h-72 w-72 rounded-full border border-[#d7b56d]/10" />
-      <div className="pointer-events-none absolute -bottom-40 -left-24 h-80 w-80 rounded-full border border-[#d7b56d]/10" />
+      {/* Luxury background decoration */}
+      <div className="pointer-events-none absolute -left-28 top-20 h-72 w-72 rounded-full border border-[#d9b568]/10" />
+      <div className="pointer-events-none absolute -right-28 bottom-12 h-80 w-80 rounded-full border border-[#d9b568]/10" />
+
+      <div className="pointer-events-none absolute left-0 top-0 h-full w-24 opacity-[0.08]">
+        <div className="h-full border-r border-[#e5c477]" />
+      </div>
 
       <PageContainer>
 
-        {/* Top promotional strip */}
-        <div className="grid grid-cols-1 gap-5 border-b border-white/10 py-8 sm:grid-cols-3 sm:gap-8">
+        {/* Trust strip */}
+        <div className="grid grid-cols-1 border-b border-[#d9b568]/50 sm:grid-cols-2 lg:grid-cols-4">
 
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-[#d7b56d]/35 bg-[#d7b56d]/10 text-[#e8c77b]">
-              <ShieldCheck size={23} strokeWidth={1.5} />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-white">
-                Quality Craftsmanship
-              </h3>
-              <p className="mt-1 text-xs text-white/55">
-                Jewellery made with care
-              </p>
-            </div>
-          </div>
+          {[
+            {
+              icon: <Truck size={25} strokeWidth={1.5} />,
+              title: "FREE SHIPPING",
+              subtitle: "On all eligible orders",
+            },
+            {
+              icon: <ShieldCheck size={25} strokeWidth={1.5} />,
+              title: "CERTIFIED JEWELLERY",
+              subtitle: "Quality you can trust",
+            },
+            {
+              icon: <Gem size={25} strokeWidth={1.5} />,
+              title: "PREMIUM COLLECTIONS",
+              subtitle: "Gold · Diamond · Silver",
+            },
+            {
+              icon: <Headset size={25} strokeWidth={1.5} />,
+              title: "CUSTOMER SUPPORT",
+              subtitle: "Here whenever you need us",
+            },
+          ].map((item, index) => (
+            <div
+              key={item.title}
+              className={`flex items-center justify-center gap-4 px-3 py-6 ${
+                index !== 3
+                  ? "lg:border-r lg:border-[#d9b568]/40"
+                  : ""
+              }`}
+            >
+              <span className="shrink-0 text-[#e6c16e]">
+                {item.icon}
+              </span>
 
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-[#d7b56d]/35 bg-[#d7b56d]/10 text-[#e8c77b]">
-              <Truck size={23} strokeWidth={1.5} />
+              <div>
+                <h3 className="text-[11px] font-bold tracking-[0.12em] text-[#f5d994] sm:text-xs">
+                  {item.title}
+                </h3>
+                <p className="mt-1 text-xs text-white/65">
+                  {item.subtitle}
+                </p>
+              </div>
             </div>
-            <div>
-              <h3 className="text-sm font-semibold text-white">
-                Reliable Delivery
-              </h3>
-              <p className="mt-1 text-xs text-white/55">
-                Carefully packed orders
-              </p>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-[#d7b56d]/35 bg-[#d7b56d]/10 text-[#e8c77b]">
-              <RotateCcw size={23} strokeWidth={1.5} />
-            </div>
-            <div>
-              <h3 className="text-sm font-semibold text-white">
-                Customer Support
-              </h3>
-              <p className="mt-1 text-xs text-white/55">
-                Here to help you
-              </p>
-            </div>
-          </div>
+          ))}
 
         </div>
 
-        {/* Main footer */}
-        <div className="grid grid-cols-1 gap-12 py-14 sm:grid-cols-2 lg:grid-cols-12 lg:gap-8 lg:py-16">
+        {/* Main footer columns */}
+        <div className="grid grid-cols-1 gap-x-9 gap-y-12 py-14 sm:grid-cols-2 lg:grid-cols-12 lg:gap-x-8 lg:py-16">
 
           {/* Brand */}
-          <div className="lg:col-span-4">
+          <div className="lg:col-span-3">
 
-            <Link to="/" className="group mb-6 inline-flex items-center gap-4">
-              <div className="flex h-[76px] w-[76px] shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#d7b56d]/50 bg-[#fffaf0] p-2">
-                <img
-                  src="/images/logo.png"
-                  alt="Sri Golds logo"
-                  className="h-full w-full object-contain"
-                />
-              </div>
-
-              <div>
-                <p className="font-serif text-3xl tracking-wide text-[#f0d69a]">
-                  Sri Golds
-                </p>
-                <p className="mt-1 text-[10px] uppercase tracking-[0.28em] text-white/60">
-                  Jewellery & Fine Designs
-                </p>
-              </div>
+            <Link to="/" className="inline-flex items-center">
+              <img
+                src="/images/logo.png"
+                alt="Sri Golds"
+                className="h-24 w-60 object-contain object-left"
+              />
             </Link>
 
-            <p className="max-w-sm text-sm leading-7 text-white/65">
-              Celebrate life's precious moments with timeless gold,
-              diamond and silver jewellery, thoughtfully selected for
-              every occasion and every generation.
+            <p className="mt-5 max-w-sm text-sm leading-7 text-white/75">
+              Where tradition meets timeless beauty. Explore our
+              exquisite collection of gold, diamond and silver jewellery,
+              crafted for your most cherished moments.
             </p>
 
             <div className="mt-7 flex flex-wrap gap-3">
-              <a
-                href="https://www.facebook.com/"
-                target="_blank"
-                rel="noreferrer"
-                aria-label="Facebook"
-                className={socialClass}
-              >
-                <FaFacebookF size={16} />
-              </a>
-
-              <a
-                href="https://www.instagram.com/"
-                target="_blank"
-                rel="noreferrer"
-                aria-label="Instagram"
-                className={socialClass}
-              >
-                <FaInstagram size={17} />
-              </a>
-
-              <a
-                href="https://www.pinterest.com/"
-                target="_blank"
-                rel="noreferrer"
-                aria-label="Pinterest"
-                className={socialClass}
-              >
-                <FaPinterestP size={16} />
-              </a>
-
-              <a
-                href="https://wa.me/919876543210"
-                target="_blank"
-                rel="noreferrer"
-                aria-label="WhatsApp"
-                className={socialClass}
-              >
-                <FaWhatsapp size={18} />
-              </a>
+              {socialLinks.map((social) => (
+                <a
+                  key={social.label}
+                  href={social.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  aria-label={social.label}
+                  title={social.label}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-[#d9b568]/70 text-[#f5d994] transition-all duration-300 hover:-translate-y-1 hover:bg-[#e5c477] hover:text-[#003b30]"
+                >
+                  {social.icon}
+                </a>
+              ))}
             </div>
-
-            <p className="mt-6 text-xs text-white/40">
-              Timeless beauty. Meaningful memories.
-            </p>
           </div>
 
-          {/* Explore */}
+          {/* Quick links */}
           <div className="lg:col-span-2">
-            <h3 className="mb-6 font-serif text-xl text-[#f0d69a]">
-              Explore
-            </h3>
+
+            <h3 className={columnHeading}>Quick Links</h3>
+            <div className={goldDivider}>
+              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#003b30] px-2 text-[#e5c477]">
+                ❖
+              </span>
+            </div>
 
             <ul className="space-y-4">
-              <li>
-                <Link to="/" className={linkClass}>
-                  <span>Home</span>
-                  <ChevronRight size={14} />
-                </Link>
-              </li>
-              <li>
-                <Link to="/about" className={linkClass}>
-                  <span>Our Story</span>
-                  <ChevronRight size={14} />
-                </Link>
-              </li>
-              <li>
-                <Link to="/shop" className={linkClass}>
-                  <span>Shop All</span>
-                  <ChevronRight size={14} />
-                </Link>
-              </li>
-              <li>
-                <Link to="/contactus" className={linkClass}>
-                  <span>Contact Us</span>
-                  <ChevronRight size={14} />
-                </Link>
-              </li>
+              {links.map((link) => (
+                <li key={link.label}>
+                  <Link to={link.to} className={footerLink}>
+                    <ChevronRight
+                      size={15}
+                      className="shrink-0 text-[#e5c477]"
+                    />
+                    {link.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
           {/* Collections */}
           <div className="lg:col-span-2">
-            <h3 className="mb-6 font-serif text-xl text-[#f0d69a]">
-              Collections
-            </h3>
+
+            <h3 className={columnHeading}>Our Collections</h3>
+            <div className={goldDivider}>
+              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#003b30] px-2 text-[#e5c477]">
+                ❖
+              </span>
+            </div>
 
             <ul className="space-y-4">
-              <li>
-                <Link to="/shop" className={linkClass}>
-                  <span>Gold Jewellery</span>
-                  <ChevronRight size={14} />
-                </Link>
-              </li>
-              <li>
-                <Link to="/shop" className={linkClass}>
-                  <span>Diamond Jewellery</span>
-                  <ChevronRight size={14} />
-                </Link>
-              </li>
-              <li>
-                <Link to="/shop" className={linkClass}>
-                  <span>Silver Jewellery</span>
-                  <ChevronRight size={14} />
-                </Link>
-              </li>
-              <li>
-                <Link to="/shop" className={linkClass}>
-                  <span>New Arrivals</span>
-                  <ChevronRight size={14} />
-                </Link>
-              </li>
+              {collections.map((collection) => (
+                <li key={collection.label}>
+                  <Link to={collection.to} className={footerLink}>
+                    <ChevronRight
+                      size={15}
+                      className="shrink-0 text-[#e5c477]"
+                    />
+                    {collection.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </div>
 
           {/* Contact */}
-          <div className="lg:col-span-4">
-            <h3 className="mb-6 font-serif text-xl text-[#f0d69a]">
-              Get in Touch
-            </h3>
+          <div className="lg:col-span-2">
 
-            <p className="mb-6 text-sm leading-6 text-white/60">
-              Have a question about a design or your order? We'd love
-              to hear from you.
-            </p>
+            <h3 className={columnHeading}>Contact Us</h3>
+            <div className={goldDivider}>
+              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#003b30] px-2 text-[#e5c477]">
+                ❖
+              </span>
+            </div>
 
-            <div className="space-y-4">
+            <div className="space-y-5">
+
               <a
                 href="tel:+919876543210"
-                className="group flex items-start gap-3 text-sm text-white/70 transition hover:text-[#e8c77b]"
+                className="group flex items-start gap-3 text-sm leading-6 text-white/80 transition hover:text-[#f5d994]"
               >
-                <Phone
-                  size={18}
-                  className="mt-0.5 shrink-0 text-[#d7b56d]"
-                />
-                <span>+91 98765 43210</span>
-                <ArrowUpRight
-                  size={14}
-                  className="ml-auto opacity-0 transition group-hover:opacity-100"
-                />
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#d9b568]/60 text-[#e5c477]">
+                  <Phone size={16} />
+                </span>
+                <span className="break-words pt-1">
+                  +91 98765 43210
+                </span>
               </a>
 
               <a
                 href="mailto:support@mystore.com"
-                className="group flex items-start gap-3 text-sm text-white/70 transition hover:text-[#e8c77b]"
+                className="group flex items-start gap-3 text-sm leading-6 text-white/80 transition hover:text-[#f5d994]"
               >
-                <Mail
-                  size={18}
-                  className="mt-0.5 shrink-0 text-[#d7b56d]"
-                />
-                <span className="break-all">support@mystore.com</span>
-                <ArrowUpRight
-                  size={14}
-                  className="ml-auto shrink-0 opacity-0 transition group-hover:opacity-100"
-                />
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#d9b568]/60 text-[#e5c477]">
+                  <Mail size={16} />
+                </span>
+                <span className="break-all pt-1">
+                  support@mystore.com
+                </span>
               </a>
 
-              <div className="flex items-start gap-3 text-sm text-white/70">
-                <MapPin
-                  size={18}
-                  className="mt-0.5 shrink-0 text-[#d7b56d]"
-                />
-                <span>Chennai, Tamil Nadu, India</span>
+              <div className="flex items-start gap-3 text-sm leading-6 text-white/80">
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#d9b568]/60 text-[#e5c477]">
+                  <MapPin size={16} />
+                </span>
+                <span className="pt-1">
+                  Chennai, Tamil Nadu,
+                  <br />
+                  India
+                </span>
               </div>
+
+            </div>
+          </div>
+
+          {/* Newsletter */}
+          <div className="lg:col-span-3">
+
+            <h3 className={columnHeading}>
+              Subscribe to Our Newsletter
+            </h3>
+
+            <div className={goldDivider}>
+              <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-[#003b30] px-2 text-[#e5c477]">
+                ❖
+              </span>
+            </div>
+
+            <p className="text-sm leading-7 text-white/75">
+              Get the latest collections, exclusive offers and jewellery
+              inspiration delivered to your inbox.
+            </p>
+
+            <form
+              onSubmit={handleSubscribe}
+              className="mt-6 flex overflow-hidden rounded-full border border-[#e5c477] bg-white/5 p-1"
+            >
+              <label
+                htmlFor="footer-subscription-email"
+                className="sr-only"
+              >
+                Email address
+              </label>
+
+              <span className="flex shrink-0 items-center pl-3 text-[#e5c477]">
+                <Mail size={19} />
+              </span>
+
+              <input
+                id="footer-subscription-email"
+                type="email"
+                value={email}
+                onChange={(event) => {
+                  setEmail(event.target.value);
+                  setSubscribed(false);
+                }}
+                placeholder="Your email address"
+                required
+                className="min-w-0 flex-1 bg-transparent px-3 py-3 text-xs text-white outline-none placeholder:text-white/55"
+              />
+
+              <button
+                type="submit"
+                aria-label="Subscribe to newsletter"
+                className="flex shrink-0 items-center justify-center gap-2 rounded-full bg-[#e8ca83] px-4 py-3 text-xs font-bold text-[#063b30] transition hover:bg-[#f5dfa7]"
+              >
+                <span>Subscribe</span>
+                <ArrowRight size={15} />
+              </button>
+            </form>
+
+            {subscribed && (
+              <p role="status" className="mt-3 text-xs text-[#f5d994]">
+                Thank you for subscribing!
+              </p>
+            )}
+
+            {/* Newsletter benefits */}
+            <div className="mt-7 grid grid-cols-2 gap-y-5">
+
+              <div className="flex items-center gap-2 text-xs text-white/80">
+                <Gem size={18} className="text-[#e5c477]" />
+                <span>Exclusive Offers</span>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs text-white/80">
+                <ShieldCheck size={18} className="text-[#e5c477]" />
+                <span>New Arrivals</span>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs text-white/80">
+                <Truck size={18} className="text-[#e5c477]" />
+                <span>Special Collections</span>
+              </div>
+
+              <div className="flex items-center gap-2 text-xs text-white/80">
+                <Gem size={18} className="text-[#e5c477]" />
+                <span>Member Updates</span>
+              </div>
+
             </div>
           </div>
 
         </div>
 
-        {/* Newsletter panel */}
-        <div className="relative mb-10 overflow-hidden rounded-2xl border border-[#d7b56d]/30 bg-[#0b493d]">
-
-          <div className="pointer-events-none absolute -right-12 -top-20 h-56 w-56 rounded-full border border-[#d7b56d]/15" />
-          <div className="pointer-events-none absolute -right-2 -top-12 h-36 w-36 rounded-full border border-[#d7b56d]/15" />
-
-          <div className="relative grid grid-cols-1 items-center gap-8 p-6 sm:p-8 lg:grid-cols-2 lg:p-10">
-
-            <div>
-              <div className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.2em] text-[#e8c77b]">
-                <Gem size={16} />
-                The Sri Golds Edit
-              </div>
-
-              <h3 className="font-serif text-2xl leading-tight text-white sm:text-3xl">
-                A little sparkle in your inbox.
-              </h3>
-
-              <p className="mt-3 max-w-md text-sm leading-6 text-white/60">
-                Discover new collections, jewellery inspiration and
-                exclusive offers. Stay close to what you love.
-              </p>
-            </div>
-
-            <div>
-              <form
-                onSubmit={handleSubscribe}
-                className="flex flex-col gap-3 sm:flex-row"
-              >
-                <label
-                  htmlFor="footer-subscription-email"
-                  className="sr-only"
-                >
-                  Email address
-                </label>
-
-                <input
-                  id="footer-subscription-email"
-                  type="email"
-                  value={email}
-                  onChange={(event) => {
-                    setEmail(event.target.value);
-                    setSubscribed(false);
-                  }}
-                  placeholder="Enter your email address"
-                  required
-                  className="min-w-0 flex-1 rounded-xl border border-white/15 bg-white/5 px-4 py-3.5 text-sm text-white outline-none transition placeholder:text-white/40 focus:border-[#d7b56d] focus:bg-white/10"
-                />
-
-                <button
-                  type="submit"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#e4c47d] px-6 py-3.5 text-sm font-bold text-[#063c32] transition hover:bg-[#f1d99d]"
-                >
-                  Subscribe
-                  <ArrowRight size={16} />
-                </button>
-              </form>
-
-              {subscribed && (
-                <p
-                  role="status"
-                  className="mt-3 text-sm text-[#f0d69a]"
-                >
-                  Thank you! Your subscription has been received.
-                </p>
-              )}
-
-              <p className="mt-3 text-xs text-white/40">
-                By subscribing, you agree to receive updates from Sri Golds.
-              </p>
-            </div>
-
-          </div>
+        {/* Ornamental bottom divider */}
+        <div className="relative flex items-center">
+          <div className="h-px flex-1 bg-gradient-to-r from-transparent via-[#d9b568] to-[#d9b568]" />
+          <span className="px-4 font-serif text-2xl text-[#e5c477]">
+            ❋
+          </span>
+          <div className="h-px flex-1 bg-gradient-to-l from-transparent via-[#d9b568] to-[#d9b568]" />
         </div>
 
         {/* Bottom bar */}
-        <div className="flex flex-col gap-4 border-t border-white/10 py-6 text-center sm:flex-row sm:items-center sm:justify-between sm:text-left">
+        <div className="flex flex-col items-center justify-between gap-5 py-6 text-center sm:flex-row sm:text-left">
 
-          <p className="text-xs text-white/50">
-            © {new Date().getFullYear()} Sri Golds. All rights reserved.
+          <p className="text-xs text-white/65">
+            © {new Date().getFullYear()} Sri Golds. All Rights Reserved.
           </p>
 
-          <p className="flex items-center justify-center gap-2 text-xs text-white/50 sm:justify-end">
-            Crafted with
-            <span className="text-[#e8c77b]">♥</span>
-            for life's precious moments
-          </p>
+          <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-xs text-white/65">
+            <Link
+              to="/privacy-policy"
+              className="transition hover:text-[#f5d994]"
+            >
+              Privacy Policy
+            </Link>
 
-          <Link
-            to="/shop"
-            className="inline-flex items-center justify-center gap-2 text-xs font-semibold text-[#e8c77b] transition hover:text-white"
-          >
-            Discover the collection
-            <ArrowRight size={14} />
-          </Link>
+            <span className="hidden h-3 w-px bg-[#d9b568]/60 sm:block" />
+
+            <Link
+              to="/terms"
+              className="transition hover:text-[#f5d994]"
+            >
+              Terms & Conditions
+            </Link>
+
+            <span className="hidden h-3 w-px bg-[#d9b568]/60 sm:block" />
+
+            <Link
+              to="/return-policy"
+              className="transition hover:text-[#f5d994]"
+            >
+              Return Policy
+            </Link>
+          </div>
 
         </div>
 
