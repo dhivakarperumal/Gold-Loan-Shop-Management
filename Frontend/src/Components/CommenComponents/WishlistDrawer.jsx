@@ -42,7 +42,14 @@ const StarRating = ({ rating = 0, count = 0 }) => {
           className={s <= stars ? "text-yellow-400" : "text-gray-300"}
         />
       ))}
-      <span className="ml-0.5 text-[10px] text-gray-400">({count})</span>
+      {rating > 0 && (
+        <span className="ml-0.5 text-[10px] font-medium text-gray-500">
+          {rating.toFixed(1)}
+        </span>
+      )}
+      {count > 0 && (
+        <span className="text-[10px] text-gray-400">({count})</span>
+      )}
     </div>
   );
 };
@@ -302,12 +309,12 @@ const WishlistDrawer = ({ isOpen, onClose }) => {
 
                       {product && (
                         <>
-                          {totalReviews > 0 && <div className="mt-1">
+                          <div className="mt-1">
                             <StarRating
                               rating={Number(product.rating) || 0}
                               count={totalReviews}
                             />
-                          </div>}
+                          </div>
                           {offerPrice > 0 && (
                             <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
                               <p className="text-sm font-bold" style={{ color: "#004D40" }}>
