@@ -393,8 +393,8 @@ const Navbar = () => {
                         onClick={() => setOpenDropdown("")}
                         className="flex items-center gap-3 rounded-lg px-2 py-2.5 text-sm font-medium text-[#30271b] transition hover:bg-[#fff8e9] hover:text-[#8c5e13]"
                       >
-                        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#fbf5e9]">
-                          {metal.image ? <img src={getMetalImageUrl(metal.image)} alt="" className="h-8 w-8 object-contain" loading="lazy" /> : <FaGem className="text-lg text-[#174a38]" />}
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#efe5d4] bg-[#fbf5e9]">
+                          {metal.image ? <img src={getMetalImageUrl(metal.image)} alt="" className="h-full w-full object-cover" loading="lazy" /> : <FaGem className="text-lg text-[#174a38]" />}
                         </span>
                         <span className="flex-1">{metal.name}</span>
                       </Link>
