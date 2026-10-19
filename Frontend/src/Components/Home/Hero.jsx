@@ -66,7 +66,7 @@ const Hero = () => {
 
   return (
     <section className="relative w-full overflow-hidden bg-[#032e25] text-white">
-      <div className="relative isolate h-[680px] w-full sm:h-[540px] lg:h-[560px]">
+      <div className="relative isolate h-[450px] w-full sm:h-[540px] lg:h-[590px]">
 
         {/* Swiper background images */}
         {slides.length > 0 && (
@@ -129,7 +129,7 @@ const Hero = () => {
         </div>
 
         {/* Hero content */}
-        <div className="pointer-events-none absolute inset-0 z-[2] flex items-end px-6 pb-16 sm:items-center sm:px-10 sm:pb-0 md:px-16 lg:px-20 xl:px-24">
+        <div className="pointer-events-none absolute inset-0 z-[2] flex items-end px-6 pb-12 sm:items-center sm:px-10 sm:pb-0 md:px-16 lg:px-20 xl:px-24">
           <div className="pointer-events-auto w-full max-w-[560px]">
 
             {slide ? (
