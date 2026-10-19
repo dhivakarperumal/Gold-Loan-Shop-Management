@@ -382,6 +382,7 @@ const Navbar = () => {
                 >
                   <span className="flex items-center gap-2 text-[#174a38]">
                     Metal
+                    <FaChevronDown className={`text-[#174a38] transition-transform ${openDropdown === "metals" ? "rotate-180" : ""}`} />
                   </span>
                 </button>
                 {openDropdown === "metals" && (
