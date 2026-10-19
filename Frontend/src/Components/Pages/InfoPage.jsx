@@ -1,6 +1,5 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import PageHeader from "../CommenComponents/PageHeader";
 
 const PAGE_CONTENT = {
   about: {
@@ -90,7 +89,16 @@ const InfoPage = ({ page }) => {
 
   return (
     <main className="min-h-[55vh] bg-[#fffdf8] pb-12">
-      <PageHeader title={pageContent.title} />
+      <header className="border-b border-[#f0e9dd] bg-white">
+        <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6 lg:px-8">
+          <nav className="mb-2 text-xs text-[#81786b]" aria-label="Breadcrumb">
+            <Link to="/" className="hover:text-[#174a38]">Home</Link>
+            <span className="mx-2" aria-hidden="true">/</span>
+            <span className="font-semibold text-[#30271b]">{pageContent.title}</span>
+          </nav>
+          <h1 className="font-serif text-3xl font-bold text-[#174a38]">{pageContent.title}</h1>
+        </div>
+      </header>
       <div className="mx-auto max-w-5xl space-y-5 px-4 py-10 leading-7 text-[#514638] sm:px-6 lg:px-8">
         {pageContent.content}
       </div>
