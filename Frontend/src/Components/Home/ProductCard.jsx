@@ -59,7 +59,7 @@ const ProductCard = ({ product }) => {
         </button>
       </div>
 
-      <div className="flex min-h-[76px] flex-1 flex-col px-3 pb-2.5 pt-2 sm:px-4 sm:pb-3">
+      <div className="relative z-10 -mt-3 flex min-h-[76px] flex-1 flex-col rounded-t-[14px] bg-white px-3 pb-2.5 pt-2 sm:px-4 sm:pb-3">
         <h3 className="line-clamp-1 font-serif text-[13px] font-semibold leading-5 text-[#292018] transition-colors hover:text-[#174a38] sm:text-sm">
           <Link to={`/product/${productId}`} aria-label={`View ${product.name} details`}>
             {product.name}
