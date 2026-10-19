@@ -124,7 +124,7 @@ const navItems = [
 
   { path: "/admin/reports", label: "Reports", icon: BarChart3 },
   
-  { path: "/", label: "Back Home", icon: Home },
+  
 ];
 
 /* ================= SIDEBAR ================= */
