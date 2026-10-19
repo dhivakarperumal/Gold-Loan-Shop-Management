@@ -228,27 +228,17 @@ const Explore = () => {
     subcategoryFilter,
   ]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [
-    availability,
-    maximumPrice,
-    minimumPrice,
-    minimumRating,
-    offerThreshold,
-    searchParams,
-    sortBy,
-  ]);
-
   const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
-  const pageStart = (currentPage - 1) * PRODUCTS_PER_PAGE;
+  const activePage = Math.min(currentPage, Math.max(totalPages, 1));
+  const pageStart = (activePage - 1) * PRODUCTS_PER_PAGE;
   const paginatedProducts = filteredProducts.slice(pageStart, pageStart + PRODUCTS_PER_PAGE);
   const visiblePageNumbers = Array.from(
     { length: Math.min(5, totalPages) },
-    (_, index) => Math.min(Math.max(currentPage - 2, 1), totalPages - 4) + index
+    (_, index) => Math.min(Math.max(activePage - 2, 1), totalPages - 4) + index
   );
 
   const clearFilters = () => {
+    setCurrentPage(1);
     setOfferThreshold(0);
     setMinimumPrice("");
     setMaximumPrice("");
@@ -259,6 +249,7 @@ const Explore = () => {
   };
 
   const toggleQueryFilter = (key, value) => {
+    setCurrentPage(1);
     const nextParams = new URLSearchParams(searchParams);
     const values = nextParams.getAll(key);
     nextParams.delete(key);
@@ -269,6 +260,7 @@ const Explore = () => {
   };
 
   const setSearchFilter = (value) => {
+    setCurrentPage(1);
     const nextParams = new URLSearchParams(searchParams);
     if (value) nextParams.set("search", value);
     else nextParams.delete("search");
@@ -427,7 +419,10 @@ const Explore = () => {
                 return checkboxOption(
                   `${offer}% and above`,
                   offerThreshold === offer,
-                  () => setOfferThreshold((current) => current === offer ? 0 : offer)
+                  () => {
+                    setCurrentPage(1);
+                    setOfferThreshold((current) => current === offer ? 0 : offer);
+                  }
                 );
               })
             ))}
@@ -451,7 +446,10 @@ const Explore = () => {
                       step={PRICE_STEP}
                       value={minimumPriceValue}
                       aria-label="Minimum price"
-                      onChange={(event) => setMinimumPrice(event.target.value === "0" ? "" : event.target.value)}
+                      onChange={(event) => {
+                        setCurrentPage(1);
+                        setMinimumPrice(event.target.value === "0" ? "" : event.target.value);
+                      }}
                       className="pointer-events-none absolute inset-0 h-5 w-full appearance-none bg-transparent [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:bg-[#c98b1b] [&::-webkit-slider-thumb]:shadow-[0_0_0_1px_#c98b1b] [&::-webkit-slider-thumb]:cursor-pointer [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:h-2.5 [&::-moz-range-thumb]:w-2.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:bg-[#c98b1b] [&::-moz-range-thumb]:shadow-[0_0_0_1px_#c98b1b] [&::-moz-range-thumb]:cursor-pointer"
                     />
                     <input
@@ -461,9 +459,12 @@ const Explore = () => {
                       step={PRICE_STEP}
                       value={maximumPriceValue}
                       aria-label="Maximum price"
-                      onChange={(event) => setMaximumPrice(
-                        Number(event.target.value) >= priceSliderMaximum ? "" : event.target.value
-                      )}
+                      onChange={(event) => {
+                        setCurrentPage(1);
+                        setMaximumPrice(
+                          Number(event.target.value) >= priceSliderMaximum ? "" : event.target.value
+                        );
+                      }}
                       className="pointer-events-none absolute inset-0 h-5 w-full appearance-none bg-transparent [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:bg-[#c98b1b] [&::-webkit-slider-thumb]:shadow-[0_0_0_1px_#c98b1b] [&::-webkit-slider-thumb]:cursor-pointer [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:h-2.5 [&::-moz-range-thumb]:w-2.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:bg-[#c98b1b] [&::-moz-range-thumb]:shadow-[0_0_0_1px_#c98b1b] [&::-moz-range-thumb]:cursor-pointer"
                     />
                   </div>
@@ -487,6 +488,7 @@ const Explore = () => {
                         type="button"
                         aria-pressed={selected}
                         onClick={() => {
+                          setCurrentPage(1);
                           setMinimumPrice(range.minimum === 0 ? "" : String(range.minimum));
                           setMaximumPrice(range.maximum === null ? "" : String(range.maximum));
                         }}
@@ -507,7 +509,10 @@ const Explore = () => {
                     <input
                       type="checkbox"
                       checked={minimumRating === rating}
-                      onChange={() => setMinimumRating((current) => current === rating ? 0 : rating)}
+                      onChange={() => {
+                        setCurrentPage(1);
+                        setMinimumRating((current) => current === rating ? 0 : rating);
+                      }}
                       className="h-3.5 w-3.5 shrink-0 accent-[#c98b1b]"
                       aria-label={`${rating} stars and above`}
                     />
@@ -528,8 +533,14 @@ const Explore = () => {
 
             {filterSection("availability", "Availability", (
               <>
-                {checkboxOption("In stock", availability === "in-stock", () => setAvailability((current) => current === "in-stock" ? "" : "in-stock"))}
-                {checkboxOption("Out of stock", availability === "out-of-stock", () => setAvailability((current) => current === "out-of-stock" ? "" : "out-of-stock"))}
+                {checkboxOption("In stock", availability === "in-stock", () => {
+                  setCurrentPage(1);
+                  setAvailability((current) => current === "in-stock" ? "" : "in-stock");
+                })}
+                {checkboxOption("Out of stock", availability === "out-of-stock", () => {
+                  setCurrentPage(1);
+                  setAvailability((current) => current === "out-of-stock" ? "" : "out-of-stock");
+                })}
               </>
             ))}
           </aside>
@@ -559,7 +570,10 @@ const Explore = () => {
                 Sort by:
                 <select
                   value={sortBy}
-                  onChange={(event) => setSortBy(event.target.value)}
+                  onChange={(event) => {
+                    setCurrentPage(1);
+                    setSortBy(event.target.value);
+                  }}
                   className="rounded-md border border-[#e8dfd1] bg-white px-2.5 py-2 text-xs text-[#30271b] outline-none focus:border-[#174a38]"
                 >
                   {SORT_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
@@ -589,8 +603,8 @@ const Explore = () => {
                   <nav className="mt-6 flex flex-wrap items-center justify-center gap-2" aria-label="Product pages">
                     <button
                       type="button"
-                      onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-                      disabled={currentPage === 1}
+                      onClick={() => setCurrentPage(Math.max(1, activePage - 1))}
+                      disabled={activePage === 1}
                       className="rounded-md border border-[#e8dfd1] bg-white px-3 py-2 text-xs font-semibold text-[#514638] transition hover:border-[#d8b46c] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Previous
@@ -600,17 +614,17 @@ const Explore = () => {
                         key={page}
                         type="button"
                         onClick={() => setCurrentPage(page)}
-                        aria-current={currentPage === page ? "page" : undefined}
+                        aria-current={activePage === page ? "page" : undefined}
                         aria-label={`Page ${page}`}
-                        className={`h-9 min-w-9 rounded-md border px-3 text-xs font-semibold transition ${currentPage === page ? "border-[#174a38] bg-[#174a38] text-white" : "border-[#e8dfd1] bg-white text-[#514638] hover:border-[#d8b46c]"}`}
+                        className={`h-9 min-w-9 rounded-md border px-3 text-xs font-semibold transition ${activePage === page ? "border-[#174a38] bg-[#174a38] text-white" : "border-[#e8dfd1] bg-white text-[#514638] hover:border-[#d8b46c]"}`}
                       >
                         {page}
                       </button>
                     ))}
                     <button
                       type="button"
-                      onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-                      disabled={currentPage === totalPages}
+                      onClick={() => setCurrentPage(Math.min(totalPages, activePage + 1))}
+                      disabled={activePage === totalPages}
                       className="rounded-md border border-[#e8dfd1] bg-white px-3 py-2 text-xs font-semibold text-[#514638] transition hover:border-[#d8b46c] disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       Next
