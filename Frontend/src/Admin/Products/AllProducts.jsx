@@ -1,32 +1,37 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useAdmin } from "../../PrivateRouter/AdminContext";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../api";
 import { toast, Toaster } from "react-hot-toast";
 import { FaRupeeSign } from "react-icons/fa";
+import useGoldRates from "../../PrivateRouter/useGoldRates";
 import {
     FiPlus,
     FiSearch,
-    FiFilter,
     FiEdit2,
     FiTrash2,
     FiEye,
     FiBox,
     FiGrid,
     FiList,
-    FiChevronRight,
     FiPackage,
-    FiLayout,
-    FiDatabase
+    FiRefreshCw,
 } from "react-icons/fi";
 
 const AllProducts = () => {
     const navigate = useNavigate();
     const { productsCache, setProductsCached } = useAdmin();
+    const { current: activeRateSet } = useGoldRates();
 
     const [searchTerm, setSearchTerm] = useState("");
-    const [showLowStockOnly, setShowLowStockOnly] = useState(false);
+    const [categoryFilter, setCategoryFilter] = useState("");
+    const [purityFilter, setPurityFilter] = useState("");
+    const [offerFilter, setOfferFilter] = useState("");
+    const [stockFilter, setStockFilter] = useState("");
+    const [lastPriceUpdateFilter, setLastPriceUpdateFilter] = useState("");
+    const [sortBy, setSortBy] = useState("created_at");
+    const [sortOrder, setSortOrder] = useState("desc");
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 10;
 
@@ -34,7 +39,14 @@ const AllProducts = () => {
         page: currentPage,
         limit: itemsPerPage,
         search: searchTerm,
-        status: showLowStockOnly ? "Low Stock" : "All"
+        status: "All",
+        category: categoryFilter,
+        purity: purityFilter,
+        offerStatus: offerFilter,
+        stockStatus: stockFilter,
+        lastPriceUpdate: lastPriceUpdateFilter,
+        sortBy,
+        sortOrder
     });
 
     const pageData = productsCache[currentCacheKey];
@@ -49,6 +61,15 @@ const AllProducts = () => {
 
     const [pagination, setPagination] = useState(pageData?.pagination || { total: 0, totalPages: 1 });
     const [stats, setStats] = useState(pageData?.stats || { total: 0, active: 0, lowStock: 0, outOfStock: 0 });
+    const [filterOptions, setFilterOptions] = useState(pageData?.filters || { categories: [], purities: [] });
+    const [refreshingPrices, setRefreshingPrices] = useState(false);
+    const [lastPriceRefresh, setLastPriceRefresh] = useState(null);
+    const previousRateSignature = useRef("");
+    const activeRateSignature = activeRateSet
+        ? `${activeRateSet.batch_id || activeRateSet.id}:${activeRateSet.rates
+            .map((rate) => `${rate.metal_type}:${rate.purity}:${rate.rate_per_unit ?? rate.rate_per_gram}`)
+            .join("|")}`
+        : "";
 
     // Rapid Add Modal
     const [isRapidAddOpen, setIsRapidAddOpen] = useState(false);
@@ -78,21 +99,28 @@ const AllProducts = () => {
             }
             fetchProducts();
         } catch (error) {
-            toast.error("Process failed.");
+            toast.error(error.response?.data?.message || "Process failed.");
         } finally {
             setRapidSaving(false);
         }
     };
 
-    const fetchProducts = async () => {
+    const fetchProducts = useCallback(async () => {
         const params = {
             page: currentPage,
             limit: itemsPerPage,
             search: searchTerm,
-            status: showLowStockOnly ? "Low Stock" : "All"
+            status: "All",
+            category: categoryFilter,
+            purity: purityFilter,
+            offerStatus: offerFilter,
+            stockStatus: stockFilter,
+            lastPriceUpdate: lastPriceUpdateFilter,
+            sortBy,
+            sortOrder
         };
         const cacheKey = JSON.stringify(params);
-        if (!productsCache[cacheKey]) setLoading(true);
+        setLoading(true);
 
         try {
             const response = await api.get("/products", { params });
@@ -104,27 +132,54 @@ const AllProducts = () => {
                 finalData = {
                     products: Array.isArray(data.products) ? data.products : [],
                     pagination: data.pagination || { total: 0, totalPages: 1 },
-                    stats: data.stats || { total: 0, active: 0, lowStock: 0, outOfStock: 0 }
+                    stats: data.stats || { total: 0, active: 0, lowStock: 0, outOfStock: 0 },
+                    filters: data.filters || { categories: [], purities: [] }
                 };
             }
             setProducts(finalData.products);
             setPagination(finalData.pagination);
             setStats(finalData.stats);
+            setFilterOptions(finalData.filters);
             setProductsCached(prev => ({ ...prev, [cacheKey]: finalData }));
         } catch (error) {
             console.error("Error fetching products:", error);
+            toast.error(error.response?.data?.message || "Could not load products.");
             setProducts([]);
         } finally {
             setLoading(false);
         }
-    };
+    }, [currentPage, itemsPerPage, searchTerm, categoryFilter, purityFilter, offerFilter, stockFilter, lastPriceUpdateFilter, sortBy, sortOrder, setProductsCached]);
 
     useEffect(() => {
         const timeout = setTimeout(() => {
             fetchProducts();
         }, 300);
         return () => clearTimeout(timeout);
-    }, [currentPage, searchTerm, showLowStockOnly]);
+    }, [fetchProducts]);
+
+    useEffect(() => {
+        if (!activeRateSignature) {
+            previousRateSignature.current = "";
+            return;
+        }
+        if (previousRateSignature.current === activeRateSignature) return;
+        previousRateSignature.current = activeRateSignature;
+
+        const syncProductsToActiveRates = async () => {
+            try {
+                await api.post("/products/recalculate-prices", {
+                    reason: "Synchronize product prices with active daily rates"
+                });
+                setProductsCached({});
+                await fetchProducts();
+            } catch (error) {
+                console.error("Could not synchronize products with active rates:", error);
+                toast.error(error.response?.data?.message || "Could not update product prices from the active daily rates.");
+            }
+        };
+
+        void syncProductsToActiveRates();
+    }, [activeRateSignature, fetchProducts, setProductsCached]);
 
     const handleDelete = async (id) => {
         if (!window.confirm("Are you sure you want to delete this product?")) return;
@@ -154,7 +209,7 @@ const AllProducts = () => {
             setProducts(products.map(p => p.id === currentProduct.id ? { ...p, total_stock: parseInt(newStock), status: parseInt(newStock) === 0 ? 'Out of Stock' : parseInt(newStock) < 10 ? 'Low Stock' : 'Active' } : p));
             setCurrentProduct(null);
         } catch (error) {
-            toast.error("Failed to update stock");
+            toast.error(error.response?.data?.message || "Failed to update stock");
         } finally {
             setUpdatingStock(false);
         }
@@ -177,7 +232,32 @@ const AllProducts = () => {
     // Reset to page 1 when search/filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, showLowStockOnly]);
+    }, [searchTerm, categoryFilter, purityFilter, offerFilter, stockFilter, lastPriceUpdateFilter, sortBy, sortOrder]);
+
+    const refreshPrices = async () => {
+        if (!window.confirm("Recalculate product prices using the currently active daily gold rates?")) return;
+        setRefreshingPrices(true);
+        try {
+            const { data } = await api.post("/products/recalculate-prices", { reason: "Manual product price refresh" });
+            toast.success(`Price refresh complete: ${data.updated} product${data.updated === 1 ? "" : "s"} updated.`);
+            setLastPriceRefresh(new Date());
+            setProductsCached({});
+            await fetchProducts();
+        } catch (error) {
+            toast.error(error.response?.data?.message || "Could not refresh product prices.");
+        } finally {
+            setRefreshingPrices(false);
+        }
+    };
+
+    const formatMoney = (value) => value == null || value === ""
+        ? "—"
+        : new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(Number(value));
+    const formatDate = (value) => {
+        if (!value) return "Not updated";
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? "—" : date.toLocaleString("en-IN", { dateStyle: "medium", timeStyle: "short" });
+    };
 
     const getProductImage = (product) => {
         let imgUrl = null;
@@ -249,25 +329,63 @@ const AllProducts = () => {
 
                     {/* Filter Bar */}
                     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-wrap gap-3 items-center">
-                        <div className="relative flex-1 min-w-[200px]">
+                        <div className="relative flex-1 min-w-[220px]">
                             <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
                             <input
                                 type="text"
                                 placeholder="Search jewelry by name, SKU..."
-                                className="w-1/2 pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-[#7b2cbf] focus:bg-white transition-all text-sm font-medium text-slate-700"
+                                className="w-full pl-9 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:border-[#7b2cbf] focus:bg-white transition-all text-sm font-medium text-slate-700"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
                        
                     
-                        <select className="px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-slate-600 outline-none hover:border-[#7b2cbf] transition-all cursor-pointer">
-                            <option>Select Status</option>
-                            <option>Active</option>
-                            <option>Low Stock</option>
-                            <option>Out of Stock</option>
+                        <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)} className="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-slate-600 outline-none cursor-pointer">
+                            <option value="">All categories</option>
+                            {filterOptions.categories.map((category) => <option key={category} value={category}>{category}</option>)}
+                        </select>
+                        <select value={purityFilter} onChange={(event) => setPurityFilter(event.target.value)} className="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-slate-600 outline-none cursor-pointer">
+                            <option value="">All purities</option>
+                            {filterOptions.purities.map((purity) => <option key={purity} value={purity}>{purity}</option>)}
+                        </select>
+                        <select value={offerFilter} onChange={(event) => setOfferFilter(event.target.value)} className="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-slate-600 outline-none cursor-pointer">
+                            <option value="">All offers</option>
+                            <option value="offered">Offer configured</option>
+                            <option value="no-offer">No offer</option>
+                        </select>
+                        <select value={stockFilter} onChange={(event) => setStockFilter(event.target.value)} className="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-slate-600 outline-none cursor-pointer">
+                            <option value="">All stock</option>
+                            <option value="in-stock">In stock</option>
+                            <option value="low-stock">Low stock</option>
+                            <option value="out-of-stock">Out of stock</option>
+                        </select>
+                        <select value={lastPriceUpdateFilter} onChange={(event) => setLastPriceUpdateFilter(event.target.value)} className="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-slate-600 outline-none cursor-pointer">
+                            <option value="">All price updates</option>
+                            <option value="updated">Price updated</option>
+                            <option value="not-updated">Never updated</option>
+                        </select>
+                        <select value={`${sortBy}:${sortOrder}`} onChange={(event) => {
+                            const [nextSortBy, nextSortOrder] = event.target.value.split(":");
+                            setSortBy(nextSortBy);
+                            setSortOrder(nextSortOrder);
+                        }} className="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-slate-600 outline-none cursor-pointer">
+                            <option value="created_at:desc">Newest first</option>
+                            <option value="name:asc">Name A–Z</option>
+                            <option value="final_selling_price:asc">Price low-high</option>
+                            <option value="final_selling_price:desc">Price high-low</option>
+                            <option value="total_stock:asc">Stock low-high</option>
+                            <option value="price_updated_at:desc">Recently price-updated</option>
                         </select>
                        <div className="flex items-center gap-3">
+                    <button
+                        onClick={refreshPrices}
+                        disabled={refreshingPrices}
+                        className="inline-flex items-center gap-2 rounded-xl border border-[#7b2cbf]/30 bg-[#240046]/5 px-4 py-3 text-sm font-bold text-[#7b2cbf] disabled:opacity-60"
+                    >
+                        <FiRefreshCw className={refreshingPrices ? "animate-spin" : ""} />
+                        {refreshingPrices ? "Refreshing…" : "Refresh Prices"}
+                    </button>
                     <div className="flex bg-gray-100 p-1 rounded-xl border border-gray-200">
                         <button onClick={() => setViewMode("table")} className={`p-2 rounded-lg transition-all ${viewMode === "table" ? "bg-[#003B3B] text-white shadow-sm" : "text-gray-400 hover:text-slate-600"}`}>
                             <FiList size={17} />
@@ -275,6 +393,10 @@ const AllProducts = () => {
                         <button onClick={() => setViewMode("grid")} className={`p-2 rounded-lg transition-all ${viewMode === "grid" ? "bg-[#003B3B] text-white shadow-sm" : "text-gray-400 hover:text-slate-600"}`}>
                             <FiGrid size={17} />
                         </button>
+                    </div>
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
+                        <p>Prices are stored from the active daily metal rates; MRP remains manually configured.</p>
+                        <p>{lastPriceRefresh ? `Last manual refresh: ${formatDate(lastPriceRefresh)}` : "Product rows show each price's last update."}</p>
                     </div>
                     <button
                         onClick={() => navigate("/admin/products/add")}
@@ -289,76 +411,55 @@ const AllProducts = () => {
                         /* Table View */
                         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                             <div className="overflow-x-auto">
-                                <table className="w-full text-left">
+                                <table className="w-full min-w-[1900px] text-left">
                                     <thead>
-                                        <tr className="bg-[#003B3B] border-b border-[#003B3B]">
-                                            <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider w-10">
-                                                <input type="checkbox" className="rounded border-white/40 accent-white" />
-                                            </th>
-                                            <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider w-12">S.No.</th>
-                                            <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Jewelry</th>
-                                            <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Category</th>
-                                            <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Metal</th>
-                                            <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Price</th>
-                                            <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Stock</th>
-                                            <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Status</th>
-                                            <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Actions</th>
+                                        <tr className="border-b border-[#7b2cbf] bg-[#240046]">
+                                            {["Image", "Product Name", "SKU / Product Code", "Category", "Metal Type", "Purity", "Gross Weight (g)", "Net Gold Weight (g)", "Making Charge", "Daily Gold Rate", "Gold Value", "MRP", "Offer Type", "Offer Price / Discount", "Final Price", "Stock Status", "Last Price Updated", "Actions"].map((heading) => (
+                                                <th key={heading} className="whitespace-nowrap px-4 py-4 text-[11px] font-bold uppercase tracking-wider text-white">{heading}</th>
+                                            ))}
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-gray-50">
-                                        {currentItems.map((product, index) => (
+                                    <tbody className="divide-y divide-gray-200">
+                                        {currentItems.map((product) => (
                                             <tr key={product.id} className="hover:bg-[#240046]/5 transition-colors group">
-                                                <td className="px-5 py-4">
-                                                    <input type="checkbox" className="rounded border-gray-300" />
+                                                <td className="px-4 py-3"><img src={getProductImage(product)} alt={product.name} loading="lazy" className="h-11 w-11 rounded-lg border border-gray-100 object-cover" /></td>
+                                                <td className="max-w-[180px] px-4 py-3 text-sm font-bold text-slate-800">{product.name}</td>
+                                                <td className="px-4 py-3 text-xs font-semibold text-slate-600">{product.product_code || "—"}</td>
+                                                <td className="px-4 py-3 text-xs text-slate-600">{product.category || "—"}</td>
+                                                <td className="px-4 py-3 text-xs text-slate-600">{product.metal_type || "—"}</td>
+                                                <td className="px-4 py-3 text-xs text-slate-600">{product.purity || "—"}</td>
+                                                <td className="px-4 py-3 text-xs text-slate-600">{product.gross_weight ?? "—"}</td>
+                                                <td className="px-4 py-3 text-xs text-slate-600">{product.net_gold_weight ?? "—"}</td>
+                                                <td className="px-4 py-3 text-xs text-slate-600">{product.making_charge == null ? "—" : `${product.making_charge_type === "Percentage" ? `${product.making_charge}%` : formatMoney(product.making_charge)}`}</td>
+                                                <td className="px-4 py-3 text-xs text-slate-600">{product.gold_rate_per_gram == null ? "—" : `${formatMoney(product.gold_rate_per_gram)} / g`}</td>
+                                                <td className="px-4 py-3 text-xs font-semibold text-slate-700">{formatMoney(product.gold_value)}</td>
+                                                <td className="px-4 py-3 text-xs text-slate-500">
+                                                    {Number(product.mrp) > Number(product.final_selling_price) && <span className="line-through">{formatMoney(product.mrp)}</span>}
+                                                    {Number(product.mrp) <= Number(product.final_selling_price) && formatMoney(product.mrp)}
                                                 </td>
-                                                <td className="px-3 py-4 text-sm text-gray-500 font-medium">
-                                                    {(currentPage - 1) * itemsPerPage + index + 1}
+                                                <td className="px-4 py-3 text-xs text-slate-600">{product.offer_type || (Number(product.offer) > 0 ? "Percentage" : "None")}</td>
+                                                <td className="px-4 py-3 text-xs text-slate-600">
+                                                    <span>{formatMoney(product.offer_price)}</span>
+                                                    {Number(product.applied_discount) > 0 && <span className="ml-1 rounded bg-orange-50 px-1.5 py-0.5 text-[10px] font-bold text-[#ff8500]">−{formatMoney(product.applied_discount)}</span>}
                                                 </td>
-                                                <td className="px-4 py-4">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-100 border border-gray-100 shrink-0 group-hover:scale-105 transition-transform">
-                                                            <img
-                                                                src={getProductImage(product)}
-                                                                alt={product.name}
-                                                                loading="lazy"
-                                                                className="w-full h-full object-cover"
-                                                                onError={(e) => e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name)}&background=3c096c&color=FCD34D`}
-                                                            />
-                                                        </div>
-                                                        <div>
-                                                            <p className="text-sm font-bold text-slate-800 leading-tight max-w-[180px] truncate">{product.name}</p>
-                                                            <p className="text-[11px] text-gray-400 font-medium mt-0.5">SKU: {product.product_code || `SS${String(product.id).padStart(4,'0')}`}</p>
-                                                        </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-4">
-                                                    <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#240046]/10 text-[#7b2cbf] border border-[#7b2cbf]/20">
-                                                        {product.category || '—'}
+                                                <td className="px-4 py-3 text-sm font-black text-[#240046]">{formatMoney(product.final_selling_price)}</td>
+                                                <td className="px-4 py-3">
+                                                    <span className={`rounded-lg border px-2.5 py-1 text-[11px] font-bold ${getStatusStyle(product.total_stock <= 0 ? "Out of Stock" : product.total_stock < 10 ? "Low Stock" : "Active")}`}>
+                                                        {product.total_stock <= 0 ? "Out of Stock" : product.total_stock < 10 ? "Low Stock" : "In Stock"}
                                                     </span>
-                                                </td>
-                                                <td className="px-4 py-4 text-sm font-medium text-slate-600">
-                                                    {product.metal_type || '—'}
-                                                </td>
-                                                <td className="px-4 py-4">
-                                                    <p className="text-sm font-bold text-slate-800">₹{parseFloat(product.offer_price || product.discount_price || product.mrp || 0).toLocaleString('en-IN')}</p>
-                                                    {product.mrp && product.offer_price && parseFloat(product.mrp) > parseFloat(product.offer_price) && (
-                                                        <p className="text-[11px] text-gray-400 line-through">₹{parseFloat(product.mrp).toLocaleString('en-IN')}</p>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-4">
                                                     <button
                                                         onClick={() => { setCurrentProduct(product); setNewStock(product.total_stock || "0"); }}
-                                                        className="text-sm font-bold text-slate-700 hover:text-[#7b2cbf] underline decoration-dotted decoration-gray-300 transition-colors"
+                                                        className="ml-2 text-xs font-semibold text-slate-500 underline decoration-dotted"
+                                                        title="Update stock quantity"
                                                     >
-                                                        {product.total_stock ?? product.stock ?? 0}
+                                                        ({product.total_stock ?? 0})
                                                     </button>
                                                 </td>
-                                                <td className="px-4 py-4">
-                                                    <span className={`px-3 py-1 rounded-lg text-[11px] font-bold border ${getStatusStyle(product.status)}`}>
-                                                        {product.status || 'Active'}
-                                                    </span>
+                                                <td className="px-4 py-3 text-xs text-slate-500">
+                                                    <span>{formatDate(product.price_updated_at)}</span>
+                                                    {product.price_updated_at && <span className="mt-1 block text-[10px] font-semibold text-emerald-700">Recalculated</span>}
                                                 </td>
-                                                <td className="px-4 py-4">
+                                                <td className="px-4 py-3">
                                                     <div className="flex items-center gap-2">
                                                         <Link
                                                             to={`/admin/products/${product.id}`}

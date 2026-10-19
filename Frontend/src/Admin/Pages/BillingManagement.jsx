@@ -267,10 +267,10 @@ function CatalogProductFields({ product, catalogProducts, loading, onSelect, sel
           >
             <option value="">{loading ? "Loading products..." : "Choose a catalog product"}</option>
             {catalogProducts.map((catalogProduct) => {
-              const price = Number(catalogProduct.offer_price) > 0
-                ? Number(catalogProduct.offer_price)
-                : Number(catalogProduct.final_selling_price) > 0
-                  ? Number(catalogProduct.final_selling_price)
+              const price = Number(catalogProduct.final_selling_price) > 0
+                ? Number(catalogProduct.final_selling_price)
+                : Number(catalogProduct.offer_price) > 0
+                  ? Number(catalogProduct.offer_price)
                   : Number(catalogProduct.mrp || 0);
               return (
                 <option key={catalogProduct.id} value={catalogProduct.id}>
@@ -301,10 +301,10 @@ function CatalogProductFields({ product, catalogProducts, loading, onSelect, sel
           {searchTerm.trim() && (
             <div className="mt-2 max-h-56 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-sm" role="listbox" aria-label="Matching catalog products">
               {filteredProducts.length > 0 ? filteredProducts.map((catalogProduct) => {
-                const price = Number(catalogProduct.offer_price) > 0
-                  ? Number(catalogProduct.offer_price)
-                  : Number(catalogProduct.final_selling_price) > 0
-                    ? Number(catalogProduct.final_selling_price)
+                const price = Number(catalogProduct.final_selling_price) > 0
+                  ? Number(catalogProduct.final_selling_price)
+                  : Number(catalogProduct.offer_price) > 0
+                    ? Number(catalogProduct.offer_price)
                     : Number(catalogProduct.mrp || 0);
                 const selected = String(catalogProduct.id) === product.product_id;
                 return (
@@ -770,10 +770,10 @@ export default function BillingManagement() {
       setProductToAdd({ ...EMPTY_PRODUCT });
       return;
     }
-    const price = Number(selected.offer_price) > 0
-      ? Number(selected.offer_price)
-      : Number(selected.final_selling_price) > 0
-        ? Number(selected.final_selling_price)
+    const price = Number(selected.final_selling_price) > 0
+      ? Number(selected.final_selling_price)
+      : Number(selected.offer_price) > 0
+        ? Number(selected.offer_price)
         : Number(selected.mrp || 0);
     setProductToAdd(resolveProductDetails({
       product_id: String(selected.id),

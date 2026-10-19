@@ -109,6 +109,7 @@ function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
+  const [priceHistory, setPriceHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadedProductId, setLoadedProductId] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -143,6 +144,18 @@ function ProductDetail() {
       })
       .finally(() => {
         if (active) setLoading(false);
+      });
+    return () => { active = false; };
+  }, [id, refreshKey]);
+
+  useEffect(() => {
+    let active = true;
+    api.get(`/products/${id}/price-history`)
+      .then(({ data }) => {
+        if (active) setPriceHistory(Array.isArray(data.history) ? data.history : []);
+      })
+      .catch((error) => {
+        if (active) console.error("Failed to load product price history:", error);
       });
     return () => { active = false; };
   }, [id, refreshKey]);
