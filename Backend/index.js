@@ -20,14 +20,16 @@ const { initializeReceiptSettingsModule } = require('./src/modules/receiptSettin
 const { initializeHomeSectionModule } = require('./src/modules/homeSectionModule');
 const apiRouter = require('./src/router');
 const { pool } = require('./src/config/db');
+const privateUploadGuard = require('./src/middleware/privateUploadGuard');
 
 const app = express();
 const PORT = Number(process.env.PORT || 5000);
+const uploadsDirectory = path.join(__dirname, 'uploads');
 
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ limit: '1mb', extended: true }));
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', privateUploadGuard(uploadsDirectory), express.static(uploadsDirectory));
 
 app.get('/', (req, res) => {
   res.json({ message: 'Gold Shop Management Backend is running' });

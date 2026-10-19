@@ -462,7 +462,7 @@ const downloadDocument = asyncHandler(async (req, res) => {
   if (!validId(req.params.documentId)) return res.status(400).json({ message: 'Document ID is invalid' });
   const document = await getDealerDocument(req.params.documentId);
   if (!document) return res.status(404).json({ message: 'Dealer document not found' });
-  const filePath = path.resolve(__dirname, '../../private_uploads/dealer-documents', document.stored_name);
+  const filePath = path.resolve(__dirname, '../../uploads/.private/dealer-documents', document.stored_name);
   return res.download(filePath, document.original_name);
 });
 const removeDocument = asyncHandler(async (req, res) => {

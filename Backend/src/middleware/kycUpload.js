@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const multer = require('multer');
 
-const kycStorageDirectory = path.resolve(__dirname, '../../private_uploads/kyc');
+const kycStorageDirectory = path.resolve(__dirname, '../../uploads/.private/kyc');
 fs.mkdirSync(kycStorageDirectory, { recursive: true });
 
 const MAX_FILE_SIZE_BYTES = Math.min(
