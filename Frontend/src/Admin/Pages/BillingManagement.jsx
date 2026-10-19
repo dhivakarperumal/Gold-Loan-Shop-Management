@@ -709,14 +709,14 @@ export default function BillingManagement() {
               <table className="w-full min-w-[900px] text-left">
                 <thead className="bg-[#00695C] text-xs uppercase tracking-wide text-white">
                   <tr>
-                    <th className="px-4 py-3">S.No.</th>
-                    <th className="px-4 py-3">Invoice</th>
-                    <th className="px-4 py-3">Customer(s)</th>
-                    <th className="px-4 py-3">Items</th>
-                    <th className="px-4 py-3">Payment</th>
-                    <th className="px-4 py-3">Date</th>
-                    <th className="px-4 py-3 text-right">Total</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
+                    <th className="px-4 py-4">S.No.</th>
+                    <th className="px-4 py-4">Invoice</th>
+                    <th className="px-4 py-4">Customer(s)</th>
+                    <th className="px-4 py-4">Items</th>
+                    <th className="px-4 py-4">Payment</th>
+                    <th className="px-4 py-4">Date</th>
+                    <th className="px-4 py-4 text-right">Total</th>
+                    <th className="px-4 py-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -729,14 +729,14 @@ export default function BillingManagement() {
                     const billProducts = decodeArray(bill.products);
                     return (
                       <tr key={bill.id} className="text-sm">
-                        <td className="px-4 py-3 text-slate-500">{index + 1}</td>
-                        <td className="px-4 py-3 font-bold text-[#00695C]">{bill.invoice_no}</td>
-                        <td className="px-4 py-3 text-slate-700">{billCustomers.map((customer) => customer.name).join(", ")}</td>
-                        <td className="px-4 py-3 text-slate-600">{billProducts.length} item{billProducts.length === 1 ? "" : "s"}</td>
-                        <td className="px-4 py-3 text-slate-600">{bill.payment_type === "EXCHANGE_GOLD" ? "Exchange Gold" : "Full Payment"}</td>
-                        <td className="px-4 py-3 text-slate-500">{bill.created_at ? new Date(bill.created_at).toLocaleDateString("en-IN") : "—"}</td>
-                        <td className="px-4 py-3 text-right font-bold text-slate-900">{currency(bill.total_amount)}</td>
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-4 text-slate-500">{index + 1}</td>
+                        <td className="px-4 py-4 font-bold text-[#00695C]">{bill.invoice_no}</td>
+                        <td className="px-4 py-4 text-slate-700">{billCustomers.map((customer) => customer.name).join(", ")}</td>
+                        <td className="px-4 py-4 text-slate-600">{billProducts.length} item{billProducts.length === 1 ? "" : "s"}</td>
+                        <td className="px-4 py-4 text-slate-600">{bill.payment_type === "EXCHANGE_GOLD" ? "Exchange Gold" : "Full Payment"}</td>
+                        <td className="px-4 py-4 text-slate-500">{bill.created_at ? new Date(bill.created_at).toLocaleDateString("en-IN") : "—"}</td>
+                        <td className="px-4 py-4 text-right font-bold text-slate-900">{currency(bill.total_amount)}</td>
+                        <td className="px-4 py-4">
                           <div className="flex justify-end gap-1">
                             <button type="button" onClick={() => setViewingBill(bill)} className="rounded-md p-2 text-sky-700 hover:bg-sky-50" aria-label={`View bill ${bill.invoice_no}`} title="View"><FiEye /></button>
                             <button type="button" onClick={() => editBill(bill)} className="rounded-md p-2 text-amber-700 hover:bg-amber-50" aria-label={`Edit bill ${bill.invoice_no}`} title="Edit"><FiEdit2 /></button>
