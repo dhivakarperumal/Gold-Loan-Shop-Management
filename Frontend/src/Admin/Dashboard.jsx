@@ -586,7 +586,7 @@ const Dashboard = () => {
       {/* ── Middle Section: Charts (Sales Overview & Loan Status) ──── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Left: Sales Overview (65% width) */}
-        <div className="lg:col-span-8 bg-white p-5 sm:p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+        <div className="lg:col-span-8 bg-white p-5 sm:p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <div>
               <h3 className="text-base sm:text-lg font-bold text-slate-800">Sales Overview</h3>
@@ -661,7 +661,7 @@ const Dashboard = () => {
       {/* ── Bottom Section: Recent Loans & Top Selling Products ───── */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
         {/* Left: Recent Loans (65% width, replacing Recent Orders properly) */}
-        <div className="lg:col-span-8 bg-white p-5 sm:p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
+        <div className="lg:col-span-8 bg-white p-5 sm:p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-base sm:text-lg font-bold text-slate-800">Recent Loans</h3>
             <button
@@ -673,27 +673,29 @@ const Dashboard = () => {
           </div>
 
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full border-separate border-spacing-0 text-left text-xs">
               <thead>
-                <tr className="text-[11px] text-slate-400 font-bold uppercase tracking-wider border-b border-slate-100">
-                  <th className="pb-3">#</th>
-                  <th className="pb-3">Customer</th>
-                  <th className="pb-3">Products</th>
-                  <th className="pb-3">Amount</th>
-                  <th className="pb-3">Status</th>
-                  <th className="pb-3">Date</th>
-                  <th className="pb-3 text-center">Action</th>
+                <tr className="text-[11px] text-white font-bold uppercase tracking-wider">
+                  <th className="rounded-tl-xl bg-[#064A41] px-4 py-4">S No</th>
+                  <th className="bg-[#064A41] px-4 py-4">Loan ID</th>
+                  <th className="bg-[#064A41] px-4 py-4">Customer</th>
+                  <th className="bg-[#064A41] px-4 py-4">Products</th>
+                  <th className="bg-[#064A41] px-4 py-4">Amount</th>
+                  <th className="bg-[#064A41] px-4 py-4">Status</th>
+                  <th className="bg-[#064A41] px-4 py-4">Date</th>
+                  <th className="rounded-tr-xl bg-[#064A41] px-4 py-4 text-center">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-50">
+              <tbody className="divide-y divide-gray-200">
                 {recentLoans.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-8 text-center text-sm font-medium text-slate-400">
+                    <td colSpan={8} className="py-8 text-center text-sm font-medium text-slate-400">
                       No recent loans found.
                     </td>
                   </tr>
                 ) : recentLoans.map((loan, idx) => (
                   <tr key={idx} className="hover:bg-slate-50/70 transition-colors group">
+                    <td className="py-3.5 font-bold text-slate-700">{idx + 1}</td>
                     <td className="py-3.5 font-bold text-slate-700">{loan.id}</td>
                     <td className="py-3.5 font-semibold text-slate-800">{loan.customer}</td>
                     <td className="py-3.5">
