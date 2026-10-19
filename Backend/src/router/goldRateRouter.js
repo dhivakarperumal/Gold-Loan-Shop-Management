@@ -10,11 +10,10 @@ const {
 
 const router = express.Router();
 
-router.use(requireAdmin);
 router.get('/current', getCurrent);
-router.get('/history', getHistory);
-router.post('/', postRates);
-router.put('/:id', putRates);
-router.post('/:id/activate', activateRates);
+router.get('/history', requireAdmin, getHistory);
+router.post('/', requireAdmin, postRates);
+router.put('/:id', requireAdmin, putRates);
+router.post('/:id/activate', requireAdmin, activateRates);
 
 module.exports = router;
