@@ -1,101 +1,57 @@
-import React from "react";
-import {
-    FiSettings,
-    FiGlobe,
-    FiBell,
-    FiLock,
-    FiDatabase,
-    FiShield,
-    FiUsers,
-    FiCheck
-} from "react-icons/fi";
-import { FaRupeeSign } from "react-icons/fa";
+import { FiArrowRight, FiPrinter, FiSettings, FiUsers } from "react-icons/fi";
+import { Link } from "react-router-dom";
 
-const Settings = () => {
-    return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            {/* Header */}
-            <div>
-                <h1 className="text-2xl font-bold text-slate-800">System Preferences</h1>
-                <p className="text-sm text-gray-500 font-medium mt-1">Configure your eMart administration experience</p>
-            </div>
+const settingsLinks = [
+    {
+        title: "Daily Gold Rate",
+        description: "Manage audited Gold, Silver, Platinum and Diamond rates used for billing and product calculations.",
+        path: "/admin/settings/daily-gold-rate",
+        label: "Manage rates"
+    },
+    {
+        title: "Receipt Settings",
+        description: "Configure the logo, shop name, contact information, address, and footer printed on bills.",
+        path: "/admin/settings/receipt",
+        label: "Configure receipt",
+        icon: <FiPrinter />
+    },
+    {
+        title: "User Management",
+        description: "View and manage all registered customer accounts, contact details, and account status.",
+        path: "/admin/users/all",
+        label: "Manage users",
+        icon: <FiUsers />
+    }
+];
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Navigation Menu */}
-                <div className="lg:col-span-1 space-y-2">
-                    {[
-                        { label: "General Settings", icon: <FiSettings />, active: true },
-                        { label: "Notifications", icon: <FiBell />, active: false },
-                        { label: "Security & Access", icon: <FiShield />, active: false },
-                        { label: "Regional & Language", icon: <FiGlobe />, active: false },
-                        { label: "Payment Gateways", icon: <FaRupeeSign />, active: false },
-                        { label: "Team Management", icon: <FiUsers />, active: false },
-                        { label: "Data & Backup", icon: <FiDatabase />, active: false },
-                    ].map((item, i) => (
-                        <button key={i} className={`w-full flex items-center gap-4 px-6 py-4 rounded-2xl text-sm font-bold transition-all ${item.active ? 'bg-blue-600 text-white shadow-lg shadow-blue-100' : 'bg-white text-gray-500 hover:bg-gray-50 hover:text-slate-800 border border-gray-100'}`}>
-                            <span className="text-xl">{item.icon}</span>
-                            {item.label}
-                        </button>
-                    ))}
-                </div>
+const Settings = () => (
+    <main className="space-y-6">
+        <header className="rounded-2xl bg-gradient-to-r from-[#003B3B] via-[#00594f] to-[#087568] px-5 py-6 text-white shadow-lg sm:px-7">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-200">Admin preferences</p>
+            <h1 className="mt-1 text-2xl font-black sm:text-3xl">All Settings</h1>
+            <p className="mt-2 max-w-2xl text-sm text-white/75">Access and manage the settings available for your Sri Golds admin panel.</p>
+        </header>
 
-                {/* Content Area */}
-                <div className="lg:col-span-2 space-y-6">
-                    <div className="bg-white p-8 rounded-[2rem] border border-gray-100 shadow-sm space-y-8">
-                        <div>
-                            <h3 className="text-xl font-bold text-slate-800 mb-6 border-b border-gray-50 pb-4">General Configuration</h3>
-
-                            <div className="space-y-6">
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-black uppercase text-gray-400 tracking-widest pl-1">Store Name</label>
-                                        <input type="text" defaultValue="eMart Jewelry Collections" className="w-full px-5 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:bg-white focus:border-blue-500 transition-all font-semibold text-slate-700 shadow-inner" />
-                                    </div>
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-black uppercase text-gray-400 tracking-widest pl-1">Store Email</label>
-                                        <input type="email" defaultValue="admin@emart.com" className="w-full px-5 py-3 bg-gray-50 border border-gray-100 rounded-xl outline-none focus:bg-white focus:border-blue-500 transition-all font-semibold text-slate-700 shadow-inner" />
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black uppercase text-gray-400 tracking-widest pl-1">Maintenance Mode</label>
-                                    <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl border border-gray-100">
-                                        <div className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-gray-200 transition-colors duration-200 ease-in-out">
-                                            <span className="pointer-events-none inline-block h-5 w-5 translate-x-0 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-slate-800">Disable customer access</p>
-                                            <p className="text-xs text-gray-400 mt-0.5">Your store will be inaccessible while editing.</p>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-2">
-                                    <label className="text-xs font-black uppercase text-gray-400 tracking-widest pl-1">Automatic Updates</label>
-                                    <div className="flex items-center gap-4 p-4 bg-blue-50/50 rounded-2xl border border-blue-100">
-                                        <div className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-blue-600 transition-colors duration-200 ease-in-out">
-                                            <span className="pointer-events-none inline-block h-5 w-5 translate-x-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out"></span>
-                                        </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-blue-800">Enabled</p>
-                                            <p className="text-xs text-blue-500 mt-0.5 font-medium">Keep system up-to-date with latest security patches.</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center justify-end gap-3 pt-6 border-t border-gray-50">
-                            <button className="px-6 py-3 bg-gray-50 hover:bg-gray-100 text-gray-500 rounded-xl font-bold transition-all">Cancel Changes</button>
-                            <button className="flex items-center gap-2 px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold transition-all shadow-lg shadow-blue-100">
-                                <FiCheck /> Save Configuration
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
+        <section aria-label="Available settings" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {settingsLinks.map((setting) => (
+                <Link
+                    key={setting.path}
+                    to={setting.path}
+                    className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
+                >
+                    <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-xl text-[#00695C]">
+                        {setting.icon || <FiSettings />}
+                    </span>
+                    <h2 className="mt-4 text-base font-extrabold text-slate-900">{setting.title}</h2>
+                    <p className="mt-2 min-h-10 text-sm leading-relaxed text-slate-500">{setting.description}</p>
+                    <span className="mt-4 inline-flex items-center gap-2 text-sm font-bold text-[#00695C]">
+                        {setting.label}
+                        <FiArrowRight className="transition-transform group-hover:translate-x-1" />
+                    </span>
+                </Link>
+            ))}
+        </section>
+    </main>
+);
 
 export default Settings;

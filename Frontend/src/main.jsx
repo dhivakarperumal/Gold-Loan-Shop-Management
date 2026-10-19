@@ -43,6 +43,7 @@ const VideoManagement = React.lazy(() => import("./Admin/Marketing/VideoManageme
 const Reviews = React.lazy(() => import("./Admin/Pages/Reviews.jsx"));
 const Settings = React.lazy(() => import("./Admin/Pages/Settings.jsx"));
 const DailyGoldRate = React.lazy(() => import("./Admin/Pages/DailyGoldRate.jsx"));
+const ReceiptSettings = React.lazy(() => import("./Admin/Pages/ReceiptSettings.jsx"));
 const Dealers = React.lazy(() => import("./Admin/Dealers/Dealers.jsx"));
 const CustomerKyc = React.lazy(() => import("./Components/Account/CustomerKyc.jsx"));
 const AdminKyc = React.lazy(() => import("./Admin/Kyc/AdminKyc.jsx"));
@@ -109,6 +110,7 @@ const router = createBrowserRouter([
       { path: "dealers/*", element: <Dealers /> },
       { path: "settings", element: <Settings /> },
       { path: "settings/daily-gold-rate", element: <DailyGoldRate /> },
+      { path: "settings/receipt", element: <ReceiptSettings /> },
       // { path: "profile", element: <Profile /> },
     ],
   },

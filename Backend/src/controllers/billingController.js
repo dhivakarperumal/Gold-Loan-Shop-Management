@@ -260,6 +260,11 @@ function mapSelectedProducts(rawProducts, catalogProducts) {
       product_name: catalogProduct.name,
       category: catalogProduct.category,
       purity: catalogProduct.purity || '',
+      gross_weight: catalogProduct.gross_weight == null ? null : Number(catalogProduct.gross_weight),
+      net_gold_weight: catalogProduct.net_gold_weight == null ? null : Number(catalogProduct.net_gold_weight),
+      making_charge_type: catalogProduct.making_charge_type || '',
+      making_charge: catalogProduct.making_charge == null ? null : Number(catalogProduct.making_charge),
+      rate_per_gram: catalogProduct.gold_rate_per_gram == null ? null : Number(catalogProduct.gold_rate_per_gram),
       price
     });
   }
