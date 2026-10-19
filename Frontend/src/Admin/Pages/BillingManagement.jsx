@@ -296,7 +296,7 @@ export default function BillingManagement() {
   const [catalogProducts, setCatalogProducts] = useState([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(() => new URLSearchParams(window.location.search).get("new") === "1");
   const [editingBillId, setEditingBillId] = useState(null);
   const [viewingBill, setViewingBill] = useState(null);
   const [billSearch, setBillSearch] = useState("");
@@ -476,11 +476,9 @@ export default function BillingManagement() {
     const exchangeTotal = billExchanges.reduce((sum, item) => sum + (Number(item.credit_amount) || 0), 0);
     const date = bill.created_at ? new Date(bill.created_at).toLocaleDateString("en-IN") : "—";
 
-    printWindow.addEventListener("load", () => {
-      printWindow.focus();
-      printWindow.print();
-    }, { once: true });
-    printWindow.document.write(`<!doctype html>
+    try {
+      printWindow.document.open();
+      printWindow.document.write(`<!doctype html>
       <html lang="en">
         <head>
           <meta charset="utf-8" />
@@ -527,7 +525,16 @@ export default function BillingManagement() {
           </div>
         </body>
       </html>`);
-    printWindow.document.close();
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.setTimeout(() => {
+        if (!printWindow.closed) printWindow.print();
+      }, 250);
+    } catch (error) {
+      printWindow.close();
+      console.error("Failed to open bill print dialog:", error);
+      toast.error("Could not open the print dialog. Please try again.");
+    }
   };
 
   const resetForm = () => {
@@ -710,13 +717,6 @@ export default function BillingManagement() {
     <main className="min-h-screen space-y-5 bg-[#F4F7F6] py-1 text-slate-800">
       {!showForm ? (
         <>
-          <header className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-medium text-slate-500">Admin / Billing</p>
-              <h1 className="mt-1 text-2xl font-extrabold text-slate-900">Show All Bills</h1>
-              <p className="mt-1 text-sm text-slate-500">Create and review jewelry invoices.</p>
-            </div>
-          </header>
           <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Billing totals">
             {[
               { label: "Total Amount", value: totalBilled, trend: `${bills.length} bill${bills.length === 1 ? "" : "s"} recorded`, icon: <FiDollarSign />, color: "green" },
