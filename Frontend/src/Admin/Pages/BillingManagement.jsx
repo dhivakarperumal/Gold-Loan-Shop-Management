@@ -3,6 +3,7 @@ import { FiArrowLeft, FiCalendar, FiChevronRight, FiCreditCard, FiDollarSign, Fi
 import { toast } from "react-hot-toast";
 import api from "../../api";
 import useGoldRates from "../../PrivateRouter/useGoldRates";
+import { getReceiptSettings } from "./receiptSettings";
 
 const EMPTY_CUSTOMER = { name: "", phone: "", email: "", address: "" };
 const EMPTY_PRODUCT = { product_id: "", product_name: "", category: "", purity: "", price: "" };
@@ -496,7 +497,32 @@ export default function BillingManagement() {
     `).join("");
     const exchangeTotal = billExchanges.reduce((sum, item) => sum + (Number(item.credit_amount) || 0), 0);
     const date = bill.created_at ? new Date(bill.created_at).toLocaleDateString("en-IN") : "—";
-    const logoUrl = new URL("/images/logo.png", window.location.origin).href;
+    const receiptSettings = getReceiptSettings();
+    let logoUrl = "";
+    if (receiptSettings.logoUrl) {
+      try {
+        if (/^data:image\/(?:png|jpeg|webp);base64,/i.test(receiptSettings.logoUrl)) {
+          logoUrl = receiptSettings.logoUrl;
+        } else {
+          const parsedLogoUrl = new URL(receiptSettings.logoUrl, window.location.origin);
+          if (!["http:", "https:"].includes(parsedLogoUrl.protocol)) {
+            throw new Error("Logo URL must use HTTP or HTTPS.");
+          }
+          logoUrl = parsedLogoUrl.href;
+        }
+      } catch (error) {
+        toast.error("Receipt logo URL is invalid.");
+        console.error("Invalid receipt logo URL:", error);
+        printWindow.close();
+        return;
+      }
+    }
+    const shopName = escapeHtml(receiptSettings.shopName);
+    const shopAddress = escapeHtml(receiptSettings.address);
+    const shopGstNumber = escapeHtml(receiptSettings.gstNumber);
+    const shopPhone = escapeHtml(receiptSettings.phone);
+    const shopEmail = escapeHtml(receiptSettings.email);
+    const footerMessage = escapeHtml(receiptSettings.footerMessage);
 
     try {
       printWindow.document.open();
@@ -536,10 +562,11 @@ export default function BillingManagement() {
         <body>
           <header>
             <div class="brand">
-              <img id="shop-logo" class="logo" src="${escapeHtml(logoUrl)}" alt="Sri Golds logo" />
+              ${logoUrl ? `<img id="shop-logo" class="logo" src="${escapeHtml(logoUrl)}" alt="${shopName} logo" />` : ""}
               <div>
-                <h1>Sri Golds</h1>
-                <p class="address">Tirupattur – Singarapet Road, Tirupattur, Tirupathur, Tirupattur, Tamil Nadu, 635600, India</p>
+                <h1>${shopName}</h1>
+                ${shopAddress ? `<p class="address">${shopAddress}</p>` : ""}
+                ${shopGstNumber ? `<p class="address"><strong>GSTIN:</strong> ${shopGstNumber}</p>` : ""}
               </div>
             </div>
             <div class="invoice-meta">
@@ -563,9 +590,12 @@ export default function BillingManagement() {
             <div class="total-row grand-total"><span>Total</span><span>${currency(bill.total_amount)}</span></div>
           </div>
           <footer>
-            <strong>Sri Golds</strong>
-            <div class="thanks">Thank you for choosing us. We value your trust and look forward to serving you again.</div>
-            <div>Tirupattur – Singarapet Road, Tirupattur, Tirupathur, Tirupattur, Tamil Nadu, 635600, India</div>
+            <strong>${shopName}</strong>
+            ${footerMessage ? `<div class="thanks">${footerMessage}</div>` : ""}
+            ${shopAddress ? `<div>${shopAddress}</div>` : ""}
+            ${shopGstNumber ? `<div>GSTIN: ${shopGstNumber}</div>` : ""}
+            ${shopPhone ? `<div>Phone: ${shopPhone}</div>` : ""}
+            ${shopEmail ? `<div>Email: ${shopEmail}</div>` : ""}
           </footer>
         </body>
       </html>`);
@@ -579,7 +609,7 @@ export default function BillingManagement() {
         printWindow.print();
       };
       const logo = printWindow.document.getElementById("shop-logo");
-      if (logo?.complete) startPrint();
+      if (!logo || logo.complete) startPrint();
       else {
         logo?.addEventListener("load", startPrint, { once: true });
         logo?.addEventListener("error", startPrint, { once: true });

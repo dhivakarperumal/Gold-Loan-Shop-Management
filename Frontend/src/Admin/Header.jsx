@@ -79,6 +79,8 @@ const pageTitles = {
   "/admin/dealers/refining": "Old Gold & Refining",
   "/admin/reports": "Reports",
   "/admin/settings": "Settings",
+  "/admin/settings/daily-gold-rate": "Daily Gold Rate",
+  "/admin/settings/receipt": "Receipt Settings",
   "/admin/profile": "Profile",
   "/admin/settings/profile": "Profile",
 };

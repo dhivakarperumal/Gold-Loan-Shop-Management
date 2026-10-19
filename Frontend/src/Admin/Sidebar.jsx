@@ -42,9 +42,11 @@ const navItems = [
     icon: SettingsIcon,
     children: [
       { path: "/admin/settings", label: "All Settings", icon: SettingsIcon },
-      { path: "/admin/settings/daily-gold-rate", label: "Daily Precious Rates", icon: Coins },
-    ],
+      { path: "/admin/settings/daily-gold-rate", label: "Daily Gold Rate", icon: Coins },
+      { path: "/admin/settings/receipt", label: "Receipt Settings", icon: Files }
+    ]
   },
+
   { path: "/admin/billings", label: "Billing", icon: Files },
   {
     label: "Loan Management",

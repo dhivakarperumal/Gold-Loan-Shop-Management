@@ -1,12 +1,19 @@
-import { FiArrowRight, FiSettings } from "react-icons/fi";
+import { FiArrowRight, FiPrinter, FiSettings } from "react-icons/fi";
 import { Link } from "react-router-dom";
 
 const settingsLinks = [
     {
-        title: "Daily Precious Rates",
+        title: "Daily Gold Rate",
         description: "Manage audited Gold, Silver, Platinum and Diamond rates used for billing and product calculations.",
         path: "/admin/settings/daily-gold-rate",
         label: "Manage rates"
+    },
+    {
+        title: "Receipt Settings",
+        description: "Configure the logo, shop name, contact information, address, and footer printed on bills.",
+        path: "/admin/settings/receipt",
+        label: "Configure receipt",
+        icon: <FiPrinter />
     }
 ];
 
@@ -26,7 +33,7 @@ const Settings = () => (
                     className="group rounded-2xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-md"
                 >
                     <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-emerald-50 text-xl text-[#00695C]">
-                        <FiSettings />
+                        {setting.icon || <FiSettings />}
                     </span>
                     <h2 className="mt-4 text-base font-extrabold text-slate-900">{setting.title}</h2>
                     <p className="mt-2 min-h-10 text-sm leading-relaxed text-slate-500">{setting.description}</p>
