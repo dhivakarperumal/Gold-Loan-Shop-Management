@@ -586,7 +586,11 @@ export default function BillingManagement() {
       </div>
     `).join("");
     const exchangeTotal = billExchanges.reduce((sum, item) => sum + (Number(item.credit_amount) || 0), 0);
-    const date = bill.created_at ? new Date(bill.created_at).toLocaleDateString("en-IN") : "—";
+    const savedAt = bill.created_at ? new Date(bill.created_at) : null;
+    const date = savedAt && !Number.isNaN(savedAt.getTime()) ? savedAt.toLocaleDateString("en-IN") : "—";
+    const savedTime = savedAt && !Number.isNaN(savedAt.getTime())
+      ? savedAt.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })
+      : "—";
     let receiptSettings;
     try {
       receiptSettings = await getReceiptSettings();
@@ -672,6 +676,7 @@ export default function BillingManagement() {
             <p>Invoice No: <strong>${escapeHtml(bill.invoice_no || "—")}</strong></p>
             <div class="invoice-meta-right">
               <p>Date: ${escapeHtml(date)}</p>
+              <p>Saved Time: ${escapeHtml(savedTime)}</p>
               <p>Payment type: ${bill.payment_type === "EXCHANGE_GOLD" ? "Exchange Gold" : "Full Payment"}</p>
               <p>Payment method: ${escapeHtml(paymentMethodLabel(bill.payment_method))}</p>
             </div>
@@ -1173,8 +1178,9 @@ export default function BillingManagement() {
               ) : (
                 <div className="w-full overflow-x-auto rounded-lg border border-slate-200">
                   <table className="w-full min-w-[900px] border-collapse text-left">
-                    <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                    <thead className="bg-gradient-to-r from-[#07564B] via-[#064A41] to-[#043D37] text-xs uppercase tracking-wide text-white">
                       <tr>
+                        <th className="px-4 py-3 font-semibold">S.No.</th>
                         <th className="px-4 py-3 font-semibold">Product</th>
                         <th className="px-4 py-3 font-semibold">Category</th>
                         <th className="px-4 py-3 font-semibold">Purity</th>
@@ -1190,6 +1196,7 @@ export default function BillingManagement() {
                         const product = getProductWithCatalogDetails(savedProduct);
                         return (
                           <tr key={`${product.product_id}-${index}`}>
+                            <td className="px-4 py-3 text-sm text-slate-500">{index + 1}</td>
                             <td className="px-4 py-3 text-sm font-medium text-slate-800">{product.product_name}</td>
                             <td className="px-4 py-3 text-sm text-slate-700">{product.category || "—"}</td>
                             <td className="px-4 py-3 text-sm text-slate-700">{product.purity || "—"}</td>
@@ -1265,7 +1272,7 @@ export default function BillingManagement() {
           </section>
           </div>
 
-          <section className="ml-auto max-w-lg space-y-3 rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
+          <section className="w-full space-y-3 rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
             <h2 className="font-bold text-slate-900">Bill Summary</h2>
             <div className="flex justify-between text-sm text-slate-600"><span>Sub-Total</span><span>{currency(subtotal)}</span></div>
             <label className="flex items-center justify-between gap-4 text-sm font-medium text-slate-600">
