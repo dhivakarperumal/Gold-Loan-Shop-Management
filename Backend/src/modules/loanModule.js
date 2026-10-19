@@ -578,13 +578,33 @@ async function getLoanByIdFrom(connection, id) {
 
 async function listLoansForCustomer(customerId) {
   const [rows] = await pool.execute(
-    `SELECT id, loan_number, customer_id, gold_pledge_number, principal_amount, interest_type,
-      interest_rate, loan_date, maturity_date, loan_status, created_at
+    `SELECT id, loan_number, customer_id, gold_pledge_number, jewellery_type, metal_type,
+      gold_purity, net_gold_weight, principal_amount, outstanding_principal,
+      interest_type, interest_rate, loan_date, maturity_date, loan_status,
+      release_status, processing_fee, other_charges, created_at
      FROM loans WHERE customer_id = ? ORDER BY created_at DESC, id DESC`,
     [customerId]
   );
   return rows;
 }
+
+async function listLoansForUser(userId) {
+  const [rows] = await pool.execute(
+    `SELECT l.id, l.loan_number, l.customer_id, l.gold_pledge_number, l.jewellery_type,
+      l.metal_type, l.gold_purity, l.net_gold_weight, l.principal_amount,
+      l.outstanding_principal, l.interest_type, l.interest_rate, l.loan_date,
+      l.maturity_date, l.loan_status, l.release_status, l.processing_fee,
+      l.other_charges, l.created_at,
+      c.full_name AS customer_name, c.customer_code
+     FROM loans l
+     JOIN loan_customers c ON c.id = l.customer_id
+     WHERE c.user_id = ?
+     ORDER BY l.created_at DESC, l.id DESC`,
+    [userId]
+  );
+  return rows;
+}
+
 
 async function createLoan(loan) {
   const connection = await pool.getConnection();
@@ -678,6 +698,7 @@ module.exports = {
   listLoans,
   listGoldReleaseEligible,
   listLoansForCustomer,
+  listLoansForUser,
   makeRenewalPreview,
   releaseGold,
   renewLoan,
