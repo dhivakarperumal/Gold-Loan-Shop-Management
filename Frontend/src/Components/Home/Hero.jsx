@@ -103,7 +103,7 @@ const Hero = () => {
                     <img
                       src={desktopImage}
                       alt=""
-                      className="h-full w-full object-cover sm:object-contain"
+                      className="h-full w-full object-cover object-[75%_center] sm:object-contain sm:object-center"
                       onError={(event) => {
                         if (mobileImage && event.currentTarget.currentSrc !== desktopImage) {
                           event.currentTarget.src = desktopImage;
@@ -118,7 +118,7 @@ const Hero = () => {
         )}
 
         {/* Subtle overlay on the left only */}
-        <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-r from-[#00271e]/80 via-[#003326]/45 to-[#003326]/10 sm:from-[#00271e]/65 sm:via-[#003326]/20 sm:to-transparent" />
+        <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-[#00271e]/90 via-[#003326]/25 to-transparent sm:bg-gradient-to-r sm:from-[#00271e]/65 sm:via-[#003326]/20 sm:to-transparent" />
 
         {/* Decorative gold border */}
         <div className="pointer-events-none absolute inset-2 z-10 border border-[#d2b56e]/60 sm:inset-3">
@@ -129,12 +129,12 @@ const Hero = () => {
         </div>
 
         {/* Hero content */}
-        <div className="pointer-events-none absolute inset-0 z-[2] flex items-center px-6 py-12 sm:px-10 md:px-16 md:py-0 lg:px-20 xl:px-24">
+        <div className="pointer-events-none absolute inset-0 z-[2] flex items-end px-6 pb-16 sm:items-center sm:px-10 sm:pb-0 md:px-16 lg:px-20 xl:px-24">
           <div className="pointer-events-auto w-full max-w-[560px]">
 
             {slide ? (
               <>
-                <p className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-[9px] font-medium uppercase tracking-[0.14em] text-[#f1dba4] sm:mb-5 sm:text-[10px] sm:tracking-[0.22em]">
+                <p className="mb-5 hidden flex-wrap items-center gap-x-3 gap-y-2 text-[10px] font-medium uppercase tracking-[0.22em] text-[#f1dba4] sm:flex">
                   {slide.subtitle}
                 </p>
 
@@ -146,13 +146,13 @@ const Hero = () => {
                   </span>
                 </h1>
 
-                <p className="mt-4 max-w-[390px] font-serif text-sm leading-6 text-[#f7ead0] sm:mt-5 sm:text-base md:text-lg">
+                <p className="mt-5 hidden max-w-[390px] font-serif text-sm leading-6 text-[#f7ead0] sm:block sm:text-base md:text-lg">
                   {slide.description}
                 </p>
 
                 <a
                   href={slide.link || "#collections"}
-                  className="group mt-6 inline-flex items-center gap-3 rounded-sm border border-[#f6d88b] bg-gradient-to-r from-[#f5d17c] to-[#dba53c] px-4 py-3 text-xs font-bold text-[#17372a] shadow-md transition duration-300 hover:-translate-y-1 hover:brightness-110 sm:mt-7 sm:gap-5 sm:px-8 sm:py-3.5 sm:text-sm"
+                  className="group mt-5 inline-flex items-center gap-3 rounded-sm border border-[#f6d88b] bg-gradient-to-r from-[#f5d17c] to-[#dba53c] px-4 py-3 text-xs font-bold text-[#17372a] shadow-md transition duration-300 hover:-translate-y-1 hover:brightness-110 sm:mt-7 sm:gap-5 sm:px-8 sm:py-3.5 sm:text-sm"
                 >
                   Explore Collections
                   <ArrowRight
@@ -168,7 +168,7 @@ const Hero = () => {
             ) : null}
 
             {/* Trust indicators */}
-            <div className="mt-7 flex max-w-[490px] flex-wrap gap-x-3 gap-y-3 sm:mt-8 sm:gap-x-7 sm:gap-y-4">
+            <div className="mt-8 hidden max-w-[490px] flex-wrap gap-x-7 gap-y-4 sm:flex">
               <div className="flex items-center gap-2.5">
                 <Gem className="h-8 w-8 shrink-0 rounded-full border border-[#d6b65f] p-1.5 text-[#f0d17e] sm:h-9 sm:w-9 sm:p-2" />
                 <span className="text-[9px] leading-4 text-[#fff5e2] sm:text-[11px]">
