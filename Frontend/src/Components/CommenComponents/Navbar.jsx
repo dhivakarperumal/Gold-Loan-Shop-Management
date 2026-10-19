@@ -49,6 +49,7 @@ const Navbar = () => {
 
   const wishlistCount = wishlist.length;
   const cartCount = cart.length;
+  const isAdmin = String(user?.role || "").toLowerCase() === "admin";
 
   useEffect(() => {
     const query = search.trim();
@@ -508,6 +509,7 @@ const Navbar = () => {
                   </div>
                 )}
               </div>
+
             </div>
 
             {/* Desktop search and actions */}
@@ -616,6 +618,18 @@ const Navbar = () => {
                         >
                           My Orders
                         </button>
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAccountOpen(false);
+                              navigate("/admin");
+                            }}
+                            className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-[#174a38] hover:bg-[#f8f0df]"
+                          >
+                            Admin Panel
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={handleLogout}
