@@ -120,6 +120,10 @@ async function initializeProductModule() {
       await pool.query(`ALTER TABLE products ADD COLUMN \`${column}\` ${definition}`);
     }
   }
+  const [reportIndexes] = await pool.query("SHOW INDEX FROM products WHERE Key_name = 'idx_products_status_metal_purity'");
+  if (reportIndexes.length === 0) {
+    await pool.query('ALTER TABLE products ADD INDEX idx_products_status_metal_purity (status, metal_type, purity)');
+  }
 }
 
 async function listProducts({ page, limit, search, status }) {

@@ -48,6 +48,7 @@ const Dealers = React.lazy(() => import("./Admin/Dealers/Dealers.jsx"));
 const CustomerKyc = React.lazy(() => import("./Components/Account/CustomerKyc.jsx"));
 const AdminKyc = React.lazy(() => import("./Admin/Kyc/AdminKyc.jsx"));
 const BillingManagement = React.lazy(() => import("./Admin/Pages/BillingManagement.jsx"));
+const Reports = React.lazy(() => import("./Admin/Pages/Reports.jsx"));
 
 const ErrorPage = React.lazy(() => import("./Admin/Pages/ErrorPage.jsx"));
 
@@ -89,6 +90,7 @@ const router = createBrowserRouter([
       { path: "users/all", element: <Users /> },
       { path: "kyc", element: <AdminKyc /> },
       { path: "billings", element: <BillingManagement /> },
+      { path: "reports", element: <Reports /> },
       { path: "loans/customermanagement", element: <LoanCustomerManagement /> },
       { path: "loans/customers/:id", element: <LoanCustomerDetails /> },
       { path: "loans/createloan", element: <CreateLoan /> },

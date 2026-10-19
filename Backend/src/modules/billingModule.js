@@ -20,6 +20,10 @@ async function initializeBillingModule() {
   if (discountColumns.length === 0) {
     await pool.query('ALTER TABLE billings ADD COLUMN discount_amount DECIMAL(12,2) NOT NULL DEFAULT 0 AFTER sub_total');
   }
+  const [billingIndexes] = await pool.query("SHOW INDEX FROM billings WHERE Key_name = 'idx_billings_created_at'");
+  if (billingIndexes.length === 0) {
+    await pool.query('ALTER TABLE billings ADD INDEX idx_billings_created_at (created_at)');
+  }
 }
 
 async function listBillings() {

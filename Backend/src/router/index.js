@@ -15,6 +15,7 @@ const cartRouter = require('./cartRouter');
 const wishlistRouter = require('./wishlistRouter');
 const kycRouter = require('./kycRouter');
 const billingRouter = require('./billingRouter');
+const reportsRouter = require('./reportsRouter');
 const receiptSettingsRouter = require('./receiptSettingsRouter');
 
 const router = express.Router();
@@ -22,6 +23,7 @@ const router = express.Router();
 router.use('/dashboard', dashboardRouter);
 router.use('/kyc', kycRouter);
 router.use('/billings', billingRouter);
+router.use('/reports', reportsRouter);
 router.use('/receipt-settings', receiptSettingsRouter);
 router.use('/auth', authRouter);
 router.use('/categories', categoryRouter);

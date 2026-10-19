@@ -79,6 +79,10 @@ async function initializeLoanModule() {
       await pool.query(`ALTER TABLE loans ADD COLUMN \`${column}\` ${definition}`);
     }
   }
+  const [reportIndexes] = await pool.query("SHOW INDEX FROM loans WHERE Key_name = 'idx_loans_loan_date'");
+  if (reportIndexes.length === 0) {
+    await pool.query('ALTER TABLE loans ADD INDEX idx_loans_loan_date (loan_date)');
+  }
   const [pledgeIndex] = await pool.query("SHOW INDEX FROM loans WHERE Key_name = 'uq_loans_gold_pledge_number'");
   if (pledgeIndex.length === 0) {
     const [[{ duplicateCount }]] = await pool.query(`
