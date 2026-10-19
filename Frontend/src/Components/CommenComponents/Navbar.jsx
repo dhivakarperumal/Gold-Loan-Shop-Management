@@ -1,5 +1,5 @@
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import {
   Search,
@@ -7,6 +7,7 @@ import {
   ShoppingBag,
   UserRound,
   ChevronDown,
+  ChevronRight,
   Menu,
   X,
   Gem,
@@ -19,6 +20,7 @@ import {
   User,
 } from "lucide-react";
 import PageContainer from "./PageContainer";
+import api from "../../api";
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -27,30 +29,50 @@ const Navbar = () => {
   const [openDropdown, setOpenDropdown] = useState(null);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
+  const [categories, setCategories] = useState([]);
+  const [metals, setMetals] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState(null);
 
   // Connect these values to your existing application state/API.
   const wishlistCount = 0;
   const cartCount = 0;
   const user = null;
 
-  const categories = [
-    { name: "Necklaces", slug: "necklaces" },
-    { name: "Earrings", slug: "earrings" },
-    { name: "Bangles", slug: "bangles" },
-    { name: "Rings", slug: "rings" },
-    { name: "Chains", slug: "chains" },
-    { name: "Mangalsutra", slug: "mangalsutra" },
-    { name: "Temple Jewellery", slug: "temple-jewellery" },
-    { name: "Coins & Bars", slug: "coins-bars" },
-    { name: "Silver Articles", slug: "silver-articles" },
-  ];
+  useEffect(() => {
+    const controller = new AbortController();
 
-  const metals = [
-    { name: "Gold Jewellery", slug: "gold" },
-    { name: "Diamond Jewellery", slug: "diamond" },
-    { name: "Silver Jewellery", slug: "silver" },
-    { name: "Platinum Jewellery", slug: "platinum" },
-  ];
+    const loadNavigationOptions = async () => {
+      const [categoryResult, metalResult] = await Promise.allSettled([
+        api.get("/categories", { signal: controller.signal }),
+        api.get("/metals", { signal: controller.signal }),
+      ]);
+
+      if (controller.signal.aborted) return;
+
+      if (categoryResult.status === "fulfilled" && Array.isArray(categoryResult.value.data)) {
+        const activeCategories = categoryResult.value.data
+          .filter((category) => (category.status || "Active") === "Active")
+          .sort((first, second) => Number(first.id) - Number(second.id));
+        setCategories(activeCategories);
+        setSelectedCategory(activeCategories[0] || null);
+      } else if (categoryResult.status === "rejected") {
+        console.error("Failed to load navbar categories:", categoryResult.reason);
+      } else {
+        console.error("Navbar category response must be an array");
+      }
+
+      if (metalResult.status === "fulfilled" && Array.isArray(metalResult.value.data)) {
+        setMetals(metalResult.value.data.filter((metal) => metal.status === "Active"));
+      } else if (metalResult.status === "rejected") {
+        console.error("Failed to load navbar metals:", metalResult.reason);
+      } else {
+        console.error("Navbar metal response must be an array");
+      }
+    };
+
+    loadNavigationOptions();
+    return () => controller.abort();
+  }, []);
 
   const navLinkClass = ({ isActive }) =>
     `relative flex h-[76px] items-center justify-center whitespace-nowrap px-3 text-[15px] font-semibold transition-all duration-300 xl:px-4
@@ -83,15 +105,33 @@ const Navbar = () => {
     setAccountOpen(false);
   };
 
-  const handleCategoryClick = (slug) => {
+  const handleCategoryClick = (category, subcategory) => {
     closeMenus();
-    navigate(`/shop?category=${encodeURIComponent(slug)}`);
+    navigate(`/shop?search=${encodeURIComponent(subcategory || category.name)}`);
   };
 
-  const handleMetalClick = (slug) => {
+  const handleMetalClick = (metalName) => {
     closeMenus();
-    navigate(`/shop?metal=${encodeURIComponent(slug)}`);
+    navigate(`/shop?search=${encodeURIComponent(metalName)}`);
   };
+
+  const getImageUrl = (image) => {
+    if (!image || /^(https?:|data:|blob:)/i.test(image)) return image || "";
+    const backendUrl = (
+      import.meta.env.VITE_BACKEND_URL ||
+      import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") ||
+      "http://localhost:5000"
+    ).replace(/\/$/, "");
+    return `${backendUrl}${image.startsWith("/") ? image : `/${image}`}`;
+  };
+
+  const getCategoryImage = (category) => {
+    const images = Array.isArray(category.images) ? category.images : [];
+    return getImageUrl(images[0]);
+  };
+
+  const getCategorySubcategories = (category) =>
+    Array.isArray(category?.subcategory) ? category.subcategory.filter(Boolean) : [];
 
   return (
     <header className="relative z-50 w-full">
@@ -143,11 +183,11 @@ const Navbar = () => {
               >
                 <button
                   type="button"
-                  onClick={() =>
-                    setOpenDropdown(
-                      openDropdown === "categories" ? null : "categories"
-                    )
-                  }
+                  onClick={() => {
+                    const next = openDropdown === "categories" ? null : "categories";
+                    setOpenDropdown(next);
+                    if (next) setSelectedCategory(categories[0] || null);
+                  }}
                   aria-expanded={openDropdown === "categories"}
                   className={`flex h-[76px] items-center gap-2 px-3 text-[15px] font-semibold transition duration-300 xl:px-4 ${
                     openDropdown === "categories"
@@ -165,27 +205,72 @@ const Navbar = () => {
                 </button>
 
                 {openDropdown === "categories" && (
-                  <div className="absolute left-0 top-full z-50 w-60 overflow-hidden rounded-b-xl border border-[#e6d5b2] bg-[#fffdf7] py-2 shadow-[0_12px_28px_rgba(30,50,35,0.16)]">
-                    <div className="border-b border-[#eee4d0] px-4 py-3">
-                      <p className="font-serif text-base text-[#064638]">
-                        Explore Collections
-                      </p>
-                      <p className="mt-1 text-xs text-gray-500">
-                        Find your favourite design
-                      </p>
+                  <div className="absolute left-0 top-full z-50 flex min-w-[300px] rounded-xl border border-[#e6d5b2] bg-[#fffdf7] p-2 shadow-[0_12px_28px_rgba(30,50,35,0.16)]">
+                    <div className="max-h-[min(70vh,520px)] w-[275px] overflow-y-auto">
+                      {categories.map((category) => {
+                        const categoryId = category.id || category.catId;
+                        const selectedId = selectedCategory?.id || selectedCategory?.catId;
+                        const image = getCategoryImage(category);
+
+                        return (
+                          <div
+                            key={categoryId}
+                            onMouseEnter={() => setSelectedCategory(category)}
+                            onFocus={() => setSelectedCategory(category)}
+                            className={`flex items-center rounded-lg pr-2 transition ${
+                              selectedId === categoryId
+                                ? "bg-[#fff8e9]"
+                                : "hover:bg-[#fffaf0]"
+                            }`}
+                          >
+                            <button
+                              type="button"
+                              onClick={() => handleCategoryClick(category)}
+                              className="flex min-w-0 flex-1 items-center gap-3 px-2 py-2.5 text-left text-sm font-medium text-[#30271b]"
+                            >
+                              <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-[#fbf5e9]">
+                                {image ? (
+                                  <img src={image} alt="" className="h-8 w-8 object-contain" loading="lazy" />
+                                ) : (
+                                  <Gem size={17} className="text-[#174a38]" aria-hidden="true" />
+                                )}
+                              </span>
+                              <span className="truncate">{category.name}</span>
+                            </button>
+                            <button
+                              type="button"
+                              aria-label={`Show ${category.name} subcategories`}
+                              onClick={() => setSelectedCategory(category)}
+                              className="rounded-md p-2 text-[#b47a25] transition hover:text-[#7c5318]"
+                            >
+                              <ChevronRight size={16} />
+                            </button>
+                          </div>
+                        );
+                      })}
                     </div>
 
-                    {categories.map((category) => (
-                      <button
-                        key={category.slug}
-                        type="button"
-                        onClick={() => handleCategoryClick(category.slug)}
-                        className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm text-[#29483b] transition hover:bg-[#f8f0df] hover:text-[#a87519]"
-                      >
-                        {category.name}
-                        <span className="text-[#c8a04f]">›</span>
-                      </button>
-                    ))}
+                    {selectedCategory && (
+                      <div className="ml-2 w-[230px] border-l border-[#efe5d4] py-1 pl-2">
+                        <p className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#9a7a42]">
+                          {selectedCategory.name}
+                        </p>
+                        {getCategorySubcategories(selectedCategory).length ? (
+                          getCategorySubcategories(selectedCategory).map((subcategory) => (
+                            <button
+                              key={subcategory}
+                              type="button"
+                              onClick={() => handleCategoryClick(selectedCategory, subcategory)}
+                              className="block w-full rounded-lg px-3 py-2.5 text-left text-sm text-[#514638] transition hover:bg-[#fff8e9] hover:text-[#8c5e13]"
+                            >
+                              {subcategory}
+                            </button>
+                          ))
+                        ) : (
+                          <p className="px-3 py-2 text-sm text-[#8a8174]">No subcategories</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -220,7 +305,7 @@ const Navbar = () => {
                 </button>
 
                 {openDropdown === "metals" && (
-                  <div className="absolute left-0 top-full z-50 w-60 overflow-hidden rounded-b-xl border border-[#e6d5b2] bg-[#fffdf7] py-2 shadow-[0_12px_28px_rgba(30,50,35,0.16)]">
+                  <div className="absolute left-0 top-full z-50 w-[250px] rounded-xl border border-[#e6d5b2] bg-[#fffdf7] p-2 shadow-[0_12px_28px_rgba(30,50,35,0.16)]">
                     <div className="border-b border-[#eee4d0] px-4 py-3">
                       <p className="font-serif text-base text-[#064638]">
                         Shop by Metal
@@ -229,13 +314,19 @@ const Navbar = () => {
 
                     {metals.map((metal) => (
                       <button
-                        key={metal.slug}
+                        key={metal.id}
                         type="button"
-                        onClick={() => handleMetalClick(metal.slug)}
-                        className="flex w-full items-center justify-between px-4 py-3 text-left text-sm text-[#29483b] transition hover:bg-[#f8f0df] hover:text-[#a87519]"
+                        onClick={() => handleMetalClick(metal.name)}
+                        className="flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left text-sm font-medium text-[#30271b] transition hover:bg-[#fff8e9] hover:text-[#8c5e13]"
                       >
+                        <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#efe5d4] bg-[#fbf5e9]">
+                          {metal.image ? (
+                            <img src={getImageUrl(metal.image)} alt="" className="h-full w-full object-cover" loading="lazy" />
+                          ) : (
+                            <Gem size={17} className="text-[#174a38]" aria-hidden="true" />
+                          )}
+                        </span>
                         {metal.name}
-                        <Gem size={15} className="text-[#c8a04f]" />
                       </button>
                     ))}
                   </div>
@@ -482,9 +573,9 @@ const Navbar = () => {
                 <div className="ml-4 border-l-2 border-[#d4aa59] pl-3">
                   {categories.map((category) => (
                     <button
-                      key={category.slug}
+                      key={category.id || category.catId}
                       type="button"
-                      onClick={() => handleCategoryClick(category.slug)}
+                      onClick={() => handleCategoryClick(category)}
                       className="block w-full rounded-lg px-3 py-2.5 text-left text-sm text-[#365547] hover:bg-[#f1e5cb]"
                     >
                       {category.name}
@@ -515,9 +606,9 @@ const Navbar = () => {
                 <div className="ml-4 border-l-2 border-[#d4aa59] pl-3">
                   {metals.map((metal) => (
                     <button
-                      key={metal.slug}
+                      key={metal.id}
                       type="button"
-                      onClick={() => handleMetalClick(metal.slug)}
+                      onClick={() => handleMetalClick(metal.name)}
                       className="block w-full rounded-lg px-3 py-2.5 text-left text-sm text-[#365547] hover:bg-[#f1e5cb]"
                     >
                       {metal.name}
