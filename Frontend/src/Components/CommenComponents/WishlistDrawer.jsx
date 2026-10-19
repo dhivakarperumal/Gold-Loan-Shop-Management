@@ -1,16 +1,37 @@
-import React, { useContext, useEffect } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiX, FiTrash2, FiShoppingBag, FiShare2 } from "react-icons/fi";
+import { FiX, FiTrash2, FiShoppingBag } from "react-icons/fi";
 import { FaHeart, FaStar } from "react-icons/fa";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
+import api from "../../api";
 
 const resolveImageUrl = (image) => {
+  if (image && typeof image === "object") {
+    return resolveImageUrl(image.url || image.path || image.src);
+  }
   if (!image || typeof image !== "string" || /^(https?:|data:|blob:)/i.test(image)) return image;
   const backendUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
   return `${backendUrl}${image.startsWith("/") ? image : `/${image}`}`;
 };
 
-const StarRating = ({ rating = 4.5, count = 0 }) => {
+const productImages = (value) => {
+  if (Array.isArray(value)) return value;
+  if (typeof value !== "string" || !value.trim()) return [];
+  try {
+    const parsed = JSON.parse(value);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [value];
+  }
+};
+
+const getProductImage = (product) => {
+  const variantImage = productImages(product?.variants)
+    .flatMap((variant) => productImages(variant?.images))[0];
+  return resolveImageUrl(variantImage || productImages(product?.images)[0]);
+};
+
+const StarRating = ({ rating = 0, count = 0 }) => {
   const stars = Math.round(rating);
   return (
     <div className="flex items-center gap-1">
@@ -21,7 +42,7 @@ const StarRating = ({ rating = 4.5, count = 0 }) => {
           className={s <= stars ? "text-yellow-400" : "text-gray-300"}
         />
       ))}
-      {count > 0 && <span className="text-[10px] text-gray-400 ml-0.5">({count})</span>}
+      <span className="ml-0.5 text-[10px] text-gray-400">({count})</span>
     </div>
   );
 };
@@ -29,6 +50,20 @@ const StarRating = ({ rating = 4.5, count = 0 }) => {
 const WishlistDrawer = ({ isOpen, onClose }) => {
   const { wishlist, loadingWishlist, toggleWishlist } = useContext(StoreContext);
   const navigate = useNavigate();
+  const [loadedProductDetails, setLoadedProductDetails] = useState({ key: "", details: {} });
+  const wishlistProductIds = [...new Set(
+    wishlist
+      .map((item) => item.product_id ?? item.productId ?? item.id)
+      .filter((id) => id != null)
+      .map(String)
+  )];
+  const wishlistProductIdsKey = wishlistProductIds.join(",");
+  const productDetails = loadedProductDetails.key === wishlistProductIdsKey
+    ? loadedProductDetails.details
+    : {};
+  const loadingProductDetails = isOpen
+    && wishlistProductIdsKey.length > 0
+    && loadedProductDetails.key !== wishlistProductIdsKey;
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -38,6 +73,37 @@ const WishlistDrawer = ({ isOpen, onClose }) => {
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [isOpen, onClose]);
+
+  useEffect(() => {
+    const productIds = wishlistProductIdsKey ? wishlistProductIdsKey.split(",") : [];
+    if (!isOpen || productIds.length === 0) return undefined;
+
+    let active = true;
+
+    Promise.all(productIds.map(async (productId) => {
+      try {
+        const { data } = await api.get(`/products/${productId}`);
+        if (!data || typeof data !== "object" || Array.isArray(data)) {
+          throw new Error("The server returned invalid product details.");
+        }
+        return [productId, { product: data }];
+      } catch (error) {
+        console.error(`Failed to load wishlist product ${productId}:`, error);
+        return [productId, {
+          error: error.response?.data?.message || error.message || "Could not load product details."
+        }];
+      }
+    })).then((entries) => {
+      if (active) {
+        setLoadedProductDetails({
+          key: wishlistProductIdsKey,
+          details: Object.fromEntries(entries)
+        });
+      }
+    });
+
+    return () => { active = false; };
+  }, [isOpen, wishlistProductIdsKey]);
 
   const goTo = (path) => {
     onClose();
@@ -140,7 +206,7 @@ const WishlistDrawer = ({ isOpen, onClose }) => {
 
         {/* ── Body ── */}
         <div className="flex-1 overflow-y-auto px-4 py-3">
-          {loadingWishlist ? (
+          {loadingWishlist || loadingProductDetails ? (
             <div className="flex h-full flex-col items-center justify-center gap-3">
               <div
                 className="h-10 w-10 animate-spin rounded-full border-[3px] border-t-transparent"
@@ -175,68 +241,102 @@ const WishlistDrawer = ({ isOpen, onClose }) => {
           ) : (
             /* ── Wishlist Items ── */
             <div className="space-y-3">
-              {wishlist.map((item) => (
-                <div
-                  key={item.id || item.product_id}
-                  className="flex gap-3 rounded-2xl bg-white p-3 shadow-sm"
-                  style={{ border: "1px solid rgba(212,160,23,0.15)" }}
-                >
-                  {/* Product Image */}
-                  <div className="relative shrink-0">
-                    <img
-                      src={
-                        resolveImageUrl(item.image) ||
-                        "https://ui-avatars.com/api/?name=Jewel&background=f3f4f6&color=004D40"
-                      }
-                      alt={item.name || "Product"}
-                      className="h-[90px] w-[75px] rounded-xl object-cover"
-                      style={{ border: "1.5px solid rgba(212,160,23,0.2)" }}
-                    />
-                  </div>
+              {wishlist.map((item) => {
+                const productId = item.product_id ?? item.productId ?? item.id;
+                const result = productDetails[String(productId)];
+                const product = result?.product;
+                const name = product?.name || result?.error || "Product details unavailable";
+                const weight = product?.net_gold_weight || product?.gross_weight;
+                const mrp = Number(product?.mrp) || 0;
+                const offerPrice = Number(product?.offer_price) > 0
+                  ? Number(product.offer_price)
+                  : Number(product?.final_selling_price) > 0
+                    ? Number(product.final_selling_price)
+                    : mrp;
+                const discount = mrp > offerPrice
+                  ? Number(product?.discount) > 0
+                    ? Number(product.discount)
+                    : Math.round(((mrp - offerPrice) / mrp) * 100)
+                  : 0;
+                const totalReviews = Number(product?.total_reviews) || 0;
 
-                  {/* Product Info */}
-                  <div className="min-w-0 flex-1 py-0.5">
-                    <div className="flex items-start justify-between gap-1">
-                      <h3 className="text-sm font-bold leading-snug text-gray-800 line-clamp-2">
-                        {item.name || "Product"}
-                      </h3>
-                      {/* Remove button */}
-                      <button
-                        type="button"
-                        onClick={() => toggleWishlist(item)}
-                        aria-label={`Remove ${item.name || "item"}`}
-                        className="shrink-0 flex h-7 w-7 items-center justify-center rounded-full text-red-400 transition hover:bg-red-50 hover:text-red-500"
-                      >
-                        <FiTrash2 size={14} />
-                      </button>
+                return (
+                  <div
+                    key={item.id || item.product_id}
+                    className="flex gap-3 rounded-2xl bg-white p-3 shadow-sm"
+                    style={{ border: "1px solid rgba(212,160,23,0.15)" }}
+                  >
+                    <div className="relative shrink-0">
+                      <img
+                        src={
+                          getProductImage(product) ||
+                          "https://ui-avatars.com/api/?name=Jewel&background=f3f4f6&color=004D40"
+                        }
+                        alt={product?.name || "Product"}
+                        className="h-[90px] w-[75px] rounded-xl object-cover"
+                        style={{ border: "1.5px solid rgba(212,160,23,0.2)" }}
+                      />
                     </div>
 
-                    {/* Metal type / variant */}
-                    {(item.colorName || item.metal_type) && (
-                      <p className="mt-0.5 text-[11px] font-medium" style={{ color: "#004D40" }}>
-                        {item.metal_type || item.colorName}
-                        {item.weight ? ` · ${item.weight}g` : ""}
-                      </p>
-                    )}
+                    <div className="min-w-0 flex-1 py-0.5">
+                      <div className="flex items-start justify-between gap-1">
+                        <h3 className="text-sm font-bold leading-snug text-gray-800 line-clamp-2">
+                          {name}
+                        </h3>
+                        <button
+                          type="button"
+                          onClick={() => toggleWishlist(item)}
+                          aria-label={`Remove ${product?.name || "item"}`}
+                          className="shrink-0 flex h-7 w-7 items-center justify-center rounded-full text-red-400 transition hover:bg-red-50 hover:text-red-500"
+                        >
+                          <FiTrash2 size={14} />
+                        </button>
+                      </div>
 
-                    {/* Star Rating */}
-                    <div className="mt-1">
-                      <StarRating rating={item.rating || 4.5} count={item.review_count || 0} />
+                      {product && (product.metal_type || weight != null) && (
+                        <p className="mt-0.5 text-[11px] font-medium" style={{ color: "#004D40" }}>
+                          {product.metal_type || product.category}
+                          {weight != null ? ` · ${weight}g` : ""}
+                        </p>
+                      )}
+
+                      {product && (
+                        <>
+                          {totalReviews > 0 && <div className="mt-1">
+                            <StarRating
+                              rating={Number(product.rating) || 0}
+                              count={totalReviews}
+                            />
+                          </div>}
+                          {offerPrice > 0 && (
+                            <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                              <p className="text-sm font-bold" style={{ color: "#004D40" }}>
+                                ₹{offerPrice.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                              </p>
+                              {discount > 0 && (
+                                <>
+                                  <p className="text-xs text-gray-400 line-through">
+                                    ₹{mrp.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                                  </p>
+                                  <span className="rounded bg-[#087452] px-1.5 py-0.5 text-[10px] font-bold text-white">
+                                    {discount}% OFF
+                                  </span>
+                                </>
+                              )}
+                            </div>
+                          )}
+                        </>
+                      )}
                     </div>
-
-                    {/* Price */}
-                    <p className="mt-1.5 text-sm font-bold" style={{ color: "#004D40" }}>
-                      ₹{Number(item.price || 0).toLocaleString("en-IN", { minimumFractionDigits: 2 })}
-                    </p>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
 
         {/* ── Footer Actions (only when items exist) ── */}
-        {wishlist.length > 0 && !loadingWishlist && (
+        {wishlist.length > 0 && !loadingWishlist && !loadingProductDetails && (
           <div className="shrink-0 border-t bg-white px-4 py-4 space-y-2.5" style={{ borderColor: "rgba(212,160,23,0.2)" }}>
             {/* Gold ornamental divider */}
             <div className="flex items-center gap-2 mb-3">
