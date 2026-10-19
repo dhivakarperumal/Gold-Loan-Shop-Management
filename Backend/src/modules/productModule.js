@@ -3,10 +3,12 @@ const { pool } = require('../config/db');
 const PRODUCT_COLUMNS = `
   id, product_code, name, brand, category, subcategory, metal_type, product_type,
   description, full_description, purity, gross_weight, net_gold_weight,
-  gold_rate_per_gram, gold_rate_date, making_charge_type, making_charge, wastage_type, wastage,
-  stone_weight, stone_charges, stone_type, huid, available_sizes, product_size, length, width,
-  height, ring_size, bangle_size, chain_length, size_guide_chart, mrp, offer,
-  offer_price, discount, gst_rate, final_selling_price, price_includes_gst,
+  gold_rate_per_gram, DATE_FORMAT(gold_rate_date, '%Y-%m-%d') AS gold_rate_date,
+  gold_value, pre_discount_price, tax_amount, applied_discount,
+  price_updated_at, making_charge_type, making_charge, wastage_type, wastage,
+  stone_weight, stone_charges, other_charges, stone_type, huid, available_sizes, product_size, length, width,
+  height, ring_size, bangle_size, chain_length, size_guide_chart, mrp, offer, offer_type,
+  fixed_discount_amount, offer_price, discount, gst_rate, final_selling_price, price_includes_gst,
   highlights, specifications, care_instructions, warranty, images, video,
   certificate, rating, total_reviews, total_stock, stock_status, sku_barcode,
   warehouse, status, featured, new_arrival, best_seller, variants, material,
@@ -61,6 +63,14 @@ const columnDefinitions = {
   discount: "DECIMAL(7,2) NULL",
   gst_rate: "DECIMAL(7,2) NULL",
   final_selling_price: "DECIMAL(14,2) NULL",
+  offer_type: "VARCHAR(32) NOT NULL DEFAULT 'None'",
+  fixed_discount_amount: "DECIMAL(14,2) NOT NULL DEFAULT 0",
+  gold_value: "DECIMAL(14,2) NULL",
+  pre_discount_price: "DECIMAL(14,2) NULL",
+  tax_amount: "DECIMAL(14,2) NULL",
+  applied_discount: "DECIMAL(14,2) NULL",
+  price_updated_at: "DATETIME NULL",
+  other_charges: "DECIMAL(14,2) NOT NULL DEFAULT 0",
   price_includes_gst: "BOOLEAN NOT NULL DEFAULT FALSE",
   highlights: "JSON NULL",
   specifications: "TEXT NULL",
@@ -120,9 +130,28 @@ async function initializeProductModule() {
       await pool.query(`ALTER TABLE products ADD COLUMN \`${column}\` ${definition}`);
     }
   }
+  await pool.query("UPDATE products SET offer_type = 'Percentage' WHERE (offer_type IS NULL OR offer_type = 'None') AND offer > 0");
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS product_price_history (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      product_id INT UNSIGNED NOT NULL,
+      product_code VARCHAR(100) NULL,
+      previous_price DECIMAL(14,2) NULL,
+      new_price DECIMAL(14,2) NOT NULL,
+      rate_per_gram DECIMAL(14,2) NOT NULL,
+      reason VARCHAR(500) NOT NULL,
+      changed_by BIGINT UNSIGNED NULL,
+      changed_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      INDEX idx_product_price_history_product (product_id, changed_at),
+      INDEX idx_product_price_history_changed (changed_at)
+    )
+  `);
 }
 
-async function listProducts({ page, limit, search, status }) {
+async function listProducts({
+  page, limit, search, status, category, purity, offerStatus, stockStatus,
+  lastPriceUpdate, sortBy, sortOrder
+}) {
   const where = [];
   const params = [];
   if (search) {
@@ -137,22 +166,59 @@ async function listProducts({ page, limit, search, status }) {
     where.push('status = ?');
     params.push(status);
   }
+  if (category) {
+    where.push('category = ?');
+    params.push(category);
+  }
+  if (purity) {
+    where.push('purity = ?');
+    params.push(purity);
+  }
+  if (offerStatus === 'offered') {
+    where.push("(offer_type <> 'None' OR offer > 0)");
+  } else if (offerStatus === 'no-offer') {
+    where.push("(offer_type = 'None' OR offer_type IS NULL) AND offer <= 0");
+  }
+  if (stockStatus === 'in-stock') where.push('total_stock > 0');
+  else if (stockStatus === 'out-of-stock') where.push('total_stock <= 0');
+  else if (stockStatus === 'low-stock') where.push('total_stock > 0 AND total_stock < 10');
+  else if (stockStatus === 'normal-stock') where.push('total_stock >= 10');
+  if (lastPriceUpdate === 'updated') where.push('price_updated_at IS NOT NULL');
+  else if (lastPriceUpdate === 'not-updated') where.push('price_updated_at IS NULL');
+  const sortColumns = {
+    name: 'name',
+    product_code: 'product_code',
+    category: 'category',
+    purity: 'purity',
+    final_selling_price: 'final_selling_price',
+    total_stock: 'total_stock',
+    updated_at: 'updated_at',
+    price_updated_at: 'price_updated_at'
+  };
+  const orderBy = sortColumns[sortBy] || 'created_at';
+  const direction = sortOrder === 'asc' ? 'ASC' : 'DESC';
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const [[{ total }]] = await pool.execute(`SELECT COUNT(*) AS total FROM products ${whereSql}`, params);
   const [[{ total: allTotal }]] = await pool.query('SELECT COUNT(*) AS total FROM products');
   const [[{ active }]] = await pool.query("SELECT COUNT(*) AS active FROM products WHERE status = 'Active'");
   const [[{ lowStock }]] = await pool.query('SELECT COUNT(*) AS lowStock FROM products WHERE total_stock > 0 AND total_stock < 10');
   const [[{ outOfStock }]] = await pool.query('SELECT COUNT(*) AS outOfStock FROM products WHERE total_stock <= 0');
+  const [categoryRows] = await pool.query('SELECT DISTINCT category FROM products WHERE category IS NOT NULL ORDER BY category');
+  const [purityRows] = await pool.query('SELECT DISTINCT purity FROM products WHERE purity IS NOT NULL ORDER BY purity');
   const offset = (page - 1) * limit;
   const [rows] = await pool.execute(
     `SELECT ${PRODUCT_COLUMNS} FROM products ${whereSql}
-     ORDER BY created_at DESC, id DESC LIMIT ? OFFSET ?`,
+     ORDER BY \`${orderBy}\` ${direction}, id DESC LIMIT ? OFFSET ?`,
     [...params, limit, offset]
   );
   return {
     products: rows.map(parseProduct),
     pagination: { total, totalPages: Math.max(1, Math.ceil(total / limit)), page, limit },
-    stats: { total: allTotal, active, lowStock, outOfStock }
+    stats: { total: allTotal, active, lowStock, outOfStock },
+    filters: {
+      categories: categoryRows.map((row) => row.category),
+      purities: purityRows.map((row) => row.purity)
+    }
   };
 }
 

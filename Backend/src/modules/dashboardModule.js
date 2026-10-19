@@ -106,71 +106,7 @@ async function getDashboardData(range = 'month') {
       Overdue: statusMap.Overdue,
     };
 
-    // Showcase default recent loans if database has fewer than 5
-    const fallbackLoans = [
-      {
-        id: "#GL1001",
-        customer: "Priya S",
-        jewellery: "Gold Necklace Set",
-        purity: "22K",
-        amount: "₹ 56,800",
-        rawAmount: 56800,
-        status: "Active",
-        date: "Oct 16, 2026",
-        img: "/images/categories/necklacecat.png",
-        rawId: 1
-      },
-      {
-        id: "#GL1002",
-        customer: "Karthik R",
-        jewellery: "Gold Earrings",
-        purity: "22K",
-        amount: "₹ 32,450",
-        rawAmount: 32450,
-        status: "Processing",
-        date: "Oct 15, 2026",
-        img: "/images/categories/earrings.png",
-        rawId: 2
-      },
-      {
-        id: "#GL1003",
-        customer: "Divya M",
-        jewellery: "Gold Ring",
-        purity: "18K",
-        amount: "₹ 18,900",
-        rawAmount: 18900,
-        status: "Pending",
-        date: "Oct 15, 2026",
-        img: "/images/categories/rings.png",
-        rawId: 3
-      },
-      {
-        id: "#GL1004",
-        customer: "Suresh K",
-        jewellery: "Gold Bangles Set",
-        purity: "22K",
-        amount: "₹ 74,200",
-        rawAmount: 74200,
-        status: "Active",
-        date: "Oct 14, 2026",
-        img: "/images/categories/bangles.png",
-        rawId: 4
-      },
-      {
-        id: "#GL1005",
-        customer: "Anitha V",
-        jewellery: "Classic Gold Chain",
-        purity: "22K",
-        amount: "₹ 26,350",
-        rawAmount: 26350,
-        status: "Overdue",
-        date: "Oct 14, 2026",
-        img: "/images/categories/choker.png",
-        rawId: 5
-      }
-    ];
-
-    const formattedRecentLoans = recentLoanRows.map((l, index) => {
+    const formattedRecentLoans = recentLoanRows.map((l) => {
       let img = "/images/categories/necklacecat.png";
       const type = (l.jewellery_type || '').toLowerCase();
       if (type.includes('chain')) img = "/images/categories/choker.png";
@@ -186,64 +122,13 @@ async function getDashboardData(range = 'month') {
         amount: `₹ ${Number(l.principal_amount || l.gold_valuation || 0).toLocaleString('en-IN')}`,
         rawAmount: Number(l.principal_amount || 0),
         status: l.loan_status || 'Active',
-        date: l.loan_date ? new Date(l.loan_date).toLocaleDateString('en-IN', { month: 'short', day: '2-digit', year: 'numeric' }) : 'Oct 16, 2026',
+        date: l.loan_date ? new Date(l.loan_date).toLocaleDateString('en-IN', { month: 'short', day: '2-digit', year: 'numeric' }) : '—',
         img,
         rawId: l.id
       };
     });
 
-    // Merge real loans with fallback to ensure at least 5 rows
-    const mergedRecentLoans = [...formattedRecentLoans];
-    for (const fb of fallbackLoans) {
-      if (mergedRecentLoans.length >= 5) break;
-      mergedRecentLoans.push(fb);
-    }
-
-    // Top selling / featured jewelry products
-    const fallbackTopProducts = [
-      {
-        id: 1,
-        name: "Gold Necklace Set",
-        cat: "Necklaces",
-        sales: 120,
-        amount: "₹ 12,45,600",
-        img: "/images/categories/necklacecat.png"
-      },
-      {
-        id: 2,
-        name: "Gold Earrings",
-        cat: "Earrings",
-        sales: 95,
-        amount: "₹ 6,82,300",
-        img: "/images/categories/earrings.png"
-      },
-      {
-        id: 3,
-        name: "Gold Ring",
-        cat: "Rings",
-        sales: 80,
-        amount: "₹ 4,56,800",
-        img: "/images/categories/rings.png"
-      },
-      {
-        id: 4,
-        name: "Gold Bracelet",
-        cat: "Bangles",
-        sales: 65,
-        amount: "₹ 3,24,500",
-        img: "/images/categories/bangles.png"
-      },
-      {
-        id: 5,
-        name: "Gold Chain",
-        cat: "Chains",
-        sales: 52,
-        amount: "₹ 2,98,600",
-        img: "/images/categories/choker.png"
-      }
-    ];
-
-    const formattedTopProducts = productRows.map((p, idx) => {
+    const formattedTopProducts = productRows.map((p) => {
       let img = "/images/categories/necklacecat.png";
       if (p.images) {
         try {
@@ -257,69 +142,53 @@ async function getDashboardData(range = 'month') {
         id: p.id,
         name: p.name,
         cat: p.category || "Jewellery",
-        sales: 50 + ((idx * 17) % 70),
-        amount: `₹ ${Number(p.offer_price || p.mrp || 250000).toLocaleString('en-IN')}`,
+        price: p.offer_price ?? p.mrp ?? null,
         img
       };
     });
 
-    const mergedTopProducts = [...formattedTopProducts];
-    for (const fb of fallbackTopProducts) {
-      if (mergedTopProducts.length >= 5) break;
-      if (!mergedTopProducts.some(p => p.name === fb.name)) {
-        mergedTopProducts.push(fb);
-      }
-    }
-
-    // Sales / Business Overview Chart Trends (matching the screenshot)
-    let revenueTrends = [];
-    if (range === 'week') {
-      revenueTrends = [
-        { label: "Mon", revenue: 85000, date: "Oct 12, 2026" },
-        { label: "Tue", revenue: 110000, date: "Oct 13, 2026" },
-        { label: "Wed", revenue: 95000, date: "Oct 14, 2026" },
-        { label: "Thu", revenue: 140000, date: "Oct 15, 2026" },
-        { label: "Fri", revenue: 124560, date: "Oct 16, 2026" },
-        { label: "Sat", revenue: 165000, date: "Oct 17, 2026" },
-        { label: "Sun", revenue: 75000, date: "Oct 18, 2026" }
-      ];
-    } else if (range === 'year') {
-      revenueTrends = [
-        { label: "Jan", revenue: 1850000 },
-        { label: "Feb", revenue: 2100000 },
-        { label: "Mar", revenue: 1950000 },
-        { label: "Apr", revenue: 2400000 },
-        { label: "May", revenue: 2200000 },
-        { label: "Jun", revenue: 2600000 },
-        { label: "Jul", revenue: 2450000 },
-        { label: "Aug", revenue: 2750000 },
-        { label: "Sep", revenue: 2900000 },
-        { label: "Oct", revenue: 2456800 },
-        { label: "Nov", revenue: 2800000 },
-        { label: "Dec", revenue: 3200000 }
-      ];
-    } else {
-      // "month" / default matching the screenshot bars:
-      // Oct 01, Oct 02, Oct 03, Oct 04, Oct 05, Oct 06, Oct 07, Oct 08, Oct 09, Oct 10, Oct 11, Oct 12, Oct 13, Oct 14, Oct 15, Oct 16
-      revenueTrends = [
-        { label: "Oct 01", revenue: 42000, date: "Oct 01, 2026" },
-        { label: "Oct 02", revenue: 62000, date: "Oct 02, 2026" },
-        { label: "Oct 03", revenue: 58000, date: "Oct 03, 2026" },
-        { label: "Oct 04", revenue: 78000, date: "Oct 04, 2026" },
-        { label: "Oct 05", revenue: 112000, date: "Oct 05, 2026" },
-        { label: "Oct 06", revenue: 82000, date: "Oct 06, 2026" },
-        { label: "Oct 07", revenue: 72000, date: "Oct 07, 2026" },
-        { label: "Oct 08", revenue: 94000, date: "Oct 08, 2026" },
-        { label: "Oct 09", revenue: 124560, date: "Oct 09, 2026" },
-        { label: "Oct 10", revenue: 104000, date: "Oct 10, 2026" },
-        { label: "Oct 11", revenue: 120000, date: "Oct 11, 2026" },
-        { label: "Oct 12", revenue: 88000, date: "Oct 12, 2026" },
-        { label: "Oct 13", revenue: 138000, date: "Oct 13, 2026" },
-        { label: "Oct 14", revenue: 118000, date: "Oct 14, 2026" },
-        { label: "Oct 15", revenue: 145000, date: "Oct 15, 2026" },
-        { label: "Oct 16", revenue: 98000, date: "Oct 16, 2026" }
-      ];
-    }
+    const salesRange = ['week', 'month', 'year'].includes(range) ? range : 'month';
+    const revenueQueries = {
+      week: `
+        SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS period_key,
+          MIN(DATE_FORMAT(created_at, '%a')) AS label,
+          MIN(DATE_FORMAT(created_at, '%b %d, %Y')) AS date,
+          SUM(total_amount) AS revenue
+        FROM billings
+        WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY)
+          AND created_at < DATE_ADD(DATE_SUB(CURDATE(), INTERVAL WEEKDAY(CURDATE()) DAY), INTERVAL 7 DAY)
+        GROUP BY DATE(created_at)
+        ORDER BY DATE(created_at)
+      `,
+      month: `
+        SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS period_key,
+          MIN(DATE_FORMAT(created_at, '%b %d')) AS label,
+          MIN(DATE_FORMAT(created_at, '%b %d, %Y')) AS date,
+          SUM(total_amount) AS revenue
+        FROM billings
+        WHERE created_at >= DATE_FORMAT(CURDATE(), '%Y-%m-01')
+          AND created_at < DATE_ADD(LAST_DAY(CURDATE()), INTERVAL 1 DAY)
+        GROUP BY DATE(created_at)
+        ORDER BY DATE(created_at)
+      `,
+      year: `
+        SELECT DATE_FORMAT(created_at, '%Y-%m-01') AS period_key,
+          MIN(DATE_FORMAT(created_at, '%b')) AS label,
+          MIN(DATE_FORMAT(created_at, '%b %Y')) AS date,
+          SUM(total_amount) AS revenue
+        FROM billings
+        WHERE created_at >= MAKEDATE(YEAR(CURDATE()), 1)
+          AND created_at < MAKEDATE(YEAR(CURDATE()) + 1, 1)
+        GROUP BY YEAR(created_at), MONTH(created_at)
+        ORDER BY YEAR(created_at), MONTH(created_at)
+      `
+    };
+    const [revenueRows] = await pool.query(revenueQueries[salesRange]);
+    const revenueTrends = revenueRows.map((row) => ({
+      label: row.label,
+      date: row.date,
+      revenue: Number(row.revenue) || 0
+    }));
 
     const totalCustomersFormatted = totalCustomers.toLocaleString('en-IN');
     const goldStockValueFormatted = `₹ ${realGoldStockValue.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
@@ -401,8 +270,8 @@ async function getDashboardData(range = 'month') {
       ],
       loanStatusCounts,
       totalLoansCount: realLoansCount,
-      recentLoans: mergedRecentLoans.slice(0, 5),
-      topProducts: mergedTopProducts.slice(0, 5),
+      recentLoans: formattedRecentLoans.slice(0, 5),
+      topProducts: formattedTopProducts.slice(0, 5),
       revenueTrends,
       goldRates: goldRateRows
     };
