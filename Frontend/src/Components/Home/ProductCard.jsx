@@ -18,6 +18,9 @@ const ProductCard = ({ product }) => {
   );
   const metalType = product.metal_type || "Gold";
   const activeRate = getRateForPurity(activeRateSet, product.purity, metalType);
+  const availablePurities = activeRateSet?.rates
+    ?.filter((candidate) => candidate.metal_type.toLowerCase() === metalType.toLowerCase())
+    .map((candidate) => candidate.purity) || [];
   const rate = Number(activeRate?.rate_per_unit ?? activeRate?.rate_per_gram);
   const hasWeight = product.net_gold_weight != null
     && product.net_gold_weight !== ""
@@ -41,7 +44,9 @@ const ProductCard = ({ product }) => {
         ? "Net weight unavailable"
         : ratesError
           ? "Could not load active rate"
-          : "No active rate for this metal and purity";
+          : availablePurities.length
+            ? `Available ${metalType} purity: ${availablePurities.join(", ")}`
+            : `No active rate configured for ${metalType}`;
   const purity = product.purity || "-";
   const rating = Number(product.rating) || 0;
   const totalReviews = Number(product.total_reviews) || 0;
