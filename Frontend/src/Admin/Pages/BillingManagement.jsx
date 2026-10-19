@@ -507,7 +507,7 @@ export default function BillingManagement() {
           </section>
 
           <section className="space-y-4 rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
-            <div><h2 className="font-bold text-slate-900">Payment Method</h2><p className="text-xs text-slate-500">GST is calculated at 3% after exchange credit.</p></div>
+            <div><h2 className="font-bold text-slate-900">Payment Method</h2><p className="text-xs text-slate-500">GST is calculated using the rate entered below.</p></div>
             <div className="flex flex-wrap gap-3">
               {[["FULL_PAYMENT", "Full Payment"], ["EXCHANGE_GOLD", "Exchange Gold"]].map(([value, label]) => (
                 <label key={value} className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-3 text-sm font-semibold ${paymentType === value ? "border-[#008577] bg-emerald-50 text-[#00695C]" : "border-slate-200 text-slate-600"}`}>
@@ -534,10 +534,10 @@ export default function BillingManagement() {
           <section className="ml-auto max-w-lg space-y-3 rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
             <h2 className="font-bold text-slate-900">Bill Summary</h2>
             <div className="flex justify-between text-sm text-slate-600"><span>Sub-Total</span><span>{currency(subtotal)}</span></div>
-            <label className="block text-sm font-medium text-slate-600">
+            <label className="flex items-center justify-between gap-4 text-sm font-medium text-slate-600">
               Discount (₹)
               <input
-                className={inputClass}
+                className={`${inputClass} mt-0 max-w-40 text-right`}
                 type="number"
                 min="0"
                 max={subtotal}
@@ -548,14 +548,12 @@ export default function BillingManagement() {
                 aria-invalid={!validDiscount}
               />
             </label>
-            {discountAmount > 0 && <div className="flex justify-between text-sm text-emerald-700"><span>Discount</span><span>−{currency(discountAmount)}</span></div>}
             {!validDiscount && <p className="text-xs font-semibold text-rose-600">Discount and exchange credit cannot exceed the products subtotal.</p>}
             {paymentType === "EXCHANGE_GOLD" && <div className="flex justify-between text-sm text-amber-700"><span>Exchange Credit</span><span>−{currency(exchangeCredit)}</span></div>}
-            <label className="block text-sm font-medium text-slate-600">
+            <label className="flex items-center justify-between gap-4 text-sm font-medium text-slate-600">
               GST Rate (%)
-              
               <input
-                className={inputClass}
+                className={`${inputClass} mt-0 max-w-40 text-right`}
                 type="number"
                 min="0"
                 max="100"
@@ -564,7 +562,6 @@ export default function BillingManagement() {
                 onChange={(event) => setGstRateInput(event.target.value)}
                 placeholder="0"
                 aria-invalid={!validGst}
-              
               />
             </label>
             <div className="flex justify-between text-sm text-slate-600">

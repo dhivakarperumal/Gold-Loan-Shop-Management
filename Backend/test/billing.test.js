@@ -18,12 +18,12 @@ const billingInput = (overrides = {}) => ({
   ...overrides
 });
 
-test('calculates full-payment billing totals with 3% GST', () => {
+test('defaults GST to 0% for full-payment billing totals', () => {
   const result = normalizeBilling(billingInput());
   assert.equal(result.error, undefined);
   assert.equal(result.billing.sub_total, 15000);
-  assert.equal(result.billing.gst_amount, 450);
-  assert.equal(result.billing.total_amount, 15450);
+  assert.equal(result.billing.gst_amount, 0);
+  assert.equal(result.billing.total_amount, 15000);
   assert.match(result.billing.invoice_no, /^BILL-\d{8}-[A-F0-9]{8}$/);
 });
 
@@ -32,9 +32,10 @@ test('preserves each customer address in the saved billing payload', () => {
   assert.equal(result.billing.customers[0].address, '12 Gold Street');
 });
 
-test('deducts exchange credit before calculating GST', () => {
+test('deducts exchange credit before calculating entered GST', () => {
   const result = normalizeBilling(billingInput({
     payment_type: 'EXCHANGE_GOLD',
+    gst_rate: 3,
     exchanges: [{ product_name: 'Old chain', category: 'Chain', purity: '22K', credit_amount: 2000 }]
   }));
   assert.equal(result.error, undefined);

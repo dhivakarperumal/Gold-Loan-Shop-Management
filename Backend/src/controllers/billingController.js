@@ -7,7 +7,7 @@ const {
 
 const PAYMENT_TYPES = new Set(['FULL_PAYMENT', 'EXCHANGE_GOLD']);
 const MAX_ITEMS = 100;
-const GST_RATE = 3;
+const GST_RATE = 0;
 
 function normalizeText(value, field, maxLength, required = false) {
   if (typeof value !== 'string') return required ? { error: `${field} is required` } : { value: '' };
