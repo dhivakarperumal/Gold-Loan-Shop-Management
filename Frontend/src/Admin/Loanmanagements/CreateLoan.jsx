@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { FiArrowLeft, FiCalendar, FiCheck, FiChevronDown, FiSearch, FiUploadCloud, FiUserPlus } from "react-icons/fi";
+import { FiArrowLeft, FiCalendar, FiCamera, FiCheck, FiChevronDown, FiSearch, FiUploadCloud, FiUserPlus } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api, { getPrivateFile } from "../../api";
 import { formatRateDate, getRateForPurity } from "../../PrivateRouter/goldRateUtils";
@@ -228,6 +228,7 @@ export default function CreateLoan() {
   const [goldImageFile, setGoldImageFile] = useState(null);
   const [goldImagePreview, setGoldImagePreview] = useState(null);
   const goldImageInput = useRef(null);
+  const goldImageCameraInput = useRef(null);
   const selectedGoldImagePreview = useRef("");
   const { current: activeRateSet, loading: ratesLoading, error: ratesError } = useGoldRates();
 
@@ -337,6 +338,25 @@ export default function CreateLoan() {
   const goldImagePreviewUrl = goldImageFile
     ? (goldImagePreview && goldImagePreview.key === goldImageFile ? goldImagePreview.url : "")
     : (goldImagePreview && goldImagePreview.key === loanRecord?.gold_image_url ? goldImagePreview.url : "");
+
+  const handleGoldImageSelect = (event) => {
+    const input = event.currentTarget;
+    const file = input.files?.[0];
+    input.value = "";
+    if (!file) return;
+    if (!["image/png", "image/jpeg"].includes(file.type)) {
+      toast.error("Choose a PNG or JPG gold image.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Gold image must be 5 MB or smaller.");
+      return;
+    }
+    if (selectedGoldImagePreview.current) URL.revokeObjectURL(selectedGoldImagePreview.current);
+    selectedGoldImagePreview.current = URL.createObjectURL(file);
+    setGoldImagePreview({ key: file, url: selectedGoldImagePreview.current });
+    setGoldImageFile(file);
+  };
 
   const filteredCustomers = useMemo(() => {
     const search = customerQuery.trim().toLowerCase();
@@ -780,37 +800,41 @@ export default function CreateLoan() {
             </div>
             <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/70 p-4">
               <p className={labelClass}>Gold Image <span className="font-normal text-slate-400">(optional, PNG or JPG up to 5 MB)</span></p>
-              <label className={labelClass}>
-                <input
-                  ref={goldImageInput}
-                  className="sr-only"
-                  type="file"
-                  accept="image/png,image/jpeg"
-                  title="Choose a PNG or JPG image of the pledged gold"
-                  onChange={(event) => {
-                    const file = event.target.files?.[0];
-                    if (!file) return;
-                    if (!["image/png", "image/jpeg"].includes(file.type)) {
-                      toast.error("Choose a PNG or JPG gold image.");
-                      event.target.value = "";
-                      return;
-                    }
-                    if (file.size > 5 * 1024 * 1024) {
-                      toast.error("Gold image must be 5 MB or smaller.");
-                      event.target.value = "";
-                      return;
-                    }
-                    if (selectedGoldImagePreview.current) URL.revokeObjectURL(selectedGoldImagePreview.current);
-                    selectedGoldImagePreview.current = URL.createObjectURL(file);
-                    setGoldImagePreview({ key: file, url: selectedGoldImagePreview.current });
-                    setGoldImageFile(file);
-                  }}
-                />
-                <span className="mt-2 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+              <input
+                ref={goldImageInput}
+                className="sr-only"
+                type="file"
+                accept="image/png,image/jpeg"
+                title="Choose a PNG or JPG image of the pledged gold"
+                onChange={handleGoldImageSelect}
+              />
+              <input
+                ref={goldImageCameraInput}
+                className="sr-only"
+                type="file"
+                accept="image/png,image/jpeg"
+                capture="environment"
+                title="Take a photo of the pledged gold"
+                onChange={handleGoldImageSelect}
+              />
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => goldImageInput.current?.click()}
+                  className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-white"
+                >
                   <FiUploadCloud className="text-[#008577]" />
                   {goldImageFile ? "Choose a different image" : loanRecord?.gold_image_url ? "Replace gold image" : "Upload gold image"}
-                </span>
-              </label>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => goldImageCameraInput.current?.click()}
+                  className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#008577]/30 px-3 py-2 text-sm font-semibold text-[#00695C] hover:bg-emerald-50"
+                >
+                  <FiCamera />
+                  Take photo
+                </button>
+              </div>
               {goldImagePreviewUrl && (
                 <img src={goldImagePreviewUrl} alt="Pledged gold preview" className="mt-3 h-40 w-40 rounded-lg border border-slate-200 object-cover" />
               )}
