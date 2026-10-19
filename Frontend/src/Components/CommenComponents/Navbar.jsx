@@ -378,7 +378,7 @@ const Navbar = () => {
                   className={`flex h-[76px] items-center justify-center border-r border-[#efe5d4] px-3 text-sm font-semibold transition hover:bg-[#fff9ed] ${openDropdown === "metals" ? "bg-[#fff9ed]" : ""}`}
                 >
                   <span className="flex items-center gap-2 text-[#174a38]">
-                    <FaGem className="text-[#a77525]" />
+                    {/* <FaGem className="text-[#a77525]" /> */}
                     Metal
                   </span>
                 </button>
