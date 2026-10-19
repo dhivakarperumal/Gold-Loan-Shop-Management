@@ -126,23 +126,15 @@ const Silver = () => {
                 pauseOnMouseEnter: true,
               } : false}
               speed={700}
-              slidesPerView={Math.max(1, Math.min(2.1, products.length))}
+              slidesPerView="auto"
               spaceBetween={12}
-              breakpoints={{
-                480: { slidesPerView: Math.max(1, Math.min(2, products.length)) },
-                640: { slidesPerView: Math.max(1, Math.min(3, products.length)) },
-                1024: { slidesPerView: Math.max(1, Math.min(3, products.length)) },
-                1280: { slidesPerView: Math.max(1, Math.min(4, products.length)) },
-              }}
               grabCursor
-              centeredSlides={false}
+              centeredSlides={products.length === 1}
               className="!pb-2"
             >
               {products.map((product) => (
-                <SwiperSlide key={product.id} className="h-auto">
-                  <div className={products.length === 1 ? "mx-auto w-full max-w-[300px]" : ""}>
-                    <ProductCard product={product} />
-                  </div>
+                <SwiperSlide key={product.id} className="!h-auto !w-[260px] sm:!w-[280px] xl:!w-[300px]">
+                  <ProductCard product={product} />
                 </SwiperSlide>
               ))}
             </Swiper>
