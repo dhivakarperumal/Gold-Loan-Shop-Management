@@ -37,18 +37,18 @@ const Footer = () => {
   const links = [
     { label: "Home", to: "/" },
     { label: "About Us", to: "/about" },
-    { label: "Shop", to: "/shop" },
+    { label: "Explore", to: "/explore" },
     { label: "Metal Rates", to: "/metal" },
     { label: "Contact Us", to: "/contactus" },
   ];
 
   const collections = [
-    { label: "Gold Jewellery", to: "/shop" },
-    { label: "Diamond Jewellery", to: "/shop" },
-    { label: "Silver Jewellery", to: "/shop" },
-    { label: "Bridal Collection", to: "/shop" },
-    { label: "Earrings & Pendants", to: "/shop" },
-    { label: "New Arrivals", to: "/shop" },
+    { label: "Gold Jewellery", to: "/explore?category=Gold%20Jewellery" },
+    { label: "Diamond Jewellery", to: "/explore?category=Diamond%20Jewellery" },
+    { label: "Silver Articles", to: "/explore?category=Silver%20Articles" },
+    { label: "Bridal Collection", to: "/explore?search=Bridal%20Collection" },
+    { label: "Earrings & Pendants", to: "/explore?search=Earrings%20%26%20Pendants" },
+    { label: "New Arrivals", to: "/explore" },
   ];
 
   const socialLinks = [

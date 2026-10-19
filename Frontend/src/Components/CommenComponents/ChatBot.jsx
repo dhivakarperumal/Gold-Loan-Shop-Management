@@ -404,7 +404,7 @@ const ChatBot = ({ isOpen, onClose }) => {
         break;
 
       case "categories":
-        addMessage({ from: "bot", type: "text", text: "🏷️ Browse all product categories:", action: { label: "Browse Categories", href: "/shop" } });
+        addMessage({ from: "bot", type: "text", text: "🏷️ Browse all product categories:", action: { label: "Browse Categories", href: "/explore" } });
         break;
 
       case "track":

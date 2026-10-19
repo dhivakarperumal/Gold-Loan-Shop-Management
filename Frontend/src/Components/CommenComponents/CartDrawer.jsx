@@ -75,7 +75,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
               <p className="mt-2 text-sm text-gray-500">Add something beautiful to get started.</p>
               <button
                 type="button"
-                onClick={() => goTo("/shop")}
+                onClick={() => goTo("/explore")}
                 className="mt-6 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary-dark"
               >
                 Continue Shopping
@@ -167,7 +167,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
             </button>
             <button
               type="button"
-              onClick={() => goTo("/shop")}
+              onClick={() => goTo("/explore")}
               className="mt-2 w-full rounded-lg border border-primary py-3 text-sm font-semibold text-primary transition hover:bg-primary/10"
             >
               Continue Shopping

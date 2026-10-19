@@ -89,7 +89,7 @@ const WishlistDrawer = ({ isOpen, onClose }) => {
               <FiHeart className="mb-4 text-primary-light" size={48} />
               <h3 className="text-lg font-semibold text-gray-700">No favorites yet</h3>
               <p className="mt-2 text-sm text-gray-500">Save your favorite jewelry here.</p>
-              <button type="button" onClick={() => goTo("/shop")} className="mt-6 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary-dark">
+              <button type="button" onClick={() => goTo("/explore")} className="mt-6 rounded-lg bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary-dark">
                 Continue Shopping
               </button>
             </div>
@@ -157,7 +157,7 @@ const WishlistDrawer = ({ isOpen, onClose }) => {
             <button type="button" onClick={handleAddAllToCart} className="w-full rounded-lg bg-primary py-3 text-sm font-semibold text-white transition hover:bg-primary-dark">
               Add All Products to Cart
             </button>
-            <button type="button" onClick={() => goTo("/shop")} className="w-full rounded-lg border border-primary py-3 text-sm font-semibold text-primary transition hover:bg-primary/10">
+            <button type="button" onClick={() => goTo("/explore")} className="w-full rounded-lg border border-primary py-3 text-sm font-semibold text-primary transition hover:bg-primary/10">
               Continue Shopping
             </button>
           </div>

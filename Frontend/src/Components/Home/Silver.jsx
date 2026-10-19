@@ -62,7 +62,7 @@ const Silver = () => {
               </div>
             </div>
             <a
-              href="/category/silver-articles"
+              href="/explore?category=Silver%20Articles"
               className="inline-flex items-center gap-2 self-end text-xs font-semibold text-[#6f5426] transition-colors hover:text-[#b47a16]"
             >
               View All

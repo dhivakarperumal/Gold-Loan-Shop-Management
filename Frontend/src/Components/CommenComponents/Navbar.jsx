@@ -24,6 +24,12 @@ import { useAuth } from "../../PrivateRouter/AuthContext";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 import api from "../../api";
 
+const INFO_PAGES = [
+  { label: "About Us", to: "/about" },
+  { label: "Contact Us", to: "/contactus" },
+  { label: "Privacy Policy", to: "/privacy-policy" },
+];
+
 const Navbar = () => {
   const navigate = useNavigate();
   const { user, logout, profileName } = useAuth();
@@ -137,7 +143,7 @@ const Navbar = () => {
     if (!query) return;
 
     // Keep this route aligned with your existing shop search implementation.
-    navigate(`/shop?search=${encodeURIComponent(query)}`);
+    navigate(`/explore?search=${encodeURIComponent(query)}`);
   };
 
   const getSearchProductImage = (product) => {
@@ -228,12 +234,14 @@ const Navbar = () => {
 
   const handleCategoryClick = (category, subcategory) => {
     closeMenus();
-    navigate(`/shop?search=${encodeURIComponent(subcategory || category.name)}`);
+    const params = new URLSearchParams({ category: category.name });
+    if (subcategory) params.set("subcategory", subcategory);
+    navigate(`/explore?${params.toString()}`);
   };
 
   const handleMetalClick = (metalName) => {
     closeMenus();
-    navigate(`/shop?search=${encodeURIComponent(metalName)}`);
+    navigate(`/explore?metal=${encodeURIComponent(metalName)}`);
   };
 
   const getImageUrl = (image) => {
@@ -293,7 +301,7 @@ const Navbar = () => {
                 Home
               </NavLink>
 
-              <NavLink to="/about" className={navLinkClass}>
+              <NavLink to="/explore" className={navLinkClass}>
                 Explore
               </NavLink>
 
@@ -455,9 +463,51 @@ const Navbar = () => {
                 )}
               </div>
 
-              <NavLink to="/contactus" className={navLinkClass}>
-                Contact Us
-              </NavLink>
+              <div
+                className="relative"
+                onMouseEnter={() => setOpenDropdown("pages")}
+                onMouseLeave={() => setOpenDropdown(null)}
+              >
+                <button
+                  type="button"
+                  onClick={() => setOpenDropdown(openDropdown === "pages" ? null : "pages")}
+                  aria-expanded={openDropdown === "pages"}
+                  aria-haspopup="true"
+                  className={`flex h-[76px] items-center gap-2 px-3 text-[15px] font-semibold transition duration-300 xl:px-4 ${
+                    openDropdown === "pages"
+                      ? "text-[#b77b19]"
+                      : "text-[#173f33] hover:text-[#b77b19]"
+                  }`}
+                >
+                  Pages
+                  <ChevronDown
+                    size={17}
+                    className={`transition-transform duration-300 ${
+                      openDropdown === "pages" ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+                {openDropdown === "pages" && (
+                  <div className="absolute left-0 top-full z-50 w-[210px] rounded-xl border border-[#e6d5b2] bg-[#fffdf7] p-2 shadow-[0_12px_28px_rgba(30,50,35,0.16)]">
+                    {INFO_PAGES.map((page) => (
+                      <NavLink
+                        key={page.to}
+                        to={page.to}
+                        onClick={closeMenus}
+                        className={({ isActive }) =>
+                          `block rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+                            isActive
+                              ? "bg-[#fff0cf] text-[#8c5e13]"
+                              : "text-[#30271b] hover:bg-[#fff8e9] hover:text-[#8c5e13]"
+                          }`
+                        }
+                      >
+                        {page.label}
+                      </NavLink>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Desktop search and actions */}
@@ -676,7 +726,7 @@ const Navbar = () => {
               </NavLink>
 
               <NavLink
-                to="/about"
+                to="/explore"
                 onClick={closeMenus}
                 className="block rounded-lg px-4 py-3 text-sm font-semibold text-[#173f33] hover:bg-[#f1e5cb]"
               >
@@ -749,13 +799,39 @@ const Navbar = () => {
                 </div>
               )}
 
-              <NavLink
-                to="/contactus"
-                onClick={closeMenus}
-                className="block rounded-lg px-4 py-3 text-sm font-semibold text-[#173f33] hover:bg-[#f1e5cb]"
+              <button
+                type="button"
+                onClick={() => setOpenDropdown(openDropdown === "pages" ? null : "pages")}
+                aria-expanded={openDropdown === "pages"}
+                className="flex w-full items-center justify-between rounded-lg px-4 py-3 text-sm font-semibold text-[#173f33] hover:bg-[#f1e5cb]"
               >
-                Contact Us
-              </NavLink>
+                Pages
+                <ChevronDown
+                  size={17}
+                  className={`transition ${openDropdown === "pages" ? "rotate-180" : ""}`}
+                />
+              </button>
+
+              {openDropdown === "pages" && (
+                <div className="ml-4 border-l-2 border-[#d4aa59] pl-3">
+                  {INFO_PAGES.map((page) => (
+                    <NavLink
+                      key={page.to}
+                      to={page.to}
+                      onClick={closeMenus}
+                      className={({ isActive }) =>
+                        `block rounded-lg px-3 py-2.5 text-sm transition ${
+                          isActive
+                            ? "bg-[#fff0cf] font-semibold text-[#8c5e13]"
+                            : "text-[#365547] hover:bg-[#f1e5cb]"
+                        }`
+                      }
+                    >
+                      {page.label}
+                    </NavLink>
+                  ))}
+                </div>
+              )}
 
               <button
                 type="button"

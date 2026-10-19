@@ -131,7 +131,7 @@ const ProductDetail = () => {
           <FaGem className="mx-auto text-3xl text-[#bd913e]" />
           <h1 className="mt-4 font-serif text-2xl font-bold text-[#174a38]">Product unavailable</h1>
           <p className="mt-2 text-sm text-[#746b5d]" role="alert">{error || "This product could not be found."}</p>
-          <Link to="/shop" className="mt-6 inline-flex items-center gap-2 rounded-lg bg-[#174a38] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#10382b]">
+          <Link to="/explore" className="mt-6 inline-flex items-center gap-2 rounded-lg bg-[#174a38] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#10382b]">
             <FaArrowLeft /> Continue shopping
           </Link>
         </div>
@@ -213,7 +213,7 @@ const ProductDetail = () => {
   return (
     <main className="min-h-screen bg-[#fffdf8] px-4 py-8 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-7xl">
-        <Link to="/shop" className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-[#174a38] transition hover:text-[#a77525]">
+        <Link to="/explore" className="mb-6 inline-flex items-center gap-2 text-sm font-semibold text-[#174a38] transition hover:text-[#a77525]">
           <FaArrowLeft /> Back to shopping
         </Link>
 
