@@ -279,6 +279,18 @@ export default function DailyGoldRate() {
             const rate = current.rates.find((item) => item.metal_type.toLowerCase() === metal.toLowerCase() && item.purity === purity);
             return <div key={key} className="rounded-xl border border-white/10 bg-white/10 p-3 backdrop-blur-sm"><p className="text-[11px] font-semibold text-white/70">{label}</p><p className="mt-1 text-base font-extrabold text-white">{rate ? <>{currency(rate.rate_per_unit ?? rate.rate_per_gram)}<span className="ml-1 text-[11px] font-medium text-white/70">/ {unit === "carat" ? "ct" : "g"}</span></> : <span className="text-sm font-semibold text-white/60">Not set</span>}</p></div>;
           })}
+          <div className="rounded-xl border border-white/10 bg-white/10 p-3 backdrop-blur-sm">
+            <p className="text-[11px] font-semibold text-white/70">Default Making Charge</p>
+            <p className="mt-1 text-base font-extrabold text-white">
+              {current.making_charge_type === "Percentage"
+                ? `${Number(current.making_charge_value).toLocaleString("en-IN")}%`
+                : currency(current.making_charge_value)}
+            </p>
+          </div>
+          <div className="rounded-xl border border-white/10 bg-white/10 p-3 backdrop-blur-sm">
+            <p className="text-[11px] font-semibold text-white/70">Wastage</p>
+            <p className="mt-1 text-base font-extrabold text-white">{Number(current.wastage_percentage).toLocaleString("en-IN")}%</p>
+          </div>
         </div>}
       </section>
 
