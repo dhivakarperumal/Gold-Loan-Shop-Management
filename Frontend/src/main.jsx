@@ -39,6 +39,7 @@ const AllLoans = React.lazy(() => import("./Admin/Loanmanagements/AllLoans.jsx")
 const LoanDetails = React.lazy(() => import("./Admin/Loanmanagements/LoanDetails.jsx"));
 const InterestManagement = React.lazy(() => import("./Admin/Loanmanagements/InterestManagement.jsx"));
 const LoanRenewal = React.lazy(() => import("./Admin/Loanmanagements/LoanRenewal.jsx"));
+const GoldRelease = React.lazy(() => import("./Admin/Loanmanagements/GoldRelease.jsx"));
 const BannerManagement = React.lazy(() => import("./Admin/Marketing/BannerManagement.jsx"));
 const VideoManagement = React.lazy(() => import("./Admin/Marketing/VideoManagement.jsx"));
 const Reviews = React.lazy(() => import("./Admin/Pages/Reviews.jsx"));
@@ -113,6 +114,10 @@ const router = createBrowserRouter([
       { path: "loans/interestmanagement", element: <InterestManagement /> },
       { path: "loans/loanreniwel", element: <LoanRenewal /> },
       { path: "loans/loanreniwel/:id", element: <LoanRenewal /> },
+      { path: "loans/goldrelease", element: <GoldRelease /> },
+      { path: "loans/goldrelease/:id", element: <GoldRelease /> },
+      { path: "loans/completeloan", element: <GoldRelease /> },
+      { path: "loans/completeloan/:id", element: <GoldRelease /> },
       { path: "products/category", element: <Category /> },
       { path: "products/add", element: <AddProducts /> },
       { path: "products/all", element: <AllProducts /> },

@@ -62,13 +62,21 @@ export default function LoanDetails() {
   if (loading) return <main className="p-6 text-sm text-slate-500">Loading loan details...</main>;
   if (!loan) return <main className="p-6"><p className="text-slate-600">Loan not found.</p><Link to="/admin/loans/allloans" className="mt-3 inline-block text-sm font-semibold text-[#008577]">Back to all loans</Link></main>;
 
+  const isAwaitingGoldRelease = loan.release_status === "Pending Release"
+    && Number(loan.outstanding_principal ?? loan.principal_amount) === 0;
+  const displayLoanStatus = loan.release_status === "Released"
+    ? "Completed · Gold Released"
+    : isAwaitingGoldRelease
+      ? "Paid · Awaiting Gold Release"
+      : loan.loan_status;
+
   return (
     <main className="space-y-5 p-4 sm:p-6">
       <Link to="/admin/loans/allloans" className="inline-flex items-center gap-2 text-sm font-semibold text-[#008577]"><FiArrowLeft /> All Loans</Link>
       <header className="flex flex-wrap items-center justify-between gap-3 rounded-xl bg-[#003B3B] p-5 text-white shadow-sm">
         <div><p className="text-xs font-semibold uppercase tracking-widest text-emerald-100">Gold Loan</p><h1 className="mt-1 text-2xl font-extrabold">{loan.loan_number}</h1><p className="mt-1 text-sm text-white/75">Created {dateText(loan.created_at)}</p></div>
         <div className="flex flex-wrap items-center gap-3">
-          <span className="rounded-full bg-white/15 px-3 py-1.5 text-sm font-bold">{loan.loan_status}</span>
+          <span className="rounded-full bg-white/15 px-3 py-1.5 text-sm font-bold">{displayLoanStatus}</span>
           <button type="button" onClick={() => printLoanAgreement(loan.id)} className="inline-flex min-h-10 items-center gap-2 rounded-xl border border-white/20 bg-white/10 px-4 py-2 text-sm font-bold text-white transition hover:bg-white/20 focus:outline-none focus:ring-4 focus:ring-white/20">
             <FiPrinter /> Print / Download PDF
           </button>
@@ -132,7 +140,9 @@ export default function LoanDetails() {
           {loan.maximum_interest_amount != null && <Detail label="Maximum Interest" value={money(loan.maximum_interest_amount)} />}
         </div>
         {loan.notes && <div className="mt-3"><Detail label="Notes" value={loan.notes} /></div>}
-        <Link to={`/admin/loans/loanreniwel/${loan.id}`} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800 hover:bg-emerald-100"><FiCalendar /> Review payment and renew loan</Link>
+        {isAwaitingGoldRelease
+          ? <Link to={`/admin/loans/completeloan/${loan.id}`} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-amber-50 px-3 py-2 text-sm font-bold text-amber-900 hover:bg-amber-100"><FiCalendar /> Complete loan and release gold</Link>
+          : loan.release_status !== "Released" && <Link to={`/admin/loans/loanreniwel/${loan.id}`} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800 hover:bg-emerald-100"><FiCalendar /> Review payment and renew loan</Link>}
       </section>
     </main>
   );

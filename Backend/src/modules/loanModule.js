@@ -52,6 +52,9 @@ async function initializeLoanModule() {
       maturity_date DATE NOT NULL,
       payment_frequency VARCHAR(20) NOT NULL,
       loan_status VARCHAR(20) NOT NULL DEFAULT 'Active',
+      release_status VARCHAR(30) NOT NULL DEFAULT 'Not Ready',
+      gold_released_at DATETIME NULL,
+      gold_released_to VARCHAR(150) NULL,
       notes TEXT NULL,
       gold_image_url VARCHAR(255) NULL,
       created_by BIGINT UNSIGNED NULL,
@@ -68,6 +71,9 @@ async function initializeLoanModule() {
   const existingColumns = new Set(loanColumns.map((column) => column.Field));
   const loanColumnMigrations = {
     outstanding_principal: 'DECIMAL(14,2) NULL AFTER principal_amount',
+    release_status: "VARCHAR(30) NOT NULL DEFAULT 'Not Ready' AFTER loan_status",
+    gold_released_at: 'DATETIME NULL AFTER release_status',
+    gold_released_to: 'VARCHAR(150) NULL AFTER gold_released_at',
     fixed_interest_amount: 'DECIMAL(14,2) NULL AFTER interest_rate',
     custom_period_days: 'SMALLINT UNSIGNED NULL AFTER interest_frequency',
     gold_rate_per_gram: 'DECIMAL(14,2) NULL AFTER gold_valuation',
@@ -103,6 +109,34 @@ async function initializeLoanModule() {
       INDEX idx_loan_renewals_loan_date (loan_id, renewal_date, id)
     )
   `);
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS loan_gold_releases (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      loan_id BIGINT UNSIGNED NOT NULL UNIQUE,
+      released_at DATETIME NOT NULL,
+      released_to VARCHAR(150) NOT NULL,
+      confirmed_customer_signature BOOLEAN NOT NULL,
+      signed_document_url VARCHAR(255) NOT NULL,
+      notes TEXT NULL,
+      released_by BIGINT UNSIGNED NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT fk_loan_gold_releases_loan FOREIGN KEY (loan_id)
+        REFERENCES loans(id) ON DELETE RESTRICT
+    )
+  `);
+  const [releaseColumns] = await pool.query('SHOW COLUMNS FROM loan_gold_releases');
+  if (!releaseColumns.some((column) => column.Field === 'signed_document_url')) {
+    await pool.query('ALTER TABLE loan_gold_releases ADD COLUMN signed_document_url VARCHAR(255) NULL AFTER confirmed_customer_signature');
+  }
+  await pool.query(`
+    UPDATE loans l
+    LEFT JOIN loan_gold_releases r ON r.loan_id = l.id
+    SET l.release_status = IF(r.id IS NULL, 'Pending Release', 'Released'),
+      l.loan_status = IF(r.id IS NULL, 'Active', 'Completed'),
+      l.gold_released_at = r.released_at,
+      l.gold_released_to = r.released_to
+    WHERE l.outstanding_principal = 0
+  `);
   const [pledgeIndex] = await pool.query("SHOW INDEX FROM loans WHERE Key_name = 'uq_loans_gold_pledge_number'");
   if (pledgeIndex.length === 0) {
     const [[{ duplicateCount }]] = await pool.query(`
@@ -133,6 +167,100 @@ async function initializeLoanModule() {
       [typeKey, label]
     );
   }
+}
+
+async function listGoldReleaseEligible() {
+  const [rows] = await pool.query(`
+    SELECT l.*, c.customer_code, c.full_name AS customer_name, c.mobile AS customer_mobile,
+      c.address AS customer_address, c.city AS customer_city, c.district AS customer_district,
+      c.state AS customer_state, c.pincode AS customer_pincode
+    FROM loans l JOIN loan_customers c ON c.id = l.customer_id
+    WHERE l.outstanding_principal = 0 AND l.release_status <> 'Released'
+    ORDER BY l.updated_at DESC, l.id DESC
+  `);
+  return rows;
+}
+
+async function getGoldReleaseDetails(id) {
+  const loan = await getLoanById(id);
+  if (!loan) return null;
+  const [releases] = await pool.execute(
+    `SELECT id, released_at, released_to, confirmed_customer_signature, signed_document_url, notes, released_by
+     FROM loan_gold_releases WHERE loan_id = ?`,
+    [id]
+  );
+  return { loan, release: releases[0] || null };
+}
+
+async function releaseGold(id, releasedTo, notes, signedDocumentUrl, releasedBy) {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [loans] = await connection.execute(
+      'SELECT * FROM loans WHERE id = ? FOR UPDATE',
+      [id]
+    );
+    if (!loans.length) {
+      const error = new Error('Loan not found');
+      error.code = 'LOAN_NOT_FOUND';
+      throw error;
+    }
+    const loan = loans[0];
+    if (loan.release_status === 'Released') {
+      const error = new Error('Gold has already been released for this loan');
+      error.code = 'GOLD_ALREADY_RELEASED';
+      throw error;
+    }
+    if (Number(loan.outstanding_principal ?? loan.principal_amount) !== 0) {
+      const error = new Error('The loan must be fully paid before gold can be released');
+      error.code = 'LOAN_BALANCE_REMAINING';
+      throw error;
+    }
+    const recipient = String(releasedTo || '').trim();
+    if (!recipient || recipient.length > 150) {
+      const error = new Error('Enter the name of the person receiving the gold');
+      error.code = 'INVALID_RELEASE_RECIPIENT';
+      throw error;
+    }
+    if (!signedDocumentUrl) {
+      const error = new Error('Upload the signed gold release document before completing the release');
+      error.code = 'SIGNED_RELEASE_DOCUMENT_REQUIRED';
+      throw error;
+    }
+    const [[timeRow]] = await connection.query(
+      'SELECT CURRENT_TIMESTAMP() AS released_at'
+    );
+    await connection.execute(
+      `INSERT INTO loan_gold_releases
+        (loan_id, released_at, released_to, confirmed_customer_signature, signed_document_url, notes, released_by)
+       VALUES (?, ?, ?, TRUE, ?, ?, ?)`,
+      [id, timeRow.released_at, recipient, signedDocumentUrl, notes ? String(notes).trim().slice(0, 2000) : null, releasedBy || null]
+    );
+    await connection.execute(
+      `UPDATE loans SET loan_status = 'Completed', release_status = 'Released',
+        gold_released_at = ?, gold_released_to = ? WHERE id = ?`,
+      [timeRow.released_at, recipient, id]
+    );
+    const details = await getGoldReleaseDetailsFrom(connection, id);
+    await connection.commit();
+    return details;
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+async function getGoldReleaseDetailsFrom(connection, id) {
+  const loan = await getLoanByIdFrom(connection, id);
+  if (!loan) return null;
+  const [releases] = await connection.execute(
+    `SELECT id, released_at, released_to, confirmed_customer_signature, signed_document_url, notes, released_by
+     FROM loan_gold_releases WHERE loan_id = ?`,
+    [id]
+  );
+  return { loan, release: releases[0] || null };
 }
 
 async function listInterestTypes() {
@@ -330,6 +458,16 @@ async function renewLoan(id, paymentAmount, adminUserId) {
     );
     const preview = makeRenewalPreview(loan, dateRow.renewal_date);
     const amount = Math.round(Number(paymentAmount) * 100) / 100;
+    if (loan.release_status === 'Released') {
+      const error = new Error('Gold has already been released and this loan is completed');
+      error.code = 'LOAN_NOT_ACTIVE';
+      throw error;
+    }
+    if (preview.current_principal <= 0) {
+      const error = new Error('This loan is fully paid. Complete gold release instead of renewing it.');
+      error.code = 'LOAN_READY_FOR_GOLD_RELEASE';
+      throw error;
+    }
     if (loan.loan_status !== 'Active') {
       const error = new Error('Only active loans can be renewed');
       error.code = 'LOAN_NOT_ACTIVE';
@@ -369,10 +507,10 @@ async function renewLoan(id, paymentAmount, adminUserId) {
     );
     await connection.execute(
       `UPDATE loans SET outstanding_principal = ?, interest_calculation_start_date = ?,
-        maturity_date = ?, loan_status = ? WHERE id = ?`,
+        maturity_date = ?, loan_status = ?, release_status = ? WHERE id = ?`,
       [
         principalAfter.toFixed(2), preview.renewal_date,
-        newMaturityDate || previousMaturityDate, fullyRepaid ? 'Completed' : 'Active', id
+        newMaturityDate || previousMaturityDate, 'Active', fullyRepaid ? 'Pending Release' : 'Not Ready', id
       ]
     );
     const [[renewal]] = await connection.query('SELECT LAST_INSERT_ID() AS id');
@@ -393,7 +531,8 @@ async function renewLoan(id, paymentAmount, adminUserId) {
       principal_after: principalAfter,
       renewal_date: preview.renewal_date,
       new_maturity_date: newMaturityDate,
-      loan_status: fullyRepaid ? 'Completed' : 'Active',
+      loan_status: 'Active',
+      release_status: fullyRepaid ? 'Pending Release' : 'Not Ready',
       loan: updatedLoan,
       preview: makeRenewalPreview(updatedLoan, preview.renewal_date),
       history
@@ -530,14 +669,17 @@ module.exports = {
   allocateRenewalPayment,
   calculateRenewalInterest,
   deleteLoan,
+  getGoldReleaseDetails,
   getLoanById,
   getLoanRenewal,
   getLoanRenewalHistory,
   initializeLoanModule,
   listInterestTypes,
   listLoans,
+  listGoldReleaseEligible,
   listLoansForCustomer,
   makeRenewalPreview,
+  releaseGold,
   renewLoan,
   setInterestType,
   updateLoan

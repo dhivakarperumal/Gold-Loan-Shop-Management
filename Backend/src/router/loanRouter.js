@@ -1,17 +1,22 @@
 const express = require('express');
 const requireAdmin = require('../middleware/requireAdmin');
 const { uploadLoanGoldImage } = require('../middleware/loanGoldImageUpload');
+const { uploadLoanGoldReleaseDocument } = require('../middleware/loanGoldReleaseUpload');
 const {
   getCustomer,
   getCustomerLoans,
   getCustomers,
+  getGoldReleaseList,
+  getGoldReleaseRecord,
   getInterestTypes,
   getLoan,
   getLoanGoldImage,
+  getLoanGoldReleaseDocument,
   getLoanRenewalDetails,
   getLoanRenewalHistoryList,
   getLoans,
   postLoan,
+  postGoldRelease,
   postLoanRenewal,
   putLoan,
   removeLoan,
@@ -28,6 +33,16 @@ router.get('/loans/interest-types', getInterestTypes);
 router.patch('/loans/interest-types/:typeKey', updateInterestType);
 router.get('/loans', getLoans);
 router.get('/loans/gold-images/:filename', getLoanGoldImage);
+router.get('/loans/:id/gold-release-document', getLoanGoldReleaseDocument);
+router.get('/loans/gold-release', getGoldReleaseList);
+router.get('/loans/:id/gold-release', getGoldReleaseRecord);
+router.post('/loans/:id/gold-release', (req, res, next) => {
+  uploadLoanGoldReleaseDocument.single('signed_document')(req, res, (error) => {
+    if (!error) return next();
+    const status = error.code === 'LIMIT_FILE_SIZE' ? 413 : 400;
+    return res.status(status).json({ message: error.message });
+  });
+}, postGoldRelease);
 router.get('/loans/:id/renewal', getLoanRenewalDetails);
 router.get('/loans/:id/renewals', getLoanRenewalHistoryList);
 router.post('/loans/:id/renewal', postLoanRenewal);
