@@ -49,6 +49,7 @@ const Navbar = () => {
 
   const wishlistCount = wishlist.length;
   const cartCount = cart.length;
+  const isAdmin = String(user?.role || "").toLowerCase() === "admin";
 
   useEffect(() => {
     const query = search.trim();
@@ -508,6 +509,12 @@ const Navbar = () => {
                   </div>
                 )}
               </div>
+
+              {isAdmin && (
+                <NavLink to="/admin" className={navLinkClass}>
+                  Admin Panel
+                </NavLink>
+              )}
             </div>
 
             {/* Desktop search and actions */}
@@ -831,6 +838,22 @@ const Navbar = () => {
                     </NavLink>
                   ))}
                 </div>
+              )}
+
+              {isAdmin && (
+                <NavLink
+                  to="/admin"
+                  onClick={closeMenus}
+                  className={({ isActive }) =>
+                    `block rounded-lg px-4 py-3 text-sm font-semibold ${
+                      isActive
+                        ? "bg-[#064638] text-[#f3d795]"
+                        : "text-[#173f33] hover:bg-[#f1e5cb]"
+                    }`
+                  }
+                >
+                  Admin Panel
+                </NavLink>
               )}
 
               <button
