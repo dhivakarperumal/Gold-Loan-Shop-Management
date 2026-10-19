@@ -22,12 +22,14 @@ async function initializeLoanModule() {
       customer_id BIGINT UNSIGNED NOT NULL,
       gold_pledge_number VARCHAR(60) NOT NULL,
       jewellery_type VARCHAR(100) NOT NULL,
+      metal_type ENUM('Gold', 'Silver', 'Platinum', 'Diamond') NOT NULL DEFAULT 'Gold',
       gold_purity VARCHAR(30) NOT NULL,
       gross_weight DECIMAL(12,3) NOT NULL,
       stone_weight DECIMAL(12,3) NOT NULL DEFAULT 0,
       net_gold_weight DECIMAL(12,3) NOT NULL,
       gold_valuation DECIMAL(14,2) NOT NULL,
       gold_rate_per_gram DECIMAL(14,2) NULL,
+      rate_unit ENUM('gram', 'carat') NOT NULL DEFAULT 'gram',
       gold_rate_date DATE NULL,
       principal_amount DECIMAL(14,2) NOT NULL,
       interest_type VARCHAR(30) NOT NULL,
@@ -67,6 +69,8 @@ async function initializeLoanModule() {
     fixed_interest_amount: 'DECIMAL(14,2) NULL AFTER interest_rate',
     custom_period_days: 'SMALLINT UNSIGNED NULL AFTER interest_frequency',
     gold_rate_per_gram: 'DECIMAL(14,2) NULL AFTER gold_valuation',
+    metal_type: "ENUM('Gold', 'Silver', 'Platinum', 'Diamond') NOT NULL DEFAULT 'Gold' AFTER jewellery_type",
+    rate_unit: "ENUM('gram', 'carat') NOT NULL DEFAULT 'gram' AFTER gold_rate_per_gram",
     gold_rate_date: 'DATE NULL AFTER gold_rate_per_gram',
     gold_image_url: 'VARCHAR(255) NULL AFTER notes'
   };

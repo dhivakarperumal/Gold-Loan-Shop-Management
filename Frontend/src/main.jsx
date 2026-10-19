@@ -29,7 +29,9 @@ const Category = React.lazy(() => import("./Admin/Categery/Category.jsx"));
 const Metals = React.lazy(() => import("./Admin/Metal Type/Metals.jsx"));
 const AddProducts = React.lazy(() => import("./Admin/Products/AddProducts.jsx"));
 const AllProducts = React.lazy(() => import("./Admin/Products/AllProducts.jsx"));
+const AddStock = React.lazy(() => import("./Admin/Products/AddStock.jsx"));
 const ProductDetail = React.lazy(() => import("./Admin/Products/ProductDetail.jsx"));
+const StockDetails = React.lazy(() => import("./Admin/Pages/StockDetails.jsx"));
 const LoanCustomerManagement = React.lazy(() => import("./Admin/Loanmanagements/LoanCustomerManagement.jsx"));
 const LoanCustomerDetails = React.lazy(() => import("./Admin/Loanmanagements/LoanCustomerDetails.jsx"));
 const CreateLoan = React.lazy(() => import("./Admin/Loanmanagements/CreateLoan.jsx"));
@@ -42,6 +44,8 @@ const Reviews = React.lazy(() => import("./Admin/Pages/Reviews.jsx"));
 const Settings = React.lazy(() => import("./Admin/Pages/Settings.jsx"));
 const DailyGoldRate = React.lazy(() => import("./Admin/Pages/DailyGoldRate.jsx"));
 const Dealers = React.lazy(() => import("./Admin/Dealers/Dealers.jsx"));
+const CustomerKyc = React.lazy(() => import("./Components/Account/CustomerKyc.jsx"));
+const AdminKyc = React.lazy(() => import("./Admin/Kyc/AdminKyc.jsx"));
 
 const ErrorPage = React.lazy(() => import("./Admin/Pages/ErrorPage.jsx"));
 
@@ -52,8 +56,14 @@ const router = createBrowserRouter([
     errorElement: <ErrorPage />,
     children: [
       { path: "/", element: <Home /> },
-      { path: "shop", element: <Explore /> },
-      { path: "product/:id", element: <StoreProductDetail /> },
+      {
+        path: "/account/kyc",
+        element: (
+          <PrivateRoute allowedRoles={["user"]}>
+            <CustomerKyc />
+          </PrivateRoute>
+        )
+      },
      
 
     ],
@@ -75,6 +85,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Dashboard /> },
       { path: "users/all", element: <Users /> },
+      { path: "kyc", element: <AdminKyc /> },
       { path: "loans/customermanagement", element: <LoanCustomerManagement /> },
       { path: "loans/customers/:id", element: <LoanCustomerDetails /> },
       { path: "loans/createloan", element: <CreateLoan /> },
@@ -85,6 +96,8 @@ const router = createBrowserRouter([
       { path: "products/category", element: <Category /> },
       { path: "products/add", element: <AddProducts /> },
       { path: "products/all", element: <AllProducts /> },
+      { path: "products/stock", element: <StockDetails /> },
+      { path: "products/stock/add", element: <AddStock /> },
       { path: "products/edit/:id", element: <AddProducts /> },
       { path: "products/:id", element: <ProductDetail /> },
       { path: "metals", element: <Metals /> },

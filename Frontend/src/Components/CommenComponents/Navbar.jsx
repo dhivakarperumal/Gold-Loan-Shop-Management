@@ -456,8 +456,27 @@ const Navbar = () => {
                   <span className="text-xs font-semibold">Account</span>
                 </button>
                 {userMenu && (
-                  <div role="menu" className="absolute right-0 top-full z-50 mt-2 w-44 overflow-hidden rounded-xl border border-[#efe5d4] bg-white shadow-xl">
-                    <Link to="/account" role="menuitem" className="block px-4 py-3 text-sm hover:bg-[#fff8e9]" onClick={() => setUserMenu(false)}>My Account</Link>
+
+                  <div className="absolute right-0 mt-2 w-44 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden animate-dropdown">
+
+                    <Link
+                      to="/account"
+                      className="block px-4 py-3 text-sm hover:bg-gray-100"
+                      onClick={() => setUserMenu(false)}
+                    >
+                      My Account
+                    </Link>
+
+                    {user.role === "user" && (
+                      <Link
+                        to="/account/kyc"
+                        className="block px-4 py-3 text-sm hover:bg-gray-100"
+                        onClick={() => setUserMenu(false)}
+                      >
+                        KYC Verification
+                      </Link>
+                    )}
+
                     {user.role === "admin" && (
                       <Link to="/admin" role="menuitem" className="block px-4 py-3 text-sm hover:bg-[#fff8e9]" onClick={() => setUserMenu(false)}>Admin Panel</Link>
                     )}
@@ -755,6 +774,11 @@ const Navbar = () => {
                         <Link to="/account" onClick={closeMobileMenu} className="flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-[#004D40]">
                           <span className="flex h-6 w-6 items-center justify-center rounded-full bg-[#174a38] text-xs font-bold uppercase text-white">{getUserInitial()}</span> My Account
                         </Link>
+                        {user.role === "user" && (
+                          <Link to="/account/kyc" onClick={closeMobileMenu} className="flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-[#004D40]">
+                            <FiFileText size={18} /> KYC Verification
+                          </Link>
+                        )}
                         {user.role === "admin" && (
                           <Link to="/admin" onClick={closeMobileMenu} className="flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 hover:text-[#004D40]">
                             <FaUser size={17} className="text-[#174a38]" /> Admin Panel

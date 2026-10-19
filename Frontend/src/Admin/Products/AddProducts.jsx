@@ -16,6 +16,33 @@ import useGoldRates from "../../PrivateRouter/useGoldRates";
 
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
 const GOLD_SHOP = "Sri Gold";
+const FALLBACK_PURITY_OPTIONS = {
+  gold: ["24K / 999", "22K / 916", "20K / 833", "18K / 750", "14K / 585"],
+  silver: ["999"],
+  platinum: ["950", "900"],
+  diamond: ["D-F / VVS", "G-H / VS", "I-J / SI"]
+};
+const GOLD_PURITY_LABELS = {
+  "999": "24K / 999",
+  "916": "22K / 916",
+  "833": "20K / 833",
+  "750": "18K / 750",
+  "585": "14K / 585"
+};
+
+function getPurityOptions(metalType, rateSet, metalList) {
+  const type = String(metalType || "").toLowerCase();
+  const activeRates = rateSet?.rates?.filter((rate) => rate.metal_type.toLowerCase() === type) || [];
+  const configuredPurities = activeRates.length
+    ? activeRates.map((rate) => rate.purity)
+    : (metalList.find((metal) => metal.name.toLowerCase() === type)?.purity || "")
+      .split(",").map((purity) => purity.trim()).filter(Boolean);
+  const purities = configuredPurities.length
+    ? configuredPurities
+    : FALLBACK_PURITY_OPTIONS[type] || [];
+  const formattedPurities = purities.map((purity) => GOLD_PURITY_LABELS[purity] || purity);
+  return [...new Set(formattedPurities.length ? formattedPurities : ["Other"])];
+}
 
 const EMPTY_PRODUCT = {
   name: "",
@@ -129,6 +156,7 @@ const AddProducts = () => {
   const [metals, setMetals] = useState([]);
   const [formData, setFormData] = useState(EMPTY_PRODUCT);
   const [originalPurity, setOriginalPurity] = useState(null);
+  const [originalMetalType, setOriginalMetalType] = useState(null);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(isEdit);
   const [uploading, setUploading] = useState(false);
@@ -156,6 +184,7 @@ const AddProducts = () => {
         if (isEdit) {
           const product = productResponse.data;
           setOriginalPurity(product.purity || "");
+          setOriginalMetalType(product.metal_type || "");
           setFormData({
             ...EMPTY_PRODUCT,
             ...product,
@@ -175,7 +204,8 @@ const AddProducts = () => {
             ...current,
             category: category?.name || "",
             subcategory: Array.isArray(category?.subcategory) ? category.subcategory[0] || "" : "",
-            metal_type: metalList.find((metal) => metal.status === "Active")?.name || "",
+            metal_type: metalList.find((metal) => metal.status === "Active" && metal.name.toLowerCase() === "gold")?.name
+              || metalList.find((metal) => metal.status === "Active")?.name || "",
             product_code: productResponse.data.latestCode || "GOLD-PRD-001"
           }));
         }
@@ -190,8 +220,15 @@ const AddProducts = () => {
     return () => { active = false; };
   }, [id, isEdit]);
 
-  const activePurityRate = getRateForPurity(activeRateSet, formData.purity);
-  const purityChanged = isEdit && originalPurity !== null && formData.purity !== originalPurity;
+  const configuredPurities = getPurityOptions(formData.metal_type, activeRateSet, metals);
+  const purityOptions = formData.purity && !configuredPurities.includes(formData.purity)
+    ? [formData.purity, ...configuredPurities]
+    : configuredPurities;
+  const isDiamond = formData.metal_type.toLowerCase() === "diamond";
+  const activePurityRate = getRateForPurity(activeRateSet, formData.purity, formData.metal_type || "Gold");
+  const rateUnit = activePurityRate?.rate_unit === "carat" || isDiamond ? "Carat" : "Gram";
+  const purityChanged = isEdit && originalPurity !== null
+    && (formData.purity !== originalPurity || formData.metal_type !== originalMetalType);
   const effectiveGoldRate = (!isEdit || purityChanged) && activePurityRate
     ? Number(activePurityRate.rate_per_gram)
     : Number(formData.gold_rate_per_gram) || 0;
@@ -256,6 +293,14 @@ const AddProducts = () => {
           ...current,
           category: value,
           subcategory: categorySubcategories.includes(current.subcategory) ? current.subcategory : categorySubcategories[0] || ""
+        };
+      }
+      if (name === "metal_type") {
+        const nextPurities = getPurityOptions(value, activeRateSet, metals);
+        return {
+          ...current,
+          metal_type: value,
+          purity: nextPurities.includes(current.purity) ? current.purity : nextPurities[0] || ""
         };
       }
       return { ...current, [name]: nextValue };
@@ -356,10 +401,10 @@ const AddProducts = () => {
       setLoading(true);
       if (isEdit) {
         await api.put(`/products/${id}`, product);
-        toast.success("Gold jewellery product updated.");
+        toast.success("Product updated.");
       } else {
         await api.post("/products", product);
-        toast.success("Gold jewellery product added.");
+        toast.success("Product added.");
       }
       navigate("/admin/products/all");
     } catch (error) {
@@ -390,8 +435,8 @@ const AddProducts = () => {
           <FiArrowLeft size={18} />
         </button>
         <div>
-          <h1 className="text-xl font-black text-[#003B3B]">{isEdit ? "Edit Gold Product" : "Add Gold Product"}</h1>
-          <p className="text-xs text-gray-500">Manage gold jewellery details, pricing, media, and inventory.</p>
+          <h1 className="text-xl font-black text-[#003B3B]">{isEdit ? "Edit Product" : "Add Product"}</h1>
+          <p className="text-xs text-gray-500">Manage product details, metal pricing, media, and inventory.</p>
         </div>
       </div>
 
@@ -417,12 +462,12 @@ const AddProducts = () => {
             </div>
           </Section>
 
-          <Section title="2. Gold Details">
+          <Section title={`2. ${isDiamond ? "Diamond" : "Metal"} Details`}>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <SelectField label="Purity" name="purity" value={formData.purity} onChange={handleChange} options={["18K / 750", "20K", "22K / 916", "24K / 999", "Other"]} />
+              <SelectField label={isDiamond ? "Diamond Grade" : "Purity"} name="purity" value={formData.purity} onChange={handleChange} options={purityOptions} />
               <Field label="Gross Weight (g)" name="gross_weight" type="number" min="0" step="0.001" value={formData.gross_weight} onChange={handleChange} placeholder="10" />
-              <Field label="Net Gold Weight (g)" name="net_gold_weight" type="number" min="0" step="0.001" value={formData.net_gold_weight} onChange={handleChange} placeholder="10" />
-              <Field label="Gold Rate / Gram (₹)" name="gold_rate_per_gram" type="number" min="0" step="0.01" value={effectiveGoldRate || ""} onChange={handleChange} placeholder={ratesLoading ? "Loading current rate..." : "No active rate"} readOnly />
+              <Field label={isDiamond ? "Net Diamond Weight (ct)" : "Net Metal Weight (g)"} name="net_gold_weight" type="number" min="0" step="0.001" value={formData.net_gold_weight} onChange={handleChange} placeholder={isDiamond ? "e.g. 0.50" : "10"} />
+              <Field label={`Rate / ${rateUnit} (₹)`} name="gold_rate_per_gram" type="number" min="0" step="0.01" value={effectiveGoldRate || ""} onChange={handleChange} placeholder={ratesLoading ? "Loading current rate..." : "No active rate"} readOnly />
               <SelectField label="Making Charge Type" name="making_charge_type" value={effectiveMakingChargeType} onChange={handleChange} options={["Percentage", "Fixed Amount"]} />
               <Field label={effectiveMakingChargeType === "Percentage" ? "Making Charge (%)" : "Making Charge (₹)"} name="making_charge" type="number" min="0" step="0.01" value={effectiveMakingCharge} onChange={handleChange} placeholder={effectiveMakingChargeType === "Percentage" ? "10" : "500"} />
               <SelectField label="Wastage Type" name="wastage_type" value={effectiveWastageType} onChange={handleChange} options={["Percentage", "Grams"]} />
@@ -434,12 +479,12 @@ const AddProducts = () => {
             </div>
             {activeRateSet && (
               <p className="mt-4 rounded-xl bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-900">
-                Active global gold rates · effective {formatRateDate(activeRateSet.rate_date)}. Existing product rate snapshots remain unchanged.
+                Active precious metal rates · effective {formatRateDate(activeRateSet.rate_date)}. Existing product rate snapshots remain unchanged.
               </p>
             )}
             {ratesError && <p role="alert" className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">Could not refresh rates: {ratesError}</p>}
             {!ratesLoading && !ratesError && !activePurityRate && formData.net_gold_weight && (
-              <p role="alert" className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">No active rate matches this purity. Save and activate it under Settings → Daily Gold Rate.</p>
+              <p role="alert" className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">No active rate matches this {formData.metal_type || "metal"} purity. Configure and activate it under Settings → Daily Precious Rates.</p>
             )}
             {goldValue > 0 && (
               <div className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-950">
@@ -506,7 +551,7 @@ const AddProducts = () => {
           <Section title="5. Product Content">
             <div className="space-y-4">
               <label className={labelClass}>Full Description
-                <textarea className={inputClass} rows="4" name="full_description" value={formData.full_description} onChange={handleChange} placeholder="Detailed gold jewellery description..." />
+                <textarea className={inputClass} rows="4" name="full_description" value={formData.full_description} onChange={handleChange} placeholder="Detailed product description..." />
               </label>
               <label className={labelClass}>Care Instructions
                 <textarea className={inputClass} rows="2" name="care_instructions" value={formData.care_instructions} onChange={handleChange} placeholder="Store safely and clean appropriately..." />

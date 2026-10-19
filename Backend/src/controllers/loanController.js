@@ -28,6 +28,7 @@ const PAYMENT_FREQUENCIES = new Set([
 ]);
 const DAY_COUNT_CONVENTIONS = new Set(['actual_365', 'actual_360', '30_360']);
 const LOAN_STATUSES = new Set(['Active', 'Pending', 'Inactive', 'Completed']);
+const METAL_TYPES = new Set(['Gold', 'Silver', 'Platinum', 'Diamond']);
 const INTEREST_TYPES = new Set([
   'simple', 'compound', 'flat', 'reducing_balance', 'daily', 'monthly',
   'annual', 'fixed', 'slab_based', 'custom'
@@ -54,8 +55,20 @@ function parseAmount(value, label, { min = 0, max = MAXIMUM } = {}) {
   return { value: amount.toFixed(4) };
 }
 
+function calculateLoanAmount(goldValuation) {
+  return (Math.round(Number(goldValuation) * 50) / 100).toFixed(2);
+}
+
+function calculateMetalValuation(netWeight, ratePerUnit) {
+  return (Number(netWeight) * Number(ratePerUnit)).toFixed(2);
+}
+
 function normalizeLoan(body) {
+  const loanAmountMode = body.loan_amount_mode == null ? 'manual' : body.loan_amount_mode;
+  if (!['auto', 'manual'].includes(loanAmountMode)) return { error: 'Select a valid loan amount mode' };
   if (!validId(body.customer_id)) return { error: 'Select a valid customer' };
+  const metalType = body.metal_type == null || body.metal_type === '' ? 'Gold' : body.metal_type;
+  if (!METAL_TYPES.has(metalType)) return { error: 'Select a valid metal type' };
   for (const field of REQUIRED_TEXT) {
     if (typeof body[field] !== 'string' || !body[field].trim() || body[field].trim().length > 100) {
       return { error: `${field.replaceAll('_', ' ')} is required and must be 100 characters or fewer` };
@@ -132,14 +145,17 @@ function normalizeLoan(body) {
     return { error: 'Custom interest period must be a whole number of days from 1 to 3650' };
   }
   return {
+    loanAmountMode,
     loan: {
       customer_id: String(body.customer_id),
       jewellery_type: body.jewellery_type.trim(),
+      metal_type: metalType,
       gold_purity: body.gold_purity.trim(),
       gross_weight: gross.value,
       stone_weight: stone.value,
       net_gold_weight: netWeight.toFixed(3),
       gold_valuation: '0.00',
+      rate_unit: body.rate_unit === 'carat' ? 'carat' : 'gram',
       principal_amount: principal.value,
       interest_type: body.interest_type,
       interest_rate: rate.value,
@@ -262,7 +278,7 @@ async function postLoan(req, res, next) {
     if (cleanupStatus) return res.status(cleanupStatus).json({ message: 'The uploaded file is not a valid PNG or JPG image' });
     return;
   }
-  const { loan, error } = normalizeLoan(req.body || {});
+  const { loan, loanAmountMode, error } = normalizeLoan(req.body || {});
   if (error) {
     const cleanupStatus = await rejectUploadedImage(req, next, 400);
     if (cleanupStatus) return res.status(cleanupStatus).json({ message: error });
@@ -270,18 +286,20 @@ async function postLoan(req, res, next) {
   }
   try {
     const activeRateSet = await getCurrentGoldRates();
-    const activeRate = findGoldRateForPurity(activeRateSet, loan.gold_purity);
+    const activeRate = findGoldRateForPurity(activeRateSet, loan.gold_purity, loan.metal_type);
     if (!activeRate) {
       const cleanupStatus = await rejectUploadedImage(req, next, 409);
-      if (cleanupStatus) return res.status(cleanupStatus).json({ message: 'No active gold rate matches this loan purity. Configure and activate the daily gold rates first.' });
+      if (cleanupStatus) return res.status(cleanupStatus).json({ message: `No active ${loan.metal_type.toLowerCase()} rate matches this purity. Configure and activate the daily metal rates first.` });
       return;
     }
     const netGoldWeight = Number(loan.net_gold_weight);
-    const goldValuation = netGoldWeight * activeRate.rate_per_gram;
+    const metalValuation = Number(calculateMetalValuation(netGoldWeight, activeRate.rate_per_gram));
     const createdLoan = await createLoan({
       ...loan,
-      gold_valuation: goldValuation.toFixed(2),
+      gold_valuation: metalValuation.toFixed(2),
+      principal_amount: loanAmountMode === 'auto' ? calculateLoanAmount(metalValuation) : loan.principal_amount,
       gold_rate_per_gram: activeRate.rate_per_gram,
+      rate_unit: activeRate.rate_unit,
       gold_rate_date: activeRateSet.rate_date,
       gold_image_url: req.file ? `/api/loans/gold-images/${req.file.filename}` : null,
       created_by: req.adminUser.user_id
@@ -310,7 +328,7 @@ async function putLoan(req, res, next) {
     if (cleanupStatus) return res.status(cleanupStatus).json({ message: 'The uploaded file is not a valid PNG or JPG image' });
     return;
   }
-  const { loan, error } = normalizeLoan(req.body || {});
+  const { loan, loanAmountMode, error } = normalizeLoan(req.body || {});
   if (error) {
     const cleanupStatus = await rejectUploadedImage(req, next, 400);
     if (cleanupStatus) return res.status(cleanupStatus).json({ message: error });
@@ -324,30 +342,41 @@ async function putLoan(req, res, next) {
       if (cleanupStatus) return res.status(cleanupStatus).json({ message: 'Loan not found' });
       return;
     }
-    if (existingLoan.gold_rate_per_gram != null && existingLoan.gold_purity === loan.gold_purity) {
+    const existingMetalType = existingLoan.metal_type || 'Gold';
+    if (
+      existingLoan.gold_rate_per_gram != null
+      && existingMetalType === loan.metal_type
+      && existingLoan.gold_purity === loan.gold_purity
+    ) {
       loan.gold_rate_per_gram = existingLoan.gold_rate_per_gram;
+      loan.rate_unit = existingLoan.rate_unit || 'gram';
       loan.gold_rate_date = existingLoan.gold_rate_date;
-      loan.gold_valuation = (Number(loan.net_gold_weight) * Number(existingLoan.gold_rate_per_gram)).toFixed(2);
+      loan.gold_valuation = calculateMetalValuation(loan.net_gold_weight, existingLoan.gold_rate_per_gram);
     } else if (existingLoan.gold_rate_per_gram != null) {
       const activeRateSet = await getCurrentGoldRates();
-      const activeRate = findGoldRateForPurity(activeRateSet, loan.gold_purity);
+      const activeRate = findGoldRateForPurity(activeRateSet, loan.gold_purity, loan.metal_type);
       if (!activeRate) {
         const cleanupStatus = await rejectUploadedImage(req, next, 409);
-        if (cleanupStatus) return res.status(cleanupStatus).json({ message: 'No active rate matches the updated loan purity.' });
+        if (cleanupStatus) return res.status(cleanupStatus).json({ message: `No active ${loan.metal_type.toLowerCase()} rate matches the updated purity.` });
         return;
       }
       loan.gold_rate_per_gram = activeRate.rate_per_gram;
+      loan.rate_unit = activeRate.rate_unit;
       loan.gold_rate_date = activeRateSet.rate_date;
-      loan.gold_valuation = (Number(loan.net_gold_weight) * activeRate.rate_per_gram).toFixed(2);
+      loan.gold_valuation = calculateMetalValuation(loan.net_gold_weight, activeRate.rate_per_gram);
     } else {
-      if (existingLoan.gold_purity !== loan.gold_purity) {
+      if (existingMetalType !== loan.metal_type || existingLoan.gold_purity !== loan.gold_purity) {
         const cleanupStatus = await rejectUploadedImage(req, next, 409);
-        if (cleanupStatus) return res.status(cleanupStatus).json({ message: 'This historical loan has no rate snapshot, so its purity cannot be changed safely.' });
+        if (cleanupStatus) return res.status(cleanupStatus).json({ message: 'This historical loan has no rate snapshot, so its metal and purity cannot be changed safely.' });
         return;
       }
       loan.gold_rate_per_gram = null;
+      loan.rate_unit = existingLoan.rate_unit || 'gram';
       loan.gold_rate_date = null;
       loan.gold_valuation = existingLoan.gold_valuation;
+    }
+    if (loanAmountMode === 'auto') {
+      loan.principal_amount = calculateLoanAmount(loan.gold_valuation);
     }
     if (req.file) loan.gold_image_url = `/api/loans/gold-images/${req.file.filename}`;
     const updatedLoan = await updateLoan(req.params.id, loan);
@@ -396,6 +425,9 @@ module.exports = {
   getLoan,
   getLoanGoldImage,
   getLoans,
+  calculateLoanAmount,
+  calculateMetalValuation,
+  normalizeLoan,
   putLoan,
   postLoan,
   removeLoan,

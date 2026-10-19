@@ -37,12 +37,13 @@ import api from "../api";
 const navItems = [
   { path: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
 
-
+  { path: "/admin/settings/daily-gold-rate", label: "Daily Gold Rate", icon: Coins },
   {
     label: "Loan Management",
     icon: HandCoins,
     children: [
       { path: "/admin/loans/customermanagement", label: "Customer Management", icon: FilePlus },
+      { path: "/admin/kyc", label: "KYC Review", icon: Users },
      
       { path: "/admin/loans/allloans", label: "All Loans", icon: Files },
       { path: "/admin/loans/loanrepayment", label: "Loan Repayment", icon: HandCoins },
@@ -90,15 +91,9 @@ const navItems = [
       { path: "/admin/dealers/refining", label: "Old Gold & Refining", icon: Gem },
     ],
   },
+
   { path: "/admin/reports", label: "Reports", icon: BarChart3 },
-  {
-    label: "Settings",
-    icon: SettingsIcon,
-    children: [
-      { path: "/admin/settings", label: "General Settings", icon: SettingsIcon },
-      { path: "/admin/settings/daily-gold-rate", label: "Daily Gold Rate", icon: Coins },
-    ],
-  },
+  
   { path: "/", label: "Back Home", icon: Home },
 ];
 

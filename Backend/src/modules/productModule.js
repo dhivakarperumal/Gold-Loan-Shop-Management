@@ -132,6 +132,7 @@ async function listProducts({ page, limit, search, status }) {
   }
   if (status === 'Low Stock') where.push('total_stock > 0 AND total_stock < 10');
   else if (status === 'Out of Stock') where.push('total_stock <= 0');
+  else if (status === 'In Stock') where.push('total_stock >= 10');
   else if (status === 'Active' || status === 'Draft' || status === 'Inactive') {
     where.push('status = ?');
     params.push(status);

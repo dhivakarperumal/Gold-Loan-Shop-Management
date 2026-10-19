@@ -10,3 +10,5 @@ private_uploads/loan-customers/*
 !private_uploads/loan-customers/.gitkeep
 private_uploads/loan-customer-documents/*
 !private_uploads/loan-customer-documents/.gitkeep
+private_uploads/kyc/*
+!private_uploads/kyc/.gitkeep

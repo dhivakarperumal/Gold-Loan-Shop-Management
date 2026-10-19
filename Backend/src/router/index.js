@@ -13,10 +13,12 @@ const dealerRouter = require('./dealerRouter');
 const dashboardRouter = require('./dashboardRouter');
 const cartRouter = require('./cartRouter');
 const wishlistRouter = require('./wishlistRouter');
+const kycRouter = require('./kycRouter');
 
 const router = express.Router();
 
 router.use('/dashboard', dashboardRouter);
+router.use('/kyc', kycRouter);
 router.use('/auth', authRouter);
 router.use('/categories', categoryRouter);
 router.use('/metals', metalRouter);

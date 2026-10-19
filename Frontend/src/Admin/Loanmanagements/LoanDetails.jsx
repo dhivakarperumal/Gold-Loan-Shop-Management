@@ -80,12 +80,13 @@ export default function LoanDetails() {
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Detail label="Gold Pledge Number" value={loan.gold_pledge_number} />
           <Detail label="Jewellery Type" value={loan.jewellery_type} />
-          <Detail label="Gold Purity" value={loan.gold_purity} />
-          <Detail label="Gross Weight" value={`${loan.gross_weight} g`} />
-          <Detail label="Stone Weight" value={`${loan.stone_weight} g`} />
-          <Detail label="Net Gold Weight" value={`${loan.net_gold_weight} g`} />
-          <Detail label="Gold Valuation" value={money(loan.gold_valuation)} />
-          {loan.gold_rate_per_gram != null && <Detail label="Applied Rate Snapshot" value={`${money(loan.gold_rate_per_gram)} / g`} />}
+          <Detail label="Metal Type" value={loan.metal_type || "Gold"} />
+          <Detail label={`${loan.metal_type || "Gold"} Purity / Quality`} value={loan.gold_purity} />
+          <Detail label="Gross Weight" value={`${loan.gross_weight} ${loan.rate_unit === "carat" ? "ct" : "g"}`} />
+          <Detail label="Stone Weight" value={`${loan.stone_weight} ${loan.rate_unit === "carat" ? "ct" : "g"}`} />
+          <Detail label={`Net ${loan.metal_type || "Gold"} Weight`} value={`${loan.net_gold_weight} ${loan.rate_unit === "carat" ? "ct" : "g"}`} />
+          <Detail label={`${loan.metal_type || "Gold"} Valuation`} value={money(loan.gold_valuation)} />
+          {loan.gold_rate_per_gram != null && <Detail label="Applied Rate Snapshot" value={`${money(loan.gold_rate_per_gram)} / ${loan.rate_unit === "carat" ? "carat" : "g"}`} />}
           {loan.gold_rate_date && <Detail label="Rate Date" value={dateText(loan.gold_rate_date)} />}
           <Detail label="Loan Amount" value={money(loan.principal_amount)} />
         </div>

@@ -27,6 +27,22 @@ const GOLD_PURITY_OPTIONS = [
   ["18K / 750", "18K (750)"],
   ["14K / 585", "14K (585)"]
 ];
+const METAL_OPTIONS = {
+  Gold: GOLD_PURITY_OPTIONS,
+  Silver: [["999", "999 Fine"]],
+  Platinum: [["950", "950"], ["900", "900"]],
+  Diamond: [["D-F / VVS", "D-F / VVS"], ["G-H / VS", "G-H / VS"], ["I-J / SI", "I-J / SI"]]
+};
+const JEWELLERY_TYPE_OPTIONS = [
+  ["Bangles", "Bangles"],
+  ["Chains", "Chains"],
+  ["Necklaces", "Necklaces"],
+  ["Earrings", "Earrings"],
+  ["Rings", "Rings"],
+  ["Bracelets", "Bracelets"],
+  ["Coins & Bars", "Coins & Bars"],
+  ["Other", "Other"]
+];
 const fieldClass = "mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-[#008577] focus:ring-2 focus:ring-emerald-100";
 const labelClass = "block text-xs font-semibold text-slate-600";
 
@@ -51,6 +67,7 @@ function initialLoan() {
   maturity.setMonth(maturity.getMonth() + 12);
   return {
     jewellery_type: "",
+    metal_type: "Gold",
     gold_purity: "",
     gross_weight: "",
     stone_weight: "0",
@@ -107,7 +124,7 @@ function periodCount(days, frequency, convention = "actual_365", customDays = 30
 function calculateEstimate(form, interestType) {
   const principal = Number(form.principal_amount);
   const rate = Number(form.interest_rate);
-  if (!(principal > 0) || !(rate >= 0) || !form.interest_calculation_start_date || !form.maturity_date) return null;
+  if (!interestType || !(principal > 0) || !(rate >= 0) || !form.interest_calculation_start_date || !form.maturity_date) return null;
   const days = elapsedDays(form.interest_calculation_start_date, form.maturity_date, form.day_count_convention);
   const eligibleDays = Math.max(0, days - Number(form.interest_free_days || 0) - Number(form.grace_period_days || 0));
   const periods = periodCount(eligibleDays, form.interest_frequency, form.day_count_convention, form.custom_period_days);
@@ -148,7 +165,12 @@ function calculateEstimate(form, interestType) {
   };
 }
 
-function FormField({ label, name, form, onChange, type = "text", required = false, min, step, help, readOnly = false }) {
+function FormField({ label, name, form, onChange, type = "text", required = false, min, step, help, readOnly = false, placeholder }) {
+  const fieldPlaceholder = placeholder || (type === "date"
+    ? `Select ${label.toLowerCase()}`
+    : type === "number"
+      ? `Enter ${label.toLowerCase()}`
+      : `Enter ${label.toLowerCase()}`);
   return (
     <label className={labelClass}>
       {label}{required && <span className="ml-1 text-rose-500">*</span>}
@@ -162,18 +184,23 @@ function FormField({ label, name, form, onChange, type = "text", required = fals
         min={min}
         step={step}
         readOnly={readOnly}
+        placeholder={fieldPlaceholder}
+        title={type === "date" ? fieldPlaceholder : undefined}
       />
       {help && <span className="mt-1 block text-[11px] font-normal text-slate-400">{help}</span>}
     </label>
   );
 }
 
-function FormSelect({ label, name, form, onChange, options, required = false, disabled = false, help }) {
+function FormSelect({ label, name, form, onChange, options, required = false, disabled = false, help, placeholder }) {
+  const selectOptions = options.some(([value]) => value === "")
+    ? options
+    : [["", placeholder || `Select ${label.toLowerCase()}`], ...options];
   return (
     <label className={labelClass}>
       {label}{required && <span className="ml-1 text-rose-500">*</span>}
       <select className={fieldClass} name={name} value={form[name] ?? ""} onChange={onChange} required={required} disabled={disabled}>
-        {options.map(([value, text, disabled]) => <option key={value} value={value} disabled={disabled}>{text}</option>)}
+        {selectOptions.map(([value, text, disabled]) => <option key={value} value={value} disabled={disabled}>{text}</option>)}
       </select>
       {help && <span className="mt-1 block text-[11px] font-normal text-slate-400">{help}</span>}
     </label>
@@ -189,6 +216,8 @@ export default function CreateLoan() {
   const [customer, setCustomer] = useState(null);
   const [customerLoans, setCustomerLoans] = useState([]);
   const [form, setForm] = useState(initialLoan);
+  const [otherJewelleryType, setOtherJewelleryType] = useState("");
+  const [loanAmountMode, setLoanAmountMode] = useState("auto");
   const [loadingCustomers, setLoadingCustomers] = useState(true);
   const [customerLoadError, setCustomerLoadError] = useState("");
   const [loadingCustomer, setLoadingCustomer] = useState(false);
@@ -223,6 +252,8 @@ export default function CreateLoan() {
           setCustomer(null);
           setCustomerQuery("");
           setCustomerLoans([]);
+          setLoanAmountMode("auto");
+          setOtherJewelleryType("");
           setForm({
             ...initialLoan(),
             interest_type: interestResponse.data.find((type) => type.enabled)?.type_key || ""
@@ -237,6 +268,10 @@ export default function CreateLoan() {
         ]);
         if (!active) return;
         setLoanRecord(loan);
+        setLoanAmountMode("manual");
+        const savedJewelleryType = String(loan.jewellery_type || "");
+        const isKnownJewelleryType = JEWELLERY_TYPE_OPTIONS.some(([value]) => value === savedJewelleryType && value !== "Other");
+        setOtherJewelleryType(isKnownJewelleryType ? "" : savedJewelleryType);
         setCustomer(customerDetails.data);
         setCustomerQuery(`${customerDetails.data.customer_code || customerDetails.data.id} · ${customerDetails.data.full_name}`);
         setCustomerLoans(customerLoanResponse.data);
@@ -244,6 +279,10 @@ export default function CreateLoan() {
           ...initialLoan(),
           ...Object.fromEntries(Object.keys(initialLoan()).map((field) => {
             const value = loan[field];
+            if (field === "metal_type") return [field, loan.metal_type || "Gold"];
+            if (field === "jewellery_type") {
+              return [field, !savedJewelleryType ? "" : isKnownJewelleryType ? savedJewelleryType : "Other"];
+            }
             if (value == null) return [field, ""];
             if (["loan_date", "maturity_date", "interest_calculation_start_date"].includes(field)) {
               return [field, formDate(value)];
@@ -307,19 +346,27 @@ export default function CreateLoan() {
     ].some((value) => String(value || "").toLowerCase().includes(search)));
   }, [customers, customerQuery]);
 
-  const estimate = useMemo(
-    () => calculateEstimate(form, form.interest_type),
-    [form]
-  );
-  const activeGoldRate = getRateForPurity(activeRateSet, form.gold_purity);
-  const savedPurityUnchanged = loanRecord?.gold_purity === form.gold_purity;
+  const activeGoldRate = getRateForPurity(activeRateSet, form.gold_purity, form.metal_type);
+  const savedPurityUnchanged = (loanRecord?.metal_type || "Gold") === form.metal_type
+    && loanRecord?.gold_purity === form.gold_purity;
   const appliedGoldRate = loanRecord && savedPurityUnchanged
     ? (loanRecord.gold_rate_per_gram == null ? null : Number(loanRecord.gold_rate_per_gram))
     : activeGoldRate?.rate_per_gram;
+  const appliedRateUnit = loanRecord && savedPurityUnchanged
+    ? loanRecord.rate_unit || "gram"
+    : activeGoldRate?.rate_unit || (form.metal_type === "Diamond" ? "carat" : "gram");
+  const weightUnit = appliedRateUnit === "carat" ? "ct" : "g";
   const estimatedGoldValuation = loanRecord && savedPurityUnchanged && loanRecord.gold_rate_per_gram == null
     ? Number(form.gold_valuation) || 0
     : Math.max(0, Number(form.gross_weight || 0) - Number(form.stone_weight || 0)) * Number(appliedGoldRate || 0);
-
+  const calculatedLoanAmount = (Math.round(estimatedGoldValuation * 50) / 100).toFixed(2);
+  const estimate = useMemo(
+    () => calculateEstimate({
+      ...form,
+      principal_amount: loanAmountMode === "auto" ? calculatedLoanAmount : form.principal_amount
+    }, form.interest_type),
+    [form, loanAmountMode, calculatedLoanAmount]
+  );
   const selectCustomer = async (selected) => {
     setCustomer(selected);
     setCustomerQuery(`${selected.customer_code || selected.id} · ${selected.full_name}`);
@@ -344,11 +391,25 @@ export default function CreateLoan() {
 
   const handleChange = (event) => {
     const { name, value } = event.target;
-    setForm((current) => ({ ...current, [name]: value }));
+    setForm((current) => name === "metal_type"
+      ? { ...current, metal_type: value, gold_purity: "" }
+      : { ...current, [name]: value });
+  };
+
+  const handleLoanAmountModeChange = (mode) => {
+    setLoanAmountMode(mode);
+    if (mode === "manual") {
+      setForm((current) => ({
+        ...current,
+        principal_amount: current.principal_amount || calculatedLoanAmount
+      }));
+    }
   };
 
   const handleReset = () => {
     setForm(initialLoan());
+    setOtherJewelleryType("");
+    setLoanAmountMode("auto");
     setCustomer(null);
     setCustomerQuery("");
     setCustomerLoans([]);
@@ -375,6 +436,10 @@ export default function CreateLoan() {
       toast.error("Maturity date must be after the loan date.");
       return;
     }
+    if (form.jewellery_type === "Other" && !otherJewelleryType.trim()) {
+      toast.error("Enter the jewellery type.");
+      return;
+    }
     if (!loanRecord && !(appliedGoldRate > 0)) {
       toast.error("An active daily gold rate for the selected purity is required before creating a loan.");
       return;
@@ -383,9 +448,12 @@ export default function CreateLoan() {
     try {
       const loanData = {
         ...form,
+        jewellery_type: form.jewellery_type === "Other" ? otherJewelleryType.trim() : form.jewellery_type,
         customer_id: String(customer.id),
         net_gold_weight: (gross - stone).toFixed(3),
-        gold_valuation: estimatedGoldValuation.toFixed(2)
+        gold_valuation: estimatedGoldValuation.toFixed(2),
+        principal_amount: loanAmountMode === "auto" ? calculatedLoanAmount : form.principal_amount,
+        loan_amount_mode: loanAmountMode
       };
       let payload = loanData;
       if (goldImageFile) {
@@ -424,20 +492,29 @@ export default function CreateLoan() {
   }
 
   return (
-    <main className="space-y-5 p-4 sm:p-6">
-      <header className="flex flex-wrap items-center justify-between gap-3">
+    <main className="mx-auto max-w-[1440px] space-y-6 bg-slate-50/60 p-4 sm:p-6 lg:p-8">
+      <header className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#003B3B] via-[#00594f] to-[#087568] px-5 py-6 text-white shadow-lg sm:px-7">
+        <div className="pointer-events-none absolute -right-12 -top-24 h-64 w-64 rounded-full border-[30px] border-white/5" />
         <div>
-          <Link to="/admin/loans/allloans" className="mb-2 inline-flex items-center gap-2 text-xs font-semibold text-[#008577] hover:text-[#003B3B]">
-            <FiArrowLeft /> All Loans
+          <Link to="/admin/loans/allloans" className="relative mb-3 inline-flex items-center gap-2 rounded-lg border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/90 transition hover:bg-white/20">
+            <FiArrowLeft /> Back to All Loans
           </Link>
-          <h1 className="text-2xl font-extrabold text-[#003B3B]">{loanRecord ? `Edit Loan ${loanRecord.loan_number}` : "Create Gold Loan"}</h1>
-          <p className="mt-1 text-sm text-slate-500">{loanRecord ? "Update the pledged gold and agreed contract terms." : "Select a registered customer and record the pledged gold and agreed terms."}</p>
+          <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-emerald-200">Loan Management</p>
+          <h1 className="mt-1 text-2xl font-extrabold sm:text-3xl">{loanRecord ? `Edit Loan ${loanRecord.loan_number}` : "Create Gold Loan"}</h1>
+          <p className="mt-2 max-w-2xl text-sm text-white/75">{loanRecord ? "Update the customer, pledged jewellery and agreed loan terms." : "Add customer details, record pledged jewellery and define the loan terms."}</p>
         </div>
       </header>
 
-      <form onSubmit={handleSubmit} className="space-y-5">
-        <section className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm sm:p-5">
-          <h2 className="mb-4 text-base font-bold text-[#003B3B]">Customer</h2>
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 items-start gap-6 lg:grid-cols-2">
+        <div className="space-y-6">
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
+          <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-50 text-sm font-black text-[#006b62]">01</span>
+            <div>
+              <h2 className="text-base font-bold text-[#003B3B]">Customer</h2>
+              <p className="mt-0.5 text-xs text-slate-500">Choose the registered customer for this loan.</p>
+            </div>
+          </div>
           <div className="relative max-w-2xl">
             <label className={labelClass}>
               Select Customer<span className="ml-1 text-rose-500">*</span>
@@ -463,7 +540,7 @@ export default function CreateLoan() {
               </div>
             </label>
             {showCustomerMenu && !id && (
-              <div className="absolute z-20 mt-1 max-h-64 w-full overflow-y-auto rounded-lg border border-slate-200 bg-white p-1 shadow-xl">
+              <div className="absolute z-20 mt-2 max-h-64 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl shadow-slate-900/10">
                 {loadingCustomers ? (
                   <p className="p-3 text-sm text-slate-500">Loading registered customers...</p>
                 ) : customerLoadError ? (
@@ -482,7 +559,7 @@ export default function CreateLoan() {
                     key={item.id}
                     type="button"
                     onClick={() => selectCustomer(item)}
-                    className="flex w-full items-center justify-between gap-3 rounded-md px-3 py-2.5 text-left hover:bg-emerald-50"
+                    className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2.5 text-left transition hover:bg-emerald-50"
                   >
                     <span className="min-w-0">
                       <span className="block truncate text-sm font-semibold text-slate-800">{item.full_name}</span>
@@ -500,17 +577,17 @@ export default function CreateLoan() {
             )}
           </div>
           {customer && (
-            <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50/50 p-4">
+            <div className="mt-5 rounded-xl border border-emerald-100 bg-gradient-to-br from-emerald-50/80 to-white p-4 sm:p-5">
               {loadingCustomer ? <p className="text-sm text-slate-500">Loading customer account and loan history...</p> : (
                 <>
-                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-2">
                     {[
                       ["Customer ID", customer.customer_code || customer.id],
                       ["Full Name", customer.full_name],
                       ["Mobile", customer.mobile],
                       ["KYC Status", customer.kyc_status]
                     ].map(([label, value]) => <div key={label}><p className="text-xs text-slate-500">{label}</p><p className="mt-1 text-sm font-semibold text-slate-800">{value || "—"}</p></div>)}
-                    <div className="sm:col-span-2 lg:col-span-4">
+                    <div className="sm:col-span-2 lg:col-span-2">
                       <p className="text-xs text-slate-500">Address</p>
                       <p className="mt-1 text-sm text-slate-800">{[customer.address, customer.city, customer.district, customer.state, customer.pincode].filter(Boolean).join(", ") || "Address not provided"}</p>
                     </div>
@@ -539,84 +616,15 @@ export default function CreateLoan() {
           )}
         </section>
 
-        <section className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm sm:p-5">
-          <h2 className="mb-4 text-base font-bold text-[#003B3B]">Pledged Jewellery</h2>
-          {activeRateSet && <p className="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
-            Global rate set effective {formatRateDate(activeRateSet.rate_date)}. Loan valuation uses eligible net gold weight × its purity rate; retail making, wastage, stones, and tax are excluded.
-          </p>}
-          {ratesError && <p role="alert" className="mb-4 rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">Could not refresh rates: {ratesError}</p>}
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <label className={labelClass}>
-              Gold Pledge Number
-              <input className={`${fieldClass} bg-slate-50`} value={loanRecord?.gold_pledge_number || "Auto-generated on save"} readOnly />
-            </label>
-            <FormField label="Jewellery Type" name="jewellery_type" form={form} onChange={handleChange} required />
-            <FormSelect
-              label="Gold Purity"
-              name="gold_purity"
-              form={form}
-              onChange={handleChange}
-              required
-              disabled={Boolean(loanRecord && loanRecord.gold_rate_per_gram == null)}
-              help={loanRecord && loanRecord.gold_rate_per_gram == null
-                ? "This legacy loan has no rate snapshot; its saved purity and valuation are preserved."
-                : "Select the purity matching the pledged gold and active rate."}
-              options={[
-                ["", "Select gold purity"],
-                ...(!GOLD_PURITY_OPTIONS.some(([value]) => value === form.gold_purity) && form.gold_purity
-                  ? [[form.gold_purity, `${form.gold_purity} (saved)`]]
-                  : []),
-                ...GOLD_PURITY_OPTIONS
-              ]}
-            />
-            <FormField label="Gross Weight (g)" name="gross_weight" form={form} onChange={handleChange} type="number" min="0.001" step="0.001" required />
-            <FormField label="Stone Weight (g)" name="stone_weight" form={form} onChange={handleChange} type="number" min="0" step="0.001" />
-            <label className={labelClass}>Net Gold Weight (g)<input className={`${fieldClass} bg-slate-50`} value={Math.max(0, Number(form.gross_weight || 0) - Number(form.stone_weight || 0)).toFixed(3)} readOnly /></label>
-            <FormField label="Gold Rate / Gram (₹)" name="gold_rate_per_gram" form={{ gold_rate_per_gram: appliedGoldRate ?? "" }} onChange={() => {}} readOnly help={loanRecord && savedPurityUnchanged && loanRecord.gold_rate_per_gram != null ? `Saved loan rate from ${formatRateDate(loanRecord.gold_rate_date)}; today's changes do not alter it.` : loanRecord && savedPurityUnchanged ? "Legacy loan; its saved valuation is preserved." : ratesLoading ? "Loading today's active rate..." : "Selected by the configured purity."} />
-            <FormField label="Gold Valuation (₹)" name="gold_valuation" form={{ gold_valuation: estimatedGoldValuation.toFixed(2) }} onChange={() => {}} readOnly required min="0.01" step="0.01" help="Eligible net gold weight × the applied rate snapshot; not the retail jewellery price." />
-            <FormField label="Loan Amount (₹)" name="principal_amount" form={form} onChange={handleChange} type="number" min="0.01" step="0.01" required />
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
+          <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-sky-50 text-sm font-black text-sky-700">03</span>
+            <div>
+              <h2 className="text-base font-bold text-[#003B3B]">Interest & Contract Terms</h2>
+              <p className="mt-0.5 text-xs text-slate-500">Set the interest method, rate and authorized charges.</p>
+            </div>
           </div>
-          <div className="mt-5 rounded-xl border border-dashed border-slate-300 p-4">
-            <label className={labelClass}>
-              Gold Image <span className="font-normal text-slate-400">(optional, PNG or JPG up to 5 MB)</span>
-              <input
-                ref={goldImageInput}
-                className="sr-only"
-                type="file"
-                accept="image/png,image/jpeg"
-                onChange={(event) => {
-                  const file = event.target.files?.[0];
-                  if (!file) return;
-                  if (!["image/png", "image/jpeg"].includes(file.type)) {
-                    toast.error("Choose a PNG or JPG gold image.");
-                    event.target.value = "";
-                    return;
-                  }
-                  if (file.size > 5 * 1024 * 1024) {
-                    toast.error("Gold image must be 5 MB or smaller.");
-                    event.target.value = "";
-                    return;
-                  }
-                  if (selectedGoldImagePreview.current) URL.revokeObjectURL(selectedGoldImagePreview.current);
-                  selectedGoldImagePreview.current = URL.createObjectURL(file);
-                  setGoldImagePreview({ key: file, url: selectedGoldImagePreview.current });
-                  setGoldImageFile(file);
-                }}
-              />
-              <span className="mt-2 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
-                <FiUploadCloud className="text-[#008577]" />
-                {goldImageFile ? "Choose a different image" : loanRecord?.gold_image_url ? "Replace gold image" : "Upload gold image"}
-              </span>
-            </label>
-            {goldImagePreviewUrl && (
-              <img src={goldImagePreviewUrl} alt="Pledged gold preview" className="mt-3 h-40 w-40 rounded-lg border border-slate-200 object-cover" />
-            )}
-          </div>
-        </section>
-
-        <section className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm sm:p-5">
-          <h2 className="mb-4 text-base font-bold text-[#003B3B]">Interest & Contract Terms</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
             <FormSelect label="Interest Type" name="interest_type" form={form} onChange={handleChange} required options={[["", "Select interest type"], ...interestTypes.map(({ type_key, label, enabled }) => [type_key, label, !enabled && type_key !== form.interest_type])]} />
             {form.interest_type !== "fixed" && <FormField label="Interest Rate (%)" name="interest_rate" form={form} onChange={handleChange} type="number" min="0" step="0.0001" required />}
             <FormSelect label="Interest Calculation Frequency" name="interest_frequency" form={form} onChange={handleChange} options={INTEREST_FREQUENCIES} required />
@@ -625,12 +633,7 @@ export default function CreateLoan() {
             {form.interest_type === "compound" && <FormSelect label="Compounding Frequency" name="compounding_frequency" form={form} onChange={handleChange} options={COMPOUND_FREQUENCIES} required />}
             <FormSelect label="Day-Count Convention" name="day_count_convention" form={form} onChange={handleChange} options={[["actual_365", "Actual / 365"], ["actual_360", "Actual / 360"], ["30_360", "30 / 360"]]} />
             <FormField label="Calculation Start Date" name="interest_calculation_start_date" form={form} onChange={handleChange} type="date" required />
-            <FormField label="Grace Period (days)" name="grace_period_days" form={form} onChange={handleChange} type="number" min="0" step="1" />
-            <FormField label="Interest-Free Period (days)" name="interest_free_days" form={form} onChange={handleChange} type="number" min="0" step="1" />
-            <FormField label="Late Payment Interest Rate (%)" name="late_payment_interest_rate" form={form} onChange={handleChange} type="number" min="0" step="0.0001" />
-            <FormField label="Minimum Interest (₹)" name="minimum_interest_amount" form={form} onChange={handleChange} type="number" min="0" step="0.01" />
-            <FormField label="Maximum Interest (₹)" name="maximum_interest_amount" form={form} onChange={handleChange} type="number" min="0" step="0.01" />
-            <FormField label="Processing Fee (₹)" name="processing_fee" form={form} onChange={handleChange} type="number" min="0" step="0.01" />
+            <FormSelect label="Loan Status" name="loan_status" form={form} onChange={handleChange} options={(loanRecord ? ["Active", "Pending", "Inactive", "Completed"] : ["Active", "Pending"]).map((status) => [status, status])} required />
             <FormField label="Other Authorized Charges (₹)" name="other_charges" form={form} onChange={handleChange} type="number" min="0" step="0.01" />
           </div>
           {!loadingCustomers && interestTypes.length === 0 && (
@@ -646,24 +649,17 @@ export default function CreateLoan() {
             </p>
           )}
         </section>
-
-        <section className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm sm:p-5">
-          <h2 className="mb-4 text-base font-bold text-[#003B3B]">Loan Schedule</h2>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <label className={labelClass}>Loan Number<input className={`${fieldClass} bg-slate-50`} value={loanRecord?.loan_number || "Auto-generated on save"} readOnly /></label>
-            <FormField label="Loan Date" name="loan_date" form={form} onChange={handleChange} type="date" required />
-            <FormField label="Maturity Date" name="maturity_date" form={form} onChange={handleChange} type="date" required />
-            <FormSelect label="Payment Frequency" name="payment_frequency" form={form} onChange={handleChange} options={PAYMENT_FREQUENCIES} required />
-            <FormSelect label="Loan Status" name="loan_status" form={form} onChange={handleChange} options={(loanRecord ? ["Active", "Pending", "Inactive", "Completed"] : ["Active", "Pending"]).map((status) => [status, status])} required />
+        <section className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-white p-5 shadow-sm sm:p-6">
+          <div className="mb-5 flex items-center gap-3 border-b border-amber-100 pb-4">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-100 text-sm font-black text-amber-800">05</span>
+            <div>
+              <h2 className="text-base font-bold text-[#003B3B]">Estimated Interest Preview</h2>
+              <p className="mt-0.5 text-xs text-slate-600">Review the estimated amount due at maturity before saving.</p>
+            </div>
           </div>
-          <label className={`${labelClass} mt-4`}>Notes<textarea className={fieldClass} name="notes" rows="3" maxLength="5000" value={form.notes} onChange={handleChange} /></label>
-        </section>
-
-        <section className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 shadow-sm sm:p-5">
-          <h2 className="mb-3 text-base font-bold text-[#003B3B]">Estimated Interest Preview</h2>
           {estimate ? (
-            <>
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="overflow-hidden rounded-xl border border-amber-100 bg-white shadow-sm">
+              <div className="grid gap-x-6 px-4 sm:grid-cols-2 sm:px-5">
                 {[
                   ["Principal Amount", formatCurrency(estimate.principal)],
                   ["Interest Type", interestTypes.find((type) => type.type_key === form.interest_type)?.label || "—"],
@@ -674,20 +670,174 @@ export default function CreateLoan() {
                   ["Processing Fee", formatCurrency(estimate.fee)],
                   ["Other Charges", formatCurrency(estimate.charges)],
                   ["Payments Received", formatCurrency(0)],
-                  ["Outstanding Principal", formatCurrency(estimate.principal)],
-                  ["Total Amount Due", formatCurrency(estimate.total)],
-                  ["Settlement Estimate", formatCurrency(estimate.total)]
-                ].map(([label, value]) => <div key={label} className="rounded-lg bg-white/80 p-3"><p className="text-[11px] text-slate-500">{label}</p><p className="mt-1 text-sm font-bold text-slate-800">{value}</p></div>)}
+                  ["Outstanding Principal", formatCurrency(estimate.principal)]
+                ].map(([label, value]) => (
+                  <div key={label} className="flex items-center justify-between gap-3 border-b border-slate-100 py-3">
+                    <p className="text-xs text-slate-500">{label}</p>
+                    <p className="text-right text-sm font-semibold text-slate-800">{value}</p>
+                  </div>
+                ))}
               </div>
-              <div className="mt-3 rounded-lg bg-white/80 p-3 text-xs leading-relaxed text-slate-600">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-amber-100 bg-amber-50/70 px-4 py-4 sm:px-5">
+                <div>
+                  <p className="text-xs font-bold text-slate-600">Total Amount Due · Settlement Estimate</p>
+                  <p className="mt-1 text-xl font-extrabold tabular-nums text-[#003B3B]">{formatCurrency(estimate.total)}</p>
+                </div>
+                <span className="rounded-full bg-white px-3 py-1 text-xs font-semibold text-amber-800">Estimated at maturity</span>
+              </div>
+              <div className="border-t border-slate-100 bg-slate-50/70 px-4 py-3 text-xs leading-relaxed text-slate-600 sm:px-5">
                 <p><FiCalendar className="mr-1 inline" />{form.interest_calculation_start_date} to {form.maturity_date}: {estimate.days} convention days; {estimate.eligibleDays} interest-bearing days after configured grace and interest-free days.</p>
                 <p className="mt-1">Principal basis: {estimate.basis}. Values round to two decimal places for display. This estimate assumes no payments received and does not allocate payments; it is not a settlement quote. Review the signed contract terms before disbursement.</p>
               </div>
-            </>
+            </div>
           ) : <p className="text-sm text-slate-500">Enter the loan amount, interest rate, and dates to see the estimate.</p>}
         </section>
+        </div>
 
-        <div className="sticky bottom-0 z-10 flex flex-wrap justify-end gap-2 rounded-xl border border-slate-100 bg-white/95 p-3 shadow-lg backdrop-blur">
+        <div className="space-y-6">
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
+          <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-amber-50 text-sm font-black text-amber-700">02</span>
+            <div>
+              <h2 className="text-base font-bold text-[#003B3B]">Pledged Jewellery</h2>
+              <p className="mt-0.5 text-xs text-slate-500">Enter the collateral details to calculate its current valuation.</p>
+            </div>
+          </div>
+          {activeRateSet && <p className="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
+            Global rate set effective {formatRateDate(activeRateSet.rate_date)}. Valuation uses eligible net {form.metal_type.toLowerCase()} weight × its configured rate; retail charges are excluded.
+          </p>}
+          {ratesError && <p role="alert" className="mb-4 rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">Could not refresh rates: {ratesError}</p>}
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
+            <FormSelect
+              label="Jewellery Type"
+              name="jewellery_type"
+              form={form}
+              onChange={handleChange}
+              required
+              options={[["", "Select jewellery category"], ...JEWELLERY_TYPE_OPTIONS]}
+            />
+            {form.jewellery_type === "Other" && (
+              <FormField
+                label="Specify Jewellery Type"
+                name="jewellery_type_other"
+                form={{ jewellery_type_other: otherJewelleryType }}
+                onChange={(event) => setOtherJewelleryType(event.target.value)}
+                required
+              />
+            )}
+            <FormSelect label="Metal Type" name="metal_type" form={form} onChange={handleChange} required disabled={Boolean(loanRecord && loanRecord.gold_rate_per_gram == null)} options={["Gold", "Silver", "Platinum", "Diamond"].map((metal) => [metal, metal])} />
+            <FormSelect
+              label={`${form.metal_type} Purity / Quality`}
+              name="gold_purity"
+              form={form}
+              onChange={handleChange}
+              required
+              disabled={Boolean(loanRecord && loanRecord.gold_rate_per_gram == null)}
+              help={loanRecord && loanRecord.gold_rate_per_gram == null
+                ? "This legacy loan has no rate snapshot; its saved purity and valuation are preserved."
+                : `Select the ${form.metal_type.toLowerCase()} purity or quality matching its active rate.`}
+              options={[
+                ["", `Select ${form.metal_type.toLowerCase()} purity / quality`],
+                ...(!(METAL_OPTIONS[form.metal_type] || []).some(([value]) => value === form.gold_purity) && form.gold_purity
+                  ? [[form.gold_purity, `${form.gold_purity} (saved)`]]
+                  : []),
+                ...(METAL_OPTIONS[form.metal_type] || [])
+              ]}
+            />
+            <FormField label={`Gross Weight (${weightUnit})`} name="gross_weight" form={form} onChange={handleChange} type="number" min="0.001" step="0.001" required />
+            <FormField label={`Stone Weight (${weightUnit})`} name="stone_weight" form={form} onChange={handleChange} type="number" min="0" step="0.001" />
+            <label className={labelClass}>Net {form.metal_type} Weight ({weightUnit})<input className={`${fieldClass} bg-slate-50`} value={Math.max(0, Number(form.gross_weight || 0) - Number(form.stone_weight || 0)).toFixed(3)} readOnly placeholder="Calculated from gross and stone weight" /></label>
+            <FormField label={`${form.metal_type} Rate / ${appliedRateUnit === "carat" ? "Carat" : "Gram"} (₹)`} name="gold_rate_per_gram" form={{ gold_rate_per_gram: appliedGoldRate ?? "" }} onChange={() => {}} readOnly help={loanRecord && savedPurityUnchanged && loanRecord.gold_rate_per_gram != null ? `Saved loan rate from ${formatRateDate(loanRecord.gold_rate_date)}; today's changes do not alter it.` : loanRecord && savedPurityUnchanged ? "Legacy loan; its saved valuation is preserved." : ratesLoading ? "Loading today's active rate..." : "Selected by the configured metal purity or quality."} />
+            <FormField label={`${form.metal_type} Valuation (₹)`} name="gold_valuation" form={{ gold_valuation: estimatedGoldValuation.toFixed(2) }} onChange={() => {}} readOnly required min="0.01" step="0.01" help={`Eligible net weight (${weightUnit}) × the applied ${appliedRateUnit} rate snapshot; retail charges are excluded.`} />
+          </div>
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            <div className="rounded-xl border border-emerald-100 bg-emerald-50/40 p-4">
+              <span className={labelClass}>Loan Amount (₹)<span className="ml-1 text-rose-500">*</span></span>
+              <div className="mt-1.5 inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1" role="radiogroup" aria-label="Loan amount calculation mode">
+                {[
+                  ["auto", "Auto calculate (50%)"],
+                  ["manual", "Enter manually"]
+                ].map(([mode, label]) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    role="radio"
+                    aria-checked={loanAmountMode === mode}
+                    onClick={() => handleLoanAmountModeChange(mode)}
+                    className={`rounded-md px-3 py-2 text-xs font-semibold transition ${loanAmountMode === mode ? "bg-[#003B3B] text-white shadow-sm" : "text-slate-600 hover:bg-white"}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {loanAmountMode === "auto" ? (
+                <>
+                  <input className={`${fieldClass} bg-slate-50`} type="number" value={calculatedLoanAmount} readOnly aria-label="Automatically calculated loan amount" placeholder="Calculated from gold valuation" />
+                  <p className="mt-1 text-[11px] font-normal text-slate-400">Automatically calculated as 50% of the pledged gold valuation ({formatCurrency(estimatedGoldValuation)}).</p>
+                </>
+              ) : (
+                <FormField label="Loan Amount (₹)" name="principal_amount" form={form} onChange={handleChange} type="number" min="0.01" step="0.01" required placeholder="Enter loan amount" help="Enter the loan amount to disburse." />
+              )}
+            </div>
+            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/70 p-4">
+              <p className={labelClass}>Gold Image <span className="font-normal text-slate-400">(optional, PNG or JPG up to 5 MB)</span></p>
+              <label className={labelClass}>
+                <input
+                  ref={goldImageInput}
+                  className="sr-only"
+                  type="file"
+                  accept="image/png,image/jpeg"
+                  title="Choose a PNG or JPG image of the pledged gold"
+                  onChange={(event) => {
+                    const file = event.target.files?.[0];
+                    if (!file) return;
+                    if (!["image/png", "image/jpeg"].includes(file.type)) {
+                      toast.error("Choose a PNG or JPG gold image.");
+                      event.target.value = "";
+                      return;
+                    }
+                    if (file.size > 5 * 1024 * 1024) {
+                      toast.error("Gold image must be 5 MB or smaller.");
+                      event.target.value = "";
+                      return;
+                    }
+                    if (selectedGoldImagePreview.current) URL.revokeObjectURL(selectedGoldImagePreview.current);
+                    selectedGoldImagePreview.current = URL.createObjectURL(file);
+                    setGoldImagePreview({ key: file, url: selectedGoldImagePreview.current });
+                    setGoldImageFile(file);
+                  }}
+                />
+                <span className="mt-2 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                  <FiUploadCloud className="text-[#008577]" />
+                  {goldImageFile ? "Choose a different image" : loanRecord?.gold_image_url ? "Replace gold image" : "Upload gold image"}
+                </span>
+              </label>
+              {goldImagePreviewUrl && (
+                <img src={goldImagePreviewUrl} alt="Pledged gold preview" className="mt-3 h-40 w-40 rounded-lg border border-slate-200 object-cover" />
+              )}
+            </div>
+          </div>
+        </section>
+
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6">
+          <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-violet-50 text-sm font-black text-violet-700">04</span>
+            <div>
+              <h2 className="text-base font-bold text-[#003B3B]">Loan Schedule</h2>
+              <p className="mt-0.5 text-xs text-slate-500">Choose the loan dates and repayment frequency.</p>
+            </div>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
+            <label className={labelClass}>Loan Number<input className={`${fieldClass} bg-slate-50`} value={loanRecord?.loan_number || "Auto-generated on save"} readOnly placeholder="Auto-generated on save" /></label>
+            <FormField label="Loan Date" name="loan_date" form={form} onChange={handleChange} type="date" required />
+            <FormField label="Maturity Date" name="maturity_date" form={form} onChange={handleChange} type="date" required />
+            <FormSelect label="Payment Frequency" name="payment_frequency" form={form} onChange={handleChange} options={PAYMENT_FREQUENCIES} required />
+          </div>
+          <label className={`${labelClass} mt-4`}>Notes<textarea className={fieldClass} name="notes" rows="3" maxLength="5000" value={form.notes} onChange={handleChange} placeholder="Enter any additional loan notes (optional)" /></label>
+        </section>
+        </div>
+
+        <div className="sticky bottom-0 z-10 flex flex-wrap justify-end gap-2 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-xl shadow-slate-900/10 backdrop-blur-md sm:p-4 lg:col-span-2">
           <button type="button" onClick={() => navigate("/admin/loans/allloans")} disabled={saving} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Cancel</button>
           {!loanRecord && <button type="button" onClick={handleReset} disabled={saving} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Reset</button>}
           <button type="submit" disabled={saving || loadingCustomer || !customer || interestTypes.length === 0} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-5 py-2.5 text-sm font-bold text-white hover:bg-[#008577] disabled:cursor-not-allowed disabled:opacity-50">

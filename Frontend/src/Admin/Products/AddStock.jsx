@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { FiArrowLeft, FiSearch, FiSave, FiLayers, FiBox, FiPlus, FiCheck } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import api from "../../api";
@@ -24,14 +24,7 @@ const AddStock = () => {
     const [manualTotalStockAdd, setManualTotalStockAdd] = useState("");
     const [isSaving, setIsSaving] = useState(false);
 
-    useEffect(() => {
-        const timeout = setTimeout(() => {
-            fetchProducts();
-        }, 300);
-        return () => clearTimeout(timeout);
-    }, [search]);
-
-    const fetchProducts = async () => {
+    const fetchProducts = useCallback(async () => {
         setLoading(true);
         try {
             const params = { search };
@@ -39,11 +32,19 @@ const AddStock = () => {
             const data = res.data;
             setProducts(Array.isArray(data) ? data : (data.products || []));
         } catch (error) {
-            toast.error("Failed to load products");
+            console.error("Failed to load products:", error);
+            toast.error(error.response?.data?.message || "Failed to load products.");
         } finally {
             setLoading(false);
         }
-    };
+    }, [search]);
+
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            void fetchProducts();
+        }, 300);
+        return () => clearTimeout(timeout);
+    }, [fetchProducts]);
 
     const handleSelectProduct = async (prod) => {
         setSelectedProduct(null);
@@ -59,7 +60,8 @@ const AddStock = () => {
             }
             setSelectedProduct({ ...p, variants: Array.isArray(variants) ? variants : [] });
         } catch (error) {
-            toast.error("Failed to fetch product details");
+            console.error("Failed to fetch product details:", error);
+            toast.error(error.response?.data?.message || "Failed to fetch product details.");
         }
     };
 
@@ -84,7 +86,10 @@ const AddStock = () => {
         if (!selectedProduct) return;
         setIsSaving(true);
         try {
-            const updatedVariants = [...selectedProduct.variants];
+            const updatedVariants = selectedProduct.variants.map((variant) => ({
+                ...variant,
+                sizesStock: variant.sizesStock ? { ...variant.sizesStock } : variant.sizesStock
+            }));
             let addedTotal = 0;
             const hasVariantsWithSizes = updatedVariants.some(v => v.sizesStock && Object.keys(v.sizesStock).length > 0);
 
@@ -111,13 +116,13 @@ const AddStock = () => {
 
             const oldTotal = getCurrentStockValue(selectedProduct);
             const newTotalStock = oldTotal + addedTotal;
-            const status = newTotalStock <= 0 ? "Out of Stock" : newTotalStock < 10 ? "Low Stock" : "Active";
+            const stockStatus = newTotalStock <= 0 ? "Out of Stock" : newTotalStock < 10 ? "Low Stock" : "In Stock";
 
             const payload = {
                 ...selectedProduct,
                 total_stock: newTotalStock.toString(),
                 stock: newTotalStock.toString(),
-                status: status,
+                stock_status: stockStatus,
                 variants: updatedVariants
             };
 
@@ -125,7 +130,8 @@ const AddStock = () => {
             toast.success(`Successfully added ${addedTotal} to stock!`);
             setTimeout(() => navigate(-1), 1500);
         } catch (error) {
-            toast.error("Failed to add stock");
+            console.error("Failed to add stock:", error);
+            toast.error(error.response?.data?.message || "Failed to add stock.");
         } finally {
             setIsSaving(false);
         }
@@ -170,6 +176,7 @@ const AddStock = () => {
 
                         {!selectedProduct && (
                             <div className="max-h-[300px] overflow-y-auto space-y-2 pr-2">
+                                {loading && <p className="py-3 text-center text-xs font-semibold text-slate-500">Loading products...</p>}
                                 {filteredProducts.map(prod => (
                                     <button
                                         key={prod.id}
