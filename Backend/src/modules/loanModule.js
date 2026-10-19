@@ -32,6 +32,7 @@ async function initializeLoanModule() {
       rate_unit ENUM('gram', 'carat') NOT NULL DEFAULT 'gram',
       gold_rate_date DATE NULL,
       principal_amount DECIMAL(14,2) NOT NULL,
+      outstanding_principal DECIMAL(14,2) NULL,
       interest_type VARCHAR(30) NOT NULL,
       interest_rate DECIMAL(9,4) NOT NULL DEFAULT 0,
       fixed_interest_amount DECIMAL(14,2) NULL,
@@ -66,6 +67,7 @@ async function initializeLoanModule() {
   const [loanColumns] = await pool.query('SHOW COLUMNS FROM loans');
   const existingColumns = new Set(loanColumns.map((column) => column.Field));
   const loanColumnMigrations = {
+    outstanding_principal: 'DECIMAL(14,2) NULL AFTER principal_amount',
     fixed_interest_amount: 'DECIMAL(14,2) NULL AFTER interest_rate',
     custom_period_days: 'SMALLINT UNSIGNED NULL AFTER interest_frequency',
     gold_rate_per_gram: 'DECIMAL(14,2) NULL AFTER gold_valuation',
@@ -79,6 +81,28 @@ async function initializeLoanModule() {
       await pool.query(`ALTER TABLE loans ADD COLUMN \`${column}\` ${definition}`);
     }
   }
+  await pool.query('UPDATE loans SET outstanding_principal = principal_amount WHERE outstanding_principal IS NULL');
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS loan_renewals (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      loan_id BIGINT UNSIGNED NOT NULL,
+      renewal_date DATE NOT NULL,
+      period_start_date DATE NOT NULL,
+      previous_maturity_date DATE NOT NULL,
+      new_maturity_date DATE NULL,
+      payment_amount DECIMAL(14,2) NOT NULL,
+      interest_paid DECIMAL(14,2) NOT NULL,
+      principal_paid DECIMAL(14,2) NOT NULL,
+      principal_before DECIMAL(14,2) NOT NULL,
+      principal_after DECIMAL(14,2) NOT NULL,
+      accrued_interest DECIMAL(14,2) NOT NULL,
+      created_by BIGINT UNSIGNED NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT fk_loan_renewals_loan FOREIGN KEY (loan_id)
+        REFERENCES loans(id) ON DELETE RESTRICT,
+      INDEX idx_loan_renewals_loan_date (loan_id, renewal_date, id)
+    )
+  `);
   const [pledgeIndex] = await pool.query("SHOW INDEX FROM loans WHERE Key_name = 'uq_loans_gold_pledge_number'");
   if (pledgeIndex.length === 0) {
     const [[{ duplicateCount }]] = await pool.query(`
@@ -135,8 +159,270 @@ async function listLoans() {
   return rows;
 }
 
-async function getLoanById(id) {
+function asDateString(value) {
+  if (value instanceof Date) {
+    return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+  }
+  return String(value || '').slice(0, 10);
+}
+
+function dateAtUtc(value) {
+  const text = asDateString(value);
+  const [year, month, day] = text.split('-').map(Number);
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+function daysBetween(start, end) {
+  return Math.max(0, Math.round((dateAtUtc(end) - dateAtUtc(start)) / 86400000));
+}
+
+function addDays(value, days) {
+  const date = dateAtUtc(value);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
+}
+
+function addMonths(value, months) {
+  const date = dateAtUtc(value);
+  const day = date.getUTCDate();
+  date.setUTCDate(1);
+  date.setUTCMonth(date.getUTCMonth() + months);
+  const lastDay = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth() + 1, 0)).getUTCDate();
+  date.setUTCDate(Math.min(day, lastDay));
+  return date.toISOString().slice(0, 10);
+}
+
+function monthPeriodsBetween(start, end) {
+  const startDate = dateAtUtc(start);
+  const endDate = dateAtUtc(end);
+  let fullMonths = (endDate.getUTCFullYear() - startDate.getUTCFullYear()) * 12
+    + endDate.getUTCMonth() - startDate.getUTCMonth();
+  while (fullMonths > 0 && addMonths(start, fullMonths) > asDateString(end)) fullMonths -= 1;
+  const periodStart = addMonths(start, fullMonths);
+  const nextPeriod = addMonths(periodStart, 1);
+  const partial = daysBetween(periodStart, end) / Math.max(1, daysBetween(periodStart, nextPeriod));
+  return fullMonths + partial;
+}
+
+function periodsBetween(start, end, frequency, customDays) {
+  const days = daysBetween(start, end);
+  switch (frequency) {
+    case 'daily': return days;
+    case 'weekly': return days / 7;
+    case 'quarterly': return monthPeriodsBetween(start, end) / 3;
+    case 'half_yearly': return monthPeriodsBetween(start, end) / 6;
+    case 'yearly':
+    case 'annual': return monthPeriodsBetween(start, end) / 12;
+    case 'custom_period': return days / Math.max(1, Number(customDays) || 30);
+    case 'monthly':
+    default: return monthPeriodsBetween(start, end);
+  }
+}
+
+function calculateRenewalInterest(loan, periodStart, renewalDate, principal) {
+  const eligibleStart = addDays(
+    periodStart,
+    Number(loan.interest_free_days || 0) + Number(loan.grace_period_days || 0)
+  );
+  const start = eligibleStart > renewalDate ? renewalDate : eligibleStart;
+  const periods = periodsBetween(start, renewalDate, loan.interest_frequency, loan.custom_period_days);
+  const rate = Number(loan.interest_rate || 0) / 100;
+  let interest;
+  if (loan.interest_type === 'fixed') {
+    interest = Number(loan.fixed_interest_amount || 0) * periods;
+  } else if (loan.interest_type === 'compound') {
+    const compoundPeriods = periodsBetween(
+      start,
+      renewalDate,
+      loan.compounding_frequency || 'monthly',
+      loan.custom_period_days
+    );
+    interest = compoundPeriods > 0
+      ? principal * ((1 + (rate * periods / compoundPeriods)) ** compoundPeriods - 1)
+      : 0;
+  } else {
+    interest = principal * rate * periods;
+  }
+  if (periods > 0 && Number(loan.minimum_interest_amount) > 0) {
+    interest = Math.max(interest, Number(loan.minimum_interest_amount));
+  }
+  if (Number(loan.maximum_interest_amount) > 0) {
+    interest = Math.min(interest, Number(loan.maximum_interest_amount));
+  }
+  return Math.round(interest * 100) / 100;
+}
+
+function makeRenewalPreview(loan, renewalDate) {
+  const principal = Number(loan.outstanding_principal ?? loan.principal_amount);
+  const accruedInterest = calculateRenewalInterest(
+    loan,
+    asDateString(loan.interest_calculation_start_date),
+    renewalDate,
+    principal
+  );
+  return {
+    renewal_date: renewalDate,
+    period_start_date: asDateString(loan.interest_calculation_start_date),
+    current_principal: principal,
+    accrued_interest: accruedInterest,
+    total_due: Math.round((principal + accruedInterest) * 100) / 100,
+    minimum_payment: accruedInterest,
+    next_maturity_date: addMonths(renewalDate, 11)
+  };
+}
+
+function allocateRenewalPayment(preview, paymentAmount) {
+  const amount = Math.round(Number(paymentAmount) * 100) / 100;
+  const interestPaid = Math.min(amount, preview.accrued_interest);
+  const principalPaid = Math.min(
+    preview.current_principal,
+    Math.max(0, Math.round((amount - interestPaid) * 100) / 100)
+  );
+  return {
+    paymentAmount: amount,
+    interestPaid,
+    principalPaid,
+    principalAfter: Math.round((preview.current_principal - principalPaid) * 100) / 100
+  };
+}
+
+async function getLoanRenewal(id) {
+  const connection = await pool.getConnection();
+  try {
+    const [[dateRow]] = await connection.query(
+      "SELECT DATE_FORMAT(CURRENT_DATE(), '%Y-%m-%d') AS renewal_date"
+    );
+    const loan = await getLoanById(id);
+    if (!loan) return null;
+    const [history] = await connection.execute(
+      `SELECT id, renewal_date, period_start_date, previous_maturity_date, new_maturity_date,
+        payment_amount, interest_paid, principal_paid, principal_before, principal_after,
+        accrued_interest, created_at
+       FROM loan_renewals WHERE loan_id = ? ORDER BY renewal_date DESC, id DESC`,
+      [id]
+    );
+    return {
+      loan,
+      preview: makeRenewalPreview(loan, dateRow.renewal_date),
+      history
+    };
+  } finally {
+    connection.release();
+  }
+}
+
+async function renewLoan(id, paymentAmount, adminUserId) {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [loans] = await connection.execute(
+      'SELECT * FROM loans WHERE id = ? FOR UPDATE',
+      [id]
+    );
+    if (!loans.length) {
+      const error = new Error('Loan not found');
+      error.code = 'LOAN_NOT_FOUND';
+      throw error;
+    }
+    const loan = loans[0];
+    const [[dateRow]] = await connection.query(
+      "SELECT DATE_FORMAT(CURRENT_DATE(), '%Y-%m-%d') AS renewal_date"
+    );
+    const preview = makeRenewalPreview(loan, dateRow.renewal_date);
+    const amount = Math.round(Number(paymentAmount) * 100) / 100;
+    if (loan.loan_status !== 'Active') {
+      const error = new Error('Only active loans can be renewed');
+      error.code = 'LOAN_NOT_ACTIVE';
+      throw error;
+    }
+    if (!(amount > 0)) {
+      const error = new Error('Enter a payment amount greater than zero');
+      error.code = 'INVALID_RENEWAL_PAYMENT';
+      throw error;
+    }
+    if (amount + 0.001 < preview.minimum_payment) {
+      const error = new Error(`The minimum payment is the accrued interest of ${preview.minimum_payment.toFixed(2)}`);
+      error.code = 'RENEWAL_PAYMENT_BELOW_INTEREST';
+      throw error;
+    }
+    if (amount - 0.001 > preview.total_due) {
+      const error = new Error(`Payment cannot exceed the total due of ${preview.total_due.toFixed(2)}`);
+      error.code = 'RENEWAL_PAYMENT_EXCEEDS_DUE';
+      throw error;
+    }
+    const { interestPaid, principalPaid, principalAfter } = allocateRenewalPayment(preview, amount);
+    const fullyRepaid = principalAfter === 0;
+    const newMaturityDate = fullyRepaid ? null : preview.next_maturity_date;
+    const previousMaturityDate = asDateString(loan.maturity_date);
+    await connection.execute(
+      `INSERT INTO loan_renewals (
+        loan_id, renewal_date, period_start_date, previous_maturity_date, new_maturity_date,
+        payment_amount, interest_paid, principal_paid, principal_before, principal_after,
+        accrued_interest, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        id, preview.renewal_date, preview.period_start_date, previousMaturityDate, newMaturityDate,
+        amount.toFixed(2), interestPaid.toFixed(2), principalPaid.toFixed(2),
+        preview.current_principal.toFixed(2), principalAfter.toFixed(2),
+        preview.accrued_interest.toFixed(2), adminUserId || null
+      ]
+    );
+    await connection.execute(
+      `UPDATE loans SET outstanding_principal = ?, interest_calculation_start_date = ?,
+        maturity_date = ?, loan_status = ? WHERE id = ?`,
+      [
+        principalAfter.toFixed(2), preview.renewal_date,
+        newMaturityDate || previousMaturityDate, fullyRepaid ? 'Completed' : 'Active', id
+      ]
+    );
+    const [[renewal]] = await connection.query('SELECT LAST_INSERT_ID() AS id');
+    const updatedLoan = await getLoanByIdFrom(connection, id);
+    const [history] = await connection.execute(
+      `SELECT id, renewal_date, period_start_date, previous_maturity_date, new_maturity_date,
+        payment_amount, interest_paid, principal_paid, principal_before, principal_after,
+        accrued_interest, created_at
+       FROM loan_renewals WHERE loan_id = ? ORDER BY renewal_date DESC, id DESC`,
+      [id]
+    );
+    await connection.commit();
+    return {
+      renewal_id: renewal.id,
+      payment_amount: amount,
+      interest_paid: interestPaid,
+      principal_paid: principalPaid,
+      principal_after: principalAfter,
+      renewal_date: preview.renewal_date,
+      new_maturity_date: newMaturityDate,
+      loan_status: fullyRepaid ? 'Completed' : 'Active',
+      loan: updatedLoan,
+      preview: makeRenewalPreview(updatedLoan, preview.renewal_date),
+      history
+    };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
+  } finally {
+    connection.release();
+  }
+}
+
+async function getLoanRenewalHistory(id) {
   const [rows] = await pool.execute(
+    `SELECT id, renewal_date, period_start_date, previous_maturity_date, new_maturity_date,
+      payment_amount, interest_paid, principal_paid, principal_before, principal_after,
+      accrued_interest, created_at
+     FROM loan_renewals WHERE loan_id = ? ORDER BY renewal_date DESC, id DESC`,
+    [id]
+  );
+  return rows;
+}
+
+async function getLoanById(id) {
+  return getLoanByIdFrom(pool, id);
+}
+
+async function getLoanByIdFrom(connection, id) {
+  const [rows] = await connection.execute(
     `SELECT l.*, c.customer_code, c.full_name AS customer_name, c.mobile AS customer_mobile,
       c.address AS customer_address, c.city AS customer_city, c.district AS customer_district,
       c.state AS customer_state, c.pincode AS customer_pincode, c.email AS customer_email,
@@ -184,14 +470,15 @@ async function createLoan(loan) {
       error.code = 'INTEREST_TYPE_UNAVAILABLE';
       throw error;
     }
-    const fields = Object.keys(loan).filter((field) => field !== 'customer_id');
+    const loanToInsert = { ...loan, outstanding_principal: loan.principal_amount };
+    const fields = Object.keys(loanToInsert).filter((field) => field !== 'customer_id');
     const columns = ['loan_number', 'gold_pledge_number', 'customer_id', ...fields];
     const temporaryNumber = `TEMP-${crypto.randomUUID()}`;
     const temporaryPledgeNumber = `TEMP-PLEDGE-${crypto.randomUUID()}`;
     const [result] = await connection.execute(
       `INSERT INTO loans (${columns.map((field) => `\`${field}\``).join(', ')})
        VALUES (${columns.map(() => '?').join(', ')})`,
-      [temporaryNumber, temporaryPledgeNumber, loan.customer_id, ...fields.map((field) => loan[field])]
+      [temporaryNumber, temporaryPledgeNumber, loan.customer_id, ...fields.map((field) => loanToInsert[field])]
     );
     loanId = result.insertId;
     const loanNumber = `GL-${loan.loan_date.replaceAll('-', '')}-${String(loanId).padStart(6, '0')}`;
@@ -213,10 +500,17 @@ async function createLoan(loan) {
 async function updateLoan(id, loan) {
   const existingLoan = await getLoanById(id);
   if (!existingLoan) return null;
-  const fields = Object.keys(loan);
+  const originalPrincipal = Number(existingLoan.principal_amount);
+  const revisedPrincipal = Number(loan.principal_amount);
+  const currentBalance = Number(existingLoan.outstanding_principal ?? existingLoan.principal_amount);
+  const revisedLoan = {
+    ...loan,
+    outstanding_principal: Math.max(0, currentBalance + revisedPrincipal - originalPrincipal).toFixed(2)
+  };
+  const fields = Object.keys(revisedLoan);
   await pool.execute(
     `UPDATE loans SET ${fields.map((field) => `\`${field}\` = ?`).join(', ')} WHERE id = ?`,
-    [...fields.map((field) => loan[field]), id]
+    [...fields.map((field) => revisedLoan[field]), id]
   );
   return getLoanById(id);
 }
@@ -233,12 +527,18 @@ async function setInterestType(typeKey, enabled) {
 
 module.exports = {
   createLoan,
+  allocateRenewalPayment,
+  calculateRenewalInterest,
   deleteLoan,
   getLoanById,
+  getLoanRenewal,
+  getLoanRenewalHistory,
   initializeLoanModule,
   listInterestTypes,
   listLoans,
   listLoansForCustomer,
+  makeRenewalPreview,
+  renewLoan,
   setInterestType,
   updateLoan
 };

@@ -8,6 +8,11 @@ import { printLoanAgreement } from "./loanPrint";
 const money = (value) => new Intl.NumberFormat("en-IN", {
   style: "currency", currency: "INR", maximumFractionDigits: 2
 }).format(Number(value || 0));
+const rateText = (value) => {
+  if (value == null || value === "") return "—";
+  const rate = Number(value);
+  return Number.isFinite(rate) ? rate.toFixed(2) : "—";
+};
 const dateText = (value) => value ? new Date(value).toLocaleDateString("en-IN") : "—";
 
 function Detail({ label, value }) {
@@ -95,6 +100,7 @@ export default function LoanDetails() {
           {loan.gold_rate_per_gram != null && <Detail label="Applied Rate Snapshot" value={`${money(loan.gold_rate_per_gram)} / ${loan.rate_unit === "carat" ? "carat" : "g"}`} />}
           {loan.gold_rate_date && <Detail label="Rate Date" value={dateText(loan.gold_rate_date)} />}
           <Detail label="Loan Amount" value={money(loan.principal_amount)} />
+          <Detail label="Current Principal Balance" value={money(loan.outstanding_principal ?? loan.principal_amount)} />
         </div>
       </section>
       {goldImageUrl && (
@@ -108,14 +114,14 @@ export default function LoanDetails() {
         <h2 className="mb-4 flex items-center gap-2 font-bold text-[#003B3B]"><FiCalendar /> Contract Terms</h2>
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <Detail label="Interest Type" value={String(loan.interest_type || "").replaceAll("_", " ")} />
-          <Detail label="Interest Rate" value={`${loan.interest_rate}% / ${String(loan.interest_frequency || "").replaceAll("_", " ")}`} />
+          <Detail label="Interest Rate" value={`${rateText(loan.interest_rate)}% / ${String(loan.interest_frequency || "").replaceAll("_", " ")}`} />
           {loan.custom_period_days != null && <Detail label="Custom Interest Period" value={`${loan.custom_period_days} days`} />}
           <Detail label="Calculation Start" value={dateText(loan.interest_calculation_start_date)} />
           <Detail label="Day-Count Convention" value={loan.day_count_convention} />
           <Detail label="Compounding Frequency" value={loan.compounding_frequency} />
           <Detail label="Grace Period" value={`${loan.grace_period_days} days`} />
           <Detail label="Interest-Free Period" value={`${loan.interest_free_days} days`} />
-          <Detail label="Late Payment Rate" value={loan.late_payment_interest_rate == null ? "Not set" : `${loan.late_payment_interest_rate}%`} />
+          <Detail label="Late Payment Rate" value={loan.late_payment_interest_rate == null ? "Not set" : `${rateText(loan.late_payment_interest_rate)}%`} />
           <Detail label="Processing Fee" value={money(loan.processing_fee)} />
           <Detail label="Other Charges" value={money(loan.other_charges)} />
           <Detail label="Loan Date" value={dateText(loan.loan_date)} />
@@ -126,7 +132,7 @@ export default function LoanDetails() {
           {loan.maximum_interest_amount != null && <Detail label="Maximum Interest" value={money(loan.maximum_interest_amount)} />}
         </div>
         {loan.notes && <div className="mt-3"><Detail label="Notes" value={loan.notes} /></div>}
-        <p className="mt-4 rounded-lg bg-amber-50 p-3 text-xs text-amber-800">This page shows the terms saved at loan creation. A live outstanding or settlement balance requires a repayment ledger, which is not yet configured.</p>
+        <Link to={`/admin/loans/loanreniwel/${loan.id}`} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm font-bold text-emerald-800 hover:bg-emerald-100"><FiCalendar /> Review payment and renew loan</Link>
       </section>
     </main>
   );
