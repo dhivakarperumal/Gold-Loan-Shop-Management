@@ -66,7 +66,7 @@ const Hero = () => {
 
   return (
     <section className="relative w-full overflow-hidden bg-[#032e25] text-white">
-      <div className="relative isolate w-full">
+      <div className="relative isolate min-h-[620px] w-full sm:min-h-[540px] md:h-[540px] md:min-h-0 lg:h-[560px]">
 
         {/* Swiper background images */}
         {slides.length > 0 && (
@@ -91,7 +91,7 @@ const Hero = () => {
             {slides.map((item) => (
               <SwiperSlide key={item.id} className="h-full w-full">
                 <div
-                  className="h-full w-full bg-cover bg-center bg-no-repeat sm:bg-contain"
+                  className="h-full w-full bg-contain bg-center bg-no-repeat"
                   style={{
                     backgroundImage: `url("${getBannerImageUrl(item.image)}")`,
                   }}
@@ -113,7 +113,7 @@ const Hero = () => {
         </div>
 
         {/* Hero content */}
-        <div className="pointer-events-none relative z-[2] flex min-h-[620px] items-center px-6 py-12 sm:min-h-[540px] sm:px-10 sm:py-10 md:h-[540px] md:min-h-0 md:px-16 md:py-0 lg:h-[560px] lg:px-20 xl:px-24">
+        <div className="pointer-events-none absolute inset-0 z-[2] flex items-center px-6 py-12 sm:px-10 md:px-16 md:py-0 lg:px-20 xl:px-24">
           <div className="pointer-events-auto w-full max-w-[560px]">
 
             {slide ? (
