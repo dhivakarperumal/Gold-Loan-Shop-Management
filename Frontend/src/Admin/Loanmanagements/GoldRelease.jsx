@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { FiArrowLeft, FiCheckCircle, FiDownload, FiPrinter, FiSearch, FiShield, FiUpload } from "react-icons/fi";
+import { FiArrowLeft, FiCalendar, FiCheckCircle, FiDownload, FiFileText, FiPrinter, FiSearch, FiShield, FiUpload } from "react-icons/fi";
 import { toast } from "react-hot-toast";
-import api from "../../api";
+import api, { getPrivateFile } from "../../api";
+import { printLoanAgreement } from "./loanPrint";
 
 const money = (value) => new Intl.NumberFormat("en-IN", {
   style: "currency", currency: "INR", maximumFractionDigits: 2
@@ -93,6 +94,10 @@ export default function GoldRelease() {
   const [recipient, setRecipient] = useState("");
   const [notes, setNotes] = useState("");
   const [signedDocument, setSignedDocument] = useState(null);
+  const [goldImage, setGoldImage] = useState("");
+  const [signedDocumentPreview, setSignedDocumentPreview] = useState(null);
+  const [paymentHistory, setPaymentHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [signatureReceived, setSignatureReceived] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -108,16 +113,92 @@ export default function GoldRelease() {
           setNotes(data.release?.notes || "");
         }
       })
-      : api.get("/loans/gold-release").then(({ data }) => {
+      : api.get(completionPage ? "/loans" : "/loans/gold-release").then(({ data }) => {
         if (!Array.isArray(data)) throw new Error("The server returned an invalid gold release list.");
-        if (active) setLoans(data);
+        if (active) {
+          const visibleLoans = completionPage
+            ? data.filter((loan) => {
+              const balance = Number(loan.outstanding_principal ?? loan.principal_amount);
+              const completed = loan.release_status === "Released" || loan.loan_status === "Completed";
+              const awaitingRelease = loan.release_status === "Pending Release" && !completed;
+              return balance === 0 && (awaitingRelease || completed);
+            })
+            : data;
+          setLoans(visibleLoans);
+        }
       });
     request.catch((error) => {
       console.error("Failed to load gold release information:", error);
       if (active) toast.error(error.response?.data?.message || error.message || "Could not load gold release information.");
     }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, [id]);
+  }, [id, completionPage]);
+
+  useEffect(() => {
+    if (!id || !details?.loan) {
+      setPaymentHistory([]);
+      return undefined;
+    }
+    let active = true;
+    setHistoryLoading(true);
+    api.get(`/loans/${id}/renewals`)
+      .then(({ data }) => {
+        if (!Array.isArray(data)) throw new Error("The server returned an invalid payment history.");
+        if (active) setPaymentHistory(data);
+      })
+      .catch((error) => {
+        console.error("Failed to load loan payment history:", error);
+        if (active) toast.error(error.response?.data?.message || "Could not load loan payment history.");
+      })
+      .finally(() => { if (active) setHistoryLoading(false); });
+    return () => { active = false; };
+  }, [id, details?.loan?.id]);
+
+  useEffect(() => {
+    if (!details?.loan?.gold_image_url) {
+      setGoldImage("");
+      return undefined;
+    }
+    let active = true;
+    let imageUrl = "";
+    getPrivateFile(details.loan.gold_image_url, { responseType: "blob" })
+      .then(({ data }) => {
+        if (!active) return;
+        imageUrl = URL.createObjectURL(data);
+        setGoldImage(imageUrl);
+      })
+      .catch((error) => {
+        console.error("Failed to load pledged gold image:", error);
+        if (active) toast.error(error.response?.data?.message || "Could not load the pledged gold image.");
+      });
+    return () => {
+      active = false;
+      if (imageUrl) URL.revokeObjectURL(imageUrl);
+    };
+  }, [details?.loan?.gold_image_url]);
+
+  useEffect(() => {
+    if (!id || !details?.release?.signed_document_url) {
+      setSignedDocumentPreview(null);
+      return undefined;
+    }
+    let active = true;
+    let documentUrl = "";
+    api.get(`/loans/${id}/gold-release-document`, { responseType: "blob" })
+      .then(({ data }) => {
+        if (!active) return;
+        documentUrl = URL.createObjectURL(data);
+        setSignedDocumentPreview({ url: documentUrl, type: data.type });
+      })
+      .catch((error) => {
+        console.error("Failed to load signed gold release document:", error);
+        if (active) toast.error(error.response?.data?.message || "Could not load the signed release document.");
+      });
+    return () => {
+      active = false;
+      if (documentUrl) URL.revokeObjectURL(documentUrl);
+    };
+  }, [id, details?.release?.signed_document_url]);
 
   const filteredLoans = loans.filter((loan) => {
     const query = search.trim().toLowerCase();
@@ -168,27 +249,33 @@ export default function GoldRelease() {
     return (
       <main className="space-y-6 p-4 sm:p-6">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div><p className="text-xs font-bold uppercase tracking-[0.2em] text-[#008577]">Loan Management</p><h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">{pageTitle}</h1><p className="mt-1 text-sm text-slate-500">Fully paid loans awaiting signed documents and physical gold handover.</p></div>
-          <span className="text-xs font-semibold text-slate-400">{loans.length} eligible loans</span>
+          <div><p className="text-xs font-bold uppercase tracking-[0.2em] text-[#008577]">Loan Management</p><h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">{pageTitle}</h1><p className="mt-1 text-sm text-slate-500">{completionPage ? "Track loans awaiting gold handover and review completed loan records." : "Fully paid loans awaiting signed documents and physical gold handover."}</p></div>
+          <span className="text-xs font-semibold text-slate-400">{loans.length} {completionPage ? "loans" : "eligible loans"}</span>
         </header>
         <label className="relative block max-w-xl"><FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" /><span className="sr-only">Search eligible loans</span><input value={search} onChange={(event) => setSearch(event.target.value)} type="search" placeholder="Search loan number, customer, mobile..." className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none focus:border-[#008577] focus:ring-4 focus:ring-emerald-700/10" /></label>
         <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
-          <div className="border-b border-slate-100 px-5 py-4"><h2 className="font-bold text-slate-800">Loans ready to complete</h2><p className="mt-0.5 text-xs text-slate-500">Select a fully paid loan, upload the signed form, and confirm gold handover.</p></div>
+          <div className="border-b border-slate-100 px-5 py-4"><h2 className="font-bold text-slate-800">{completionPage ? "Loan completion records" : "Loans ready for gold release"}</h2><p className="mt-0.5 text-xs text-slate-500">{completionPage ? "Open a loan awaiting handover to complete it, or view a completed loan record." : "Select a fully paid loan, upload the signed form, and confirm gold handover."}</p></div>
           <div className="overflow-x-auto"><table className="w-full min-w-[760px] border-separate border-spacing-0 text-left">
-            <thead><tr className="bg-[#064A41] text-[11px] font-bold uppercase tracking-wide text-emerald-50/90">{["Loan Number", "Customer", "Mobile", "Pledge Number", "Outstanding", "Maturity", ""].map((label) => <th key={label} className="whitespace-nowrap px-4 py-3 first:pl-5">{label}</th>)}</tr></thead>
+            <thead><tr className="bg-[#064A41] text-[11px] font-bold uppercase tracking-wide text-emerald-50/90">{["Loan Number", "Customer", "Mobile", "Pledge Number", "Outstanding", "Maturity", ...(completionPage ? ["Status"] : []), ""].map((label, index) => <th key={`${label}-${index}`} className="whitespace-nowrap px-4 py-3 first:pl-5">{label}</th>)}</tr></thead>
             <tbody className="divide-y divide-slate-100">{loading
-              ? <tr><td colSpan="7" className="px-4 py-14 text-center text-sm text-slate-400">Loading eligible loans...</td></tr>
+              ? <tr><td colSpan={completionPage ? "8" : "7"} className="px-4 py-14 text-center text-sm text-slate-400">Loading loans...</td></tr>
               : !filteredLoans.length
-                ? <tr><td colSpan="7" className="px-4 py-14 text-center text-sm text-slate-400">{loans.length ? "No loans match your search." : "No fully paid loans are awaiting gold release."}</td></tr>
-                : filteredLoans.map((loan) => <tr key={loan.id} className="cursor-pointer text-sm transition-colors hover:bg-emerald-50/60" onClick={() => navigate(`${pagePath}/${loan.id}`)}>
-                  <td className="whitespace-nowrap px-4 py-4 pl-5 font-bold text-[#064A41]">{loan.loan_number}</td>
-                  <td className="px-4 py-4"><span className="block font-semibold text-slate-800">{loan.customer_name || "—"}</span><span className="text-xs text-slate-400">{loan.customer_code || "—"}</span></td>
-                  <td className="whitespace-nowrap px-4 py-4 text-slate-600">{loan.customer_mobile || "—"}</td>
-                  <td className="whitespace-nowrap px-4 py-4 text-slate-600">{loan.gold_pledge_number}</td>
-                  <td className="whitespace-nowrap px-4 py-4 font-bold text-emerald-700">{money(loan.outstanding_principal)}</td>
-                  <td className="whitespace-nowrap px-4 py-4 text-slate-600">{dateText(loan.maturity_date)}</td>
-                  <td className="px-4 py-4 pr-5"><Link to={`${pagePath}/${loan.id}`} onClick={(event) => event.stopPropagation()} className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">Complete loan</Link></td>
-                </tr>)}
+                ? <tr><td colSpan={completionPage ? "8" : "7"} className="px-4 py-14 text-center text-sm text-slate-400">{loans.length ? "No loans match your search." : completionPage ? "No fully paid or completed loans are available." : "No fully paid loans are awaiting gold release."}</td></tr>
+                : filteredLoans.map((loan) => {
+                  const completed = loan.release_status === "Released" || loan.loan_status === "Completed";
+                  return (
+                    <tr key={loan.id} className="cursor-pointer text-sm transition-colors hover:bg-emerald-50/60" onClick={() => navigate(`${pagePath}/${loan.id}`)}>
+                      <td className="whitespace-nowrap px-4 py-4 pl-5 font-bold text-[#064A41]">{loan.loan_number}</td>
+                      <td className="px-4 py-4"><span className="block font-semibold text-slate-800">{loan.customer_name || "—"}</span><span className="text-xs text-slate-400">{loan.customer_code || "—"}</span></td>
+                      <td className="whitespace-nowrap px-4 py-4 text-slate-600">{loan.customer_mobile || "—"}</td>
+                      <td className="whitespace-nowrap px-4 py-4 text-slate-600">{loan.gold_pledge_number}</td>
+                      <td className="whitespace-nowrap px-4 py-4 font-bold text-emerald-700">{money(loan.outstanding_principal)}</td>
+                      <td className="whitespace-nowrap px-4 py-4 text-slate-600">{dateText(loan.maturity_date)}</td>
+                      {completionPage && <td className="whitespace-nowrap px-4 py-4"><span className={`rounded-full px-2.5 py-1.5 text-xs font-bold ${completed ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}>{completed ? "Completed" : "Awaiting Gold Release"}</span></td>}
+                      <td className="px-4 py-4 pr-5"><Link to={`${pagePath}/${loan.id}`} onClick={(event) => event.stopPropagation()} className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">{completionPage ? completed ? "View record" : "Complete loan" : "Prepare release form"}</Link></td>
+                    </tr>
+                  );
+                })}
             </tbody>
           </table></div>
         </section>
@@ -203,6 +290,14 @@ export default function GoldRelease() {
   const released = Boolean(release);
   const balance = Number(loan.outstanding_principal ?? loan.principal_amount);
   const fullyPaid = balance === 0;
+  const unit = loan.rate_unit === "carat" ? "ct" : "g";
+  const customerAddress = [
+    loan.customer_address, loan.customer_city, loan.customer_district,
+    loan.customer_state, loan.customer_pincode
+  ].filter(Boolean).join(", ");
+  const releaseStatus = released ? "Completed · Gold released"
+    : fullyPaid ? "Paid · Awaiting gold release"
+      : "Balance due · Not eligible";
 
   return (
     <main className="mx-auto max-w-[1280px] space-y-5 p-4 sm:p-6">
@@ -212,31 +307,157 @@ export default function GoldRelease() {
         <span className={`w-fit rounded-full px-3 py-1.5 text-xs font-bold ${released ? "bg-emerald-300/20 text-emerald-50" : fullyPaid ? "bg-amber-300/20 text-amber-50" : "bg-rose-300/20 text-rose-50"}`}>{released ? "Gold released · Loan completed" : fullyPaid ? "Paid · Awaiting gold release" : "Balance due · Not eligible"}</span>
       </header>
 
-      <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
+      {released ? (
+        <section className="space-y-5">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-4">
+            <div><p className="text-sm font-extrabold text-emerald-900">Completed loan file</p><p className="mt-1 text-xs text-emerald-800">Loan agreement, payment history, pledged-gold evidence, and signed release form.</p></div>
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => printLoanAgreement(loan.id)} className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm font-bold text-emerald-900 hover:bg-emerald-100"><FiPrinter /> Print loan agreement</button>
+              {release.signed_document_url && <button type="button" onClick={downloadSignedDocument} className="inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 py-2 text-sm font-bold text-emerald-900 hover:bg-emerald-100"><FiDownload /> Download signed release</button>}
+            </div>
+          </div>
+
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
+            <h2 className="mb-4 flex items-center gap-2 font-bold text-slate-800"><FiFileText /> Customer and loan agreement</h2>
+            <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <Info label="Loan number" value={loan.loan_number} /><Info label="Pledge number" value={loan.gold_pledge_number} />
+              <Info label="Customer ID" value={loan.customer_code} /><Info label="Customer name" value={loan.customer_name} />
+              <Info label="Mobile" value={loan.customer_mobile} /><Info label="Alternate mobile" value={loan.customer_alternate_mobile} />
+              <Info label="Email" value={loan.customer_email} /><Info label="KYC status" value={loan.customer_kyc_status} />
+              <Info label="Date of birth" value={dateText(loan.customer_date_of_birth)} /><Info label="Gender" value={loan.customer_gender} />
+              <Info label="Occupation" value={loan.customer_occupation} />
+              <div className="sm:col-span-2 xl:col-span-4"><Info label="Customer address" value={customerAddress} /></div>
+              <Info label="Loan amount" value={money(loan.principal_amount)} /><Info label="Current balance" value={money(balance)} />
+              <Info label="Loan date" value={dateText(loan.loan_date)} /><Info label="Maturity date" value={dateText(loan.maturity_date)} />
+              <Info label="Loan status" value={releaseStatus} /><Info label="Payment frequency" value={loan.payment_frequency} />
+              <Info label="Interest type" value={String(loan.interest_type || "").replaceAll("_", " ")} />
+              <Info label="Interest rate" value={`${Number(loan.interest_rate || 0).toFixed(2)}% per ${String(loan.interest_frequency || "").replaceAll("_", " ")}`} />
+              <Info label="Interest start date" value={dateText(loan.interest_calculation_start_date)} />
+              <Info label="Day count convention" value={loan.day_count_convention} />
+              <Info label="Compounding frequency" value={loan.compounding_frequency} />
+              <Info label="Custom period" value={loan.custom_period_days == null ? "—" : `${loan.custom_period_days} days`} />
+              <Info label="Grace period" value={`${loan.grace_period_days || 0} days`} />
+              <Info label="Interest-free period" value={`${loan.interest_free_days || 0} days`} />
+              <Info label="Processing fee" value={money(loan.processing_fee)} /><Info label="Other charges" value={money(loan.other_charges)} />
+              <Info label="Fixed interest amount" value={loan.fixed_interest_amount == null ? "—" : money(loan.fixed_interest_amount)} />
+              <Info label="Late payment rate" value={loan.late_payment_interest_rate == null ? "—" : `${Number(loan.late_payment_interest_rate).toFixed(2)}%`} />
+              <Info label="Minimum interest" value={loan.minimum_interest_amount == null ? "—" : money(loan.minimum_interest_amount)} />
+              <Info label="Maximum interest" value={loan.maximum_interest_amount == null ? "—" : money(loan.maximum_interest_amount)} />
+              <div className="sm:col-span-2 xl:col-span-4"><Info label="Loan notes" value={loan.notes} /></div>
+              <Info label="Guarantor" value={loan.guarantor_name} /><Info label="Guarantor mobile" value={loan.guarantor_mobile} />
+              <Info label="Guarantor email" value={loan.guarantor_email} /><Info label="Guarantor relationship" value={loan.guarantor_relationship} />
+              <div className="sm:col-span-2 xl:col-span-4"><Info label="Guarantor address" value={loan.guarantor_address} /></div>
+            </dl>
+          </section>
+
+          <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
+            <h2 className="mb-4 font-bold text-slate-800">Pledged jewellery and valuation</h2>
+            <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <Info label="Jewellery type" value={loan.jewellery_type} /><Info label="Metal type" value={loan.metal_type || "Gold"} />
+              <Info label="Purity / quality" value={loan.gold_purity} /><Info label="Gross weight" value={`${loan.gross_weight} ${unit}`} />
+              <Info label="Stone weight" value={`${loan.stone_weight || 0} ${unit}`} /><Info label="Net weight" value={`${loan.net_gold_weight} ${unit}`} />
+              <Info label="Gold valuation" value={money(loan.gold_valuation)} />
+              <Info label="Rate snapshot" value={loan.gold_rate_per_gram == null ? "—" : `${money(loan.gold_rate_per_gram)} / ${unit}`} />
+              <Info label="Rate date" value={dateText(loan.gold_rate_date)} />
+            </dl>
+            {goldImage && <img src={goldImage} alt={`Pledged ${loan.jewellery_type || "gold"}`} className="mt-4 max-h-[28rem] w-full rounded-xl border border-slate-200 bg-slate-50 object-contain p-2" />}
+            {!loan.gold_image_url && <p className="mt-3 text-sm text-slate-500">No pledged gold image was saved for this loan.</p>}
+          </section>
+
+          <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+            <div className="border-b border-slate-100 px-5 py-4"><h2 className="flex items-center gap-2 font-bold text-slate-800"><FiCalendar /> Payment and renewal history</h2><p className="mt-1 text-xs text-slate-500">Every recorded renewal payment and principal allocation for this loan.</p></div>
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[850px] text-left text-sm">
+                <thead><tr className="bg-[#064A41] text-[11px] font-bold uppercase tracking-wide text-emerald-50/90">{["Date", "Period start", "Payment", "Interest accrued", "Interest paid", "Principal paid", "Balance before", "Balance after", "Previous maturity", "New maturity"].map((label) => <th key={label} className="whitespace-nowrap px-4 py-3 first:pl-5">{label}</th>)}</tr></thead>
+                <tbody className="divide-y divide-slate-100">
+                  {historyLoading ? <tr><td colSpan="10" className="px-4 py-10 text-center text-slate-400">Loading payment history...</td></tr>
+                    : !paymentHistory.length ? <tr><td colSpan="10" className="px-4 py-10 text-center text-slate-400">No renewal payments are recorded for this loan.</td></tr>
+                      : paymentHistory.map((payment) => <tr key={payment.id}>
+                        <td className="whitespace-nowrap px-4 py-3 pl-5">{dateText(payment.renewal_date)}</td>
+                        <td className="whitespace-nowrap px-4 py-3">{dateText(payment.period_start_date)}</td>
+                        <td className="whitespace-nowrap px-4 py-3 font-bold">{money(payment.payment_amount)}</td>
+                        <td className="whitespace-nowrap px-4 py-3">{money(payment.accrued_interest)}</td>
+                        <td className="whitespace-nowrap px-4 py-3">{money(payment.interest_paid)}</td>
+                        <td className="whitespace-nowrap px-4 py-3">{money(payment.principal_paid)}</td>
+                        <td className="whitespace-nowrap px-4 py-3">{money(payment.principal_before)}</td>
+                        <td className="whitespace-nowrap px-4 py-3 font-semibold text-emerald-800">{money(payment.principal_after)}</td>
+                        <td className="whitespace-nowrap px-4 py-3">{dateText(payment.previous_maturity_date)}</td>
+                        <td className="whitespace-nowrap px-4 py-3">{dateText(payment.new_maturity_date)}</td>
+                      </tr>)}
+                </tbody>
+              </table>
+            </div>
+          </section>
+
+          <section className="rounded-2xl border border-emerald-200 bg-white p-5 shadow-sm">
+            <h2 className="mb-4 flex items-center gap-2 font-bold text-emerald-900"><FiShield /> Gold release record</h2>
+            <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <Info label="Release status" value={releaseStatus} /><Info label="Released to" value={release.released_to} />
+              <Info label="Release date" value={dateText(release.released_at)} /><Info label="Customer signature confirmed" value={release.confirmed_customer_signature ? "Yes" : "No"} />
+              <div className="sm:col-span-2 xl:col-span-4"><Info label="Release notes" value={release.notes} /></div>
+            </dl>
+            {signedDocumentPreview?.type === "application/pdf"
+              ? <iframe title="Signed gold release form" src={signedDocumentPreview.url} className="mt-4 h-[700px] w-full rounded-xl border border-slate-200" />
+              : signedDocumentPreview?.type?.startsWith("image/")
+                ? <img src={signedDocumentPreview.url} alt="Signed gold release form" className="mt-4 max-h-[48rem] w-full rounded-xl border border-slate-200 bg-slate-50 object-contain p-2" />
+                : <p className="mt-4 text-sm text-slate-500">{release.signed_document_url ? "Loading signed release document preview..." : "No signed release document is attached."}</p>}
+          </section>
+        </section>
+      ) : (
+        <>
+        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_380px]">
         <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
           <h2 className="mb-4 font-bold text-slate-800">Verify customer, loan, and pledged jewellery</h2>
           <dl className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             <Info label="Customer ID" value={loan.customer_code} /><Info label="Customer name" value={loan.customer_name} />
             <Info label="Mobile" value={loan.customer_mobile} /><Info label="Alternate mobile" value={loan.customer_alternate_mobile} />
-            <Info label="Email" value={loan.customer_email} />
-            <div className="sm:col-span-2 xl:col-span-3"><Info label="Address" value={[loan.customer_address, loan.customer_city, loan.customer_district, loan.customer_state, loan.customer_pincode].filter(Boolean).join(", ")} /></div>
+            <Info label="Email" value={loan.customer_email} /><Info label="Date of birth" value={dateText(loan.customer_date_of_birth)} />
+            <Info label="Gender" value={loan.customer_gender} /><Info label="Occupation" value={loan.customer_occupation} />
+            <Info label="KYC status" value={loan.customer_kyc_status} />
+            <div className="sm:col-span-2 xl:col-span-3"><Info label="Address" value={customerAddress} /></div>
             <Info label="Loan number" value={loan.loan_number} /><Info label="Gold pledge number" value={loan.gold_pledge_number} />
             <Info label="Jewellery" value={`${loan.jewellery_type} · ${loan.metal_type || "Gold"}`} /><Info label="Purity" value={loan.gold_purity} />
-            <Info label="Gross weight" value={`${loan.gross_weight} ${loan.rate_unit === "carat" ? "ct" : "g"}`} />
-            <Info label="Stone weight" value={`${loan.stone_weight || 0} ${loan.rate_unit === "carat" ? "ct" : "g"}`} />
-            <Info label="Net weight" value={`${loan.net_gold_weight} ${loan.rate_unit === "carat" ? "ct" : "g"}`} />
+            <Info label="Gross weight" value={`${loan.gross_weight} ${unit}`} />
+            <Info label="Stone weight" value={`${loan.stone_weight || 0} ${unit}`} />
+            <Info label="Net weight" value={`${loan.net_gold_weight} ${unit}`} />
             <Info label="Loan amount" value={money(loan.principal_amount)} /><Info label="Outstanding balance" value={money(balance)} />
             <Info label="Loan date" value={dateText(loan.loan_date)} /><Info label="Maturity date" value={dateText(loan.maturity_date)} />
             <Info label="Interest rate" value={`${Number(loan.interest_rate || 0).toFixed(2)}% per ${String(loan.interest_frequency || "").replaceAll("_", " ")}`} />
+            <Info label="Interest type" value={String(loan.interest_type || "").replaceAll("_", " ")} />
+            <Info label="Interest start date" value={dateText(loan.interest_calculation_start_date)} />
+            <Info label="Payment frequency" value={loan.payment_frequency} />
+            <Info label="Compounding frequency" value={loan.compounding_frequency} />
+            <Info label="Custom interest period" value={loan.custom_period_days == null ? "—" : `${loan.custom_period_days} days`} />
+            <Info label="Day-count convention" value={loan.day_count_convention} />
+            <Info label="Grace period" value={`${loan.grace_period_days || 0} days`} />
+            <Info label="Interest-free period" value={`${loan.interest_free_days || 0} days`} />
+            <Info label="Late payment rate" value={loan.late_payment_interest_rate == null ? "—" : `${Number(loan.late_payment_interest_rate).toFixed(2)}%`} />
+            <Info label="Fixed interest amount" value={loan.fixed_interest_amount == null ? "—" : money(loan.fixed_interest_amount)} />
+            <Info label="Minimum interest" value={loan.minimum_interest_amount == null ? "—" : money(loan.minimum_interest_amount)} />
+            <Info label="Maximum interest" value={loan.maximum_interest_amount == null ? "—" : money(loan.maximum_interest_amount)} />
+            <Info label="Processing fee" value={money(loan.processing_fee)} /><Info label="Other charges" value={money(loan.other_charges)} />
+            <Info label="Guarantor" value={loan.guarantor_name} /><Info label="Guarantor mobile" value={loan.guarantor_mobile} />
+            <Info label="Guarantor email" value={loan.guarantor_email} /><Info label="Guarantor relationship" value={loan.guarantor_relationship} />
+            <div className="sm:col-span-2 xl:col-span-3"><Info label="Guarantor address" value={loan.guarantor_address} /></div>
+            <div className="sm:col-span-2 xl:col-span-3"><Info label="Loan notes" value={loan.notes} /></div>
           </dl>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <Info label="Gold valuation" value={money(loan.gold_valuation)} />
+            <Info label="Gold rate snapshot" value={loan.gold_rate_per_gram == null ? "—" : `${money(loan.gold_rate_per_gram)} / ${unit}`} />
+            <Info label="Gold rate date" value={dateText(loan.gold_rate_date)} />
+          </div>
+          {goldImage && <img src={goldImage} alt={`Pledged ${loan.jewellery_type || "gold"}`} className="mt-4 max-h-72 w-full rounded-xl border border-slate-200 bg-slate-50 object-contain p-2" />}
+          {!loan.gold_image_url && <p className="mt-3 text-sm text-slate-500">No pledged gold image was saved for this loan.</p>}
         </section>
 
         <aside className="space-y-5">
           <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
             <h2 className="font-bold text-slate-800">Print and record handover</h2>
             <p className="mt-1 text-xs leading-relaxed text-slate-500">Print the release form, collect the customer signature, scan or photograph the signed document, then upload it before confirming physical handover.</p>
+            <button type="button" onClick={() => printLoanAgreement(loan.id)}
+              className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"><FiFileText /> Print Loan Agreement</button>
             <button type="button" onClick={() => printReleaseForm(loan, recipient || loan.customer_name)} disabled={!fullyPaid}
-              className="mt-4 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-bold text-emerald-800 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"><FiPrinter /> Print Gold Release Form</button>
+              className="mt-2 inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-bold text-emerald-800 hover:bg-emerald-100 disabled:cursor-not-allowed disabled:opacity-50"><FiPrinter /> Print Gold Release Form</button>
             {!fullyPaid && <p className="mt-2 text-xs font-semibold text-rose-600">Gold release is locked until the outstanding balance is fully paid.</p>}
             {released && <div className="mt-4 rounded-xl bg-emerald-50 p-3 text-xs leading-relaxed text-emerald-900"><strong>Released to:</strong> {release.released_to}<br /><strong>Release date:</strong> {dateText(release.released_at)}<br />The loan is completed.{release.signed_document_url && <button type="button" onClick={downloadSignedDocument} className="mt-3 inline-flex items-center gap-2 rounded-lg border border-emerald-200 bg-white px-3 py-2 font-bold text-emerald-800 hover:bg-emerald-50"><FiDownload /> Download signed document</button>}</div>}
           </section>
@@ -272,6 +493,32 @@ export default function GoldRelease() {
           {released && <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5 text-sm text-emerald-900"><FiShield className="mb-2" size={22} /><strong>Release complete.</strong><p className="mt-1 text-xs">This loan is now marked Completed after gold handover.</p><Link to="/admin/loans/allloans" className="mt-4 inline-flex font-bold underline">Return to All Loans</Link></div>}
         </aside>
       </div>
+      <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
+        <div className="border-b border-slate-100 px-5 py-4"><h2 className="flex items-center gap-2 font-bold text-slate-800"><FiCalendar /> Payment and renewal history</h2><p className="mt-1 text-xs text-slate-500">Payment allocation and balance changes for this loan.</p></div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[850px] text-left text-sm">
+            <thead><tr className="bg-[#064A41] text-[11px] font-bold uppercase tracking-wide text-emerald-50/90">{["Date", "Period start", "Payment", "Interest accrued", "Interest paid", "Principal paid", "Balance before", "Balance after", "Previous maturity", "New maturity"].map((label) => <th key={label} className="whitespace-nowrap px-4 py-3 first:pl-5">{label}</th>)}</tr></thead>
+            <tbody className="divide-y divide-slate-100">
+              {historyLoading ? <tr><td colSpan="10" className="px-4 py-10 text-center text-slate-400">Loading payment history...</td></tr>
+                : !paymentHistory.length ? <tr><td colSpan="10" className="px-4 py-10 text-center text-slate-400">No renewal payments are recorded for this loan.</td></tr>
+                  : paymentHistory.map((payment) => <tr key={payment.id}>
+                    <td className="whitespace-nowrap px-4 py-3 pl-5">{dateText(payment.renewal_date)}</td>
+                    <td className="whitespace-nowrap px-4 py-3">{dateText(payment.period_start_date)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 font-bold">{money(payment.payment_amount)}</td>
+                    <td className="whitespace-nowrap px-4 py-3">{money(payment.accrued_interest)}</td>
+                    <td className="whitespace-nowrap px-4 py-3">{money(payment.interest_paid)}</td>
+                    <td className="whitespace-nowrap px-4 py-3">{money(payment.principal_paid)}</td>
+                    <td className="whitespace-nowrap px-4 py-3">{money(payment.principal_before)}</td>
+                    <td className="whitespace-nowrap px-4 py-3 font-semibold text-emerald-800">{money(payment.principal_after)}</td>
+                    <td className="whitespace-nowrap px-4 py-3">{dateText(payment.previous_maturity_date)}</td>
+                    <td className="whitespace-nowrap px-4 py-3">{dateText(payment.new_maturity_date)}</td>
+                  </tr>)}
+            </tbody>
+          </table>
+        </div>
+      </section>
+      </>
+      )}
     </main>
   );
 }
