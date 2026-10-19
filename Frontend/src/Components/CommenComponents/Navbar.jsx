@@ -377,7 +377,10 @@ const Navbar = () => {
                   onClick={() => setOpenDropdown(openDropdown === "metals" ? "" : "metals")}
                   className={`flex h-[76px] items-center justify-center border-r border-[#efe5d4] px-3 text-sm font-semibold transition hover:bg-[#fff9ed] ${openDropdown === "metals" ? "bg-[#fff9ed]" : ""}`}
                 >
-                  <span className="text-[#174a38]">Metal</span>
+                  <span className="flex items-center gap-2 text-[#174a38]">
+                    <FaGem className="text-[#a77525]" />
+                    Metal
+                  </span>
                 </button>
                 {openDropdown === "metals" && (
                   <div className="absolute left-0 top-full z-50 w-[250px] rounded-xl border border-[#efe5d4] bg-white p-2 shadow-xl">
