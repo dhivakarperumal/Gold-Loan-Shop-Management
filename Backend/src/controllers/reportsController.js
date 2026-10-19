@@ -1,7 +1,7 @@
 const { dateBounds, getReportsData } = require('../modules/reportsModule');
 
 const PERIODS = new Set(['today', 'yesterday', 'week', 'month', 'year', 'custom']);
-const PAYMENT_TYPES = new Set(['FULL_PAYMENT', 'EXCHANGE_GOLD']);
+const PAYMENT_METHODS = new Set(['CASH', 'UPI', 'CARD', 'BANK_TRANSFER', 'CHEQUE', 'OTHER', 'UNSPECIFIED']);
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 function validDate(value) {
@@ -26,7 +26,7 @@ function normalizeReportFilters(query) {
   const category = query.category || '';
   if (typeof category !== 'string' || category.length > 150) return { error: 'Product category is invalid' };
   const paymentType = query.paymentType || '';
-  if (paymentType && !PAYMENT_TYPES.has(paymentType)) return { error: 'Payment type is invalid' };
+  if (paymentType && !PAYMENT_METHODS.has(paymentType)) return { error: 'Payment method is invalid' };
   const status = query.status || '';
   if (typeof status !== 'string' || status.length > 40) return { error: 'Transaction status is invalid' };
   const employeeId = query.employeeId || '';

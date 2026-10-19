@@ -49,6 +49,19 @@ test('preserves each customer address in the saved billing payload', () => {
   assert.equal(result.billing.customers[0].address, '12 Gold Street');
 });
 
+test('defaults an omitted payment method for compatibility with older clients', () => {
+  const result = normalizeBilling(billingInput());
+  assert.equal(result.error, undefined);
+  assert.equal(result.billing.payment_method, 'UNSPECIFIED');
+});
+
+test('accepts supported payment methods and rejects unsupported methods', () => {
+  const result = normalizeBilling(billingInput({ payment_method: 'UPI' }));
+  assert.equal(result.error, undefined);
+  assert.equal(result.billing.payment_method, 'UPI');
+  assert.match(normalizeBilling(billingInput({ payment_method: 'CRYPTO' })).error, /payment method/i);
+});
+
 test('deducts exchange credit before calculating entered GST', () => {
   const result = normalizeBilling(billingInput({
     payment_type: 'EXCHANGE_GOLD',

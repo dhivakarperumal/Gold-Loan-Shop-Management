@@ -10,6 +10,7 @@ const {
 const { findGoldRateForPurity, getCurrentGoldRates } = require('../modules/goldRateModule');
 
 const PAYMENT_TYPES = new Set(['FULL_PAYMENT', 'EXCHANGE_GOLD']);
+const PAYMENT_METHODS = new Set(['CASH', 'UPI', 'CARD', 'BANK_TRANSFER', 'CHEQUE', 'OTHER', 'UNSPECIFIED']);
 const MAX_ITEMS = 100;
 const GST_RATE = 0;
 
@@ -176,6 +177,8 @@ function normalizeBilling(body, currentRateSet = null) {
   }
   const paymentType = body.payment_type;
   if (!PAYMENT_TYPES.has(paymentType)) return { error: 'Select a valid payment type' };
+  const paymentMethod = body.payment_method == null ? 'UNSPECIFIED' : body.payment_method;
+  if (!PAYMENT_METHODS.has(paymentMethod)) return { error: 'Select a valid payment method' };
   const customers = normalizePeople(body.customers, 'customers');
   if (customers.error) return customers;
   const products = normalizeItems(body.products, 'products');
@@ -223,6 +226,7 @@ function normalizeBilling(body, currentRateSet = null) {
       products: products.value,
       exchanges,
       payment_type: paymentType,
+      payment_method: paymentMethod,
       sub_total: subTotal,
       discount_amount: discount.value,
       gst_amount: gstAmount,

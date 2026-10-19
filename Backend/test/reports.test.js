@@ -25,7 +25,7 @@ test('accepts a valid custom range and report filters', () => {
     startDate: '2026-10-01',
     endDate: '2026-10-19',
     category: 'Rings',
-    paymentType: 'FULL_PAYMENT',
+    paymentType: 'CASH',
     status: 'Recorded',
     employeeId: '12'
   });
@@ -35,7 +35,7 @@ test('accepts a valid custom range and report filters', () => {
     startDate: '2026-10-01',
     endDate: '2026-10-19',
     category: 'Rings',
-    paymentType: 'FULL_PAYMENT',
+    paymentType: 'CASH',
     status: 'Recorded',
     employeeId: '12'
   });
@@ -45,7 +45,7 @@ test('rejects invalid ranges, unsupported payment types, employees, and unconfig
   assert.match(normalizeReportFilters({ period: 'invalid' }).error, /period/i);
   assert.match(normalizeReportFilters({ period: 'custom', startDate: '2026-02-30', endDate: '2026-03-01' }).error, /dates/i);
   assert.match(normalizeReportFilters({ period: 'custom', startDate: '2026-03-02', endDate: '2026-03-01' }).error, /range/i);
-  assert.match(normalizeReportFilters({ period: 'month', paymentType: 'CASH' }).error, /payment/i);
+  assert.match(normalizeReportFilters({ period: 'month', paymentType: 'FULL_PAYMENT' }).error, /payment/i);
   assert.match(normalizeReportFilters({ period: 'month', employeeId: 'abc' }).error, /employee/i);
   assert.match(normalizeReportFilters({ period: 'month', branchId: '1' }).error, /branch/i);
 });

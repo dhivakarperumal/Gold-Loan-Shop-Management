@@ -9,6 +9,7 @@ async function initializeBillingModule() {
       products JSON NOT NULL,
       exchanges JSON NOT NULL,
       payment_type ENUM('FULL_PAYMENT', 'EXCHANGE_GOLD') NOT NULL,
+      payment_method VARCHAR(20) NOT NULL DEFAULT 'UNSPECIFIED',
       sub_total DECIMAL(12,2) NOT NULL,
       discount_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
       gst_amount DECIMAL(12,2) NOT NULL,
@@ -20,6 +21,10 @@ async function initializeBillingModule() {
   if (discountColumns.length === 0) {
     await pool.query('ALTER TABLE billings ADD COLUMN discount_amount DECIMAL(12,2) NOT NULL DEFAULT 0 AFTER sub_total');
   }
+  const [paymentMethodColumns] = await pool.query("SHOW COLUMNS FROM billings LIKE 'payment_method'");
+  if (paymentMethodColumns.length === 0) {
+    await pool.query("ALTER TABLE billings ADD COLUMN payment_method VARCHAR(20) NOT NULL DEFAULT 'UNSPECIFIED' AFTER payment_type");
+  }
   const [billingIndexes] = await pool.query("SHOW INDEX FROM billings WHERE Key_name = 'idx_billings_created_at'");
   if (billingIndexes.length === 0) {
     await pool.query('ALTER TABLE billings ADD INDEX idx_billings_created_at (created_at)');
@@ -28,7 +33,7 @@ async function initializeBillingModule() {
 
 async function listBillings() {
   const [rows] = await pool.query(`
-    SELECT id, invoice_no, customers, products, exchanges, payment_type,
+    SELECT id, invoice_no, customers, products, exchanges, payment_type, payment_method,
       sub_total, discount_amount, gst_amount, total_amount, created_at
     FROM billings
     ORDER BY created_at DESC, id DESC
@@ -38,7 +43,7 @@ async function listBillings() {
 
 async function getBillingById(id) {
   const [rows] = await pool.execute(
-    `SELECT id, invoice_no, customers, products, exchanges, payment_type,
+    `SELECT id, invoice_no, customers, products, exchanges, payment_type, payment_method,
       sub_total, discount_amount, gst_amount, total_amount, created_at
      FROM billings WHERE id = ?`,
     [id]
@@ -62,14 +67,15 @@ async function getBillingProductsByIds(productIds) {
 async function createBilling(billing) {
   const [result] = await pool.execute(
     `INSERT INTO billings
-      (invoice_no, customers, products, exchanges, payment_type, sub_total, discount_amount, gst_amount, total_amount)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      (invoice_no, customers, products, exchanges, payment_type, payment_method, sub_total, discount_amount, gst_amount, total_amount)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       billing.invoice_no,
       JSON.stringify(billing.customers),
       JSON.stringify(billing.products),
       JSON.stringify(billing.exchanges),
       billing.payment_type,
+      billing.payment_method,
       billing.sub_total,
       billing.discount_amount,
       billing.gst_amount,
@@ -82,7 +88,7 @@ async function createBilling(billing) {
 async function updateBilling(id, billing) {
   await pool.execute(
     `UPDATE billings
-     SET customers = ?, products = ?, exchanges = ?, payment_type = ?,
+     SET customers = ?, products = ?, exchanges = ?, payment_type = ?, payment_method = ?,
        sub_total = ?, discount_amount = ?, gst_amount = ?, total_amount = ?
      WHERE id = ?`,
     [
@@ -90,6 +96,7 @@ async function updateBilling(id, billing) {
       JSON.stringify(billing.products),
       JSON.stringify(billing.exchanges),
       billing.payment_type,
+      billing.payment_method,
       billing.sub_total,
       billing.discount_amount,
       billing.gst_amount,

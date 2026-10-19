@@ -13,6 +13,18 @@ function parseJson(value) {
   }
 }
 
+function paymentMethodName(method) {
+  return ({
+    CASH: 'Cash',
+    UPI: 'UPI',
+    CARD: 'Card',
+    BANK_TRANSFER: 'Bank Transfer',
+    CHEQUE: 'Cheque',
+    OTHER: 'Other',
+    UNSPECIFIED: 'Not specified'
+  })[method] || 'Not specified';
+}
+
 function dateOnly(value) {
   if (!value) return '';
   if (value instanceof Date) return value.toISOString().slice(0, 10);
@@ -119,7 +131,7 @@ function mapBillRow(bill, filters) {
     ? products.filter((product) => String(product.category || '').toLowerCase() === filters.category.toLowerCase())
     : products;
   if (filters.category && matchingProducts.length === 0) return null;
-  if (filters.paymentType && bill.payment_type !== filters.paymentType) return null;
+  if (filters.paymentType && (bill.payment_method || 'UNSPECIFIED') !== filters.paymentType) return null;
   if (filters.status && filters.status !== 'Recorded') return null;
   const lineSubtotal = matchingProducts.reduce((sum, product) => sum + (Number(product.price) || 0), 0);
   return {
@@ -131,7 +143,7 @@ function mapBillRow(bill, filters) {
     weightGrams: matchingProducts.reduce((sum, product) => sum + (Number(product.net_gold_weight) || 0), 0),
     amount: filters.category ? lineSubtotal : Number(bill.total_amount) || 0,
     gstAmount: Number(bill.gst_amount) || 0,
-    paymentMethod: bill.payment_type === 'EXCHANGE_GOLD' ? 'Exchange Gold' : 'Full Payment',
+    paymentMethod: paymentMethodName(bill.payment_method),
     status: 'Recorded',
     category: matchingProducts.map((product) => product.category).filter(Boolean).join(', '),
     source: 'sale'
@@ -154,7 +166,7 @@ async function getReportsData(filters) {
   const [billRowsResult, purchaseRowsResult, loanRowsResult, productRowsResult, activeLoansResult, allLoanStatusResult,
     rateHistoryResult, rateBatchResult, employeeRowsResult, previousBillRowsResult, previousPurchaseRowsResult] = await Promise.all([
     pool.execute(
-      `SELECT id, invoice_no, customers, products, payment_type, total_amount,
+      `SELECT id, invoice_no, customers, products, payment_type, payment_method, total_amount,
         sub_total, discount_amount, gst_amount, created_at
        FROM billings WHERE created_at >= ? AND created_at < ?
        ORDER BY created_at DESC, id DESC`,
@@ -205,7 +217,7 @@ async function getReportsData(filters) {
     pool.query(`SELECT user_id AS id, username AS name FROM users
       WHERE role IN ('admin', 'manager') AND status = 'Active' ORDER BY username`),
     pool.execute(
-      `SELECT id, invoice_no, customers, products, payment_type, total_amount,
+      `SELECT id, invoice_no, customers, products, payment_type, payment_method, total_amount,
         sub_total, discount_amount, gst_amount, created_at
        FROM billings WHERE created_at >= ? AND created_at < ?
        ORDER BY created_at DESC, id DESC`,
@@ -321,7 +333,7 @@ async function getReportsData(filters) {
     dayStats.transactions += 1;
     dayStats.goldGrams += productsOnBill.reduce((sum, product) => sum + (Number(product.net_gold_weight) || 0), 0);
     trend.set(day, dayStats);
-    const paymentLabel = bill.payment_type === 'EXCHANGE_GOLD' ? 'Exchange Gold' : 'Full Payment';
+    const paymentLabel = paymentMethodName(bill.payment_method);
     paymentBreakdown.set(paymentLabel, (paymentBreakdown.get(paymentLabel) || 0) + row.amount);
   }
 

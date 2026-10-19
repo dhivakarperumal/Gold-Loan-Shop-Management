@@ -296,10 +296,15 @@ const Reports = () => {
             <option value="">All Employees</option>
             {report.employees.map((employee) => <option key={employee.id} value={employee.id}>{employee.name}</option>)}
           </select>
-          <select aria-label="Payment type" className={filterClass} value={paymentType} onChange={(event) => setPaymentType(event.target.value)}>
-            <option value="">All Payment Types</option>
-            <option value="FULL_PAYMENT">Full Payment</option>
-            <option value="EXCHANGE_GOLD">Exchange Gold</option>
+          <select aria-label="Payment method" className={filterClass} value={paymentType} onChange={(event) => setPaymentType(event.target.value)}>
+            <option value="">All Payment Methods</option>
+            <option value="CASH">Cash</option>
+            <option value="UPI">UPI</option>
+            <option value="CARD">Card</option>
+            <option value="BANK_TRANSFER">Bank Transfer</option>
+            <option value="CHEQUE">Cheque</option>
+            <option value="OTHER">Other</option>
+            <option value="UNSPECIFIED">Not specified</option>
           </select>
           <select aria-label="Transaction status" className={filterClass} value={status} onChange={(event) => setStatus(event.target.value)}>
             <option value="">All Transaction Statuses</option>

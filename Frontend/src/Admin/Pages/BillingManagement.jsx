@@ -21,6 +21,15 @@ const EMPTY_PRODUCT = {
 };
 const EMPTY_EXCHANGE = { product_name: "", category: "", category_is_other: false, metal_type: "Gold", purity: "22K", weight: "", wastage_weight: "" };
 const PURITY_LABELS = { "999": "24K", "916": "22K", "833": "20K", "750": "18K", "585": "14K" };
+const PAYMENT_METHOD_OPTIONS = [
+  ["CASH", "Cash"],
+  ["UPI", "UPI"],
+  ["CARD", "Card"],
+  ["BANK_TRANSFER", "Bank Transfer"],
+  ["CHEQUE", "Cheque"],
+  ["OTHER", "Other"]
+];
+const paymentMethodLabel = (method) => PAYMENT_METHOD_OPTIONS.find(([value]) => value === method)?.[1] || "Not specified";
 const inputClass = "mt-1 block w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-[#008577] focus:ring-2 focus:ring-emerald-100";
 const labelClass = "block text-xs font-semibold text-slate-600";
 
@@ -355,6 +364,7 @@ export default function BillingManagement() {
   const [viewingBill, setViewingBill] = useState(null);
   const [billSearch, setBillSearch] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("ALL");
+  const [paymentMethodFilter, setPaymentMethodFilter] = useState("ALL");
   const [billView, setBillView] = useState("list");
   const [todayKey] = useState(() => new Date().toLocaleDateString("en-CA"));
   const [customers, setCustomers] = useState([{ ...EMPTY_CUSTOMER }]);
@@ -364,6 +374,7 @@ export default function BillingManagement() {
   const [discountInput, setDiscountInput] = useState("");
   const [exchanges, setExchanges] = useState([]);
   const [paymentType, setPaymentType] = useState("FULL_PAYMENT");
+  const [paymentMethod, setPaymentMethod] = useState("CASH");
   const metalRates = useMemo(
     () => currentGoldRates?.rates || [],
     [currentGoldRates]
@@ -501,16 +512,18 @@ export default function BillingManagement() {
     const query = billSearch.trim().toLowerCase();
     return bills.filter((bill) => {
       if (paymentFilter !== "ALL" && bill.payment_type !== paymentFilter) return false;
+      if (paymentMethodFilter !== "ALL" && (bill.payment_method || "UNSPECIFIED") !== paymentMethodFilter) return false;
       if (!query) return true;
       const searchableValues = [
         bill.invoice_no,
+        paymentMethodLabel(bill.payment_method),
         ...decodeArray(bill.customers).flatMap((customer) => [customer.name, customer.phone, customer.email]),
         ...decodeArray(bill.products).flatMap((product) => [product.product_name, product.sku, product.category]),
         ...decodeArray(bill.exchanges).flatMap((exchange) => [exchange.product_name, exchange.category, exchange.metal_type, exchange.purity])
       ];
       return searchableValues.some((value) => String(value || "").toLowerCase().includes(query));
     });
-  }, [bills, billSearch, paymentFilter]);
+  }, [bills, billSearch, paymentFilter, paymentMethodFilter]);
 
   const printBill = async (bill) => {
     const printWindow = window.open("", "_blank", "width=900,height=700");
@@ -659,7 +672,8 @@ export default function BillingManagement() {
             <p>Invoice No: <strong>${escapeHtml(bill.invoice_no || "—")}</strong></p>
             <div class="invoice-meta-right">
               <p>Date: ${escapeHtml(date)}</p>
-              <p>Payment: ${bill.payment_type === "EXCHANGE_GOLD" ? "Exchange Gold" : "Full Payment"}</p>
+              <p>Payment type: ${bill.payment_type === "EXCHANGE_GOLD" ? "Exchange Gold" : "Full Payment"}</p>
+              <p>Payment method: ${escapeHtml(paymentMethodLabel(bill.payment_method))}</p>
             </div>
           </div>
           <h2>Customer${billCustomers.length === 1 ? "" : "s"}</h2>
@@ -713,6 +727,7 @@ export default function BillingManagement() {
     setDiscountInput("");
     setExchanges([]);
     setPaymentType("FULL_PAYMENT");
+    setPaymentMethod("CASH");
   };
 
   const editBill = (bill) => {
@@ -743,6 +758,7 @@ export default function BillingManagement() {
       rate_per_unit: String(exchange.rate_per_unit ?? "")
     })));
     setPaymentType(bill.payment_type);
+    setPaymentMethod(bill.payment_method || "UNSPECIFIED");
     setGstRateInput(String(savedGstRate));
     setDiscountInput(billDiscount ? String(billDiscount) : "");
     setShowForm(true);
@@ -866,6 +882,7 @@ export default function BillingManagement() {
           }))
           : [],
         payment_type: paymentType,
+        payment_method: paymentMethod,
         gst_rate: gstRate,
         discount_amount: discountAmount
       };
@@ -957,9 +974,19 @@ export default function BillingManagement() {
                 aria-label="Filter bills by payment type"
                 className="h-[52px] min-w-[160px] rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm font-semibold text-slate-600 outline-none focus:border-[#00695C] focus:ring-2 focus:ring-emerald-100"
               >
-                <option value="ALL">All Payment Types</option>
+                <option value="ALL">All Billing Types</option>
                 <option value="FULL_PAYMENT">Full Payment</option>
                 <option value="EXCHANGE_GOLD">Exchange Gold</option>
+              </select>
+              <select
+                value={paymentMethodFilter}
+                onChange={(event) => setPaymentMethodFilter(event.target.value)}
+                aria-label="Filter bills by payment method"
+                className="h-[52px] min-w-[160px] rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm font-semibold text-slate-600 outline-none focus:border-[#00695C] focus:ring-2 focus:ring-emerald-100"
+              >
+                <option value="ALL">All Payment Methods</option>
+                {PAYMENT_METHOD_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                <option value="UNSPECIFIED">Not specified</option>
               </select>
               <div role="group" aria-label="Bill view" className="flex h-[52px] items-center rounded-xl bg-slate-100 p-1">
                 <button
@@ -989,14 +1016,15 @@ export default function BillingManagement() {
           <section className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
             {billView === "list" ? (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px] text-left">
+              <table className="w-full min-w-[1100px] text-left">
                 <thead className="bg-[#00695C] text-xs uppercase tracking-wide text-white">
                   <tr>
                     <th className="px-4 py-4">S.No.</th>
                     <th className="px-4 py-4">Invoice</th>
                     <th className="px-4 py-4">Customer(s)</th>
                     <th className="px-4 py-4">Items</th>
-                    <th className="px-4 py-4">Payment</th>
+                    <th className="px-4 py-4">Billing Type</th>
+                    <th className="px-4 py-4">Payment Method</th>
                     <th className="px-4 py-4">Date</th>
                     <th className="px-4 py-4 text-right">Total</th>
                     <th className="px-4 py-4 text-right">Actions</th>
@@ -1004,9 +1032,9 @@ export default function BillingManagement() {
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {loading ? (
-                    <tr><td colSpan="8" className="px-4 py-12 text-center text-sm text-slate-500">Loading bills...</td></tr>
+                    <tr><td colSpan="9" className="px-4 py-12 text-center text-sm text-slate-500">Loading bills...</td></tr>
                   ) : visibleBills.length === 0 ? (
-                    <tr><td colSpan="8" className="px-4 py-12 text-center text-sm text-slate-500">{bills.length === 0 ? "No bills yet. Create your first bill." : "No bills match your search or payment filter."}</td></tr>
+                    <tr><td colSpan="9" className="px-4 py-12 text-center text-sm text-slate-500">{bills.length === 0 ? "No bills yet. Create your first bill." : "No bills match your search or payment filter."}</td></tr>
                   ) : visibleBills.map((bill, index) => {
                     const billCustomers = decodeArray(bill.customers);
                     const billProducts = decodeArray(bill.products);
@@ -1017,6 +1045,7 @@ export default function BillingManagement() {
                         <td className="px-4 py-4 text-slate-700">{billCustomers.map((customer) => customer.name).join(", ")}</td>
                         <td className="px-4 py-4 text-slate-600">{billProducts.length} item{billProducts.length === 1 ? "" : "s"}</td>
                         <td className="px-4 py-4 text-slate-600">{bill.payment_type === "EXCHANGE_GOLD" ? "Exchange Gold" : "Full Payment"}</td>
+                        <td className="px-4 py-4 text-slate-600">{paymentMethodLabel(bill.payment_method)}</td>
                         <td className="px-4 py-4 text-slate-500">{bill.created_at ? new Date(bill.created_at).toLocaleDateString("en-IN") : "—"}</td>
                         <td className="px-4 py-4 text-right font-bold text-slate-900">{currency(bill.total_amount)}</td>
                         <td className="px-4 py-4">
@@ -1056,6 +1085,7 @@ export default function BillingManagement() {
                       <div className="mt-4 space-y-2 border-t border-slate-100 pt-3 text-sm">
                         <p className="truncate text-slate-700">{billCustomers.map((customer) => customer.name).join(", ") || "No customer name"}</p>
                         <p className="text-slate-500">{billProducts.length} item{billProducts.length === 1 ? "" : "s"} · {bill.created_at ? new Date(bill.created_at).toLocaleDateString("en-IN") : "—"}</p>
+                        <p className="text-xs font-semibold text-emerald-800">Paid by {paymentMethodLabel(bill.payment_method)}</p>
                         <p className="text-lg font-extrabold text-slate-900">{currency(bill.total_amount)}</p>
                       </div>
                       <div className="mt-3 flex justify-end gap-1 border-t border-slate-100 pt-2">
@@ -1179,11 +1209,24 @@ export default function BillingManagement() {
           </section>
 
           <section className="space-y-4 rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
-            <div><h2 className="font-bold text-slate-900">Payment Method</h2><p className="text-xs text-slate-500">GST is calculated using the rate entered below.</p></div>
-            <div className="flex flex-wrap gap-3">
+            <div><h2 className="font-bold text-slate-900">Payment Details</h2><p className="text-xs text-slate-500">Choose how the customer paid and select the billing type.</p></div>
+            <div className="grid gap-3 md:grid-cols-3">
+              <label className={labelClass}>
+                Payment Method<span className="ml-1 text-rose-500">*</span>
+                <select
+                  className={inputClass}
+                  value={paymentMethod}
+                  onChange={(event) => setPaymentMethod(event.target.value)}
+                  required
+                >
+                  {PAYMENT_METHOD_OPTIONS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                  {paymentMethod === "UNSPECIFIED" && <option value="UNSPECIFIED">Not specified (legacy bill)</option>}
+                </select>
+              </label>
               {[["FULL_PAYMENT", "Full Payment"], ["EXCHANGE_GOLD", "Exchange Gold"]].map(([value, label]) => (
-                <label key={value} className={`inline-flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-3 text-sm font-semibold ${paymentType === value ? "border-[#008577] bg-emerald-50 text-[#00695C]" : "border-slate-200 text-slate-600"}`}>
-                  <input type="radio" name="payment_type" value={value} checked={paymentType === value} onChange={() => setPaymentType(value)} className="accent-[#008577]" />{label}
+                <label key={value} className={`flex cursor-pointer items-center gap-3 rounded-lg border px-4 py-3 text-sm font-semibold transition-colors ${paymentType === value ? "border-[#008577] bg-emerald-50 text-[#00695C]" : "border-slate-200 text-slate-600 hover:bg-slate-50"}`}>
+                  <input type="radio" name="payment_type" value={value} checked={paymentType === value} onChange={() => setPaymentType(value)} className="accent-[#008577]" />
+                  <span>{label}</span>
                 </label>
               ))}
             </div>
@@ -1291,7 +1334,8 @@ export default function BillingManagement() {
               </div>
               <div className="rounded-lg bg-slate-50 p-4 text-sm text-slate-600">
                 <h3 className="mb-2 font-bold text-slate-800">Bill Information</h3>
-                <p>Payment: {viewingBill.payment_type === "EXCHANGE_GOLD" ? "Exchange Gold" : "Full Payment"}</p>
+                <p>Billing type: {viewingBill.payment_type === "EXCHANGE_GOLD" ? "Exchange Gold" : "Full Payment"}</p>
+                <p>Payment method: {paymentMethodLabel(viewingBill.payment_method)}</p>
                 <p>Date: {viewingBill.created_at ? new Date(viewingBill.created_at).toLocaleDateString("en-IN") : "—"}</p>
               </div>
             </div>
