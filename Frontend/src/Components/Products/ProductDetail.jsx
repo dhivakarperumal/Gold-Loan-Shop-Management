@@ -12,6 +12,7 @@ import {
   FaStar
 } from "react-icons/fa";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
+import PageContainer from "../CommenComponents/PageContainer";
 import api from "../../api";
 
 const backendUrl = (
@@ -159,23 +160,27 @@ const ProductDetail = () => {
 
   if (loading) {
     return (
-      <main className="mx-auto max-w-7xl px-4 py-20 text-center text-sm font-semibold text-[#746b5d]" role="status">
-        Loading product details...
+      <main className="bg-[#fffdf8]" role="status">
+        <PageContainer className="py-20 text-center text-sm font-semibold text-[#746b5d]">
+          Loading product details...
+        </PageContainer>
       </main>
     );
   }
 
   if (!product) {
     return (
-      <main className="mx-auto max-w-2xl px-4 py-20 text-center">
-        <div className="rounded-3xl border border-[#eadfce] bg-white p-8 shadow-sm">
-          <FaGem className="mx-auto text-3xl text-[#bd913e]" />
-          <h1 className="mt-4 font-serif text-2xl font-bold text-[#174a38]">Product unavailable</h1>
-          <p className="mt-2 text-sm text-[#746b5d]" role="alert">{error || "This product could not be found."}</p>
-          <Link to="/explore" className="mt-6 inline-flex items-center gap-2 rounded-lg bg-[#174a38] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#10382b]">
-            <FaArrowLeft /> Continue shopping
-          </Link>
-        </div>
+      <main className="bg-[#fffdf8]">
+        <PageContainer className="py-20 text-center">
+          <div className="mx-auto max-w-2xl rounded-3xl border border-[#eadfce] bg-white p-8 shadow-sm">
+            <FaGem className="mx-auto text-3xl text-[#bd913e]" />
+            <h1 className="mt-4 font-serif text-2xl font-bold text-[#174a38]">Product unavailable</h1>
+            <p className="mt-2 text-sm text-[#746b5d]" role="alert">{error || "This product could not be found."}</p>
+            <Link to="/explore" className="mt-6 inline-flex items-center gap-2 rounded-lg bg-[#174a38] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#10382b]">
+              <FaArrowLeft /> Continue shopping
+            </Link>
+          </div>
+        </PageContainer>
       </main>
     );
   }
@@ -261,8 +266,8 @@ const ProductDetail = () => {
   ));
 
   return (
-    <main className="min-h-screen bg-[#fffdf8] px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-7xl">
+    <main className="min-h-screen bg-[#fffdf8]">
+      <PageContainer className="py-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs font-medium text-[#78817c] sm:text-sm">
             <Link to="/explore" className="hover:text-[#174a38]">Products</Link>
@@ -522,7 +527,7 @@ const ProductDetail = () => {
             ]} />
           )}
         </div>
-      </div>
+      </PageContainer>
     </main>
   );
 };
