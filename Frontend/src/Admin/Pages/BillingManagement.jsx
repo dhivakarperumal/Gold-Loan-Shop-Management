@@ -37,6 +37,15 @@ const currency = (value) => `₹${Number(value || 0).toLocaleString("en-IN", {
   minimumFractionDigits: 2,
   maximumFractionDigits: 2
 })}`;
+const formatBillSavedAt = (value) => {
+  if (!value) return { date: "—", time: "—" };
+  const savedAt = new Date(value);
+  if (Number.isNaN(savedAt.getTime())) return { date: "—", time: "—" };
+  return {
+    date: savedAt.toLocaleDateString("en-IN"),
+    time: savedAt.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit", hour12: true })
+  };
+};
 
 function decodeArray(value) {
   if (Array.isArray(value)) return value;
@@ -1043,6 +1052,7 @@ export default function BillingManagement() {
                   ) : visibleBills.map((bill, index) => {
                     const billCustomers = decodeArray(bill.customers);
                     const billProducts = decodeArray(bill.products);
+                    const savedAt = formatBillSavedAt(bill.created_at);
                     return (
                       <tr key={bill.id} className="text-sm">
                         <td className="px-4 py-4 text-slate-500">{index + 1}</td>
@@ -1051,12 +1061,12 @@ export default function BillingManagement() {
                         <td className="px-4 py-4 text-slate-600">{billProducts.length} item{billProducts.length === 1 ? "" : "s"}</td>
                         <td className="px-4 py-4 text-slate-600">{bill.payment_type === "EXCHANGE_GOLD" ? "Exchange Gold" : "Full Payment"}</td>
                         <td className="px-4 py-4 text-slate-600">{paymentMethodLabel(bill.payment_method)}</td>
-                        <td className="px-4 py-4 text-slate-500">{bill.created_at ? new Date(bill.created_at).toLocaleDateString("en-IN") : "—"}</td>
+                        <td className="px-4 py-4 text-slate-500"><span className="block">{savedAt.date}</span><span className="mt-0.5 block text-xs text-slate-400">{savedAt.time}</span></td>
                         <td className="px-4 py-4 text-right font-bold text-slate-900">{currency(bill.total_amount)}</td>
                         <td className="px-4 py-4">
                           <div className="flex justify-end gap-1">
                             <button type="button" onClick={() => setViewingBill(bill)} className="rounded-md p-2 text-sky-700 hover:bg-sky-50" aria-label={`View bill ${bill.invoice_no}`} title="View"><FiEye /></button>
-                            <button type="button" onClick={() => printBill(bill)} className="rounded-md p-2 text-[#00695C] hover:bg-emerald-50" aria-label={`Print bill ${bill.invoice_no}`} title="Print"><FiPrinter /></button>
+                            <button type="button" onClick={() => printBill(bill)} className="inline-flex items-center gap-1 rounded-md px-2 py-2 text-xs font-bold text-[#00695C] hover:bg-emerald-50" aria-label={`Print bill ${bill.invoice_no}`} title="Print"><FiPrinter /> Print</button>
                             <button type="button" onClick={() => editBill(bill)} className="rounded-md p-2 text-amber-700 hover:bg-amber-50" aria-label={`Edit bill ${bill.invoice_no}`} title="Edit"><FiEdit2 /></button>
                             <button type="button" onClick={() => deleteBill(bill)} className="rounded-md p-2 text-rose-600 hover:bg-rose-50" aria-label={`Delete bill ${bill.invoice_no}`} title="Delete"><FiTrash2 /></button>
                           </div>
@@ -1076,6 +1086,7 @@ export default function BillingManagement() {
                 ) : visibleBills.map((bill, index) => {
                   const billCustomers = decodeArray(bill.customers);
                   const billProducts = decodeArray(bill.products);
+                  const savedAt = formatBillSavedAt(bill.created_at);
                   return (
                     <article key={bill.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
                       <div className="flex items-start justify-between gap-3">
@@ -1089,13 +1100,13 @@ export default function BillingManagement() {
                       </div>
                       <div className="mt-4 space-y-2 border-t border-slate-100 pt-3 text-sm">
                         <p className="truncate text-slate-700">{billCustomers.map((customer) => customer.name).join(", ") || "No customer name"}</p>
-                        <p className="text-slate-500">{billProducts.length} item{billProducts.length === 1 ? "" : "s"} · {bill.created_at ? new Date(bill.created_at).toLocaleDateString("en-IN") : "—"}</p>
+                        <p className="text-slate-500">{billProducts.length} item{billProducts.length === 1 ? "" : "s"} · {savedAt.date} at {savedAt.time}</p>
                         <p className="text-xs font-semibold text-emerald-800">Paid by {paymentMethodLabel(bill.payment_method)}</p>
                         <p className="text-lg font-extrabold text-slate-900">{currency(bill.total_amount)}</p>
                       </div>
                       <div className="mt-3 flex justify-end gap-1 border-t border-slate-100 pt-2">
                         <button type="button" onClick={() => setViewingBill(bill)} className="rounded-md p-2 text-sky-700 hover:bg-sky-50" aria-label={`View bill ${bill.invoice_no}`} title="View"><FiEye /></button>
-                        <button type="button" onClick={() => printBill(bill)} className="rounded-md p-2 text-[#00695C] hover:bg-emerald-50" aria-label={`Print bill ${bill.invoice_no}`} title="Print"><FiPrinter /></button>
+                        <button type="button" onClick={() => printBill(bill)} className="inline-flex items-center gap-1 rounded-md px-2 py-2 text-xs font-bold text-[#00695C] hover:bg-emerald-50" aria-label={`Print bill ${bill.invoice_no}`} title="Print"><FiPrinter /> Print</button>
                         <button type="button" onClick={() => editBill(bill)} className="rounded-md p-2 text-amber-700 hover:bg-amber-50" aria-label={`Edit bill ${bill.invoice_no}`} title="Edit"><FiEdit2 /></button>
                         <button type="button" onClick={() => deleteBill(bill)} className="rounded-md p-2 text-rose-600 hover:bg-rose-50" aria-label={`Delete bill ${bill.invoice_no}`} title="Delete"><FiTrash2 /></button>
                       </div>
@@ -1345,7 +1356,8 @@ export default function BillingManagement() {
                 <h3 className="mb-2 font-bold text-slate-800">Bill Information</h3>
                 <p>Billing type: {viewingBill.payment_type === "EXCHANGE_GOLD" ? "Exchange Gold" : "Full Payment"}</p>
                 <p>Payment method: {paymentMethodLabel(viewingBill.payment_method)}</p>
-                <p>Date: {viewingBill.created_at ? new Date(viewingBill.created_at).toLocaleDateString("en-IN") : "—"}</p>
+                <p>Date: {formatBillSavedAt(viewingBill.created_at).date}</p>
+                <p>Saved time: {formatBillSavedAt(viewingBill.created_at).time}</p>
               </div>
             </div>
             <div className="overflow-x-auto rounded-lg border border-slate-200">

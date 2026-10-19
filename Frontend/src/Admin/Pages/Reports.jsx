@@ -55,16 +55,25 @@ const escapeHtml = (value) => String(value ?? "").replace(/[&<>"']/g, (character
   "'": "&#39;"
 })[character]);
 
-function SummaryCard({ title, value, note, icon: Icon, unavailable = false }) {
+function SummaryCard({ title, value, note, icon: Icon, tone = "green", unavailable = false }) {
+  const tones = {
+    green: "bg-emerald-50 text-emerald-700 ring-emerald-100",
+    blue: "bg-sky-50 text-sky-700 ring-sky-100",
+    amber: "bg-amber-50 text-amber-700 ring-amber-100",
+    violet: "bg-violet-50 text-violet-700 ring-violet-100",
+    rose: "bg-rose-50 text-rose-700 ring-rose-100",
+    teal: "bg-teal-50 text-teal-700 ring-teal-100"
+  };
   return (
-    <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-      <div className="flex items-start justify-between gap-3">
+    <article className="group relative overflow-hidden rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-0.5 hover:border-emerald-200 hover:shadow-md sm:p-5">
+      <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-emerald-500 to-teal-300 opacity-0 transition group-hover:opacity-100" />
+      <div className="flex min-w-0 items-start justify-between gap-3">
         <div>
           <p className="text-xs font-semibold text-slate-500">{title}</p>
-          <p className={`mt-2 text-xl font-black sm:text-2xl ${unavailable ? "text-slate-400" : "text-slate-900"}`}>{value}</p>
-          <p className="mt-1 text-[11px] text-slate-400">{note}</p>
+          <p className={`mt-2 truncate text-xl font-black tracking-tight sm:text-2xl ${unavailable ? "text-slate-400" : "text-slate-900"}`}>{value}</p>
+          <p className="mt-1 line-clamp-2 text-[11px] leading-4 text-slate-400">{note}</p>
         </div>
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#DCFCE7] text-lg text-[#15803D]"><Icon /></span>
+        <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-lg ring-1 ${tones[tone] || tones.green}`}><Icon /></span>
       </div>
     </article>
   );
@@ -224,44 +233,53 @@ const Reports = () => {
     : `${value > 0 ? "+" : ""}${value}% vs previous period`;
 
   const cards = [
-    { title: "Total Sales", value: formatCurrency(summary.totalSales), note: comparisonNote(summary.previousPeriod?.salesChangePercent), icon: FiTrendingUp },
-    { title: "Total Purchases", value: formatCurrency(summary.totalPurchases), note: comparisonNote(summary.previousPeriod?.purchasesChangePercent), icon: FiDownload },
-    { title: "Gross Profit", value: formatCurrency(summary.grossProfit), note: "Requires linked product cost records", icon: FiBarChart2, unavailable: true },
-    { title: "Total Expenses", value: formatCurrency(summary.totalExpenses), note: "Expense records are not configured", icon: FiActivity, unavailable: true },
-    { title: "Payments Received", value: formatCurrency(summary.paymentsReceived), note: "No payment ledger is configured", icon: FiDownload, unavailable: true },
-    { title: "Customer Dues", value: formatCurrency(summary.outstandingCustomerDues), note: "Customer credit balances are not recorded", icon: FiActivity, unavailable: true },
-    { title: "Gold Stock Available", value: `${formatNumber(summary.availableGoldGrams, 3)} g`, note: "Active catalog quantity × net gold weight", icon: FiBarChart2 },
-    { title: "Active Gold Loans", value: formatNumber(summary.activeGoldLoans, 0), note: `${formatCurrency(summary.activeLoanPrincipal)} principal on active loans`, icon: FiActivity }
+    { title: "Total Sales", value: formatCurrency(summary.totalSales), note: comparisonNote(summary.previousPeriod?.salesChangePercent), icon: FiTrendingUp, tone: "green" },
+    { title: "Total Purchases", value: formatCurrency(summary.totalPurchases), note: comparisonNote(summary.previousPeriod?.purchasesChangePercent), icon: FiDownload, tone: "amber" },
+    { title: "Gross Profit", value: formatCurrency(summary.grossProfit), note: "Requires linked product cost records", icon: FiBarChart2, tone: "blue", unavailable: true },
+    { title: "Total Expenses", value: formatCurrency(summary.totalExpenses), note: "Expense records are not configured", icon: FiActivity, tone: "rose", unavailable: true },
+    { title: "Payments Received", value: formatCurrency(summary.paymentsReceived), note: "No payment ledger is configured", icon: FiDownload, tone: "violet", unavailable: true },
+    { title: "Customer Dues", value: formatCurrency(summary.outstandingCustomerDues), note: "Customer credit balances are not recorded", icon: FiActivity, tone: "teal", unavailable: true },
+    { title: "Gold Stock Available", value: `${formatNumber(summary.availableGoldGrams, 3)} g`, note: "Active catalog quantity × net gold weight", icon: FiBarChart2, tone: "amber" },
+    { title: "Active Gold Loans", value: formatNumber(summary.activeGoldLoans, 0), note: `${formatCurrency(summary.activeLoanPrincipal)} principal on active loans`, icon: FiActivity, tone: "green" }
   ];
 
-  const filterClass = "min-w-0 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none focus:border-[#15803D]";
+  const filterClass = "min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700 outline-none transition focus:border-[#15803D] focus:ring-2 focus:ring-emerald-100";
 
   return (
-    <main className="space-y-6 bg-[#F9FAFB] pb-8 text-slate-800">
+    <main className="mx-auto max-w-[1600px] space-y-5 bg-[#F8FAFC] pb-8 text-slate-800">
       <style>{`@media print { @page { size: landscape; margin: 12mm; } tr { break-inside: avoid; } } @page { @bottom-right { content: "Page " counter(page); font-size: 9px; color: #64748b; } }`}</style>
-      <header className="rounded-2xl bg-gradient-to-r from-[#14532D] to-[#15803D] p-5 text-white shadow-lg sm:p-7 print:bg-white print:text-black print:shadow-none">
-        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-center">
-          <div>
-            <h1 className="text-2xl font-black sm:text-3xl">Real-Time Reports</h1>
-            <p className="mt-2 text-sm text-white/80 print:text-slate-600">Monitor sales, inventory, payments, and gold loan performance.</p>
-            <p className="mt-2 text-xs text-white/75 print:text-slate-600">Reporting period: {report.period ? `${formatDate(report.period.startDate)} – ${formatDate(report.period.endDate)}` : "Loading"}</p>
-            <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-white/80 print:text-slate-500">
-              <span className="inline-flex items-center gap-2 print:hidden"><span className={`h-2 w-2 rounded-full ${error ? "bg-rose-300" : "animate-pulse bg-emerald-300"}`} /> {error ? "Data refresh unavailable" : "Live · refreshes every 60 seconds"}</span>
-              <span>Last successful data refresh: {lastUpdated ? formatDateTime(lastUpdated) : "Not yet refreshed"}</span>
-              {printGeneratedAt && <span className="hidden print:inline">Generated: {formatDateTime(printGeneratedAt)}</span>}
-            </div>
+      <header className="flex flex-col justify-between gap-4 border-b border-slate-200/80 pb-4 sm:flex-row sm:items-end">
+        <div className="min-w-0">
+          <div className="mb-2 flex items-center gap-2 text-[11px] font-medium text-slate-400">
+            <span>Home</span><span aria-hidden="true">›</span><span className="text-emerald-700">Reports</span>
           </div>
-          <div className="flex flex-wrap gap-2 print:hidden">
-            <button type="button" onClick={() => refreshReports(true)} disabled={refreshing} className="inline-flex items-center gap-2 rounded-lg border border-white/30 bg-white/10 px-4 py-2.5 text-sm font-bold transition hover:bg-white/20 disabled:opacity-60">
-              <FiRefreshCw className={refreshing ? "animate-spin" : ""} /> Refresh
-            </button>
-            <button type="button" onClick={exportCsv} disabled={loading || !filteredRows.length} className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-bold text-[#15803D] transition hover:bg-[#DCFCE7] disabled:opacity-60">
-              <FiDownload /> Export Reports
-            </button>
-            <button type="button" onClick={printReport} className="inline-flex items-center gap-2 rounded-lg bg-[#DCFCE7] px-4 py-2.5 text-sm font-bold text-[#14532D] transition hover:bg-white">
-              <FiPrinter /> Print / PDF
-            </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="text-2xl font-black tracking-tight text-slate-900 sm:text-3xl">Real-Time Reports</h1>
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[10px] font-bold ${error ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`}>
+              <span className={`h-1.5 w-1.5 rounded-full ${error ? "bg-rose-500" : "animate-pulse bg-emerald-500"}`} />
+              {error ? "Refresh unavailable" : "Live"}
+            </span>
           </div>
+          <p className="mt-1.5 text-sm text-slate-500">Monitor sales, inventory, payments, and gold loan performance.</p>
+          <p className="mt-2 text-[11px] text-slate-400">Last updated: {lastUpdated ? formatDateTime(lastUpdated) : "Waiting for first refresh"}{printGeneratedAt && <span className="hidden print:inline"> · Generated: {formatDateTime(printGeneratedAt)}</span>}</p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 print:hidden">
+          <label className="relative">
+            <span className="sr-only">Report period</span>
+            <FiCalendar aria-hidden="true" className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <select aria-label="Date period" className={`${filterClass} h-10 pl-9 pr-8`} value={period} onChange={(event) => setPeriod(event.target.value)}>
+              {PERIODS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+          </label>
+          <button type="button" onClick={() => refreshReports(true)} disabled={refreshing} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 text-xs font-bold text-slate-600 shadow-sm transition hover:border-emerald-200 hover:text-emerald-800 disabled:opacity-60">
+            <FiRefreshCw className={refreshing ? "animate-spin" : ""} /> Refresh
+          </button>
+          <button type="button" onClick={exportCsv} disabled={loading || !filteredRows.length} className="inline-flex h-10 items-center gap-2 rounded-xl bg-[#15803D] px-4 text-xs font-bold text-white shadow-sm transition hover:bg-[#166534] disabled:opacity-60">
+            <FiDownload /> Export Reports
+          </button>
+          <button type="button" onClick={printReport} className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 text-xs font-bold text-slate-600 shadow-sm transition hover:bg-slate-50">
+            <FiPrinter /> Print / PDF
+          </button>
         </div>
       </header>
 
@@ -272,20 +290,20 @@ const Reports = () => {
         </div>
       )}
 
-      <section aria-label="Report filters" className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm print:hidden">
-        <div className="mb-3 flex items-center gap-2 text-sm font-bold text-slate-800"><FiCalendar className="text-[#15803D]" /> Report Filters</div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <select aria-label="Date period" className={filterClass} value={period} onChange={(event) => setPeriod(event.target.value)}>
-            {PERIODS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
+      <section aria-label="Report filters" className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.035)] print:hidden">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wide text-slate-600"><FiCalendar className="text-[#15803D]" /> Report Filters</div>
+          <span className="text-[11px] text-slate-400">{report.period ? `${formatDate(report.period.startDate)} – ${formatDate(report.period.endDate)}` : "Selected range"} · refreshes every 60 seconds</span>
+        </div>
+        <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-4">
           {period === "custom" ? (
             <>
               <label className="text-xs font-semibold text-slate-500">Start Date<input type="date" className={`${filterClass} mt-1 block w-full`} value={startDate} max={endDate} onChange={(event) => setStartDate(event.target.value)} /></label>
               <label className="text-xs font-semibold text-slate-500">End Date<input type="date" className={`${filterClass} mt-1 block w-full`} value={endDate} min={startDate} onChange={(event) => setEndDate(event.target.value)} /></label>
             </>
           ) : (
-            <div className="flex items-center rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500 sm:col-span-1 lg:col-span-1">
-              {report.period ? `${formatDate(report.period.startDate)} – ${formatDate(report.period.endDate)}` : "Selected period"}
+            <div className="flex min-h-10 items-center rounded-xl bg-slate-50 px-3 py-2 text-xs text-slate-500">
+              Date range: {report.period ? `${formatDate(report.period.startDate)} – ${formatDate(report.period.endDate)}` : "Loading"}
             </div>
           )}
           <select aria-label="Product category" className={filterClass} value={category} onChange={(event) => setCategory(event.target.value)}>
@@ -314,14 +332,14 @@ const Reports = () => {
         </div>
       </section>
 
-      <section aria-label="Summary metrics" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      <section aria-label="Summary metrics" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4 2xl:gap-4">
         {loading && !lastUpdated
-          ? Array.from({ length: 8 }, (_, index) => <div key={index} className="h-28 animate-pulse rounded-2xl bg-slate-200" />)
+          ? Array.from({ length: 8 }, (_, index) => <div key={index} className="h-[112px] animate-pulse rounded-2xl border border-slate-100 bg-white shadow-sm" />)
           : cards.map((card) => <SummaryCard key={card.title} {...card} />)}
       </section>
 
-      <div className="grid gap-5 xl:grid-cols-2">
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <div className="grid gap-4 xl:grid-cols-5">
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.035)] sm:p-5 xl:col-span-3">
           <div className="mb-4 flex items-start justify-between"><div><h2 className="font-extrabold text-slate-900">Sales Trend</h2><p className="mt-1 text-xs text-slate-500">Recorded bill totals by {report.salesTrendGranularity || "day"}</p></div><FiBarChart2 className="text-xl text-[#15803D]" /></div>
           {report.salesTrend.length ? (
             <div className="flex h-52 items-end gap-1 overflow-x-auto border-b border-slate-100 pb-1">
@@ -340,8 +358,8 @@ const Reports = () => {
           <p className="mt-3 text-xs text-slate-500">Net gold recorded sold: {formatNumber(summary.soldNetGoldGrams, 3)} g. Sales amount and transaction count are available in each bar’s tooltip.</p>
         </section>
 
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-          <h2 className="font-extrabold text-slate-900">Product Category Performance</h2>
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.035)] sm:p-5 xl:col-span-2">
+          <h2 className="font-extrabold text-slate-900">Category-wise Sales</h2>
           <p className="mb-4 mt-1 text-xs text-slate-500">Product line totals before bill-level adjustments</p>
           {report.categoryPerformance.length ? (
             <div className="space-y-4">
@@ -354,8 +372,8 @@ const Reports = () => {
               })}
             </div>
           ) : <EmptyState />}
-          <h3 className="mb-3 mt-6 text-sm font-bold text-slate-800">Recorded Billing Type Mix</h3>
-          <p className="mb-3 text-xs text-slate-500">This system stores full-payment vs exchange-gold type, not cash / UPI / card tender.</p>
+          <h3 className="mb-3 mt-6 text-sm font-bold text-slate-800">Sales by Payment Method</h3>
+          <p className="mb-3 text-xs text-slate-500">Based on payment method recorded on each bill.</p>
           {report.paymentBreakdown.length ? <div className="space-y-3">{report.paymentBreakdown.map((item) => {
             const max = Math.max(...report.paymentBreakdown.map((value) => value.amount), 1);
             return <div key={item.method}><div className="mb-1 flex justify-between text-xs"><span>{item.method}</span><strong>{formatCurrency(item.amount)}</strong></div><div className="h-2 overflow-hidden rounded-full bg-emerald-50"><div className="h-full rounded-full bg-emerald-600" style={{ width: `${Math.max(1, item.amount / max * 100)}%` }} /></div></div>;
@@ -364,8 +382,8 @@ const Reports = () => {
         </section>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-3">
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5 xl:col-span-2">
+      <div className="grid gap-4 xl:grid-cols-3">
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.035)] sm:p-5 xl:col-span-2">
           <h2 className="font-extrabold text-slate-900">Gold Inventory by Purity</h2>
           <p className="mb-4 mt-1 text-xs text-slate-500">Current active catalog stock × per-item weights; not a stock movement ledger</p>
           {report.inventory.goldByPurity.length ? (
@@ -377,15 +395,15 @@ const Reports = () => {
             </div>
           ) : <EmptyState />}
         </section>
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.035)] sm:p-5">
           <h2 className="font-extrabold text-slate-900">Low Stock Alerts</h2>
           <p className="mb-4 mt-1 text-xs text-slate-500">Active products with fewer than 10 units</p>
           {report.inventory.lowStock.length ? <ul className="max-h-64 space-y-2 overflow-auto">{report.inventory.lowStock.map((item) => <li key={item.name} className="flex justify-between gap-3 rounded-lg bg-amber-50 px-3 py-2 text-xs"><span className="truncate font-semibold text-slate-700">{item.name}<span className="block text-[10px] text-slate-400">{item.category}</span></span><strong className="shrink-0 text-amber-800">{item.quantity} left</strong></li>)}</ul> : <EmptyState>No low-stock products.</EmptyState>}
         </section>
       </div>
 
-      <div className="grid gap-5 xl:grid-cols-2">
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <div className="grid gap-4 xl:grid-cols-2">
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.035)] sm:p-5">
           <h2 className="font-extrabold text-slate-900">Current Daily Gold Rates</h2>
           <p className="mb-4 mt-1 text-xs text-slate-500">Active rate set used by the system</p>
           {report.currentRates.length ? <div className="grid gap-2 sm:grid-cols-2">{report.currentRates.map((rate) => <div key={`${rate.metal_type}-${rate.purity}`} className="flex justify-between rounded-lg bg-emerald-50 px-3 py-2 text-xs"><span className="font-semibold text-slate-600">{rate.metal_type} · {purityName(rate.metal_type, rate.purity)}{purityName(rate.metal_type, rate.purity) !== rate.purity ? ` / ${rate.purity}` : ""}</span><strong className="text-[#15803D]">{formatCurrency(rate.rate_per_unit ?? rate.rate_per_gram)} / {rate.rate_unit || "gram"}</strong></div>)}</div> : <EmptyState>No active rate set.</EmptyState>}
@@ -395,7 +413,7 @@ const Reports = () => {
             return <li key={item.id} className="flex flex-wrap justify-between gap-2 py-2 text-xs"><span>{item.metal_type} {purityName(item.metal_type, item.purity)} · {formatDateTime(item.changed_at)} · {item.employee_name || "Admin"}</span><strong>{formatCurrency(item.previous_rate)} → {formatCurrency(item.new_rate)}{change == null ? "" : ` (${change > 0 ? "+" : ""}${change}%)`}</strong></li>;
           })}</ul> : <EmptyState>No rate updates in this period.</EmptyState>}
         </section>
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <section className="rounded-2xl border border-slate-200/80 bg-white p-4 shadow-[0_2px_8px_rgba(15,23,42,0.035)] sm:p-5">
           <h2 className="font-extrabold text-slate-900">Top-Selling Products</h2>
           <p className="mb-4 mt-1 text-xs text-slate-500">Ranked by recorded product line value</p>
           {report.topProducts.length ? <ol className="space-y-2">{report.topProducts.map((item, index) => <li key={item.name} className="flex items-center gap-3 rounded-lg bg-slate-50 px-3 py-2 text-xs"><span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#DCFCE7] font-black text-[#15803D]">{index + 1}</span><span className="min-w-0 flex-1 truncate font-semibold text-slate-700">{item.name}</span><strong>{formatCurrency(item.amount)}</strong></li>)}</ol> : <EmptyState />}
@@ -405,7 +423,7 @@ const Reports = () => {
         </section>
       </div>
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm print:break-before-page">
+      <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_2px_8px_rgba(15,23,42,0.035)] print:break-before-page">
         <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between">
           <div><h2 className="font-extrabold text-slate-900">Report Transactions</h2><p className="mt-1 text-xs text-slate-500">Sales, supplier documents, and loan disbursements recorded in the selected period.</p></div>
           <div className="flex flex-wrap gap-2 print:hidden">
@@ -415,7 +433,7 @@ const Reports = () => {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1050px] text-left text-xs">
-            <thead className="bg-slate-50 text-[10px] uppercase text-slate-500"><tr><th className="px-4 py-3">Transaction ID</th><th className="px-4 py-3">Date & Time</th><th className="px-4 py-3">Customer / Supplier</th><th className="px-4 py-3">Report Category</th><th className="px-4 py-3">Description</th><th className="px-4 py-3 text-right">Weight (g)</th><th className="px-4 py-3 text-right">Amount</th><th className="px-4 py-3">Payment Type</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 print:hidden">Actions</th></tr></thead>
+            <thead className="bg-gradient-to-r from-[#07564B] via-[#064A41] to-[#043D37] text-[10px] uppercase text-white"><tr><th className="px-4 py-3">Transaction ID</th><th className="px-4 py-3">Date & Time</th><th className="px-4 py-3">Customer / Supplier</th><th className="px-4 py-3">Report Category</th><th className="px-4 py-3">Description</th><th className="px-4 py-3 text-right">Weight (g)</th><th className="px-4 py-3 text-right">Amount</th><th className="px-4 py-3">Payment Method</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 print:hidden">Actions</th></tr></thead>
             <tbody className="divide-y divide-slate-100 print:hidden">
               {loading && !lastUpdated ? Array.from({ length: 5 }, (_, index) => <tr key={index}><td colSpan="10" className="px-4 py-4"><div className="h-5 animate-pulse rounded bg-slate-100" /></td></tr>)
                 : visibleRows.map((row) => <tr key={`${row.source}-${row.transactionId}`} className="hover:bg-emerald-50/30">
