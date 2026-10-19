@@ -66,7 +66,7 @@ const Hero = () => {
 
   return (
     <section className="relative w-full overflow-hidden bg-[#032e25] text-white">
-      <div className="relative isolate min-h-[620px] w-full sm:min-h-[540px] md:h-[540px] md:min-h-0 lg:h-[560px]">
+      <div className="relative isolate h-[680px] w-full sm:h-[540px] lg:h-[560px]">
 
         {/* Swiper background images */}
         {slides.length > 0 && (
@@ -86,25 +86,34 @@ const Hero = () => {
             onSlideChange={(swiper) => {
               setActiveSlide(swiper.realIndex);
             }}
-            className="absolute inset-0 h-full w-full"
+            className="absolute inset-0 w-full"
           >
-            {slides.map((item) => (
-              <SwiperSlide key={item.id} className="h-full w-full">
-                <picture className="absolute inset-0 block h-full w-full">
-                  {item.mobile_image && (
-                    <source
-                      media="(max-width: 639px)"
-                      srcSet={getBannerImageUrl(item.mobile_image)}
+            {slides.map((item) => {
+              const desktopImage = getBannerImageUrl(item.image);
+              const mobileImage = item.mobile_image
+                ? getBannerImageUrl(item.mobile_image)
+                : "";
+
+              return (
+                <SwiperSlide key={item.id} className="h-full w-full">
+                  <picture className="absolute inset-0 block h-full w-full">
+                    {mobileImage && (
+                      <source media="(max-width: 639px)" srcSet={mobileImage} />
+                    )}
+                    <img
+                      src={desktopImage}
+                      alt=""
+                      className="h-full w-full object-cover sm:object-contain"
+                      onError={(event) => {
+                        if (mobileImage && event.currentTarget.currentSrc !== desktopImage) {
+                          event.currentTarget.src = desktopImage;
+                        }
+                      }}
                     />
-                  )}
-                  <img
-                    src={getBannerImageUrl(item.image)}
-                    alt=""
-                    className="h-full w-full object-cover sm:object-contain"
-                  />
-                </picture>
-              </SwiperSlide>
-            ))}
+                  </picture>
+                </SwiperSlide>
+              );
+            })}
           </Swiper>
         )}
 
