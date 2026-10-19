@@ -4,6 +4,7 @@ import { FaArrowRight } from "react-icons/fa";
 import { Autoplay } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
 import api from "../../api";
+import PageContainer from "../CommenComponents/PageContainer";
 import ProductCard from "./ProductCard";
 
 import "swiper/css";
@@ -43,67 +44,26 @@ const Silver = () => {
   }, []);
 
   return (
-    <section className="w-full bg-[#fffdf8] px-3 py-4 sm:px-5 lg:px-7">
-      <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-4 lg:grid-cols-[0.9fr_2fr]">
-
-        {/* LEFT: Silver promotional banner */}
-        <a
-          href="/category/silver-articles"
-          className="group relative flex min-h-[280px] overflow-hidden rounded-lg border border-[#c99a43]/60 bg-[#003b2b] sm:min-h-[320px] lg:min-h-0"
-        >
-          {/* Silver banner image */}
-          <img
-            src="/images/silverproduct.png"
-            alt="Premium silver jewellery and articles"
-            loading="lazy"
-            className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.03]"
-            onError={(e) => {
-              e.currentTarget.style.display = "none";
-            }}
-          />
-
-          {/* Reduced green overlay */}
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-[#003b2b]/20 via-[#003b2b]/5 to-transparent" />
-
-          {/* Decorative gold border */}
-          <div className="pointer-events-none absolute inset-[5px] rounded-md border border-[#d8b45e]/60" />
-
-          {/* Banner content */}
-          <div className="relative z-10 flex w-[65%] flex-col items-start justify-center p-5 sm:p-7">
-            <p className="mb-2 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#f4ce72]">
-              Timeless Elegance
-            </p>
-
-            <h2 className="font-serif text-2xl font-bold leading-tight text-[#ffe4a0] sm:text-3xl">
-              Silver
-              <br />
-              Collection
-            </h2>
-
-            <p className="mt-3 max-w-[180px] text-xs leading-relaxed text-white sm:text-sm">
-              Tradition in pure silver
-            </p>
-
-            <span className="mt-4 inline-flex items-center gap-2 rounded-sm bg-gradient-to-r from-[#f2b93f] to-[#ffda76] px-3 py-2.5 text-[10px] font-bold text-[#34230d] transition-all group-hover:gap-3 sm:px-4 sm:text-xs">
-              Explore Collection
-              <FaArrowRight />
-            </span>
-          </div>
-        </a>
-
-        {/* RIGHT: Silver products */}
+    <section className="w-full bg-[#fffdf8] py-4">
+      <PageContainer>
         <div className="min-w-0">
-          <div className="mb-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <h2 className="font-serif text-xl font-bold text-[#201a13] sm:text-2xl">
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="flex flex-col items-start text-left">
+              <span className="mb-1 text-[9px] font-bold uppercase tracking-[0.3em] text-[#a67b2e]">
+                Curated Collection
+              </span>
+              <h2 className="font-serif text-2xl font-bold tracking-wide text-[#201a13] sm:text-3xl">
                 Silver Articles
               </h2>
-              <span className="h-px w-10 bg-[#d9a441]" />
+              <div className="mt-2 flex items-center justify-start gap-3" aria-hidden="true">
+                <span className="h-px w-12 bg-gradient-to-r from-transparent to-[#d9a441]" />
+                <span className="h-1.5 w-1.5 rotate-45 bg-[#d9a441]" />
+                <span className="h-px w-12 bg-gradient-to-l from-transparent to-[#d9a441]" />
+              </div>
             </div>
-
             <a
               href="/category/silver-articles"
-              className="flex items-center gap-2 text-xs font-medium text-[#33271b] transition-colors hover:text-[#b47a16]"
+              className="inline-flex items-center gap-2 self-end text-xs font-semibold text-[#6f5426] transition-colors hover:text-[#b47a16]"
             >
               View All
               <FaArrowRight className="text-[10px] text-[#b47a16]" />
@@ -119,8 +79,8 @@ const Silver = () => {
           ) : (
             <Swiper
               modules={[Autoplay]}
-              loop={products.length > 1}
-              autoplay={products.length > 1 ? {
+              loop={products.length > 5}
+              autoplay={products.length > 5 ? {
                 delay: 2200,
                 disableOnInteraction: false,
                 pauseOnMouseEnter: true,
@@ -128,19 +88,25 @@ const Silver = () => {
               speed={700}
               slidesPerView="auto"
               spaceBetween={12}
+              breakpoints={{
+                640: { slidesPerView: 2 },
+                900: { slidesPerView: 3 },
+                1200: { slidesPerView: 4 },
+                1500: { slidesPerView: 5 },
+              }}
               grabCursor
               centeredSlides={products.length === 1}
               className="!pb-2"
             >
               {products.map((product) => (
-                <SwiperSlide key={product.id} className="!h-auto !w-[260px] sm:!w-[280px] xl:!w-[300px]">
+                <SwiperSlide key={product.id} className="h-auto w-[260px] sm:w-[280px] xl:w-[300px]">
                   <ProductCard product={product} />
                 </SwiperSlide>
               ))}
             </Swiper>
           )}
         </div>
-      </div>
+      </PageContainer>
     </section>
   );
 };
