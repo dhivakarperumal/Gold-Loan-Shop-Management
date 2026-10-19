@@ -36,10 +36,11 @@ test('deducts exchange credit before calculating entered GST', () => {
   const result = normalizeBilling(billingInput({
     payment_type: 'EXCHANGE_GOLD',
     gst_rate: 3,
-    exchanges: [{ product_name: 'Old chain', category: 'Chain', purity: '22K', credit_amount: 2000 }]
+    exchanges: [{ product_name: 'Old chain', category: 'Chain', metal_type: 'Gold', purity: '22K', credit_amount: 2000 }]
   }));
   assert.equal(result.error, undefined);
   assert.equal(result.billing.sub_total, 15000);
+  assert.equal(result.billing.exchanges[0].metal_type, 'Gold');
   assert.equal(result.billing.gst_amount, 390);
   assert.equal(result.billing.total_amount, 13390);
 });
@@ -56,7 +57,7 @@ test('applies a fixed discount before exchange credit and GST', () => {
     discount_amount: 1000,
     gst_rate: 3,
     payment_type: 'EXCHANGE_GOLD',
-    exchanges: [{ product_name: 'Old chain', category: 'Chain', purity: '22K', credit_amount: 2000 }]
+    exchanges: [{ product_name: 'Old chain', category: 'Chain', metal_type: 'Gold', purity: '22K', credit_amount: 2000 }]
   }));
   assert.equal(result.error, undefined);
   assert.equal(result.billing.discount_amount, 1000);
@@ -69,7 +70,7 @@ test('rejects discounts and exchange credits that exceed the products subtotal',
   assert.match(normalizeBilling(billingInput({
     discount_amount: 14000,
     payment_type: 'EXCHANGE_GOLD',
-    exchanges: [{ product_name: 'Old chain', category: 'Chain', purity: '22K', credit_amount: 2000 }]
+    exchanges: [{ product_name: 'Old chain', category: 'Chain', metal_type: 'Gold', purity: '22K', credit_amount: 2000 }]
   })).error, /cannot exceed/i);
 });
 

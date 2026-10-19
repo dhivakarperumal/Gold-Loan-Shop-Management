@@ -67,8 +67,11 @@ function normalizeItems(value, field, withCredit = false) {
     const productName = normalizeText(item.product_name, `${field} ${index + 1} product name`, 150, true);
     const category = normalizeText(item.category, `${field} ${index + 1} category`, 100, true);
     const purity = normalizeText(item.purity, `${field} ${index + 1} purity`, 30, withCredit);
-    if (productName.error || category.error || purity.error) {
-      return { error: productName.error || category.error || purity.error };
+    const metalType = withCredit
+      ? normalizeText(item.metal_type == null ? 'Gold' : item.metal_type, `${field} ${index + 1} metal type`, 30, true)
+      : { value: '' };
+    if (productName.error || category.error || purity.error || metalType.error) {
+      return { error: productName.error || category.error || purity.error || metalType.error };
     }
     const entry = {
       product_name: productName.value,
@@ -76,6 +79,7 @@ function normalizeItems(value, field, withCredit = false) {
       purity: purity.value
     };
     if (withCredit) {
+      entry.metal_type = metalType.value;
       const credit = normalizeMoney(item.credit_amount, `${field} ${index + 1} exchange credit`);
       if (credit.error) return { error: credit.error };
       entry.credit_amount = credit.value;

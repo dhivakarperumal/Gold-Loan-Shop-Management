@@ -2,10 +2,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { FiArrowLeft, FiPlus, FiSave, FiSearch, FiTrash2 } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api from "../../api";
+import useGoldRates from "../../PrivateRouter/useGoldRates";
 
 const EMPTY_CUSTOMER = { name: "", phone: "", email: "", address: "" };
 const EMPTY_PRODUCT = { product_id: "", product_name: "", category: "", purity: "", price: "" };
-const EMPTY_EXCHANGE = { product_name: "", category: "", category_is_other: false, purity: "22K", credit_amount: "" };
+const EMPTY_EXCHANGE = { product_name: "", category: "", category_is_other: false, metal_type: "Gold", purity: "22K", credit_amount: "" };
+const PURITY_LABELS = { "999": "24K", "916": "22K", "833": "20K", "750": "18K", "585": "14K" };
 const inputClass = "mt-1 block w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-[#008577] focus:ring-2 focus:ring-emerald-100";
 const labelClass = "block text-xs font-semibold text-slate-600";
 
@@ -43,9 +45,22 @@ function TextField({ label, value, onChange, type = "text", required = false, pl
   );
 }
 
-function ItemFields({ item, onChange, onCategorySelect, categories, exchange = false }) {
+function ItemFields({ item, onChange, onCategorySelect, onMetalSelect, categories, metalRates, exchange = false }) {
+  const selectedMetalRates = exchange
+    ? metalRates.filter((rate) => rate.metal_type.toLowerCase() === item.metal_type.toLowerCase())
+    : [];
+  const purityLabel = (purity) => item.metal_type === "Gold"
+    ? PURITY_LABELS[purity] || purity
+    : purity;
+  const purityOptions = exchange
+    ? [...new Set(selectedMetalRates.map((rate) => purityLabel(rate.purity)))]
+    : ["24K", "22K", "18K"];
+  const selectedMetalRate = selectedMetalRates.find((rate) => (
+    purityLabel(rate.purity).toLowerCase() === item.purity.toLowerCase()
+  ));
+
   return (
-    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-5">
       <TextField label="Product Name" value={item.product_name} onChange={(value) => onChange("product_name", value)} required placeholder="Enter product name" />
       {exchange ? (
         <div>
@@ -80,11 +95,39 @@ function ItemFields({ item, onChange, onCategorySelect, categories, exchange = f
       ) : (
         <TextField label="Category" value={item.category} onChange={(value) => onChange("category", value)} required placeholder="e.g. Necklace" />
       )}
+      {exchange && (
+        <label className={labelClass}>
+          Metal Type<span className="ml-1 text-rose-500">*</span>
+          <select
+            className={inputClass}
+            value={item.metal_type}
+            onChange={(event) => {
+              const selectedRates = metalRates.filter((rate) => rate.metal_type === event.target.value);
+              const firstRate = selectedRates[0];
+              const nextPurity = firstRate
+                ? event.target.value === "Gold" ? PURITY_LABELS[firstRate.purity] || firstRate.purity : firstRate.purity
+                : "";
+              onMetalSelect(event.target.value, nextPurity);
+            }}
+            required
+          >
+            {[...new Set(metalRates.map((rate) => rate.metal_type))].map((metalType) => (
+              <option key={metalType} value={metalType}>{metalType}</option>
+            ))}
+          </select>
+        </label>
+      )}
       <label className={labelClass}>
-        Gold Purity<span className="ml-1 text-rose-500">*</span>
-        <select className={inputClass} value={item.purity} onChange={(event) => onChange("purity", event.target.value)} required>
-          {["24K", "22K", "18K"].map((purity) => <option key={purity}>{purity}</option>)}
+        {item.metal_type || "Gold"} Purity<span className="ml-1 text-rose-500">*</span>
+        <select className={inputClass} value={item.purity} onChange={(event) => onChange("purity", event.target.value)} required disabled={exchange && purityOptions.length === 0}>
+          {purityOptions.length === 0 && <option value="">No active purity rates</option>}
+          {purityOptions.map((purity) => <option key={purity}>{purity}</option>)}
         </select>
+        {exchange && <span className="mt-1 block text-[11px] font-normal text-slate-500">
+          {selectedMetalRate
+            ? `Today's rate: ${currency(selectedMetalRate.rate_per_unit ?? selectedMetalRate.rate_per_gram)} / ${selectedMetalRate.rate_unit === "carat" ? "carat" : "g"}`
+            : "Today's rate is unavailable for this purity"}
+        </span>}
       </label>
       <TextField
         label={exchange ? "Exchange Credit (₹)" : "Unit Price (₹)"}
@@ -220,6 +263,7 @@ export default function BillingManagement() {
   const [bills, setBills] = useState([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState([]);
+  const { current: currentGoldRates } = useGoldRates();
   const [catalogProducts, setCatalogProducts] = useState([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -231,6 +275,10 @@ export default function BillingManagement() {
   const [discountInput, setDiscountInput] = useState("");
   const [exchanges, setExchanges] = useState([]);
   const [paymentType, setPaymentType] = useState("FULL_PAYMENT");
+  const metalRates = useMemo(
+    () => currentGoldRates?.rates || [],
+    [currentGoldRates]
+  );
 
   const loadBills = useCallback(async () => {
     setLoading(true);
@@ -573,12 +621,18 @@ export default function BillingManagement() {
                     <ItemFields
                       item={exchange}
                       categories={categories}
+                      metalRates={metalRates}
                       exchange
                       onChange={(field, value) => updateRow(setExchanges, exchanges, index, field, value)}
                       onCategorySelect={(value, isOther) => setExchanges((rows) => rows.map((row, rowIndex) => rowIndex === index ? {
                         ...row,
                         category_is_other: isOther,
                         category: isOther ? "" : value
+                      } : row))}
+                      onMetalSelect={(metalType, purity) => setExchanges((rows) => rows.map((row, rowIndex) => rowIndex === index ? {
+                        ...row,
+                        metal_type: metalType,
+                        purity
                       } : row))}
                     />
                   </div>
