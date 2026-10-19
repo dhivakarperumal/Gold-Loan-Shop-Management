@@ -1,6 +1,6 @@
 const crypto = require('node:crypto');
 const { pool } = require('../config/db');
-const { recalculateProductPrices } = require('../services/productPricing');
+const { rateForProduct, recalculateProductPrices } = require('../services/productPricing');
 
 const RATE_SPECS = [
   { key: 'gold_999', metal_type: 'Gold', purity: '999', rate_unit: 'gram' },
@@ -141,20 +141,7 @@ async function getCurrentGoldRates() {
 }
 
 function findGoldRateForPurity(current, purity, metalType = 'Gold') {
-  if (!current) return null;
-  const text = String(purity || '').toLowerCase();
-  const exactRate = current.rates.find((rate) => (
-    rate.metal_type.toLowerCase() === String(metalType).toLowerCase()
-    && rate.purity.toLowerCase() === text
-  ));
-  if (exactRate) return exactRate;
-  const purityDigits = text.match(/\d{3}/)?.[0] || ({
-    '24k': '999', '22k': '916', '20k': '833', '18k': '750', '14k': '585'
-  })[text.match(/\d{2}k/)?.[0]];
-  return current.rates.find((rate) => (
-    rate.metal_type.toLowerCase() === String(metalType).toLowerCase()
-    && rate.purity === purityDigits
-  )) || null;
+  return current ? rateForProduct(current.rates, purity, metalType) : null;
 }
 
 async function recordHistory(connection, { batchId, rateId, metalType, purity, rateUnit = 'gram', previousRate, newRate, action, reason, userId }) {

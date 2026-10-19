@@ -1,10 +1,11 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useAdmin } from "../../PrivateRouter/AdminContext";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../api";
 import { toast, Toaster } from "react-hot-toast";
 import { FaRupeeSign } from "react-icons/fa";
+import useGoldRates from "../../PrivateRouter/useGoldRates";
 import {
     FiPlus,
     FiSearch,
@@ -21,6 +22,7 @@ import {
 const AllProducts = () => {
     const navigate = useNavigate();
     const { productsCache, setProductsCached } = useAdmin();
+    const { current: activeRateSet } = useGoldRates();
 
     const [searchTerm, setSearchTerm] = useState("");
     const [categoryFilter, setCategoryFilter] = useState("");
@@ -62,6 +64,12 @@ const AllProducts = () => {
     const [filterOptions, setFilterOptions] = useState(pageData?.filters || { categories: [], purities: [] });
     const [refreshingPrices, setRefreshingPrices] = useState(false);
     const [lastPriceRefresh, setLastPriceRefresh] = useState(null);
+    const previousRateSignature = useRef("");
+    const activeRateSignature = activeRateSet
+        ? `${activeRateSet.batch_id || activeRateSet.id}:${activeRateSet.rates
+            .map((rate) => `${rate.metal_type}:${rate.purity}:${rate.rate_per_unit ?? rate.rate_per_gram}`)
+            .join("|")}`
+        : "";
 
     // Rapid Add Modal
     const [isRapidAddOpen, setIsRapidAddOpen] = useState(false);
@@ -148,6 +156,30 @@ const AllProducts = () => {
         }, 300);
         return () => clearTimeout(timeout);
     }, [fetchProducts]);
+
+    useEffect(() => {
+        if (!activeRateSignature) {
+            previousRateSignature.current = "";
+            return;
+        }
+        if (previousRateSignature.current === activeRateSignature) return;
+        previousRateSignature.current = activeRateSignature;
+
+        const syncProductsToActiveRates = async () => {
+            try {
+                await api.post("/products/recalculate-prices", {
+                    reason: "Synchronize product prices with active daily rates"
+                });
+                setProductsCached({});
+                await fetchProducts();
+            } catch (error) {
+                console.error("Could not synchronize products with active rates:", error);
+                toast.error(error.response?.data?.message || "Could not update product prices from the active daily rates.");
+            }
+        };
+
+        void syncProductsToActiveRates();
+    }, [activeRateSignature, fetchProducts, setProductsCached]);
 
     const handleDelete = async (id) => {
         if (!window.confirm("Are you sure you want to delete this product?")) return;

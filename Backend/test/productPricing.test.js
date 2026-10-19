@@ -79,6 +79,24 @@ test('matches 24K, 22K, and 18K purity labels to their configured rates', () => 
   assert.equal(rateForProduct(rates, '18K', 'Gold').rate_per_gram, 7500);
 });
 
+test('matches product rates despite surrounding spaces and normalized purity labels', () => {
+  const rates = [
+    { metal_type: ' Gold ', purity: '916', rate_per_gram: 9160 },
+    { metal_type: 'Silver', purity: '999', rate_per_gram: 100 }
+  ];
+  assert.equal(rateForProduct(rates, ' 22K / 916 ', ' gold ').rate_per_gram, 9160);
+  assert.equal(rateForProduct(rates, '999', 'Gold'), null);
+});
+
+test('uses the gold rate for diamond-labelled karat jewellery and the only silver rate for legacy silver purity labels', () => {
+  const rates = [
+    { metal_type: 'Gold', purity: '833', rate_per_gram: 8330 },
+    { metal_type: 'Silver', purity: '999', rate_per_gram: 120 }
+  ];
+  assert.equal(rateForProduct(rates, '20K', 'Diamond').rate_per_gram, 8330);
+  assert.equal(rateForProduct(rates, '18K / 750', 'Silver').rate_per_gram, 120);
+});
+
 test('rejects invalid inputs and offer types', () => {
   assert.throws(() => calculateProductPricing({ ...baseProduct, net_gold_weight: -1 }, 8000), /non-negative/);
   assert.throws(() => calculateProductPricing({ ...baseProduct, offer_type: 'Invalid' }, 8000), /Offer type/);

@@ -62,7 +62,7 @@ function calculateProductPricing(product, ratePerGram) {
 }
 
 function rateForProduct(rates, purity, metalType) {
-  const normalize = (value) => String(value || '').toLowerCase();
+  const normalize = (value) => String(value || '').trim().toLowerCase();
   const metal = normalize(metalType);
   const text = normalize(purity);
   const digits = text.match(/\d{3}/)?.[0] || ({
@@ -72,8 +72,20 @@ function rateForProduct(rates, purity, metalType) {
     '18k': '750',
     '14k': '585'
   })[text.match(/\d{2}k/)?.[0]];
-  return rates.find((rate) => normalize(rate.metal_type) === metal
-    && (normalize(rate.purity) === text || (digits && String(rate.purity) === digits))) || null;
+  const normalizedPurity = digits || text;
+  const matchesPurity = (rate) => normalize(rate.purity) === text
+    || (digits && (normalize(rate.purity).match(/\d{3}/)?.[0] || normalize(rate.purity)) === normalizedPurity);
+  const exactRate = rates.find((rate) => normalize(rate.metal_type) === metal && matchesPurity(rate));
+  if (exactRate) return exactRate;
+
+  if (metal === 'diamond' && digits) {
+    return rates.find((rate) => normalize(rate.metal_type) === 'gold' && matchesPurity(rate)) || null;
+  }
+  if (metal === 'silver') {
+    const silverRates = rates.filter((rate) => normalize(rate.metal_type) === 'silver');
+    if (silverRates.length === 1) return silverRates[0];
+  }
+  return null;
 }
 
 async function recalculateProductPrices(connection, rates, { reason, userId, rateDate }) {
@@ -84,7 +96,7 @@ async function recalculateProductPrices(connection, rates, { reason, userId, rat
       gold_rate_per_gram, gold_value, pre_discount_price, tax_amount, applied_discount,
       offer_price, final_selling_price
     FROM products
-    WHERE net_gold_weight > 0 AND metal_type IS NOT NULL AND purity IS NOT NULL
+    WHERE metal_type IS NOT NULL AND purity IS NOT NULL
     FOR UPDATE
   `);
   let changed = 0;

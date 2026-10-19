@@ -95,7 +95,7 @@ function normalizeProduct(body) {
   product.rating = product.rating ?? 0;
   product.offer = product.offer ?? 0;
   product.mrp = product.mrp ?? 0;
-  product.offer_type = product.offer_type || (product.offer > 0 ? 'Percentage' : 'None');
+  product.offer_type = product.offer_type || 'Percentage';
   product.fixed_discount_amount = product.fixed_discount_amount ?? 0;
   product.stock_status = product.stock_status
     || (product.total_stock <= 0 ? 'Out of Stock' : product.total_stock < 10 ? 'Low Stock' : 'In Stock');

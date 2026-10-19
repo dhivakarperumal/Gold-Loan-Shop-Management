@@ -75,7 +75,7 @@ const EMPTY_PRODUCT = {
   size_guide_chart: "",
   mrp: "",
   offer: "0",
-  offer_type: "None",
+  offer_type: "Percentage",
   offer_price: "",
   fixed_discount_amount: "0",
   discount: "0",
