@@ -1,6 +1,6 @@
 import React, { useContext } from "react";
 import { Link } from "react-router-dom";
-import { FaHeart } from "react-icons/fa";
+import { BadgeCheck, Heart, Weight } from "lucide-react";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 import { getProductImageUrl } from "./productDisplay";
 
@@ -17,17 +17,19 @@ const ProductCard = ({ product }) => {
   const offerPrice = Number(
     product.offer_price ?? product.final_selling_price ?? product.mrp ?? 0
   );
-  const details = [
-    ["Metal", product.metal_type || "-"],
-    ["Purity", product.purity || "-"],
-    ["Weight", product.gross_weight ? `${Number(product.gross_weight)} g` : "-"],
-    ["Category", product.category || "-"],
-    ["Type", product.product_type || "-"],
-  ];
+  const discount = mrp > offerPrice
+    ? Number(product.discount) > 0
+      ? Number(product.discount)
+      : Math.round(((mrp - offerPrice) / mrp) * 100)
+    : 0;
+  const weight = product.gross_weight != null && product.gross_weight !== ""
+    ? `${Number(product.gross_weight)} g`
+    : "-";
+  const purity = product.purity || "-";
 
   return (
-    <article className="group h-full overflow-hidden rounded-xl border border-[#eadfce] bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#d8b46c] hover:shadow-lg">
-      <div className="relative aspect-[1.14/1] overflow-hidden bg-[#f6efe4]">
+    <article className="group flex h-full flex-col overflow-hidden rounded-[14px] border border-[#eadfce] bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#d8b46c] hover:shadow-lg">
+      <div className="relative aspect-[1.6/1] shrink-0 overflow-hidden bg-[#f6efe4]">
         <Link
           to={`/product/${productId}`}
           aria-label={`View ${product.name} details`}
@@ -40,7 +42,7 @@ const ProductCard = ({ product }) => {
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />
         </Link>
-        <span className="absolute left-2 top-2 max-w-[70%] truncate rounded-full bg-white/95 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide text-[#765323] shadow-sm">
+        <span className="absolute left-2.5 top-2.5 max-w-[70%] truncate rounded-full bg-white/95 px-3 py-1 text-[9px] font-bold uppercase tracking-wide text-[#765323] shadow-sm sm:text-[10px]">
           {product.category || "Jewelry"}
         </span>
         <button
@@ -48,50 +50,56 @@ const ProductCard = ({ product }) => {
           aria-label={`${isFavorite ? "Remove" : "Add"} ${product.name} ${isFavorite ? "from" : "to"} favorites`}
           aria-pressed={isFavorite}
           onClick={() => toggleWishlist(product)}
-          className={`absolute right-2 top-2 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 shadow-md transition-colors hover:bg-[#fff0e8] hover:text-red-600 ${isFavorite ? "text-red-600" : "text-[#81513b]"}`}
+          className={`absolute right-2.5 top-2.5 flex h-8 w-8 items-center justify-center rounded-full bg-white/95 shadow-sm transition-colors hover:bg-[#fff0e8] hover:text-red-600 sm:h-9 sm:w-9 ${isFavorite ? "text-red-600" : "text-[#34433f]"}`}
         >
-          <FaHeart size={15} />
+          <Heart size={18} fill={isFavorite ? "currentColor" : "none"} />
         </button>
       </div>
 
-      <div className="flex h-[190px] flex-col p-3 sm:p-4">
-        <h3 className="line-clamp-2 min-h-10 font-serif text-sm font-semibold leading-5 text-[#292018] transition-colors hover:text-[#174a38] sm:text-base">
+      <div className="flex min-h-[76px] flex-1 flex-col px-3 pb-2.5 pt-2 sm:px-4 sm:pb-3">
+        <h3 className="line-clamp-1 font-serif text-[13px] font-semibold leading-5 text-[#292018] transition-colors hover:text-[#174a38] sm:text-sm">
           <Link to={`/product/${productId}`} aria-label={`View ${product.name} details`}>
             {product.name}
           </Link>
         </h3>
 
-        <div className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-          <span className="text-lg font-bold text-[#9c3218] sm:text-xl">
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className="text-base font-bold leading-5 text-[#c51e18] sm:text-lg">
             {formatPrice(offerPrice)}
           </span>
-          <span className="text-[10px] font-medium uppercase tracking-wide text-[#8a8177]">
-            Offer price
-          </span>
-        </div>
-        <div className="mt-0.5 flex items-baseline gap-2">
-          <span className={`text-xs ${mrp > offerPrice ? "text-gray-400 line-through" : "text-gray-600"}`}>
-            {formatPrice(mrp)}
-          </span>
-          <span className="text-[10px] text-gray-400">MRP</span>
           {mrp > offerPrice && (
-            <span className="text-[10px] font-semibold text-emerald-700">
-              Save {formatPrice(mrp - offerPrice)}
-            </span>
+            <>
+              <span className="text-xs text-[#92979a] line-through">
+                {formatPrice(mrp)}
+              </span>
+              <span className="rounded-md bg-[#087452] px-2 py-1 text-[10px] font-bold leading-none text-white sm:text-[11px]">
+                {discount}% OFF
+              </span>
+            </>
           )}
         </div>
-
-        <dl className="mt-auto grid grid-cols-2 gap-x-2 gap-y-1.5 border-t border-[#f1e8da] pt-2.5 text-[10px] sm:text-[11px]">
-          {details.map(([label, value]) => (
-            <div key={label} className="flex min-w-0 gap-1">
-              <dt className="shrink-0 text-[#91877b]">{label}:</dt>
-              <dd className="truncate font-semibold text-[#514638]" title={String(value)}>
-                {value}
-              </dd>
-            </div>
-          ))}
-        </dl>
       </div>
+
+      <dl className="grid grid-cols-2 border-t border-[#e8e7e3] bg-[#f2f1ee] px-3 py-2 text-[9px] sm:px-4 sm:text-[10px]">
+        <div className="flex min-w-0 items-center gap-2 border-r border-[#deddd8] pr-2">
+          <Weight size={16} className="shrink-0 text-[#9b742e]" aria-hidden="true" />
+          <div className="min-w-0">
+            <dt className="leading-3 text-[#77766f]">Weight</dt>
+            <dd className="truncate font-semibold leading-4 text-[#3f403c]" title={weight}>
+              {weight}
+            </dd>
+          </div>
+        </div>
+        <div className="flex min-w-0 items-center gap-2 pl-2">
+          <BadgeCheck size={16} className="shrink-0 text-[#9b742e]" aria-hidden="true" />
+          <div className="min-w-0">
+            <dt className="leading-3 text-[#77766f]">Purity</dt>
+            <dd className="truncate font-semibold leading-4 text-[#3f403c]" title={String(purity)}>
+              {purity}
+            </dd>
+          </div>
+        </div>
+      </dl>
     </article>
   );
 };
