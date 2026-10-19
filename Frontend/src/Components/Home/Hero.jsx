@@ -86,7 +86,7 @@ const Hero = () => {
             onSlideChange={(swiper) => {
               setActiveSlide(swiper.realIndex);
             }}
-            className="absolute inset-0 w-full"
+            className="!absolute inset-0 h-full w-full"
           >
             {slides.map((item) => {
               const desktopImage = getBannerImageUrl(item.image);
