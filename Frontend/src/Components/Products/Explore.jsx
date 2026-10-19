@@ -17,7 +17,7 @@ import ProductCard from "../Home/ProductCard";
 import { getProductImageUrl } from "../Home/productDisplay";
 
 const PAGE_SIZE = 100;
-const PRODUCTS_PER_PAGE = 12;
+const ROWS_PER_PAGE = 3;
 const SORT_OPTIONS = [
   { value: "newest", label: "Newest First" },
   { value: "oldest", label: "Oldest First" },
@@ -56,6 +56,7 @@ const Explore = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [currentPage, setCurrentPage] = useState(1);
+  const [gridColumns, setGridColumns] = useState(1);
   const [categories, setCategories] = useState([]);
   const [metals, setMetals] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -75,6 +76,17 @@ const Explore = () => {
   const [maximumPrice, setMaximumPrice] = useState("");
   const [minimumRating, setMinimumRating] = useState(0);
   const [availability, setAvailability] = useState("");
+  useEffect(() => {
+    const updateGridColumns = () => {
+      const width = window.innerWidth;
+      setGridColumns(width >= 1536 ? 5 : width >= 1024 ? 4 : width >= 640 ? 2 : 1);
+    };
+
+    updateGridColumns();
+    window.addEventListener("resize", updateGridColumns);
+    return () => window.removeEventListener("resize", updateGridColumns);
+  }, []);
+
   const searchQuery = searchParams.get("search")?.trim() || "";
   const selectedCategories = searchParams.getAll("category");
   const selectedMetals = searchParams.getAll("metal");
@@ -228,10 +240,11 @@ const Explore = () => {
     subcategoryFilter,
   ]);
 
-  const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
+  const productsPerPage = gridColumns * ROWS_PER_PAGE;
+  const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
   const activePage = Math.min(currentPage, Math.max(totalPages, 1));
-  const pageStart = (activePage - 1) * PRODUCTS_PER_PAGE;
-  const paginatedProducts = filteredProducts.slice(pageStart, pageStart + PRODUCTS_PER_PAGE);
+  const pageStart = (activePage - 1) * productsPerPage;
+  const paginatedProducts = filteredProducts.slice(pageStart, pageStart + productsPerPage);
   const visiblePageNumbers = Array.from(
     { length: Math.min(5, totalPages) },
     (_, index) => Math.max(1, Math.min(activePage - 2, totalPages - 4)) + index
@@ -594,7 +607,7 @@ const Explore = () => {
               <p className="rounded-xl border border-rose-200 bg-white py-16 text-center text-sm text-rose-700" role="alert">{error}</p>
             ) : filteredProducts.length ? (
               <>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5">
                   {paginatedProducts.map((product) => (
                   <ProductCard key={product.id ?? product.product_id ?? product.product_code} product={product} variant="explore" />
                   ))}
