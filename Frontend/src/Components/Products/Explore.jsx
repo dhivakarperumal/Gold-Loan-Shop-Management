@@ -17,6 +17,7 @@ import ProductCard from "../Home/ProductCard";
 import { getProductImageUrl } from "../Home/productDisplay";
 
 const PAGE_SIZE = 100;
+const PRODUCTS_PER_PAGE = 12;
 const SORT_OPTIONS = [
   { value: "newest", label: "Newest First" },
   { value: "oldest", label: "Oldest First" },
@@ -54,6 +55,7 @@ const toggleValue = (values, value) =>
 const Explore = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
   const [categories, setCategories] = useState([]);
   const [metals, setMetals] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -226,6 +228,26 @@ const Explore = () => {
     subcategoryFilter,
   ]);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [
+    availability,
+    maximumPrice,
+    minimumPrice,
+    minimumRating,
+    offerThreshold,
+    searchParams,
+    sortBy,
+  ]);
+
+  const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
+  const pageStart = (currentPage - 1) * PRODUCTS_PER_PAGE;
+  const paginatedProducts = filteredProducts.slice(pageStart, pageStart + PRODUCTS_PER_PAGE);
+  const visiblePageNumbers = Array.from(
+    { length: Math.min(5, totalPages) },
+    (_, index) => Math.min(Math.max(currentPage - 2, 1), totalPages - 4) + index
+  );
+
   const clearFilters = () => {
     setOfferThreshold(0);
     setMinimumPrice("");
@@ -375,7 +397,7 @@ const Explore = () => {
         </section>
 
         <div id="explore-products" className="mt-4 grid scroll-mt-24 gap-5 lg:contents">
-          <aside className={`${filtersOpen ? "block" : "hidden"} h-fit rounded-xl border border-[#eee7dc] bg-white p-4 shadow-sm lg:col-start-1 lg:row-start-1 lg:row-span-3 lg:block`}>
+          <aside className={`${filtersOpen ? "block" : "hidden"} h-fit rounded-xl border border-[#eee7dc] bg-white p-4 shadow-sm lg:sticky lg:top-4 lg:col-start-1 lg:row-start-1 lg:row-span-3 lg:block lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto`}>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="flex items-center gap-2 font-serif text-lg font-bold text-[#29231c]"><FaSlidersH className="text-sm text-[#174a38]" /> Filters</h2>
               <button type="button" onClick={clearFilters} className="text-[11px] font-semibold text-[#a77525] hover:underline">Clear All</button>
@@ -528,7 +550,9 @@ const Explore = () => {
                   </h2>
                 </div>
                 <p className="mt-1 text-xs text-[#81786b]">
-                  {loading ? "Loading products..." : `Found ${filteredProducts.length} ${filteredProducts.length === 1 ? "product" : "products"}`}
+                  {loading
+                    ? "Loading products..."
+                    : `Found ${filteredProducts.length} ${filteredProducts.length === 1 ? "product" : "products"}`}
                 </p>
               </div>
               <label className="flex items-center gap-2 text-xs text-[#62594d]">
@@ -555,11 +579,45 @@ const Explore = () => {
             ) : error ? (
               <p className="rounded-xl border border-rose-200 bg-white py-16 text-center text-sm text-rose-700" role="alert">{error}</p>
             ) : filteredProducts.length ? (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
-                {filteredProducts.map((product) => (
+              <>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
+                  {paginatedProducts.map((product) => (
                   <ProductCard key={product.id ?? product.product_id ?? product.product_code} product={product} variant="explore" />
-                ))}
-              </div>
+                  ))}
+                </div>
+                {totalPages > 1 && (
+                  <nav className="mt-6 flex flex-wrap items-center justify-center gap-2" aria-label="Product pages">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+                      disabled={currentPage === 1}
+                      className="rounded-md border border-[#e8dfd1] bg-white px-3 py-2 text-xs font-semibold text-[#514638] transition hover:border-[#d8b46c] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Previous
+                    </button>
+                    {visiblePageNumbers.map((page) => (
+                      <button
+                        key={page}
+                        type="button"
+                        onClick={() => setCurrentPage(page)}
+                        aria-current={currentPage === page ? "page" : undefined}
+                        aria-label={`Page ${page}`}
+                        className={`h-9 min-w-9 rounded-md border px-3 text-xs font-semibold transition ${currentPage === page ? "border-[#174a38] bg-[#174a38] text-white" : "border-[#e8dfd1] bg-white text-[#514638] hover:border-[#d8b46c]"}`}
+                      >
+                        {page}
+                      </button>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+                      disabled={currentPage === totalPages}
+                      className="rounded-md border border-[#e8dfd1] bg-white px-3 py-2 text-xs font-semibold text-[#514638] transition hover:border-[#d8b46c] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Next
+                    </button>
+                  </nav>
+                )}
+              </>
             ) : (
               <div className="rounded-xl border border-[#eee7dc] bg-white px-5 py-16 text-center">
                 <FaGem className="mx-auto text-3xl text-[#bd913e]" />
