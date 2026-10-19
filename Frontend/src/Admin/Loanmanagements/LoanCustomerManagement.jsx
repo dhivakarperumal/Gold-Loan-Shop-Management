@@ -5,7 +5,6 @@ import {
   FiDownload,
   FiEdit2,
   FiEye,
-  FiEyeOff,
   FiFilter,
   FiGrid,
   FiList,
@@ -154,7 +153,6 @@ export default function LoanCustomerManagement() {
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [form, setForm] = useState(EMPTY_CUSTOMER);
   const [accountPassword, setAccountPassword] = useState("");
-  const [showAccountPassword, setShowAccountPassword] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoPreview, setPhotoPreview] = useState({ reference: "", url: "" });
@@ -248,7 +246,6 @@ export default function LoanCustomerManagement() {
     setEditingCustomer(null);
     setForm(EMPTY_CUSTOMER);
     setAccountPassword("");
-    setShowAccountPassword(false);
     setDocuments([]);
     setPendingDocuments([]);
     setDocumentType("");
@@ -268,7 +265,6 @@ export default function LoanCustomerManagement() {
       photo_url: customer.photo_url || ""
     });
     setAccountPassword("");
-    setShowAccountPassword(false);
     setIsFormOpen(true);
     try {
       const response = await api.get(`/loan-customers/${customer.id}/documents`);
@@ -756,48 +752,7 @@ export default function LoanCustomerManagement() {
               <div className="flex-1 space-y-4 overflow-y-auto p-5">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <CustomerField label="Full Name" name="full_name" value={form.full_name} onChange={handleChange} required placeholder="Enter full name" />
-                  {!editingCustomer && (
-                    <label className={labelClass}>
-                      Username<span className="ml-1 text-red-500">*</span>
-                      <input
-                        className={inputClass}
-                        name="username"
-                        value={form.full_name}
-                        readOnly
-                        required
-                        autoComplete="username"
-                        placeholder="Enter full name"
-                      />
-                    </label>
-                  )}
                   <CustomerField label="Mobile" name="mobile" value={form.mobile} onChange={handleChange} required placeholder="Enter phone number" />
-                  {!editingCustomer && (
-                    <label className={labelClass}>
-                      Password<span className="ml-1 text-red-500">*</span>
-                      <span className="relative block">
-                        <input
-                          className={`${inputClass} pr-10`}
-                          type={showAccountPassword ? "text" : "password"}
-                          name="password"
-                          value={accountPassword}
-                          onChange={(event) => setAccountPassword(event.target.value)}
-                          required
-                          minLength={8}
-                          autoComplete="new-password"
-                          placeholder="Initial password (defaults to mobile)"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowAccountPassword((visible) => !visible)}
-                          aria-label={showAccountPassword ? "Hide password" : "Show password"}
-                          aria-pressed={showAccountPassword}
-                          className="absolute inset-y-0 right-2 flex items-center px-1 text-slate-500 hover:text-[#008577]"
-                        >
-                          {showAccountPassword ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}
-                        </button>
-                      </span>
-                    </label>
-                  )}
                   <CustomerField label="Alternate Mobile" name="alternate_mobile" value={form.alternate_mobile} onChange={handleChange} placeholder="Enter alternate phone number" />
                   <CustomerField label="Email" name="email" type="email" value={form.email} onChange={handleChange} placeholder="name@example.com" />
                   {!editingCustomer && (
@@ -827,7 +782,6 @@ export default function LoanCustomerManagement() {
                       ))}
                     </div>
                   </fieldset>
-                  <CustomerField label="Occupation" name="occupation" value={form.occupation} onChange={handleChange} placeholder="Enter occupation" />
                   <CustomerField label="City / Town" name="city" value={form.city} onChange={handleChange} required placeholder="Enter city or town" />
                   <CustomerField label="District" name="district" value={form.district} onChange={handleChange} required placeholder="Enter district" />
                   <CustomerSelect label="State" name="state" value={form.state} onChange={handleChange} options={["", ...INDIAN_STATES_AND_UTS]} required />
