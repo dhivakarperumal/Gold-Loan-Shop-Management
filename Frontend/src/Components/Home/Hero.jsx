@@ -90,12 +90,19 @@ const Hero = () => {
           >
             {slides.map((item) => (
               <SwiperSlide key={item.id} className="h-full w-full">
-                <div
-                  className="h-full w-full bg-contain bg-center bg-no-repeat"
-                  style={{
-                    backgroundImage: `url("${getBannerImageUrl(item.image)}")`,
-                  }}
-                />
+                <picture className="absolute inset-0 block h-full w-full">
+                  {item.mobile_image && (
+                    <source
+                      media="(max-width: 639px)"
+                      srcSet={getBannerImageUrl(item.mobile_image)}
+                    />
+                  )}
+                  <img
+                    src={getBannerImageUrl(item.image)}
+                    alt=""
+                    className="h-full w-full object-cover sm:object-contain"
+                  />
+                </picture>
               </SwiperSlide>
             ))}
           </Swiper>
