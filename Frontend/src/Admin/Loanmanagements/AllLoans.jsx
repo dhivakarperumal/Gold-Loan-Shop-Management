@@ -13,7 +13,14 @@ const rateText = (value) => {
   const rate = Number(value);
   return Number.isFinite(rate) ? rate.toFixed(2) : "—";
 };
-const dateText = (value) => value ? new Date(value).toLocaleDateString("en-IN") : "—";
+const dateText = (value) => {
+  if (!value) return "—";
+  const text = String(value);
+  const date = /^\d{4}-\d{2}-\d{2}/.test(text)
+    ? new Date(`${text.slice(0, 10)}T00:00:00`)
+    : new Date(value);
+  return Number.isNaN(date.valueOf()) ? "—" : date.toLocaleDateString("en-IN");
+};
 
 export default function AllLoans() {
   const [loans, setLoans] = useState([]);
@@ -45,13 +52,21 @@ export default function AllLoans() {
       toast.error(error.response?.data?.message || "Could not delete loan.");
     }
   };
-  useEffect(() => { loadLoans({ showLoading: false }); }, []);
+  useEffect(() => {
+    loadLoans({ showLoading: false });
+    const refreshLoans = () => loadLoans({ showLoading: false });
+    window.addEventListener("focus", refreshLoans);
+    return () => window.removeEventListener("focus", refreshLoans);
+  }, []);
 
   const loanCounts = loans.reduce((counts, loan) => {
     const status = String(loan.loan_status || "").trim().toLowerCase();
-    if (status === "active") counts.active += 1;
+    const released = loan.release_status === "Released";
+    const awaitingGoldRelease = loan.release_status === "Pending Release"
+      && Number(loan.outstanding_principal ?? loan.principal_amount) === 0;
+    if (status === "active" && !awaitingGoldRelease) counts.active += 1;
     if (status === "inactive") counts.inactive += 1;
-    if (status === "completed") counts.completed += 1;
+    if (status === "completed" || released) counts.completed += 1;
     return counts;
   }, { active: 0, inactive: 0, completed: 0 });
   const summaryCards = [
@@ -68,8 +83,14 @@ export default function AllLoans() {
       loan.customer_code,
       loan.customer_mobile
     ].some((value) => String(value || "").toLowerCase().includes(query));
+    const displayStatus = loan.release_status === "Released"
+      ? "Completed"
+      : loan.release_status === "Pending Release"
+      && Number(loan.outstanding_principal ?? loan.principal_amount) === 0
+      ? "Awaiting Gold Release"
+      : loan.loan_status;
     const matchesStatus = statusFilter === "All"
-      || String(loan.loan_status || "").trim().toLowerCase() === statusFilter.toLowerCase();
+      || String(displayStatus || "").trim().toLowerCase() === statusFilter.toLowerCase();
     return matchesSearch && matchesStatus;
   });
   const getStatusStyle = (status) => {
@@ -78,6 +99,7 @@ export default function AllLoans() {
       case "inactive": return "bg-amber-50 text-amber-700";
       case "completed": return "bg-slate-100 text-slate-600";
       case "pending": return "bg-blue-50 text-blue-700";
+      case "awaiting gold release": return "bg-amber-50 text-amber-800";
       default: return "bg-slate-100 text-slate-600";
     }
   };
@@ -126,7 +148,7 @@ export default function AllLoans() {
             className="min-w-[142px] rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm font-semibold text-slate-600 outline-none transition hover:border-slate-300 focus:border-[#008577] focus:ring-4 focus:ring-emerald-700/10"
           >
             <option value="All">Select Status</option>
-            {["Active", "Inactive", "Completed", "Pending"].map((status) => <option key={status} value={status}>{status}</option>)}
+            {["Active", "Awaiting Gold Release", "Inactive", "Completed", "Pending"].map((status) => <option key={status} value={status}>{status}</option>)}
           </select>
           <div className="flex rounded-xl border border-slate-200 bg-slate-100/80 p-1">
             <button type="button" onClick={() => setViewMode("table")} aria-label="List view" aria-pressed={viewMode === "table"} className={`rounded-lg p-2.5 transition-all ${viewMode === "table" ? "bg-[#064A41] text-white shadow-sm" : "text-slate-400 hover:text-slate-700"}`}><FiList size={17} /></button>
@@ -149,7 +171,7 @@ export default function AllLoans() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[960px] border-separate border-spacing-0 text-left">
               <thead><tr className="bg-[#064A41] text-[11px] font-bold uppercase tracking-[0.08em] text-emerald-50/90">
-                {["S No", "Loan Number", "Customer", "Mobile", "Loan Amount", "Interest", "Maturity", "Status", "Actions"].map((title) => <th key={title} scope="col" className="whitespace-nowrap px-4 py-4 first:pl-5 last:pr-5">{title}</th>)}
+                {["S No", "Loan Number", "Customer", "Mobile", "Outstanding Balance", "Interest", "Maturity", "Status", "Actions"].map((title) => <th key={title} scope="col" className="whitespace-nowrap px-4 py-4 first:pl-5 last:pr-5">{title}</th>)}
               </tr></thead>
               <tbody className="divide-y divide-slate-100/80">
                 {loading ? <tr><td colSpan="9" className="px-4 py-16 text-center text-sm font-medium text-slate-400">Loading loans...</td></tr>
@@ -160,14 +182,15 @@ export default function AllLoans() {
                         <td className="whitespace-nowrap px-4 py-4 font-bold text-[#064A41]">{loan.loan_number}</td>
                         <td className="px-4 py-4"><div className="flex min-w-[145px] items-center gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-xs font-bold uppercase text-[#087263] ring-1 ring-inset ring-emerald-800/5">{String(loan.customer_name || "?").trim().charAt(0)}</span><span className="min-w-0"><span className="block truncate font-semibold text-slate-800">{loan.customer_name || "—"}</span><span className="mt-0.5 block text-xs text-slate-400">{loan.customer_code || "—"}</span></span></div></td>
                         <td className="whitespace-nowrap px-4 py-4 text-slate-600">{loan.customer_mobile || "—"}</td>
-                        <td className="whitespace-nowrap px-4 py-4 font-bold tabular-nums text-slate-800">{money(loan.principal_amount)}</td>
+                        <td className="whitespace-nowrap px-4 py-4 font-bold tabular-nums text-slate-800" title={`Original loan amount: ${money(loan.principal_amount)}`}>{money(loan.outstanding_principal ?? loan.principal_amount)}</td>
                         <td className="whitespace-nowrap px-4 py-4 text-slate-600"><span className="font-semibold text-slate-800">{rateText(loan.interest_rate)}%</span></td>
                         <td className="whitespace-nowrap px-4 py-4 text-slate-600">{dateText(loan.maturity_date)}</td>
-                        <td className="whitespace-nowrap px-4 py-4"><span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-bold capitalize ${getStatusStyle(loan.loan_status)}`}><span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />{loan.loan_status || "Unknown"}</span></td>
+                        <td className="whitespace-nowrap px-4 py-4"><span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-bold ${getStatusStyle(loan.release_status === "Released" ? "Completed" : loan.release_status === "Pending Release" && Number(loan.outstanding_principal ?? loan.principal_amount) === 0 ? "Awaiting Gold Release" : loan.loan_status)}`}><span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />{loan.release_status === "Released" ? "Completed" : loan.release_status === "Pending Release" && Number(loan.outstanding_principal ?? loan.principal_amount) === 0 ? "Awaiting Gold Release" : loan.loan_status || "Unknown"}</span></td>
                         <td className="whitespace-nowrap px-4 py-4 pr-5">
                           <div className="flex items-center gap-1">
                             <Link to={`/admin/loans/details/${loan.id}`} aria-label={`View loan ${loan.loan_number}`} title="View loan" className="rounded-lg p-2 text-slate-400 transition hover:bg-teal-50 hover:text-[#008577] focus:outline-none focus:ring-2 focus:ring-teal-600/30"><FiEye size={16} /></Link>
-                            <Link to={`/admin/loans/edit/${loan.id}`} aria-label={`Edit loan ${loan.loan_number}`} title="Edit loan" className="rounded-lg p-2 text-slate-400 transition hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-600/30"><FiEdit2 size={16} /></Link>
+                            {Number(loan.outstanding_principal ?? loan.principal_amount) > 0 && loan.loan_status !== "Completed" && loan.release_status !== "Released" && <Link to={`/admin/loans/edit/${loan.id}`} aria-label={`Edit loan ${loan.loan_number}`} title="Edit loan" className="rounded-lg p-2 text-slate-400 transition hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-600/30"><FiEdit2 size={16} /></Link>}
+                            {loan.release_status === "Pending Release" && Number(loan.outstanding_principal ?? loan.principal_amount) === 0 && <Link to={`/admin/loans/completeloan/${loan.id}`} aria-label={`Complete loan ${loan.loan_number}`} title="Complete Loan" className="rounded-lg p-2 text-amber-600 transition hover:bg-amber-50 hover:text-amber-800"><FiCheckCircle size={16} /></Link>}
                             <button type="button" onClick={() => printLoanAgreement(loan.id)} aria-label={`Print or download loan ${loan.loan_number}`} title="Print / Download PDF" className="rounded-lg p-2 text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-600/30"><FiPrinter size={16} /></button>
                             <button type="button" onClick={() => handleDeleteLoan(loan)} aria-label={`Delete loan ${loan.loan_number}`} title="Delete loan" className="rounded-lg p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-600/30"><FiTrash2 size={16} /></button>
                           </div>
@@ -186,21 +209,22 @@ export default function AllLoans() {
                 <article key={loan.id} className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_2px_10px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-900/[0.06]">
                   <div className="flex items-start justify-between gap-3">
                     <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Loan Number</p><h2 className="mt-1 font-extrabold text-[#064A41]">{loan.loan_number}</h2></div>
-                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-bold capitalize ${getStatusStyle(loan.loan_status)}`}><span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />{loan.loan_status || "Unknown"}</span>
+                    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-bold ${getStatusStyle(loan.release_status === "Released" ? "Completed" : loan.release_status === "Pending Release" && Number(loan.outstanding_principal ?? loan.principal_amount) === 0 ? "Awaiting Gold Release" : loan.loan_status)}`}><span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />{loan.release_status === "Released" ? "Completed" : loan.release_status === "Pending Release" && Number(loan.outstanding_principal ?? loan.principal_amount) === 0 ? "Awaiting Gold Release" : loan.loan_status || "Unknown"}</span>
                   </div>
                   <div className="mt-4 border-t border-slate-100 pt-4">
                     <div className="flex items-center gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-xs font-bold uppercase text-[#087263]">{String(loan.customer_name || "?").trim().charAt(0)}</span><div className="min-w-0"><p className="truncate font-semibold text-slate-800">{loan.customer_name || "—"}</p><p className="mt-0.5 text-xs text-slate-400">{loan.customer_code || "—"}</p></div></div>
                     <p className="mt-2 text-xs text-slate-500">{loan.customer_mobile || "Mobile number unavailable"}</p>
                     <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                      <div><dt className="text-xs font-medium text-slate-400">Loan Amount</dt><dd className="mt-1 font-bold text-[#064A41]">{money(loan.principal_amount)}</dd></div>
+                      <div><dt className="text-xs font-medium text-slate-400">Outstanding Balance</dt><dd className="mt-1 font-bold text-[#064A41]">{money(loan.outstanding_principal ?? loan.principal_amount)}</dd></div>
                       <div><dt className="text-xs text-slate-500">Maturity</dt><dd className="mt-1 font-semibold text-slate-700">{dateText(loan.maturity_date)}</dd></div>
-                      <div className="col-span-2"><dt className="text-xs font-medium text-slate-400">Interest</dt><dd className="mt-1 font-semibold text-slate-700">{rateText(loan.interest_rate)}%</dd></div>
+                      <div><dt className="text-xs font-medium text-slate-400">Interest</dt><dd className="mt-1 font-semibold text-slate-700">{rateText(loan.interest_rate)}%</dd></div>
                     </dl>
                     <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
                       <Link to={`/admin/loans/details/${loan.id}`} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#008577] hover:underline"><FiEye /> View details</Link>
                       <div className="flex items-center gap-1">
                         <button type="button" onClick={() => printLoanAgreement(loan.id)} aria-label={`Print or download loan ${loan.loan_number}`} title="Print / Download PDF" className="rounded-lg p-2 text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-700"><FiPrinter size={16} /></button>
-                        <Link to={`/admin/loans/edit/${loan.id}`} aria-label={`Edit loan ${loan.loan_number}`} title="Edit loan" className="rounded-lg p-2 text-slate-400 transition hover:bg-blue-50 hover:text-blue-700"><FiEdit2 size={16} /></Link>
+                        {loan.release_status === "Pending Release" && Number(loan.outstanding_principal ?? loan.principal_amount) === 0 && <Link to={`/admin/loans/completeloan/${loan.id}`} aria-label={`Complete loan ${loan.loan_number}`} title="Complete Loan" className="rounded-lg p-2 text-amber-600 transition hover:bg-amber-50 hover:text-amber-800"><FiCheckCircle size={16} /></Link>}
+                        {Number(loan.outstanding_principal ?? loan.principal_amount) > 0 && loan.loan_status !== "Completed" && loan.release_status !== "Released" && <Link to={`/admin/loans/edit/${loan.id}`} aria-label={`Edit loan ${loan.loan_number}`} title="Edit loan" className="rounded-lg p-2 text-slate-400 transition hover:bg-blue-50 hover:text-blue-700"><FiEdit2 size={16} /></Link>}
                         <button type="button" onClick={() => handleDeleteLoan(loan)} aria-label={`Delete loan ${loan.loan_number}`} title="Delete loan" className="rounded-lg p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-700"><FiTrash2 size={16} /></button>
                       </div>
                     </div>

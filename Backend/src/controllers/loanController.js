@@ -2,13 +2,16 @@ const { getLoanCustomerById, listLoanCustomers } = require('../modules/loanCusto
 const {
   createLoan,
   deleteLoan,
+  getGoldReleaseDetails,
   getLoanById,
   getLoanRenewal,
   getLoanRenewalHistory,
   listInterestTypes,
+  listGoldReleaseEligible,
   listLoans,
   listLoansForCustomer,
   renewLoan,
+  releaseGold,
   setInterestType,
   updateLoan
 } = require('../modules/loanModule');
@@ -19,6 +22,11 @@ const {
   isValidLoanGoldImage,
   removeLoanGoldImage
 } = require('../middleware/loanGoldImageUpload');
+const {
+  getLoanGoldReleaseDocumentPath,
+  isValidLoanGoldReleaseDocument,
+  removeLoanGoldReleaseDocument
+} = require('../middleware/loanGoldReleaseUpload');
 
 const INTEREST_FREQUENCIES = new Set([
   'daily', 'weekly', 'monthly', 'quarterly', 'half_yearly', 'yearly', 'custom_period'
@@ -271,7 +279,9 @@ async function postLoanRenewal(req, res, next) {
     return res.json(await renewLoan(req.params.id, amount.value, req.adminUser.user_id));
   } catch (error) {
     if (error.code === 'LOAN_NOT_FOUND') return res.status(404).json({ message: error.message });
-    if (error.code === 'LOAN_NOT_ACTIVE') return res.status(409).json({ message: error.message });
+    if (['LOAN_NOT_ACTIVE', 'LOAN_READY_FOR_GOLD_RELEASE'].includes(error.code)) {
+      return res.status(409).json({ message: error.message });
+    }
     if ([
       'INVALID_RENEWAL_PAYMENT',
       'RENEWAL_PAYMENT_BELOW_INTEREST',
@@ -293,12 +303,109 @@ async function getLoanRenewalHistoryList(req, res, next) {
   }
 }
 
+async function getGoldReleaseList(req, res, next) {
+  try {
+    return res.json(await listGoldReleaseEligible());
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function postGoldRelease(req, res, next) {
+  const rejectUpload = async (status, message) => {
+    try {
+      if (req.file) {
+        await removeLoanGoldReleaseDocument(`/api/loans/gold-release-documents/${req.file.filename}`);
+      }
+      return res.status(status).json({ message });
+    } catch (error) {
+      return next(error);
+    }
+  };
+  if (!validId(req.params.id)) return rejectUpload(400, 'Loan ID is invalid');
+  if (!req.file) return res.status(400).json({ message: 'Upload the signed gold release document before completing the release' });
+  try {
+    if (!isValidLoanGoldReleaseDocument(req.file.path, req.file.mimetype)) {
+      return rejectUpload(400, 'The uploaded file is not a valid PDF, JPG, or PNG document');
+    }
+  } catch (error) {
+    try {
+      await removeLoanGoldReleaseDocument(`/api/loans/gold-release-documents/${req.file.filename}`);
+    } catch (cleanupError) {
+      return next(cleanupError);
+    }
+    return next(error);
+  }
+  const signatureReceived = req.body?.customer_signature_received === true
+    || String(req.body?.customer_signature_received || '').trim().toLowerCase() === 'true';
+  if (!signatureReceived) {
+    return rejectUpload(400, 'Confirm that the signed gold release form has been received');
+  }
+  const recipient = typeof req.body.released_to === 'string' ? req.body.released_to.trim() : '';
+  if (!recipient || recipient.length > 150) {
+    return rejectUpload(400, 'Enter the name of the person receiving the gold');
+  }
+  const notes = typeof req.body.notes === 'string' ? req.body.notes : '';
+  if (notes.length > 2000) return rejectUpload(400, 'Release notes must be 2000 characters or fewer');
+  const documentUrl = `/api/loans/gold-release-documents/${req.file.filename}`;
+  try {
+    return res.json(await releaseGold(req.params.id, recipient, notes, documentUrl, req.adminUser.user_id));
+  } catch (error) {
+    try {
+      await removeLoanGoldReleaseDocument(documentUrl);
+    } catch (cleanupError) {
+      return next(cleanupError);
+    }
+    if (error.code === 'LOAN_NOT_FOUND') return res.status(404).json({ message: error.message });
+    if (['GOLD_ALREADY_RELEASED', 'LOAN_BALANCE_REMAINING'].includes(error.code)) {
+      return res.status(409).json({ message: error.message });
+    }
+    if (error.code === 'INVALID_RELEASE_RECIPIENT') return res.status(400).json({ message: error.message });
+    if (error.code === 'SIGNED_RELEASE_DOCUMENT_REQUIRED') return res.status(400).json({ message: error.message });
+    return next(error);
+  }
+}
+
+async function getGoldReleaseRecord(req, res, next) {
+  if (!validId(req.params.id)) return res.status(400).json({ message: 'Loan ID is invalid' });
+  try {
+    const details = await getGoldReleaseDetails(req.params.id);
+    if (!details) return res.status(404).json({ message: 'Loan not found' });
+    if (details.loan.release_status !== 'Released'
+      && Number(details.loan.outstanding_principal ?? details.loan.principal_amount) !== 0) {
+      return res.status(409).json({ message: 'This loan is not fully paid and is not ready for gold release' });
+    }
+    return res.json(details);
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function getLoanGoldImage(req, res, next) {
   const imagePath = getLoanGoldImagePath(`/api/loans/gold-images/${req.params.filename}`);
   if (!imagePath) return res.status(400).json({ message: 'Gold image reference is invalid' });
   try {
     if (!fs.existsSync(imagePath)) return res.status(404).json({ message: 'Gold image not found' });
     return res.sendFile(imagePath, (error) => {
+      if (error && !res.headersSent) next(error);
+    });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function getLoanGoldReleaseDocument(req, res, next) {
+  if (!validId(req.params.id)) return res.status(400).json({ message: 'Loan ID is invalid' });
+  try {
+    const details = await getGoldReleaseDetails(req.params.id);
+    if (!details) return res.status(404).json({ message: 'Loan not found' });
+    if (!details.release?.signed_document_url) {
+      return res.status(404).json({ message: 'No signed release document is stored for this loan' });
+    }
+    const documentPath = getLoanGoldReleaseDocumentPath(details.release.signed_document_url);
+    if (!documentPath) return res.status(400).json({ message: 'Stored release document reference is invalid' });
+    if (!fs.existsSync(documentPath)) return res.status(404).json({ message: 'Signed release document file is missing' });
+    return res.download(documentPath, (error) => {
       if (error && !res.headersSent) next(error);
     });
   } catch (error) {
@@ -326,6 +433,11 @@ async function postLoan(req, res, next) {
   if (error) {
     const cleanupStatus = await rejectUploadedImage(req, next, 400);
     if (cleanupStatus) return res.status(cleanupStatus).json({ message: error });
+    return;
+  }
+  if (loan.loan_status === 'Completed') {
+    const cleanupStatus = await rejectUploadedImage(req, next, 409);
+    if (cleanupStatus) return res.status(cleanupStatus).json({ message: 'A loan can only be marked completed after its gold has been released.' });
     return;
   }
   try {
@@ -384,6 +496,20 @@ async function putLoan(req, res, next) {
     if (!existingLoan) {
       const cleanupStatus = await rejectUploadedImage(req, next, 404);
       if (cleanupStatus) return res.status(cleanupStatus).json({ message: 'Loan not found' });
+      return;
+    }
+    if (
+      existingLoan.release_status === 'Released'
+      || existingLoan.loan_status === 'Completed'
+      || Number(existingLoan.outstanding_principal ?? existingLoan.principal_amount) === 0
+    ) {
+      const cleanupStatus = await rejectUploadedImage(req, next, 409);
+      if (cleanupStatus) return res.status(cleanupStatus).json({ message: 'Paid, released, or completed loans cannot be edited. Use the gold release workflow to complete a fully paid loan.' });
+      return;
+    }
+    if (loan.loan_status === 'Completed') {
+      const cleanupStatus = await rejectUploadedImage(req, next, 409);
+      if (cleanupStatus) return res.status(cleanupStatus).json({ message: 'A loan can only be marked completed after its gold has been released.' });
       return;
     }
     const existingMetalType = existingLoan.metal_type || 'Gold';
@@ -465,17 +591,21 @@ module.exports = {
   getCustomer,
   getCustomerLoans,
   getCustomers,
+  getGoldReleaseList,
+  getGoldReleaseRecord,
   getInterestTypes,
   getLoan,
   getLoanRenewalDetails,
   getLoanRenewalHistoryList,
   getLoanGoldImage,
+  getLoanGoldReleaseDocument,
   getLoans,
   calculateLoanAmount,
   calculateMetalValuation,
   normalizeLoan,
   putLoan,
   postLoan,
+  postGoldRelease,
   postLoanRenewal,
   removeLoan,
   updateInterestType
