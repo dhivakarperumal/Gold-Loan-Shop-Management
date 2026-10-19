@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiArrowLeft, FiCalendar, FiChevronRight, FiCreditCard, FiDollarSign, FiEdit2, FiEye, FiPlus, FiRepeat, FiSave, FiSearch, FiTrash2, FiX } from "react-icons/fi";
+import { FiArrowLeft, FiCalendar, FiChevronRight, FiCreditCard, FiDollarSign, FiEdit2, FiEye, FiGrid, FiList, FiPlus, FiRepeat, FiSave, FiSearch, FiTrash2, FiX } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api from "../../api";
 import useGoldRates from "../../PrivateRouter/useGoldRates";
@@ -289,6 +289,9 @@ export default function BillingManagement() {
   const [showForm, setShowForm] = useState(false);
   const [editingBillId, setEditingBillId] = useState(null);
   const [viewingBill, setViewingBill] = useState(null);
+  const [billSearch, setBillSearch] = useState("");
+  const [paymentFilter, setPaymentFilter] = useState("ALL");
+  const [billView, setBillView] = useState("list");
   const [todayKey] = useState(() => new Date().toLocaleDateString("en-CA"));
   const [customers, setCustomers] = useState([{ ...EMPTY_CUSTOMER }]);
   const [products, setProducts] = useState([]);
@@ -403,6 +406,20 @@ export default function BillingManagement() {
   const fullPaymentAmount = bills.reduce((sum, bill) => (
     bill.payment_type === "FULL_PAYMENT" ? sum + (Number(bill.total_amount) || 0) : sum
   ), 0);
+  const visibleBills = useMemo(() => {
+    const query = billSearch.trim().toLowerCase();
+    return bills.filter((bill) => {
+      if (paymentFilter !== "ALL" && bill.payment_type !== paymentFilter) return false;
+      if (!query) return true;
+      const searchableValues = [
+        bill.invoice_no,
+        ...decodeArray(bill.customers).flatMap((customer) => [customer.name, customer.phone, customer.email]),
+        ...decodeArray(bill.products).flatMap((product) => [product.product_name, product.sku, product.category]),
+        ...decodeArray(bill.exchanges).flatMap((exchange) => [exchange.product_name, exchange.category, exchange.metal_type, exchange.purity])
+      ];
+      return searchableValues.some((value) => String(value || "").toLowerCase().includes(query));
+    });
+  }, [bills, billSearch, paymentFilter]);
 
   const resetForm = () => {
     setEditingBillId(null);
@@ -590,9 +607,6 @@ export default function BillingManagement() {
               <h1 className="mt-1 text-2xl font-extrabold text-slate-900">Show All Bills</h1>
               <p className="mt-1 text-sm text-slate-500">Create and review jewelry invoices.</p>
             </div>
-            <button type="button" onClick={() => setShowForm(true)} className="inline-flex items-center gap-2 rounded-lg bg-[#00695C] px-4 py-2.5 text-sm font-bold text-white shadow-sm hover:bg-[#008577]">
-              <FiPlus /> New Bill
-            </button>
           </header>
           <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Billing totals">
             {[
@@ -641,7 +655,56 @@ export default function BillingManagement() {
               </article>
             ))}
           </section>
+          <section aria-label="Search and filter bills" className="flex flex-wrap items-center gap-3 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+            <label className="relative min-w-[220px] flex-1 sm:max-w-[480px]">
+              <FiSearch aria-hidden="true" className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="search"
+                value={billSearch}
+                onChange={(event) => setBillSearch(event.target.value)}
+                placeholder="Search bills by invoice, customer, phone..."
+                aria-label="Search bills"
+                className="h-[52px] w-full rounded-xl border border-slate-200 bg-slate-50/70 pl-11 pr-4 text-sm text-slate-700 outline-none placeholder:text-slate-400 focus:border-[#00695C] focus:ring-2 focus:ring-emerald-100"
+              />
+            </label>
+            <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
+              <select
+                value={paymentFilter}
+                onChange={(event) => setPaymentFilter(event.target.value)}
+                aria-label="Filter bills by payment type"
+                className="h-[52px] min-w-[160px] rounded-xl border border-slate-200 bg-slate-50/70 px-4 text-sm font-semibold text-slate-600 outline-none focus:border-[#00695C] focus:ring-2 focus:ring-emerald-100"
+              >
+                <option value="ALL">All Payment Types</option>
+                <option value="FULL_PAYMENT">Full Payment</option>
+                <option value="EXCHANGE_GOLD">Exchange Gold</option>
+              </select>
+              <div role="group" aria-label="Bill view" className="flex h-[52px] items-center rounded-xl bg-slate-100 p-1">
+                <button
+                  type="button"
+                  onClick={() => setBillView("list")}
+                  aria-label="Show bills as a list"
+                  aria-pressed={billView === "list"}
+                  className={`flex h-10 w-10 items-center justify-center rounded-lg transition ${billView === "list" ? "bg-[#004D40] text-white shadow-sm" : "text-slate-500 hover:bg-white"}`}
+                >
+                  <FiList size={19} />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setBillView("grid")}
+                  aria-label="Show bills as cards"
+                  aria-pressed={billView === "grid"}
+                  className={`flex h-10 w-10 items-center justify-center rounded-lg transition ${billView === "grid" ? "bg-[#004D40] text-white shadow-sm" : "text-slate-500 hover:bg-white"}`}
+                >
+                  <FiGrid size={18} />
+                </button>
+              </div>
+              <button type="button" onClick={() => setShowForm(true)} className="inline-flex h-[52px] items-center gap-2 rounded-xl bg-[#004D40] px-5 text-sm font-bold text-white shadow-[0_8px_18px_rgba(0,77,64,0.2)] transition hover:bg-[#00695C]">
+                <FiPlus size={18} /> New Bill
+              </button>
+            </div>
+          </section>
           <section className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
+            {billView === "list" ? (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[900px] text-left">
                 <thead className="bg-[#00695C] text-xs uppercase tracking-wide text-white">
@@ -659,9 +722,9 @@ export default function BillingManagement() {
                 <tbody className="divide-y divide-slate-100">
                   {loading ? (
                     <tr><td colSpan="8" className="px-4 py-12 text-center text-sm text-slate-500">Loading bills...</td></tr>
-                  ) : bills.length === 0 ? (
-                    <tr><td colSpan="8" className="px-4 py-12 text-center text-sm text-slate-500">No bills yet. Create your first bill.</td></tr>
-                  ) : bills.map((bill, index) => {
+                  ) : visibleBills.length === 0 ? (
+                    <tr><td colSpan="8" className="px-4 py-12 text-center text-sm text-slate-500">{bills.length === 0 ? "No bills yet. Create your first bill." : "No bills match your search or payment filter."}</td></tr>
+                  ) : visibleBills.map((bill, index) => {
                     const billCustomers = decodeArray(bill.customers);
                     const billProducts = decodeArray(bill.products);
                     return (
@@ -686,6 +749,41 @@ export default function BillingManagement() {
                 </tbody>
               </table>
             </div>
+            ) : (
+              <div className="grid gap-4 p-4 sm:grid-cols-2 xl:grid-cols-3">
+                {loading ? (
+                  <p className="col-span-full py-10 text-center text-sm text-slate-500">Loading bills...</p>
+                ) : visibleBills.length === 0 ? (
+                  <p className="col-span-full py-10 text-center text-sm text-slate-500">{bills.length === 0 ? "No bills yet. Create your first bill." : "No bills match your search or payment filter."}</p>
+                ) : visibleBills.map((bill, index) => {
+                  const billCustomers = decodeArray(bill.customers);
+                  const billProducts = decodeArray(bill.products);
+                  return (
+                    <article key={bill.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="text-xs font-medium text-slate-400">Bill #{index + 1}</p>
+                          <h2 className="mt-1 truncate font-bold text-[#00695C]">{bill.invoice_no}</h2>
+                        </div>
+                        <span className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${bill.payment_type === "EXCHANGE_GOLD" ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"}`}>
+                          {bill.payment_type === "EXCHANGE_GOLD" ? "Exchange Gold" : "Full Payment"}
+                        </span>
+                      </div>
+                      <div className="mt-4 space-y-2 border-t border-slate-100 pt-3 text-sm">
+                        <p className="truncate text-slate-700">{billCustomers.map((customer) => customer.name).join(", ") || "No customer name"}</p>
+                        <p className="text-slate-500">{billProducts.length} item{billProducts.length === 1 ? "" : "s"} · {bill.created_at ? new Date(bill.created_at).toLocaleDateString("en-IN") : "—"}</p>
+                        <p className="text-lg font-extrabold text-slate-900">{currency(bill.total_amount)}</p>
+                      </div>
+                      <div className="mt-3 flex justify-end gap-1 border-t border-slate-100 pt-2">
+                        <button type="button" onClick={() => setViewingBill(bill)} className="rounded-md p-2 text-sky-700 hover:bg-sky-50" aria-label={`View bill ${bill.invoice_no}`} title="View"><FiEye /></button>
+                        <button type="button" onClick={() => editBill(bill)} className="rounded-md p-2 text-amber-700 hover:bg-amber-50" aria-label={`Edit bill ${bill.invoice_no}`} title="Edit"><FiEdit2 /></button>
+                        <button type="button" onClick={() => deleteBill(bill)} className="rounded-md p-2 text-rose-600 hover:bg-rose-50" aria-label={`Delete bill ${bill.invoice_no}`} title="Delete"><FiTrash2 /></button>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
           </section>
         </>
       ) : (
