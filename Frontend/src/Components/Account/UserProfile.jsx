@@ -42,33 +42,6 @@ const getWishlistImage = (item) => {
   return `${backendUrl}${image.startsWith("/") ? image : `/${image}`}`;
 };
 
-const productImage = (item) => {
-  const images = (() => {
-    try {
-      const parsed = typeof item.product_images === "string"
-        ? JSON.parse(item.product_images)
-        : item.product_images;
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  })();
-  const variants = (() => {
-    try {
-      const parsed = typeof item.variants === "string" ? JSON.parse(item.variants) : item.variants;
-      return Array.isArray(parsed) ? parsed : [];
-    } catch {
-      return [];
-    }
-  })();
-  const variantImage = variants.flatMap((variant) => Array.isArray(variant.images) ? variant.images : [])[0];
-  const image = item.image || variantImage || images[0];
-  if (!image || typeof image !== "string") return "";
-  if (/^(https?:|data:|blob:)/i.test(image)) return image;
-  const backendUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
-  return `${backendUrl}${image.startsWith("/") ? image : `/${image}`}`;
-};
-
 const STATUS_STYLES = {
   Active:    { bg: "rgba(0,100,60,0.1)",  text: "#006430", dot: "#22c55e" },
   Pending:   { bg: "rgba(217,164,65,0.15)", text: "#8c5e13", dot: "#f59e0b" },
