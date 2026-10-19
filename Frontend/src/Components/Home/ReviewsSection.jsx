@@ -34,7 +34,7 @@ const initials = (name = "") =>
     .join("");
 
 const ReviewCard = ({ review }) => (
-  <div className="flex h-full flex-col rounded-2xl bg-white p-5 shadow-sm"
+  <div className="flex h-full w-full flex-col rounded-2xl bg-white p-5 shadow-sm"
     style={{ border: "1px solid rgba(212,160,23,0.18)" }}>
     {/* Quote icon */}
     <FaQuoteLeft size={20} className="mb-3 shrink-0" style={{ color: "#D4A017", opacity: 0.6 }} />
@@ -153,9 +153,9 @@ const ReviewsSection = () => {
         ) : (
           <Swiper
             modules={[Autoplay]}
-            loop={reviews.length > 3}
+            loop={reviews.length > 5}
             autoplay={
-              reviews.length > 3
+              reviews.length > 5
                 ? { delay: 3000, disableOnInteraction: false, pauseOnMouseEnter: true }
                 : false
             }
@@ -163,18 +163,20 @@ const ReviewsSection = () => {
             slidesPerView={1}
             spaceBetween={16}
             breakpoints={{
-              640: { slidesPerView: 2 },
+              640:  { slidesPerView: 2 },
               1024: { slidesPerView: 3 },
-              1400: { slidesPerView: 4 },
+              1280: { slidesPerView: 4 },
+              1536: { slidesPerView: 5 },
             }}
             grabCursor
             centeredSlides={reviews.length === 1}
             className="!pb-2"
+            style={{ alignItems: "stretch" }}
           >
             {reviews.map((review) => (
-              <SwiperSlide key={review.id} className="h-auto">
+              <SwiperSlide key={review.id} style={{ height: "auto", display: "flex" }}>
                 <ReviewCard review={review} />
-            </SwiperSlide>
+              </SwiperSlide>
             ))}
           </Swiper>
         )}
