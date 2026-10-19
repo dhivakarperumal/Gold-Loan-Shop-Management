@@ -9,10 +9,12 @@ import {
   FaLock,
   FaSearch,
   FaSlidersH,
+  FaStar,
   FaTimes,
 } from "react-icons/fa";
 import api from "../../api";
 import ProductCard from "../Home/ProductCard";
+import { getProductImageUrl } from "../Home/productDisplay";
 
 const PAGE_SIZE = 100;
 const SORT_OPTIONS = [
@@ -24,6 +26,15 @@ const SORT_OPTIONS = [
 ];
 const QUICK_FILTERS = ["10", "20", "30", "40"];
 const RATINGS = [4, 3, 2, 1];
+const PRICE_RANGES = [
+  { label: "₹ 0 - 25K", minimum: 0, maximum: 25_000 },
+  { label: "₹ 25K - 50K", minimum: 25_000, maximum: 50_000 },
+  { label: "₹ 50K - 1L", minimum: 50_000, maximum: 100_000 },
+  { label: "₹ 1L - 5L", minimum: 100_000, maximum: 500_000 },
+  { label: "₹ 5L+", minimum: 500_000, maximum: null },
+];
+const PRICE_STEP = 1_000;
+const formatPriceLabel = (price) => `₹ ${Number(price).toLocaleString("en-IN")}`;
 
 const getProductPrice = (product) =>
   Number(product.offer_price ?? product.final_selling_price ?? product.mrp ?? 0);
@@ -66,6 +77,17 @@ const Explore = () => {
   const selectedCategories = searchParams.getAll("category");
   const selectedMetals = searchParams.getAll("metal");
   const subcategoryFilter = searchParams.get("subcategory")?.trim().toLowerCase() || "";
+  const priceSliderMaximum = useMemo(() => {
+    const highestProductPrice = products.reduce(
+      (highest, product) => Math.max(highest, getProductPrice(product)),
+      0
+    );
+    return Math.max(1_000_000, Math.ceil(highestProductPrice / 10_000) * 10_000);
+  }, [products]);
+  const minimumPriceValue = Math.min(Number(minimumPrice) || 0, priceSliderMaximum);
+  const maximumPriceValue = maximumPrice === ""
+    ? priceSliderMaximum
+    : Math.min(Number(maximumPrice), priceSliderMaximum);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -242,6 +264,18 @@ const Explore = () => {
     if (product.metal_type) counts[product.metal_type] = (counts[product.metal_type] || 0) + 1;
     return counts;
   }, {}), [products]);
+  const ratingCounts = useMemo(() => products.reduce((counts, product) => {
+    const rating = Number(product.rating) || 0;
+    RATINGS.forEach((minimumRatingValue) => {
+      if (rating >= minimumRatingValue) counts[minimumRatingValue] += 1;
+    });
+    return counts;
+  }, Object.fromEntries(RATINGS.map((rating) => [rating, 0]))), [products]);
+
+  const topSearchProducts = useMemo(
+    () => products.filter((product) => product.name).slice(0, 8),
+    [products]
+  );
 
   const filterSection = (key, title, content) => (
     <section className="border-b border-[#eee7dc] py-3 last:border-b-0">
@@ -271,8 +305,6 @@ const Explore = () => {
     </label>
   );
 
-  const topSearches = availableCategories.slice(0, 8).map((category) => category.name);
-
   return (
     <main className="min-h-screen bg-[#fffdf8] pb-12">
       <div className="border-b border-[#f0e9dd] bg-white">
@@ -284,8 +316,8 @@ const Explore = () => {
         </div>
       </div>
 
-      <div className="mx-auto max-w-[1700px] px-4 pt-4 sm:px-6 lg:px-8">
-        <section className="relative isolate min-h-[220px] overflow-hidden rounded-xl border border-[#d8b46c]/60 bg-[#f8e4b4] sm:min-h-[250px]">
+      <div className="mx-auto grid max-w-[1700px] items-start gap-x-4 px-4 pt-4 sm:px-6 lg:grid-cols-[220px_minmax(0,1fr)] lg:px-8 xl:grid-cols-[235px_minmax(0,1fr)]">
+        <section className="relative isolate min-h-[180px] overflow-hidden rounded-xl border border-[#d8b46c]/60 bg-[#f8e4b4] sm:min-h-[210px] lg:col-start-2 lg:row-start-1 lg:min-h-[155px]">
           <img
             src="/images/Hero/hero.png"
             alt=""
@@ -293,48 +325,57 @@ const Explore = () => {
           />
           <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#fff5df]/95 via-[#f7e3b9]/80 to-[#143e32]/10 sm:from-[#fff5df]/95 sm:via-[#f7e3b9]/65 sm:to-transparent" />
           <div className="pointer-events-none absolute inset-2 rounded-lg border border-[#d0a747]/50" />
-          <div className="relative z-10 flex min-h-[220px] flex-col justify-center px-6 py-6 sm:min-h-[250px] sm:px-10 lg:w-[62%] lg:px-14">
-            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#9b6b18]">Sri Golds · Since 1984</p>
-            <h1 className="mt-2 max-w-xl font-serif text-3xl font-bold leading-tight text-[#123c30] sm:text-4xl lg:text-5xl">
+          <div className="relative z-10 flex min-h-[180px] flex-col justify-center px-6 py-5 sm:min-h-[210px] sm:px-10 lg:min-h-[155px] lg:w-[62%] lg:px-7 lg:py-3">
+            <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-[#9b6b18]">Sri Golds · Since 1984</p>
+            <h1 className="mt-1 max-w-xl font-serif text-2xl font-bold leading-tight text-[#123c30] sm:text-3xl lg:text-[28px]">
               Explore Our<br className="hidden sm:block" /> Exclusive Collection
             </h1>
-            <p className="mt-2 max-w-lg text-sm text-[#514638] sm:text-base">Traditional designs for every special moment.</p>
-            <a href="#explore-products" className="mt-4 inline-flex w-fit items-center gap-2 rounded-md bg-gradient-to-r from-[#f2b936] to-[#ffda78] px-4 py-2.5 text-xs font-bold text-[#3d2910] shadow-sm transition hover:-translate-y-0.5">
+            <p className="mt-1 max-w-lg text-xs text-[#514638] sm:text-sm">Traditional designs for every special moment.</p>
+            <a href="#explore-products" className="mt-2 inline-flex w-fit items-center gap-2 rounded-md bg-gradient-to-r from-[#f2b936] to-[#ffda78] px-3.5 py-2 text-[10px] font-bold text-[#3d2910] shadow-sm transition hover:-translate-y-0.5">
               Shop collection <FaArrowRight />
             </a>
           </div>
-          <div className="absolute bottom-5 right-5 hidden flex-col gap-3 rounded-xl border border-white/40 bg-white/80 p-4 text-xs font-semibold text-[#273c32] shadow-sm backdrop-blur sm:flex lg:right-8">
+          <div className="absolute bottom-4 right-4 hidden flex-col gap-2 rounded-xl border border-white/40 bg-white/80 p-3 text-[10px] font-semibold text-[#273c32] shadow-sm backdrop-blur sm:flex lg:right-5 lg:top-1/2 lg:bottom-auto lg:-translate-y-1/2">
             <span className="flex items-center gap-2"><FaCheckCircle className="text-[#a77525]" /> Certified jewellery</span>
             <span className="flex items-center gap-2"><FaAward className="text-[#a77525]" /> Trusted quality</span>
             <span className="flex items-center gap-2"><FaLock className="text-[#a77525]" /> Secure shopping</span>
           </div>
         </section>
 
-        <section className="mt-5" aria-labelledby="top-searches-title">
-          <h2 id="top-searches-title" className="flex items-center gap-2 font-serif text-lg font-bold text-[#29231c]">
-            <FaSearch className="text-sm text-[#a77525]" /> Top Searches
+        <section className="mt-4 lg:col-start-2 lg:row-start-2 lg:mt-3" aria-labelledby="top-searches-title">
+          <h2 id="top-searches-title" className="flex items-center gap-2 font-serif text-base font-bold text-[#29231c]">
+            <FaSearch className="text-xs text-[#a77525]" /> Top Searches
           </h2>
-          {topSearches.length ? (
-            <div className="mt-2 flex gap-2 overflow-x-auto pb-2">
-              {topSearches.map((search) => (
+          {topSearchProducts.length ? (
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+              {topSearchProducts.map((product) => {
+                const productId = product.id ?? product.product_id ?? product.product_code ?? product.name;
+                const image = getProductImageUrl(product);
+                return (
                 <button
-                  key={search}
+                  key={productId}
                   type="button"
-                  onClick={() => setSearchFilter(searchQuery === search ? "" : search)}
-                  className={`flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2.5 text-xs font-semibold transition ${searchQuery === search ? "border-[#174a38] bg-[#edf5ef] text-[#174a38]" : "border-[#eee5d6] bg-white text-[#514638] hover:border-[#d8b46c] hover:bg-[#fffaf0]"}`}
+                  onClick={() => setSearchFilter(searchQuery === product.name ? "" : product.name)}
+                  title={product.name}
+                  className={`flex min-w-0 items-center gap-2 rounded-lg border px-2 py-2 text-left text-[10px] font-medium transition sm:text-[11px] ${searchQuery === product.name ? "border-[#174a38] bg-[#edf5ef] text-[#174a38]" : "border-[#eee5d6] bg-white text-[#514638] hover:border-[#d8b46c] hover:bg-[#fffaf0]"}`}
                 >
-                  <FaGem className="text-sm text-[#bd913e]" />
-                  {search}
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-[#f8f2e8]">
+                    {image
+                      ? <img src={image} alt="" loading="lazy" className="h-full w-full object-contain" />
+                      : <FaGem className="text-sm text-[#bd913e]" aria-hidden="true" />}
+                  </span>
+                  <span className="min-w-0 truncate">{product.name}</span>
                 </button>
-              ))}
+                );
+              })}
             </div>
           ) : (
-            <p className="mt-2 text-sm text-[#81786b]">Popular categories will appear here.</p>
+            <p className="mt-2 text-sm text-[#81786b]">Popular products will appear here.</p>
           )}
         </section>
 
-        <div id="explore-products" className="mt-4 grid scroll-mt-24 gap-5 lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[245px_minmax(0,1fr)]">
-          <aside className={`${filtersOpen ? "block" : "hidden"} h-fit rounded-xl border border-[#eee7dc] bg-white p-4 shadow-sm lg:block`}>
+        <div id="explore-products" className="mt-4 grid scroll-mt-24 gap-5 lg:contents">
+          <aside className={`${filtersOpen ? "block" : "hidden"} h-fit rounded-xl border border-[#eee7dc] bg-white p-4 shadow-sm lg:col-start-1 lg:row-start-1 lg:row-span-3 lg:block`}>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="flex items-center gap-2 font-serif text-lg font-bold text-[#29231c]"><FaSlidersH className="text-sm text-[#174a38]" /> Filters</h2>
               <button type="button" onClick={clearFilters} className="text-[11px] font-semibold text-[#a77525] hover:underline">Clear All</button>
@@ -371,42 +412,96 @@ const Explore = () => {
 
             {filterSection("price", "Price Range", (
               <>
-                <div className="grid grid-cols-2 gap-2">
-                  <label className="text-[10px] text-[#81786b]">
-                    Min (₹)
-                    <input
-                      type="number"
-                      min="0"
-                      value={minimumPrice}
-                      onChange={(event) => setMinimumPrice(event.target.value)}
-                      placeholder="0"
-                      className="mt-1 w-full rounded-md border border-[#e6dfd3] px-2 py-1.5 text-xs text-[#30271b] outline-none focus:border-[#174a38]"
+                <div className="px-1 pt-1">
+                  <div className="relative h-5">
+                    <span className="absolute left-0 right-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-[#eadfca]" />
+                    <span
+                      className="absolute top-1/2 h-1 -translate-y-1/2 rounded-full bg-[#d49a19]"
+                      style={{
+                        left: `${(minimumPriceValue / priceSliderMaximum) * 100}%`,
+                        right: `${100 - (maximumPriceValue / priceSliderMaximum) * 100}%`,
+                      }}
                     />
-                  </label>
-                  <label className="text-[10px] text-[#81786b]">
-                    Max (₹)
                     <input
-                      type="number"
+                      type="range"
                       min="0"
-                      value={maximumPrice}
-                      onChange={(event) => setMaximumPrice(event.target.value)}
-                      placeholder="No limit"
-                      className="mt-1 w-full rounded-md border border-[#e6dfd3] px-2 py-1.5 text-xs text-[#30271b] outline-none focus:border-[#174a38]"
+                      max={maximumPriceValue}
+                      step={PRICE_STEP}
+                      value={minimumPriceValue}
+                      aria-label="Minimum price"
+                      onChange={(event) => setMinimumPrice(event.target.value === "0" ? "" : event.target.value)}
+                      className="pointer-events-none absolute inset-0 h-5 w-full appearance-none bg-transparent [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:bg-[#c98b1b] [&::-webkit-slider-thumb]:shadow-[0_0_0_1px_#c98b1b] [&::-webkit-slider-thumb]:cursor-pointer [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:h-2.5 [&::-moz-range-thumb]:w-2.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:bg-[#c98b1b] [&::-moz-range-thumb]:shadow-[0_0_0_1px_#c98b1b] [&::-moz-range-thumb]:cursor-pointer"
                     />
-                  </label>
+                    <input
+                      type="range"
+                      min={minimumPriceValue}
+                      max={priceSliderMaximum}
+                      step={PRICE_STEP}
+                      value={maximumPriceValue}
+                      aria-label="Maximum price"
+                      onChange={(event) => setMaximumPrice(
+                        Number(event.target.value) >= priceSliderMaximum ? "" : event.target.value
+                      )}
+                      className="pointer-events-none absolute inset-0 h-5 w-full appearance-none bg-transparent [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:h-3.5 [&::-webkit-slider-thumb]:w-3.5 [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-white [&::-webkit-slider-thumb]:bg-[#c98b1b] [&::-webkit-slider-thumb]:shadow-[0_0_0_1px_#c98b1b] [&::-webkit-slider-thumb]:cursor-pointer [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:h-2.5 [&::-moz-range-thumb]:w-2.5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-white [&::-moz-range-thumb]:bg-[#c98b1b] [&::-moz-range-thumb]:shadow-[0_0_0_1px_#c98b1b] [&::-moz-range-thumb]:cursor-pointer"
+                    />
+                  </div>
+                  <div className="mt-1 flex justify-between text-[10px] text-[#70685d]">
+                    <span>{formatPriceLabel(minimumPriceValue)}</span>
+                    <span>{formatPriceLabel(priceSliderMaximum)}</span>
+                  </div>
                 </div>
                 {maximumPrice !== "" && minimumPrice !== "" && Number(minimumPrice) > Number(maximumPrice) && (
                   <p className="text-[11px] text-rose-700" role="alert">Minimum price must not exceed maximum.</p>
                 )}
+                <div className="grid grid-cols-2 gap-1.5 pt-1">
+                  {PRICE_RANGES.map((range) => {
+                    const selected = minimumPriceValue === range.minimum
+                      && (range.maximum === null
+                        ? maximumPrice === ""
+                        : maximumPriceValue === range.maximum);
+                    return (
+                      <button
+                        key={range.label}
+                        type="button"
+                        aria-pressed={selected}
+                        onClick={() => {
+                          setMinimumPrice(range.minimum === 0 ? "" : String(range.minimum));
+                          setMaximumPrice(range.maximum === null ? "" : String(range.maximum));
+                        }}
+                        className={`rounded-md border px-1.5 py-1.5 text-[9px] transition sm:text-[10px] ${selected ? "border-[#d49a19] bg-[#fff7e5] font-semibold text-[#765323]" : "border-[#eee9e0] bg-[#faf9f6] text-[#777066] hover:border-[#d8b46c] hover:bg-[#fffaf0]"}`}
+                      >
+                        {range.label}
+                      </button>
+                    );
+                  })}
+                </div>
               </>
             ))}
 
             {filterSection("rating", "Rating", (
-              RATINGS.map((rating) => checkboxOption(
-                `${rating} & above`,
-                minimumRating === rating,
-                () => setMinimumRating((current) => current === rating ? 0 : rating)
-              ))
+              <div className="space-y-1.5">
+                {RATINGS.map((rating) => (
+                  <label key={rating} className="flex cursor-pointer items-center gap-2 text-[10px] text-[#514b42]">
+                    <input
+                      type="checkbox"
+                      checked={minimumRating === rating}
+                      onChange={() => setMinimumRating((current) => current === rating ? 0 : rating)}
+                      className="h-3.5 w-3.5 shrink-0 accent-[#c98b1b]"
+                      aria-label={`${rating} stars and above`}
+                    />
+                    <span className="flex items-center gap-0.5" aria-hidden="true">
+                      {Array.from({ length: 5 }, (_, index) => (
+                        <FaStar
+                          key={index}
+                          className={`text-[11px] ${index < rating ? "text-[#e6a323]" : "text-[#dedbd5]"}`}
+                        />
+                      ))}
+                    </span>
+                    <span className="whitespace-nowrap">{rating} &amp; above</span>
+                    <span className="ml-auto text-[10px] text-[#9a9286]">({ratingCounts[rating]})</span>
+                  </label>
+                ))}
+              </div>
             ))}
 
             {filterSection("availability", "Availability", (
@@ -417,7 +512,7 @@ const Explore = () => {
             ))}
           </aside>
 
-          <section className="min-w-0">
+          <section className="min-w-0 lg:col-start-2 lg:row-start-3">
             <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2">
@@ -460,9 +555,9 @@ const Explore = () => {
             ) : error ? (
               <p className="rounded-xl border border-rose-200 bg-white py-16 text-center text-sm text-rose-700" role="alert">{error}</p>
             ) : filteredProducts.length ? (
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4 2xl:grid-cols-5">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
                 {filteredProducts.map((product) => (
-                  <ProductCard key={product.id ?? product.product_id ?? product.product_code} product={product} />
+                  <ProductCard key={product.id ?? product.product_id ?? product.product_code} product={product} variant="explore" />
                 ))}
               </div>
             ) : (
