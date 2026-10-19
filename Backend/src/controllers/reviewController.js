@@ -61,6 +61,18 @@ async function getReviews(req, res, next) {
   }
 }
 
+// Public: returns only Published reviews for homepage display
+async function getPublishedReviews(req, res, next) {
+  const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 50);
+  try {
+    const result = await listReviews({ status: 'Published', rating: 0, search: '' });
+    return res.json({ reviews: result.reviews.slice(0, limit) });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+
 async function postReview(req, res, next) {
   const { review, error } = normalizeReview(req.body || {});
   if (error) return res.status(400).json({ message: error });
@@ -140,6 +152,7 @@ async function cleanFailedReviewUpload(req, res, next) {
 module.exports = {
   cleanFailedReviewUpload,
   getReviews,
+  getPublishedReviews,
   normalizeReview,
   postReview,
   postReviewUpload,
@@ -147,3 +160,4 @@ module.exports = {
   putReviewStatus,
   removeReview
 };
+
