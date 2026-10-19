@@ -1,7 +1,14 @@
-import { FiArrowRight, FiPrinter, FiSettings, FiUsers } from "react-icons/fi";
+import { FiArrowRight, FiPrinter, FiSettings, FiUsers, FiLayout } from "react-icons/fi";
 import { Link } from "react-router-dom";
 
 const settingsLinks = [
+    {
+        title: "Home Product Sections",
+        description: "Choose which metal collections appear on the storefront home page and arrange their order.",
+        path: "/admin/settings/home-sections",
+        label: "Customize home page",
+        icon: <FiLayout />
+    },
     {
         title: "Daily Gold Rate",
         description: "Manage audited Gold, Silver, Platinum and Diamond rates used for billing and product calculations.",
