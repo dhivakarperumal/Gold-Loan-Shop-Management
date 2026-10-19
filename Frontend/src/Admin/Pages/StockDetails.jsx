@@ -2,6 +2,8 @@ import React, { useState, useEffect, useContext } from "react";
 import { createPortal } from "react-dom";
 import { useAdmin } from "../../PrivateRouter/AdminContext";
 import api from "../../api";
+import { formatRateDate, getRateForPurity } from "../../PrivateRouter/goldRateUtils";
+import useGoldRates from "../../PrivateRouter/useGoldRates";
 import { toast, Toaster } from "react-hot-toast";
 import {
     FiBox,
@@ -22,6 +24,7 @@ import { useNavigate, Link } from "react-router-dom";
 const StockDetails = () => {
     const navigate = useNavigate();
     const { stockCache, setStockCached } = useAdmin();
+    const { current: activeRateSet, loading: ratesLoading, error: ratesError } = useGoldRates();
 
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
@@ -117,6 +120,11 @@ const StockDetails = () => {
 
     const totalPages = pagination.totalPages;
     const currentItems = products;
+    const visibleStockMetalValue = products.reduce((total, product) => {
+        const rate = getRateForPurity(activeRateSet, product.purity);
+        const count = Number(product.total_stock ?? product.stock ?? 0);
+        return total + (Number(product.net_gold_weight) || 0) * count * (Number(rate?.rate_per_gram) || 0);
+    }, 0);
 
     // Reset page 1 on search
     useEffect(() => {
@@ -259,6 +267,19 @@ const StockDetails = () => {
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-10">
             <Toaster position="top-right" />
+
+            <section className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                        <p className="text-xs font-bold uppercase tracking-wide text-emerald-800">Current-page stock metal estimate</p>
+                        <p className="mt-1 text-lg font-extrabold text-[#003B3B]">
+                            {ratesLoading ? "Refreshing active rates..." : activeRateSet ? `₹${visibleStockMetalValue.toLocaleString("en-IN", { maximumFractionDigits: 2 })}` : "No active gold rate"}
+                        </p>
+                        <p className="text-xs text-slate-500">{activeRateSet ? `Based on listed items' net gold weight × quantity × current purity rate · ${formatRateDate(activeRateSet.rate_date)}` : "Activate global rates to value gold stock."}</p>
+                    </div>
+                    {ratesError && <p role="alert" className="text-xs font-semibold text-rose-700">Rate refresh failed: {ratesError}</p>}
+                </div>
+            </section>
 
            
             

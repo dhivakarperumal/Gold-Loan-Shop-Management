@@ -11,6 +11,8 @@ import {
   FiX
 } from "react-icons/fi";
 import api from "../../api";
+import { formatRateDate, getRateForPurity } from "../../PrivateRouter/goldRateUtils";
+import useGoldRates from "../../PrivateRouter/useGoldRates";
 
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
 const GOLD_SHOP = "Sri Gold";
@@ -31,6 +33,7 @@ const EMPTY_PRODUCT = {
   wastage_type: "Percentage",
   wastage: "",
   stone_weight: "0",
+  stone_charges: "0",
   stone_type: "None",
   huid: "",
   available_sizes: [],
@@ -125,9 +128,11 @@ const AddProducts = () => {
   const [categories, setCategories] = useState([]);
   const [metals, setMetals] = useState([]);
   const [formData, setFormData] = useState(EMPTY_PRODUCT);
+  const [originalPurity, setOriginalPurity] = useState(null);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(isEdit);
   const [uploading, setUploading] = useState(false);
+  const { current: activeRateSet, loading: ratesLoading, error: ratesError } = useGoldRates();
 
   useEffect(() => {
     let active = true;
@@ -150,6 +155,7 @@ const AddProducts = () => {
         setMetals(metalList.filter((metal) => metal.status === "Active"));
         if (isEdit) {
           const product = productResponse.data;
+          setOriginalPurity(product.purity || "");
           setFormData({
             ...EMPTY_PRODUCT,
             ...product,
@@ -184,12 +190,30 @@ const AddProducts = () => {
     return () => { active = false; };
   }, [id, isEdit]);
 
+  const activePurityRate = getRateForPurity(activeRateSet, formData.purity);
+  const purityChanged = isEdit && originalPurity !== null && formData.purity !== originalPurity;
+  const effectiveGoldRate = (!isEdit || purityChanged) && activePurityRate
+    ? Number(activePurityRate.rate_per_gram)
+    : Number(formData.gold_rate_per_gram) || 0;
+  const effectiveMakingChargeType = !isEdit && !formData.making_charge && activeRateSet
+    ? activeRateSet.making_charge_type
+    : formData.making_charge_type;
+  const effectiveMakingCharge = !isEdit && !formData.making_charge && activeRateSet
+    ? String(activeRateSet.making_charge_value)
+    : formData.making_charge;
+  const effectiveWastage = !isEdit && !formData.wastage && activeRateSet
+    ? String(activeRateSet.wastage_percentage)
+    : formData.wastage;
+  const effectiveWastageType = !isEdit && !formData.wastage && activeRateSet
+    ? "Percentage"
+    : formData.wastage_type;
+
   const selectedCategory = categories.find((category) => category.name === formData.category);
   const subcategories = Array.isArray(selectedCategory?.subcategory) ? selectedCategory.subcategory : [];
 
   const goldValue = useMemo(
-    () => (Number(formData.net_gold_weight) || 0) * (Number(formData.gold_rate_per_gram) || 0),
-    [formData.net_gold_weight, formData.gold_rate_per_gram]
+    () => (Number(formData.net_gold_weight) || 0) * effectiveGoldRate,
+    [formData.net_gold_weight, effectiveGoldRate]
   );
 
   const pricing = useMemo(() => {
@@ -202,6 +226,24 @@ const AddProducts = () => {
       : offerPrice * (1 + gstRate / 100);
     return { offerPrice, discount, finalPrice };
   }, [formData.mrp, formData.offer, formData.gst_rate, formData.price_includes_gst]);
+
+  const estimatedPrice = useMemo(() => {
+    const metalValue = goldValue;
+    const makingCharge = effectiveMakingChargeType === "Percentage"
+      ? metalValue * (Number(effectiveMakingCharge) || 0) / 100
+      : Number(effectiveMakingCharge) || 0;
+    const wastageWeight = effectiveWastageType === "Percentage"
+      ? (Number(formData.net_gold_weight) || 0) * (Number(effectiveWastage) || 0) / 100
+      : Number(effectiveWastage) || 0;
+    const wastageCharge = wastageWeight * effectiveGoldRate;
+    const subtotal = metalValue + makingCharge + wastageCharge + (Number(formData.stone_charges) || 0);
+    const tax = subtotal * (Number(formData.gst_rate) || 0) / 100;
+    return {
+      metalValue, makingCharge, wastageCharge,
+      stoneCharges: Number(formData.stone_charges) || 0,
+      tax, total: formData.price_includes_gst ? subtotal : subtotal + tax
+    };
+  }, [effectiveGoldRate, effectiveMakingCharge, effectiveMakingChargeType, effectiveWastage, effectiveWastageType, formData, goldValue]);
 
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target;
@@ -297,10 +339,13 @@ const AddProducts = () => {
       final_selling_price: Number(finalPrice.toFixed(2)),
       gross_weight: Number(formData.gross_weight) || 0,
       net_gold_weight: Number(formData.net_gold_weight) || 0,
-      gold_rate_per_gram: Number(formData.gold_rate_per_gram) || 0,
-      making_charge: Number(formData.making_charge) || 0,
-      wastage: Number(formData.wastage) || 0,
+      gold_rate_per_gram: effectiveGoldRate,
+      making_charge_type: effectiveMakingChargeType,
+      making_charge: Number(effectiveMakingCharge) || 0,
+      wastage_type: effectiveWastageType,
+      wastage: Number(effectiveWastage) || 0,
       stone_weight: Number(formData.stone_weight) || 0,
+      stone_charges: Number(formData.stone_charges) || 0,
       rating: Number(formData.rating) || 0,
       total_reviews: Number(formData.total_reviews) || 0,
       price_includes_gst: Boolean(formData.price_includes_gst),
@@ -377,19 +422,31 @@ const AddProducts = () => {
               <SelectField label="Purity" name="purity" value={formData.purity} onChange={handleChange} options={["18K / 750", "20K", "22K / 916", "24K / 999", "Other"]} />
               <Field label="Gross Weight (g)" name="gross_weight" type="number" min="0" step="0.001" value={formData.gross_weight} onChange={handleChange} placeholder="10" />
               <Field label="Net Gold Weight (g)" name="net_gold_weight" type="number" min="0" step="0.001" value={formData.net_gold_weight} onChange={handleChange} placeholder="10" />
-              <Field label="Gold Rate / Gram (₹)" name="gold_rate_per_gram" type="number" min="0" step="0.01" value={formData.gold_rate_per_gram} onChange={handleChange} placeholder="Current shop rate" />
-              <SelectField label="Making Charge Type" name="making_charge_type" value={formData.making_charge_type} onChange={handleChange} options={["Percentage", "Fixed Amount"]} />
-              <Field label={formData.making_charge_type === "Percentage" ? "Making Charge (%)" : "Making Charge (₹)"} name="making_charge" type="number" min="0" step="0.01" value={formData.making_charge} onChange={handleChange} placeholder={formData.making_charge_type === "Percentage" ? "10" : "500"} />
-              <SelectField label="Wastage Type" name="wastage_type" value={formData.wastage_type} onChange={handleChange} options={["Percentage", "Grams"]} />
-              <Field label={formData.wastage_type === "Percentage" ? "Wastage (%)" : "Wastage (g)"} name="wastage" type="number" min="0" step="0.001" value={formData.wastage} onChange={handleChange} placeholder={formData.wastage_type === "Percentage" ? "e.g. 5" : "e.g. 0.5"} />
+              <Field label="Gold Rate / Gram (₹)" name="gold_rate_per_gram" type="number" min="0" step="0.01" value={effectiveGoldRate || ""} onChange={handleChange} placeholder={ratesLoading ? "Loading current rate..." : "No active rate"} readOnly />
+              <SelectField label="Making Charge Type" name="making_charge_type" value={effectiveMakingChargeType} onChange={handleChange} options={["Percentage", "Fixed Amount"]} />
+              <Field label={effectiveMakingChargeType === "Percentage" ? "Making Charge (%)" : "Making Charge (₹)"} name="making_charge" type="number" min="0" step="0.01" value={effectiveMakingCharge} onChange={handleChange} placeholder={effectiveMakingChargeType === "Percentage" ? "10" : "500"} />
+              <SelectField label="Wastage Type" name="wastage_type" value={effectiveWastageType} onChange={handleChange} options={["Percentage", "Grams"]} />
+              <Field label={effectiveWastageType === "Percentage" ? "Wastage (%)" : "Wastage (g)"} name="wastage" type="number" min="0" step="0.001" value={effectiveWastage} onChange={handleChange} placeholder={effectiveWastageType === "Percentage" ? "e.g. 5" : "e.g. 0.5"} />
               <Field label="Stone Weight (g)" name="stone_weight" type="number" min="0" step="0.001" value={formData.stone_weight} onChange={handleChange} placeholder="0" />
+              <Field label="Stone Charges (₹)" name="stone_charges" type="number" min="0" step="0.01" value={formData.stone_charges} onChange={handleChange} placeholder="0" />
               <SelectField label="Stone Type" name="stone_type" value={formData.stone_type} onChange={handleChange} options={["None", "Diamond", "Ruby", "Other"]} />
               <Field label="Hallmark / HUID" name="huid" value={formData.huid} onChange={handleChange} placeholder="Verified HUID" />
             </div>
-            {goldValue > 0 && (
-              <p className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">
-                Estimated gold value: ₹{goldValue.toLocaleString("en-IN", { maximumFractionDigits: 2 })}
+            {activeRateSet && (
+              <p className="mt-4 rounded-xl bg-emerald-50 px-4 py-3 text-xs font-semibold text-emerald-900">
+                Active global gold rates · effective {formatRateDate(activeRateSet.rate_date)}. Existing product rate snapshots remain unchanged.
               </p>
+            )}
+            {ratesError && <p role="alert" className="mt-3 rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">Could not refresh rates: {ratesError}</p>}
+            {!ratesLoading && !ratesError && !activePurityRate && formData.net_gold_weight && (
+              <p role="alert" className="mt-3 rounded-lg bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">No active rate matches this purity. Save and activate it under Settings → Daily Gold Rate.</p>
+            )}
+            {goldValue > 0 && (
+              <div className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-950">
+                <p className="font-bold">Estimated jewellery price: ₹{estimatedPrice.total.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</p>
+                <p className="mt-1 text-xs">Metal ₹{estimatedPrice.metalValue.toFixed(2)} + making ₹{estimatedPrice.makingCharge.toFixed(2)} + wastage ₹{estimatedPrice.wastageCharge.toFixed(2)} + stones ₹{estimatedPrice.stoneCharges.toFixed(2)} + applicable tax ₹{estimatedPrice.tax.toFixed(2)}{formData.price_includes_gst ? " (included)" : ""}.</p>
+                <p className="mt-1 text-xs">This estimate does not change the entered MRP or existing offer/tax calculation.</p>
+              </div>
             )}
           </Section>
 

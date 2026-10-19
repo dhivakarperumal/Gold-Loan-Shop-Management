@@ -27,8 +27,9 @@ const DOCUMENT_TYPES = new Set([
 ]);
 const DOCUMENT_SIDES = new Set(['front', 'back']);
 const FIELDS = [
-  'customer_type', 'full_name', 'mobile', 'alternate_mobile', 'date_of_birth',
+  'customer_type', 'full_name', 'mobile', 'alternate_mobile', 'email', 'date_of_birth',
   'gender', 'occupation', 'address', 'city', 'district', 'state', 'pincode',
+  'guarantor_name', 'guarantor_mobile', 'guarantor_email', 'guarantor_relationship', 'guarantor_address',
   'kyc_status', 'photo_url', 'notes'
 ];
 const MAX_LENGTHS = {
@@ -36,12 +37,17 @@ const MAX_LENGTHS = {
   full_name: 150,
   mobile: 15,
   alternate_mobile: 15,
+  email: 254,
+  guarantor_email: 254,
   gender: 30,
   occupation: 100,
   city: 100,
   district: 100,
   state: 100,
   pincode: 10,
+  guarantor_name: 150,
+  guarantor_mobile: 15,
+  guarantor_relationship: 100,
   kyc_status: 20
 };
 
@@ -65,13 +71,24 @@ function normalizeCustomer(body) {
   if (!customer.full_name || !customer.mobile) {
     return { error: 'Customer name and primary mobile are required' };
   }
+  const requiredFields = [
+    'email', 'gender', 'address', 'city', 'district', 'state', 'pincode',
+    'guarantor_name', 'guarantor_mobile', 'guarantor_relationship', 'guarantor_address'
+  ];
+  const missingField = requiredFields.find((field) => !customer[field]);
+  if (missingField) {
+    return { error: `${missingField.replaceAll('_', ' ')} is required` };
+  }
+  if (customer.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email)) {
+    return { error: 'Enter a valid email address' };
+  }
   if (!CUSTOMER_TYPES.has(customer.customer_type)) {
     return { error: 'Customer type must be Individual or Business' };
   }
   if (!KYC_STATUSES.has(customer.kyc_status)) {
     return { error: 'KYC status must be Pending, Verified, or Rejected' };
   }
-  if (![customer.mobile, customer.alternate_mobile].filter(Boolean).every((phone) => /^[+\d][\d\s()-]{5,14}$/.test(phone))) {
+  if (![customer.mobile, customer.alternate_mobile, customer.guarantor_mobile].filter(Boolean).every((phone) => /^[+\d][\d\s()-]{5,14}$/.test(phone))) {
     return { error: 'Enter a valid mobile number' };
   }
   if (customer.date_of_birth && !/^\d{4}-\d{2}-\d{2}$/.test(customer.date_of_birth)) {
@@ -262,6 +279,18 @@ async function putCustomer(req, res, next) {
   }
 }
 
+async function verifyCustomerKyc(req, res, next) {
+  if (!validId(req.params.id)) return res.status(400).json({ message: 'Customer ID is invalid' });
+  try {
+    const existing = await getLoanCustomerById(req.params.id);
+    if (!existing) return res.status(404).json({ message: 'Customer not found' });
+    if (existing.kyc_status === 'Verified') return res.json(existing);
+    return res.json(await updateLoanCustomer(req.params.id, { kyc_status: 'Verified' }));
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function removeCustomer(req, res, next) {
   if (!validId(req.params.id)) return res.status(400).json({ message: 'Customer ID is invalid' });
   try {
@@ -291,6 +320,7 @@ module.exports = {
   postCustomerDocuments,
   postCustomerPhoto,
   putCustomer,
+  verifyCustomerKyc,
   removeCustomerDocument,
   removeCustomer
 };

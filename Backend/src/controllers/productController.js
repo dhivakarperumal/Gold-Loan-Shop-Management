@@ -7,19 +7,20 @@ const {
   updateProduct
 } = require('../modules/productModule');
 const { isValidProductFile, removeProductFiles } = require('../middleware/productUpload');
+const { findGoldRateForPurity, getCurrentGoldRates } = require('../modules/goldRateModule');
 
 const JSON_FIELDS = new Set(['available_sizes', 'highlights', 'images', 'variants']);
 const BOOLEAN_FIELDS = new Set(['price_includes_gst', 'featured', 'new_arrival', 'best_seller']);
 const NUMBER_FIELDS = new Set([
   'mrp', 'offer', 'offer_price', 'rating', 'total_stock', 'gross_weight',
   'net_gold_weight', 'gold_rate_per_gram', 'making_charge', 'wastage',
-  'stone_weight', 'discount', 'gst_rate', 'final_selling_price', 'total_reviews'
+  'stone_weight', 'stone_charges', 'discount', 'gst_rate', 'final_selling_price', 'total_reviews'
 ]);
 const ALLOWED_FIELDS = new Set([
   'product_code', 'name', 'brand', 'category', 'subcategory', 'metal_type', 'product_type',
   'description', 'full_description', 'purity', 'gross_weight', 'net_gold_weight',
   'gold_rate_per_gram', 'making_charge_type', 'making_charge', 'wastage_type',
-  'wastage', 'stone_weight', 'stone_type', 'huid', 'available_sizes',
+  'wastage', 'stone_weight', 'stone_charges', 'stone_type', 'huid', 'available_sizes',
   'product_size', 'length', 'width', 'height', 'ring_size', 'bangle_size',
   'chain_length', 'size_guide_chart', 'mrp', 'offer', 'offer_price', 'discount',
   'gst_rate', 'final_selling_price', 'price_includes_gst', 'highlights',
@@ -131,6 +132,13 @@ async function postProduct(req, res, next) {
   const { product, error } = normalizeProduct(req.body || {});
   if (error) return res.status(400).json({ message: error });
   try {
+    if (Number(product.net_gold_weight) > 0) {
+      const activeRateSet = await getCurrentGoldRates();
+      const activeRate = findGoldRateForPurity(activeRateSet, product.purity);
+      if (!activeRate) return res.status(409).json({ message: 'No active gold rate matches this product purity. Configure and activate the daily gold rates first.' });
+      product.gold_rate_per_gram = activeRate.rate_per_gram;
+      product.gold_rate_date = activeRateSet.rate_date;
+    }
     return res.status(201).json(await createProduct(product));
   } catch (createError) {
     if (createError.code === 'ER_DUP_ENTRY') return res.status(409).json({ message: 'This SKU already exists' });
@@ -144,7 +152,18 @@ async function putProduct(req, res, next) {
   const { product, error } = normalizeProduct(req.body || {});
   if (error) return res.status(400).json({ message: error });
   try {
-    if (!await getProductById(id)) return res.status(404).json({ message: 'Product not found' });
+    const existingProduct = await getProductById(id);
+    if (!existingProduct) return res.status(404).json({ message: 'Product not found' });
+    if (Number(product.net_gold_weight) > 0 && existingProduct.purity !== product.purity) {
+      const activeRateSet = await getCurrentGoldRates();
+      const activeRate = findGoldRateForPurity(activeRateSet, product.purity);
+      if (!activeRate) return res.status(409).json({ message: 'No active gold rate matches the updated product purity.' });
+      product.gold_rate_per_gram = activeRate.rate_per_gram;
+      product.gold_rate_date = activeRateSet.rate_date;
+    } else {
+      product.gold_rate_per_gram = existingProduct.gold_rate_per_gram;
+      product.gold_rate_date = existingProduct.gold_rate_date;
+    }
     return res.json(await updateProduct(id, product));
   } catch (updateError) {
     if (updateError.code === 'ER_DUP_ENTRY') return res.status(409).json({ message: 'This SKU already exists' });
