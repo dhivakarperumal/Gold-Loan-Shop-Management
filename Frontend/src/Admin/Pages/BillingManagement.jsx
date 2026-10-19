@@ -372,14 +372,25 @@ export default function BillingManagement() {
     const catalogProduct = catalogProductDetails.find(
       (item) => String(item.id) === String(product.product_id)
     );
+    const useCatalogMakingCharge = !(Number(product.making_charge) > 0)
+      && Number(catalogProduct?.making_charge) > 0;
+    const catalogRate = Number(catalogProduct?.gold_rate_per_gram);
     return resolveProductDetails({
       ...product,
       metal_type: product.metal_type || catalogProduct?.metal_type,
       gross_weight: product.gross_weight ?? catalogProduct?.gross_weight,
       net_gold_weight: product.net_gold_weight ?? catalogProduct?.net_gold_weight,
-      making_charge_type: product.making_charge_type || catalogProduct?.making_charge_type,
-      making_charge: product.making_charge ?? catalogProduct?.making_charge,
-      rate_per_gram: product.rate_per_gram ?? catalogProduct?.gold_rate_per_gram,
+      making_charge_type: useCatalogMakingCharge
+        ? catalogProduct.making_charge_type
+        : product.making_charge_type || catalogProduct?.making_charge_type,
+      making_charge: useCatalogMakingCharge
+        ? catalogProduct.making_charge
+        : product.making_charge ?? catalogProduct?.making_charge,
+      rate_per_gram: Number(product.rate_per_gram) > 0
+        ? product.rate_per_gram
+        : Number.isFinite(catalogRate) && catalogRate > 0
+          ? catalogRate
+          : product.rate_per_gram ?? catalogProduct?.gold_rate_per_gram,
       rate_unit: product.rate_unit || catalogProduct?.rate_unit
     }, metalRates, currentGoldRates);
   };
@@ -1316,7 +1327,6 @@ export default function BillingManagement() {
                       <td className="px-3 py-2">{exchange.product_name || "Exchange item"}</td>
                       <td className="px-3 py-2">{exchange.category || "—"}</td>
                       <td className="px-3 py-2">{exchange.metal_type} {exchange.purity}</td>
-                      <td className="px-3 py-2 text-right">—</td>
                       <td className="px-3 py-2 text-right">—</td>
                       <td className="px-3 py-2 text-right">{formatWeight(exchange.weight, exchange.weight_unit === "carat" ? "carat" : "g")}</td>
                       <td className="px-3 py-2 text-right">{formatWeight(exchange.wastage_weight, exchange.weight_unit === "carat" ? "carat" : "g")}</td>
