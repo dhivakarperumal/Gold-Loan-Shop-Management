@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { FiHeart, FiShoppingCart, FiX, FiTrash2 } from "react-icons/fi";
+import { FiHeart, FiX, FiTrash2 } from "react-icons/fi";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 
 const resolveImageUrl = (image) => {
@@ -10,9 +10,8 @@ const resolveImageUrl = (image) => {
 };
 
 const WishlistDrawer = ({ isOpen, onClose }) => {
-  const { wishlist, loadingWishlist, toggleWishlist, addToCart } = useContext(StoreContext);
+  const { wishlist, loadingWishlist, toggleWishlist } = useContext(StoreContext);
   const navigate = useNavigate();
-  const [quantities, setQuantities] = useState({});
 
   useEffect(() => {
     if (!isOpen) return undefined;
@@ -28,26 +27,6 @@ const WishlistDrawer = ({ isOpen, onClose }) => {
   const goTo = (path) => {
     onClose();
     navigate(path);
-  };
-
-  const handleAddToCart = async (item) => {
-    const matchingVariant = item.variants?.find(
-      (variant) => variant.color === item.colorName || variant.colorName === item.colorName,
-    ) || item.variants?.[0] || null;
-    await addToCart(item, matchingVariant, item.size, quantities[item.id] || 1);
-  };
-
-  const handleAddAllToCart = async () => {
-    for (const item of wishlist) {
-      await handleAddToCart(item);
-    }
-  };
-
-  const updateQuantity = (itemId, amount) => {
-    setQuantities((current) => ({
-      ...current,
-      [itemId]: Math.max(1, (current[itemId] || 1) + amount),
-    }));
   };
 
   return (
@@ -114,37 +93,6 @@ const WishlistDrawer = ({ isOpen, onClose }) => {
                       {item.colorName && <span>Color: {item.colorName}</span>}
                       {item.size && <span>Size: {item.size}</span>}
                     </div>
-                    <div className="mt-2 flex w-full items-center justify-between gap-2">
-                      <div className="flex h-8 w-24 items-center overflow-hidden rounded-lg border border-gray-200">
-                        <button
-                          type="button"
-                          onClick={() => updateQuantity(item.id, -1)}
-                          disabled={(quantities[item.id] || 1) <= 1}
-                          aria-label="Decrease quantity"
-                          className="flex h-full flex-1 items-center justify-center text-gray-600 transition hover:bg-gray-100 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          −
-                        </button>
-                        <span className="w-8 text-center text-xs font-semibold text-gray-700">{quantities[item.id] || 1}</span>
-                        <button
-                          type="button"
-                          onClick={() => updateQuantity(item.id, 1)}
-                          aria-label="Increase quantity"
-                          className="flex h-full flex-1 items-center justify-center text-gray-600 transition hover:bg-gray-100"
-                        >
-                          +
-                        </button>
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleAddToCart(item)}
-                        title="Add to Cart"
-                        aria-label={`Add ${item.name || "item"} to cart`}
-                        className="ml-auto rounded-lg bg-primary p-2 text-white transition hover:bg-primary-dark"
-                      >
-                        <FiShoppingCart size={16} />
-                      </button>
-                    </div>
                   </div>
                 </div>
               ))}
@@ -154,9 +102,6 @@ const WishlistDrawer = ({ isOpen, onClose }) => {
 
         {wishlist.length > 0 && !loadingWishlist && (
           <div className="space-y-2 border-t border-gray-100 bg-white px-5 py-4">
-            <button type="button" onClick={handleAddAllToCart} className="w-full rounded-lg bg-primary py-3 text-sm font-semibold text-white transition hover:bg-primary-dark">
-              Add All Products to Cart
-            </button>
             <button type="button" onClick={() => goTo("/explore")} className="w-full rounded-lg border border-primary py-3 text-sm font-semibold text-primary transition hover:bg-primary/10">
               Continue Shopping
             </button>
