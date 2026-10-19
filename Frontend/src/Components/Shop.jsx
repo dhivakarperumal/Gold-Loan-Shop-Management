@@ -6,47 +6,90 @@ import { StoreContext } from "../PrivateRouter/StoreContext";
 import { getProductImageUrl } from "./Home/productDisplay";
 
 const Shop = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [search, setSearch] = useState("");
   const { addToCart, toggleWishlist, wishlist } = useContext(StoreContext);
+  const categoryFilter = searchParams.get("category")?.trim() || "";
+  const subcategoryFilter = searchParams.get("subcategory")?.trim() || "";
   const metalFilter = searchParams.get("metal")?.trim().toLowerCase() || "";
+  const search = searchParams.get("search")?.trim() || "";
 
   useEffect(() => {
     const controller = new AbortController();
 
-    api.get("/products", {
-      params: { page: 1, limit: 100, status: "Active" },
-      signal: controller.signal,
-    }).then(({ data }) => {
-      if (!Array.isArray(data?.products)) {
-        throw new TypeError("The products response must contain a products array");
+    const loadProducts = async () => {
+      try {
+        const firstResponse = await api.get("/products", {
+          params: { page: 1, limit: 100, status: "Active" },
+          signal: controller.signal,
+        });
+        if (!Array.isArray(firstResponse.data?.products)) {
+          throw new TypeError("The products response must contain a products array");
+        }
+
+        const totalPages = Math.max(1, Number(firstResponse.data.pagination?.totalPages) || 1);
+        const additionalResponses = await Promise.all(
+          Array.from({ length: totalPages - 1 }, (_, index) =>
+            api.get("/products", {
+              params: { page: index + 2, limit: 100, status: "Active" },
+              signal: controller.signal,
+            })
+          )
+        );
+        const allResponses = [firstResponse, ...additionalResponses];
+        const allProducts = allResponses.flatMap(({ data }) => {
+          if (!Array.isArray(data?.products)) {
+            throw new TypeError("A products page did not contain a products array");
+          }
+          return data.products;
+        });
+
+        setProducts(allProducts.filter((product) => !product.status || product.status === "Active"));
+        setError("");
+      } catch (fetchError) {
+        if (controller.signal.aborted) return;
+        console.error("Failed to load shop products:", fetchError);
+        setError("Products could not be loaded. Please try again.");
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
       }
-      setProducts(data.products.filter((product) => !product.status || product.status === "Active"));
-      setError("");
-    }).catch((fetchError) => {
-      if (controller.signal.aborted) return;
-      console.error("Failed to load shop products:", fetchError);
-      setError("Products could not be loaded. Please try again.");
-    }).finally(() => {
-      if (!controller.signal.aborted) setLoading(false);
-    });
+    };
+
+    loadProducts();
 
     return () => controller.abort();
   }, []);
 
   const visibleProducts = useMemo(() => products.filter((product) => {
-    const fields = [product.name, product.category, product.subcategory, product.metal_type, product.purity];
-    const matchesMetal = !metalFilter || fields.some((value) =>
-      String(value || "").toLowerCase().includes(metalFilter)
-    );
+    const matchesCategory = !categoryFilter
+      || String(product.category || "").trim().toLowerCase() === categoryFilter.toLowerCase();
+    const matchesSubcategory = !subcategoryFilter
+      || String(product.subcategory || "").trim().toLowerCase() === subcategoryFilter.toLowerCase();
+    const matchesMetal = !metalFilter
+      || String(product.metal_type || "").trim().toLowerCase() === metalFilter;
+    const fields = [
+      product.name,
+      product.product_code,
+      product.brand,
+      product.category,
+      product.subcategory,
+      product.metal_type,
+      product.product_type,
+      product.purity,
+    ];
     const matchesSearch = !search.trim() || fields.some((value) =>
       String(value || "").toLowerCase().includes(search.trim().toLowerCase())
     );
-    return matchesMetal && matchesSearch;
-  }), [metalFilter, products, search]);
+    return matchesCategory && matchesSubcategory && matchesMetal && matchesSearch;
+  }), [categoryFilter, metalFilter, products, search, subcategoryFilter]);
+
+  const activeFilters = [
+    categoryFilter,
+    subcategoryFilter,
+    searchParams.get("metal")?.trim(),
+  ].filter(Boolean);
 
   return (
     <main className="mx-auto min-h-[60vh] max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
@@ -54,14 +97,28 @@ const Shop = () => {
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#a77525]">Our collection</p>
           <h1 className="mt-2 font-serif text-3xl font-bold text-[#174a38] sm:text-4xl">Shop Jewellery</h1>
-          {metalFilter && <p className="mt-2 text-sm text-[#746b5d]">Showing: {searchParams.get("metal")}</p>}
+          {activeFilters.length > 0 && (
+            <p className="mt-2 text-sm text-[#746b5d]">
+              Showing: {activeFilters.join(" / ")}
+              {" · "}
+              <Link to="/shop" className="font-semibold text-[#8c5e13] hover:underline">
+                Clear filters
+              </Link>
+            </p>
+          )}
         </div>
         <label className="w-full sm:max-w-xs">
           <span className="sr-only">Search products</span>
           <input
             type="search"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+          onChange={(event) => {
+            const nextParams = new URLSearchParams(searchParams);
+            const nextSearch = event.target.value.trim();
+            if (nextSearch) nextParams.set("search", nextSearch);
+            else nextParams.delete("search");
+            setSearchParams(nextParams, { replace: true });
+          }}
             placeholder="Search jewellery..."
             className="w-full rounded-lg border border-[#dfd2bd] bg-white px-4 py-3 text-sm outline-none transition focus:border-[#a77525]"
           />

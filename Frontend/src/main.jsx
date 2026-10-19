@@ -57,6 +57,8 @@ const router = createBrowserRouter([
     errorElement: <ErrorPage />,
     children: [
       { path: "/", element: <Home /> },
+      { path: "shop", element: <Shop /> },
+      { path: "product/:id", element: <StoreProductDetail /> },
       {
         path: "/account/kyc",
         element: (

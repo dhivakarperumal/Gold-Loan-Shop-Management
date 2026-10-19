@@ -67,7 +67,7 @@ const Gold = () => {
                             </div>
                         </div>
                         <a
-                            href="/category/gold-jewellery"
+                            href="/shop?category=Gold%20Jewellery"
                             className="inline-flex items-center gap-2 self-end text-xs font-semibold text-[#6f5426] transition-colors hover:text-[#b47a16]"
                         >
                             View All

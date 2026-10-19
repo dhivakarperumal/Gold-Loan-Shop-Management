@@ -228,12 +228,14 @@ const Navbar = () => {
 
   const handleCategoryClick = (category, subcategory) => {
     closeMenus();
-    navigate(`/shop?search=${encodeURIComponent(subcategory || category.name)}`);
+    const params = new URLSearchParams({ category: category.name });
+    if (subcategory) params.set("subcategory", subcategory);
+    navigate(`/shop?${params.toString()}`);
   };
 
   const handleMetalClick = (metalName) => {
     closeMenus();
-    navigate(`/shop?search=${encodeURIComponent(metalName)}`);
+    navigate(`/shop?metal=${encodeURIComponent(metalName)}`);
   };
 
   const getImageUrl = (image) => {
@@ -293,7 +295,7 @@ const Navbar = () => {
                 Home
               </NavLink>
 
-              <NavLink to="/about" className={navLinkClass}>
+              <NavLink to="/shop" className={navLinkClass}>
                 Explore
               </NavLink>
 
@@ -676,7 +678,7 @@ const Navbar = () => {
               </NavLink>
 
               <NavLink
-                to="/about"
+                to="/shop"
                 onClick={closeMenus}
                 className="block rounded-lg px-4 py-3 text-sm font-semibold text-[#173f33] hover:bg-[#f1e5cb]"
               >
