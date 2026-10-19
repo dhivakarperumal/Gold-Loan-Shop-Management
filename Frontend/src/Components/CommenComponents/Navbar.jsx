@@ -108,7 +108,7 @@ const Navbar = () => {
         </div>
 
         <PageContainer>
-          <div className="relative flex min-h-[65px] items-center justify-between gap-3 py-1.5 lg:min-h-[74px] lg:gap-4">
+          <div className="relative flex min-h-[65px] items-center justify-between gap-3 py-1 lg:min-h-[74px] lg:gap-4">
 
             {/* Logo */}
             <Link
