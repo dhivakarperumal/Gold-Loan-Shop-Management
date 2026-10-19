@@ -7,6 +7,7 @@ import Silver from './Silver'
 import Diamond from './Diamond'
 import Gold from './Gold'
 import Platinum from './Platinum'
+import ReviewsSection from './ReviewsSection'
 
 const HOME_SECTION_COMPONENTS = {
   gold: Gold,
@@ -61,6 +62,7 @@ const Home = () => {
             return <Section key={section.key} />;
           })
       )}
+      <ReviewsSection />
     </div>
   )
 }
