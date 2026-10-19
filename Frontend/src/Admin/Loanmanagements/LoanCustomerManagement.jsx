@@ -795,7 +795,7 @@ export default function LoanCustomerManagement() {
                     </label>
                   )}
                   <CustomerField label="Alternate Mobile" name="alternate_mobile" value={form.alternate_mobile} onChange={handleChange} placeholder="Enter alternate phone number" />
-                  <CustomerField label="Email" name="email" type="email" value={form.email} onChange={handleChange} required placeholder="name@example.com" />
+                  <CustomerField label="Email" name="email" type="email" value={form.email} onChange={handleChange} placeholder="name@example.com" />
                   {!editingCustomer && (
                     <p className="text-xs text-slate-500 sm:col-span-2">
                       The initial password defaults to the primary mobile number; you can change it here.
@@ -824,7 +824,6 @@ export default function LoanCustomerManagement() {
                     </div>
                   </fieldset>
                   <CustomerField label="Occupation" name="occupation" value={form.occupation} onChange={handleChange} placeholder="Enter occupation" />
-                  <CustomerSelect label="KYC Status" name="kyc_status" value={form.kyc_status} onChange={handleChange} options={["Pending", "Verified", "Rejected"]} />
                   <CustomerField label="City / Town" name="city" value={form.city} onChange={handleChange} required placeholder="Enter city or town" />
                   <CustomerField label="District" name="district" value={form.district} onChange={handleChange} required placeholder="Enter district" />
                   <CustomerSelect label="State" name="state" value={form.state} onChange={handleChange} options={["", ...INDIAN_STATES_AND_UTS]} required />
@@ -836,14 +835,14 @@ export default function LoanCustomerManagement() {
                 <section className="space-y-3 rounded-xl border border-slate-200 p-4">
                   <div>
                     <h3 className="text-sm font-bold text-[#003B3B]">Guarantor / Surety Details</h3>
-                    <p className="mt-1 text-xs text-slate-500">All guarantor details are required.</p>
+                    <p className="mt-1 text-xs text-slate-500">Guarantor address is optional; other details are required.</p>
                   </div>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <CustomerField label="Guarantor Name" name="guarantor_name" value={form.guarantor_name} onChange={handleChange} required placeholder="Enter guarantor's full name" />
                     <CustomerField label="Guarantor Mobile" name="guarantor_mobile" value={form.guarantor_mobile} onChange={handleChange} required placeholder="Enter phone number" />
                     <CustomerField label="Relationship to Customer" name="guarantor_relationship" value={form.guarantor_relationship} onChange={handleChange} required placeholder="e.g. Spouse, Parent, Friend" />
-                    <label className={labelClass} htmlFor="guarantor-address">Guarantor Address<span className="ml-1 text-red-500">*</span>
-                      <textarea id="guarantor-address" className={`${inputClass} min-h-20`} name="guarantor_address" value={form.guarantor_address || ""} onChange={handleChange} rows="2" required placeholder="Enter guarantor's full address" />
+                    <label className={labelClass} htmlFor="guarantor-address">Guarantor Address
+                      <textarea id="guarantor-address" className={`${inputClass} min-h-20`} name="guarantor_address" value={form.guarantor_address || ""} onChange={handleChange} rows="2" placeholder="Enter guarantor's full address" />
                     </label>
                   </div>
                 </section>
@@ -970,6 +969,7 @@ export default function LoanCustomerManagement() {
                 <label className={labelClass}>Internal Notes
                   <textarea className={`${inputClass} min-h-20`} name="notes" value={form.notes || ""} onChange={handleChange} rows="3" />
                 </label>
+                <CustomerSelect label="KYC Status" name="kyc_status" value={form.kyc_status} onChange={handleChange} options={["Pending", "Verified", "Rejected"]} />
               </div>
               <footer className="flex justify-end gap-2 border-t border-slate-100 p-4">
                 <button type="button" onClick={closeForm} disabled={saving || uploadingPhoto} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">Close</button>

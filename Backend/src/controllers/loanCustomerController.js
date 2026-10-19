@@ -72,8 +72,8 @@ function normalizeCustomer(body) {
     return { error: 'Customer name and primary mobile are required' };
   }
   const requiredFields = [
-    'email', 'gender', 'address', 'city', 'district', 'state', 'pincode',
-    'guarantor_name', 'guarantor_mobile', 'guarantor_relationship', 'guarantor_address'
+    'gender', 'address', 'city', 'district', 'state', 'pincode',
+    'guarantor_name', 'guarantor_mobile', 'guarantor_relationship'
   ];
   const missingField = requiredFields.find((field) => !customer[field]);
   if (missingField) {
@@ -332,6 +332,7 @@ module.exports = {
   getCustomerDocuments,
   getCustomerPhoto,
   getCustomers,
+  normalizeCustomer,
   normalizeCustomerUsername,
   postCustomer,
   postCustomerDocuments,

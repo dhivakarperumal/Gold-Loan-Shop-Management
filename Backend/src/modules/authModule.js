@@ -38,6 +38,10 @@ async function initializeAuthModule() {
   if (usernameLength < 150) {
     await pool.query('ALTER TABLE users MODIFY COLUMN username VARCHAR(150) NOT NULL');
   }
+  const [emailColumns] = await pool.query("SHOW COLUMNS FROM users LIKE 'email'");
+  if (emailColumns[0]?.Null === 'NO') {
+    await pool.query('ALTER TABLE users MODIFY COLUMN email VARCHAR(254) NULL');
+  }
 }
 
 async function insertUser(connection, { username, name = username, email, phone, password, status, role = 'user' }) {
