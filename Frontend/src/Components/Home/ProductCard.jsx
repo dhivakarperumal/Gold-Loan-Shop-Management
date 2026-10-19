@@ -1,6 +1,6 @@
 import React, { useContext } from "react";
 import { Link } from "react-router-dom";
-import { BadgeCheck, Heart, Weight } from "lucide-react";
+import { BadgeCheck, CircleCheck, CircleX, Heart, Star, Weight } from "lucide-react";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 import { getProductImageUrl } from "./productDisplay";
 
@@ -26,6 +26,9 @@ const ProductCard = ({ product }) => {
     ? `${Number(product.gross_weight)} g`
     : "-";
   const purity = product.purity || "-";
+  const rating = Number(product.rating) || 0;
+  const totalReviews = Number(product.total_reviews) || 0;
+  const inStock = Number(product.total_stock ?? product.stock ?? 0) > 0;
 
   return (
     <article className="group flex h-full flex-col overflow-hidden rounded-[14px] border border-[#eadfce] bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#d8b46c] hover:shadow-lg">
@@ -62,6 +65,38 @@ const ProductCard = ({ product }) => {
             {product.name}
           </Link>
         </h3>
+
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <div
+            className="flex min-w-0 items-center gap-1 text-[10px] text-[#716b60] sm:text-[11px]"
+            aria-label={rating > 0 ? `Rated ${rating.toFixed(1)} out of 5` : "No ratings yet"}
+          >
+            <Star
+              size={13}
+              className="shrink-0 text-[#d49a19]"
+              fill={rating > 0 ? "currentColor" : "none"}
+              aria-hidden="true"
+            />
+            {rating > 0 ? (
+              <>
+                <span className="font-semibold text-[#514638]">{rating.toFixed(1)}</span>
+                {totalReviews > 0 && <span>({totalReviews})</span>}
+              </>
+            ) : (
+              <span>No ratings</span>
+            )}
+          </div>
+          <span
+            className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[9px] font-semibold leading-none sm:text-[10px] ${
+              inStock ? "bg-[#e8f4ed] text-[#167347]" : "bg-[#fbe9e7] text-[#b42318]"
+            }`}
+          >
+            {inStock
+              ? <CircleCheck size={11} aria-hidden="true" />
+              : <CircleX size={11} aria-hidden="true" />}
+            {inStock ? "In Stock" : "Out of Stock"}
+          </span>
+        </div>
 
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className="text-base font-bold leading-5 text-[#c51e18] sm:text-lg">
