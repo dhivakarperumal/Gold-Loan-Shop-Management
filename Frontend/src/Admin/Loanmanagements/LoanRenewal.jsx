@@ -51,7 +51,13 @@ export default function LoanRenewal() {
       })
       : api.get("/loans").then(({ data }) => {
         if (!Array.isArray(data)) throw new Error("The server returned an invalid loan list.");
-        if (active) setLoans(data);
+        if (active) {
+          setLoans(data.filter((loan) =>
+            loan.loan_status === "Active"
+            && loan.release_status !== "Released"
+            && Number(loan.outstanding_principal ?? loan.principal_amount) > 0
+          ));
+        }
       });
     request.catch((error) => {
       console.error("Failed to load loan renewal data:", error);
@@ -163,7 +169,7 @@ export default function LoanRenewal() {
                 {loading
                   ? <tr><td colSpan="8" className="px-4 py-14 text-center text-sm text-slate-400">Loading loans...</td></tr>
                   : filteredLoans.length === 0
-                    ? <tr><td colSpan="8" className="px-4 py-14 text-center text-sm text-slate-400">{loans.length ? "No loans match your search." : "No loans are available."}</td></tr>
+                    ? <tr><td colSpan="8" className="px-4 py-14 text-center text-sm text-slate-400">{loans.length ? "No loans match your search." : "No active loans are available for renewal."}</td></tr>
                     : filteredLoans.map((item) => (
                       <tr key={item.id} className={`text-sm transition-colors ${item.loan_status === "Active" ? "cursor-pointer hover:bg-emerald-50/60" : "opacity-60"}`}
                         onClick={() => item.loan_status === "Active" && navigate(Number(item.outstanding_principal ?? item.principal_amount) === 0 ? `/admin/loans/completeloan/${item.id}` : `/admin/loans/loanreniwel/${item.id}`)}>

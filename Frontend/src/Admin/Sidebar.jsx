@@ -62,6 +62,7 @@ const navItems = [
       },
       
       { path: "/admin/loans/loanreniwel", label: "Loan Renewal", icon: RefreshCw },
+      { path: "/admin/loans/goldrelease", label: "Gold Release", icon: Gem },
       { path: "/admin/loans/completeloan", label: "Complete Loan", icon: CheckCircle2 },
       { path: "/admin/loans/overdueloans", label: "Overdue Loans", icon: Clock3 },
       
