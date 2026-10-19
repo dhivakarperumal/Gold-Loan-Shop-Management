@@ -269,34 +269,40 @@ const Navbar = () => {
           <div className="absolute -right-12 -top-20 h-48 w-48 rounded-full border border-[#d4aa59]/30" />
         </div>
 
-      )}
-      <div
-        className={`fixed inset-0 z-[60] transition-[visibility] duration-300 lg:hidden ${
-          mobileMenu ? "visible pointer-events-auto" : "invisible pointer-events-none"
-        }`}
-        aria-hidden={!mobileMenu}
-      >
-          <button
-            type="button"
-            aria-label="Close navigation menu"
-            onClick={closeMobileMenu}
-            tabIndex={mobileMenu ? 0 : -1}
-            className={`absolute inset-0 h-full w-full bg-slate-950/45 backdrop-blur-[2px] transition-opacity duration-300 ${
-              mobileMenu ? "opacity-100" : "pointer-events-none opacity-0"
-            }`}
-          />
-          <aside
-            id="store-mobile-navigation"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Store navigation"
-            inert={!mobileMenu}
-            className={`absolute inset-0 flex h-[100dvh] w-full flex-col overflow-hidden bg-white shadow-2xl transition-transform duration-300 ease-out ${
-              mobileMenu ? "translate-y-0" : "-translate-y-full"
-            }`}
-          >
-            <div className="flex shrink-0 items-center justify-between border-b border-emerald-900/10 bg-gradient-to-r from-[#003B3B] to-[#00695C] px-5 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] text-white">
-              {mobileCategory || mobilePages ? (
+        <PageContainer>
+          <div className="relative flex min-h-[65px] items-center justify-between gap-3 py-1 lg:min-h-[74px] lg:gap-4">
+
+            {/* Logo */}
+            <Link
+              to="/"
+              onClick={closeMenus}
+              className="flex shrink-0 items-center"
+              aria-label="Sri Golds home"
+            >
+              <img
+                src="/images/logo.png"
+                alt="Sri Golds"
+                className="h-12 w-24 object-contain sm:h-14 sm:w-28 lg:h-[62px] lg:w-36"
+              />
+            </Link>
+
+            {/* Desktop navigation */}
+            <div className="hidden min-w-0 flex-1 items-center justify-center lg:flex">
+
+              <NavLink to="/" end className={navLinkClass}>
+                Home
+              </NavLink>
+
+              <NavLink to="/about" className={navLinkClass}>
+                Explore
+              </NavLink>
+
+              {/* Category dropdown */}
+              <div
+                className="relative"
+                onMouseEnter={() => setOpenDropdown("categories")}
+                onMouseLeave={() => setOpenDropdown(null)}
+              >
                 <button
                   type="button"
                   onClick={() => {
@@ -366,42 +372,18 @@ const Navbar = () => {
                       })}
                     </div>
 
-            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 pb-[max(1.25rem,env(safe-area-inset-bottom))]">
-              {!mobileCategory && !mobilePages && (
-                <>
-                  <p className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Browse the store</p>
-                  <div className="space-y-1.5">
-                    {[
-                      { to: "/", label: "Home", icon: FaHome },
-                      { to: "/shop", label: "Shop", icon: FaShoppingBag },
-                      { to: "/contactus", label: "Contact Us", icon: FaPhoneAlt },
-                    ].map(({ to, label, icon: Icon }) => (
-                      <NavLink
-                        key={to}
-                        to={to}
-                        end={to === "/"}
-                        onClick={closeMobileMenu}
-                        className={({ isActive }) =>
-                          `flex items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold transition ${
-                            isActive ? "bg-emerald-50 text-[#004D40]" : "text-slate-600 hover:bg-slate-50 hover:text-[#004D40]"
-                          }`
-                        }
-                      >
-                        <Icon size={18} /> {label}
-                      </NavLink>
-                    ))}
-                    {metals.length > 0 && (
-                      <div className="pt-4">
-                        <p className="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">
-                          Shop by metal
+                    {selectedCategory && (
+                      <div className="ml-2 w-[230px] border-l border-[#efe5d4] py-1 pl-2">
+                        <p className="px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#9a7a42]">
+                          {selectedCategory.name}
                         </p>
-                        <div className="grid grid-cols-2 gap-2">
-                          {metals.map((metal) => (
-                            <Link
-                              key={metal.id}
-                              to={`/shop?metal=${encodeURIComponent(metal.name)}`}
-                              onClick={closeMobileMenu}
-                              className="flex items-center gap-2 rounded-xl border border-[#f0e5d1] bg-[#fffdf8] px-3 py-2.5 text-sm font-semibold text-[#30271b] transition hover:border-[#d6ad5f] hover:bg-[#fff7e7]"
+                        {getCategorySubcategories(selectedCategory).length ? (
+                          getCategorySubcategories(selectedCategory).map((subcategory) => (
+                            <button
+                              key={subcategory}
+                              type="button"
+                              onClick={() => handleCategoryClick(selectedCategory, subcategory)}
+                              className="block w-full rounded-lg px-3 py-2.5 text-left text-sm text-[#514638] transition hover:bg-[#fff8e9] hover:text-[#8c5e13]"
                             >
                               {subcategory}
                             </button>
@@ -470,6 +452,95 @@ const Navbar = () => {
                       </button>
                     ))}
                   </div>
+                )}
+              </div>
+
+              <NavLink to="/contactus" className={navLinkClass}>
+                Contact Us
+              </NavLink>
+            </div>
+
+            {/* Desktop search and actions */}
+            <div className="hidden shrink-0 items-center gap-3 lg:flex xl:gap-5">
+
+              <div className="relative">
+                <form
+                  onSubmit={handleSearch}
+                  className="flex w-[210px] items-center overflow-hidden rounded-full border border-[#d4aa59] bg-white/80 p-1 shadow-sm transition focus-within:ring-2 focus-within:ring-[#d4aa59]/20 xl:w-[260px] 2xl:w-[300px]"
+                >
+                  <Search
+                    size={20}
+                    className="ml-2 shrink-0 text-[#174638]"
+                  />
+
+                  <input
+                    type="search"
+                    value={search}
+                    onChange={(event) => {
+                      setSearch(event.target.value);
+                      setSearchResults([]);
+                      setSearchError(false);
+                      setSearching(event.target.value.trim().length >= 2);
+                    }}
+                    placeholder="Search for jewellery..."
+                    aria-label="Search jewellery"
+                    aria-controls="desktop-product-search-results"
+                    aria-autocomplete="list"
+                    className="min-w-0 flex-1 bg-transparent px-2 py-2.5 text-xs text-[#173f33] outline-none placeholder:text-[#8a8d81]"
+                  />
+
+                  <button
+                    type="submit"
+                    aria-label="Submit search"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#064638] text-[#f3d795] transition hover:bg-[#0b5948]"
+                  >
+                    <Search size={20} />
+                  </button>
+                </form>
+                {renderSearchResults("desktop-product-search-results")}
+              </div>
+
+              {/* Wishlist */}
+              <button
+                type="button"
+                onClick={() => setWishlistOpen(true)}
+                className="group relative flex min-w-[48px] flex-col items-center gap-1 text-[#173f33] transition hover:text-[#b77b19]"
+                aria-label={`Wishlist, ${wishlistCount} items`}
+              >
+                <span className={iconCircleClass}>
+                  <Heart size={21} />
+                </span>
+                {wishlistCount > 0 && (
+                  <span className="absolute right-0 top-0 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#c78b20] px-1 text-[10px] font-bold text-white">
+                    {wishlistCount}
+                  </span>
+                )}
+                <span className="text-xs font-medium">Wishlist</span>
+              </button>
+
+             
+
+              {/* Account */}
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setAccountOpen(!accountOpen)}
+                  aria-expanded={accountOpen}
+                  className="group flex min-w-[48px] flex-col items-center gap-1 text-[#173f33] transition hover:text-[#b77b19]"
+                >
+                  <span className={iconCircleClass}>
+                    {user ? (
+                      <span className="text-base font-semibold uppercase">
+                        {profileName.trim().charAt(0) || "U"}
+                      </span>
+                    ) : (
+                      <UserRound size={21} />
+                    )}
+                  </span>
+                  <span className="max-w-20 truncate text-xs font-medium">
+                    {user ? profileName : "Account"}
+                  </span>
+                </button>
 
                 {accountOpen && (
                   <div className="absolute right-0 top-full z-50 mt-3 w-52 rounded-xl border border-[#e6d5b2] bg-[#fffdf7] p-2 text-[#173f33] shadow-xl">
@@ -517,18 +588,123 @@ const Navbar = () => {
                       </button>
                     )}
                   </div>
-                  <div className="mt-6 rounded-2xl bg-[#F8F5EB] p-4">
-                    <p className="font-serif text-sm font-semibold text-[#004D40]">Timeless pieces, made to treasure.</p>
-                    <p className="mt-1 text-xs leading-relaxed text-slate-500">Explore the Sri Golds jewellery collection.</p>
-                  </div>
-                </>
-              )}
+                )}
+              </div>
+            </div>
 
-              {mobileCategory && (
-                <div className="space-y-1.5">
-                  <p className="mb-3 px-3 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Shop by category</p>
-                  {categories.length ? categories.map((category) => (
-                    <NavLink
+            {/* Mobile actions */}
+            <div className="flex items-center gap-2 lg:hidden">
+              <button
+                type="button"
+                onClick={() => {
+                  closeMenus();
+                  setWishlistOpen(true);
+                }}
+                aria-label="Wishlist"
+                className="relative rounded-full p-2 text-[#064638] hover:bg-[#eee3cc]"
+              >
+                <Heart size={21} />
+                {wishlistCount > 0 && (
+                  <span className="absolute right-0 top-0 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#c78b20] px-1 text-[9px] text-white">
+                    {wishlistCount}
+                  </span>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
+                aria-expanded={mobileMenuOpen}
+                className="rounded-full border border-[#e4d3af] p-2 text-[#064638] transition hover:bg-[#f3e7cc]"
+              >
+                {mobileMenuOpen ? <X size={23} /> : <Menu size={23} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Mobile search */}
+          <div className="relative z-30 mb-3 lg:hidden">
+            <form
+              onSubmit={handleSearch}
+              className="flex items-center overflow-hidden rounded-full border border-[#d4aa59] bg-white/90 p-1"
+            >
+              <Search size={19} className="ml-3 shrink-0 text-[#174638]" />
+              <input
+                type="search"
+                value={search}
+                onChange={(event) => {
+                  setSearch(event.target.value);
+                  setSearchResults([]);
+                  setSearchError(false);
+                  setSearching(event.target.value.trim().length >= 2);
+                }}
+                placeholder="Search for jewellery..."
+                aria-label="Search jewellery"
+                aria-controls="mobile-product-search-results"
+                aria-autocomplete="list"
+                className="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm text-[#173f33] outline-none placeholder:text-[#8a8d81]"
+              />
+              <button
+                type="submit"
+                aria-label="Submit search"
+                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#064638] text-[#f3d795]"
+              >
+                <Search size={18} />
+              </button>
+            </form>
+            {renderSearchResults("mobile-product-search-results")}
+          </div>
+
+          {/* Mobile menu */}
+          {mobileMenuOpen && (
+            <div className="relative z-20 border-t border-[#dfc68f] pb-5 pt-3 lg:hidden">
+
+              <NavLink
+                to="/"
+                end
+                onClick={closeMenus}
+                className={({ isActive }) =>
+                  `block rounded-lg px-4 py-3 text-sm font-semibold ${
+                    isActive
+                      ? "bg-[#064638] text-[#f3d795]"
+                      : "text-[#173f33] hover:bg-[#f1e5cb]"
+                  }`
+                }
+              >
+                Home
+              </NavLink>
+
+              <NavLink
+                to="/about"
+                onClick={closeMenus}
+                className="block rounded-lg px-4 py-3 text-sm font-semibold text-[#173f33] hover:bg-[#f1e5cb]"
+              >
+                Explore
+              </NavLink>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setOpenDropdown(
+                    openDropdown === "categories" ? null : "categories"
+                  )
+                }
+                className="flex w-full items-center justify-between rounded-lg px-4 py-3 text-sm font-semibold text-[#173f33] hover:bg-[#f1e5cb]"
+              >
+                Category
+                <ChevronDown
+                  size={17}
+                  className={`transition ${
+                    openDropdown === "categories" ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
+
+              {openDropdown === "categories" && (
+                <div className="ml-4 border-l-2 border-[#d4aa59] pl-3">
+                  {categories.map((category) => (
+                    <button
                       key={category.id || category.catId}
                       type="button"
                       onClick={() => handleCategoryClick(category)}
