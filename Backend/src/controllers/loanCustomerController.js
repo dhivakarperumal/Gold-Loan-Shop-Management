@@ -71,6 +71,9 @@ function normalizeCustomer(body) {
   if (!customer.full_name || !customer.mobile) {
     return { error: 'Customer name and primary mobile are required' };
   }
+  if (!customer.photo_url) {
+    return { error: 'Customer photo is required' };
+  }
   const requiredFields = [
     'gender', 'address', 'city', 'district', 'state', 'pincode',
     'guarantor_name', 'guarantor_mobile', 'guarantor_relationship'

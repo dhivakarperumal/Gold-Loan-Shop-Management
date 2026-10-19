@@ -442,6 +442,10 @@ export default function LoanCustomerManagement() {
 
   const handleSave = async (event) => {
     event.preventDefault();
+    if (!form.photo_url.trim()) {
+      toast.error("Upload a customer photo before saving.");
+      return;
+    }
     const stagedTypes = new Set(pendingDocuments.map((document) => document.document_type));
     for (const type of stagedTypes) {
       const savedSides = new Set(documents
@@ -847,8 +851,8 @@ export default function LoanCustomerManagement() {
                   </div>
                 </section>
                 <div>
-                  <p className={labelClass}>Customer Photo</p>
-                  <p className="mt-1 text-xs text-slate-500">Upload a PNG or JPG (up to 5 MB). Photos are stored privately.</p>
+                  <p className={labelClass}>Customer Photo<span className="ml-1 text-red-500">*</span></p>
+                  <p className="mt-1 text-xs text-slate-500">Required. Upload a PNG or JPG (up to 5 MB). Photos are stored privately.</p>
                   {photoPreview.reference === form.photo_url && photoPreview.url && (
                     <div className="mt-3 flex items-center gap-3">
                       <img src={photoPreview.url} alt="Customer photo preview" className="h-20 w-20 rounded-lg border border-slate-200 object-cover" />

@@ -16,12 +16,22 @@ test('allows customer email and guarantor address to be omitted', () => {
     pincode: '600001',
     guarantor_name: 'Guarantor Name',
     guarantor_mobile: '9876543211',
-    guarantor_relationship: 'Parent'
+    guarantor_relationship: 'Parent',
+    photo_url: '/api/loan-customers/photos/27d248e2-50a3-4f3b-aba8-6735bafb40a3.jpg'
   });
 
   assert.equal(error, undefined);
   assert.equal(customer.email, null);
   assert.equal(customer.guarantor_address, null);
+});
+
+test('requires a customer photo', () => {
+  const { error } = normalizeCustomer({
+    full_name: 'Gold Customer',
+    mobile: '9876543210'
+  });
+
+  assert.equal(error, 'Customer photo is required');
 });
 
 test('requires a non-empty customer account username', () => {
