@@ -32,7 +32,7 @@ const ProductCard = ({ product }) => {
 
   return (
     <article className="group flex h-full flex-col overflow-hidden rounded-[14px] border border-[#eadfce] bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:border-[#d8b46c] hover:shadow-lg">
-      <div className="relative aspect-[1.25/1] shrink-0 overflow-hidden bg-[#f6efe4]">
+      <div className="relative aspect-[1.1/1] shrink-0 overflow-hidden bg-[#f6efe4]">
         <Link
           to={`/product/${productId}`}
           aria-label={`View ${product.name} details`}
