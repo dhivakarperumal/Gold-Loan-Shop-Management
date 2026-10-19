@@ -2,8 +2,6 @@ import React, { useContext } from "react";
 import { Link } from "react-router-dom";
 import { BadgeCheck, CircleCheck, CircleX, Heart, Star, Weight } from "lucide-react";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
-import { getRateForPurity } from "../../PrivateRouter/goldRateUtils";
-import useGoldRates from "../../PrivateRouter/useGoldRates";
 import { getProductImageUrl } from "./productDisplay";
 
 const formatPrice = (value) =>
@@ -11,42 +9,22 @@ const formatPrice = (value) =>
 
 const ProductCard = ({ product }) => {
   const { wishlist, toggleWishlist } = useContext(StoreContext);
-  const { current: activeRateSet, loading: ratesLoading, error: ratesError } = useGoldRates();
   const productId = product.id ?? product.product_id ?? product.productId;
   const isFavorite = wishlist.some(
     (item) => String(item.product_id ?? item.productId ?? item.id) === String(productId)
   );
-  const metalType = product.metal_type || "Gold";
-  const activeRate = getRateForPurity(activeRateSet, product.purity, metalType);
-  const availablePurities = activeRateSet?.rates
-    ?.filter((candidate) => candidate.metal_type.toLowerCase() === metalType.toLowerCase())
-    .map((candidate) => candidate.purity) || [];
-  const rate = Number(activeRate?.rate_per_unit ?? activeRate?.rate_per_gram);
-  const hasWeight = product.net_gold_weight != null
-    && product.net_gold_weight !== ""
-    && Number.isFinite(Number(product.net_gold_weight))
-    && Number(product.net_gold_weight) >= 0;
-  const netWeight = hasWeight ? Number(product.net_gold_weight) : null;
-  const unit = activeRate?.rate_unit === "carat" || metalType.toLowerCase() === "diamond"
-    ? "ct"
-    : "g";
-  const weight = hasWeight
-    ? `${netWeight.toLocaleString("en-IN", { maximumFractionDigits: 3 })} ${unit}`
+  const mrp = Number(product.mrp || 0);
+  const offerPrice = Number(
+    product.offer_price ?? product.final_selling_price ?? product.mrp ?? 0
+  );
+  const discount = mrp > offerPrice
+    ? Number(product.discount) > 0
+      ? Number(product.discount)
+      : Math.round(((mrp - offerPrice) / mrp) * 100)
+    : 0;
+  const weight = product.gross_weight != null && product.gross_weight !== ""
+    ? `${Number(product.gross_weight)} g`
     : "-";
-  const metalValue = hasWeight && Number.isFinite(rate) && rate > 0
-    ? netWeight * rate
-    : null;
-  const priceCaption = metalValue != null
-    ? "Metal value · active rate × net weight"
-    : ratesLoading
-      ? "Loading active rate..."
-      : !hasWeight
-        ? "Net weight unavailable"
-        : ratesError
-          ? "Could not load active rate"
-          : availablePurities.length
-            ? `Available ${metalType} purity: ${availablePurities.join(", ")}`
-            : `No active rate configured for ${metalType}`;
   const purity = product.purity || "-";
   const rating = Number(product.rating) || 0;
   const totalReviews = Number(product.total_reviews) || 0;
@@ -122,18 +100,18 @@ const ProductCard = ({ product }) => {
 
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className="text-base font-bold leading-5 text-[#c51e18] sm:text-lg">
-            {metalValue != null
-              ? formatPrice(metalValue)
-              : ratesLoading
-                ? "Loading rate..."
-                : "Price unavailable"}
+            {formatPrice(offerPrice)}
           </span>
-          <span
-            className="text-[9px] text-[#716b60] sm:text-[10px]"
-            title={ratesError || undefined}
-          >
-            {priceCaption}
-          </span>
+          {mrp > offerPrice && (
+            <>
+              <span className="text-xs text-[#92979a] line-through">
+                {formatPrice(mrp)}
+              </span>
+              <span className="rounded-md bg-[#087452] px-2 py-1 text-[10px] font-bold leading-none text-white sm:text-[11px]">
+                {discount}% OFF
+              </span>
+            </>
+          )}
         </div>
       </div>
 
@@ -141,7 +119,7 @@ const ProductCard = ({ product }) => {
         <div className="flex min-w-0 items-center gap-2 border-r border-[#deddd8] pr-2">
           <Weight size={16} className="shrink-0 text-[#9b742e]" aria-hidden="true" />
           <div className="min-w-0">
-            <dt className="leading-3 text-[#77766f]">{unit === "ct" ? "Net Weight (ct)" : "Net Weight"}</dt>
+            <dt className="leading-3 text-[#77766f]">Weight</dt>
             <dd className="truncate font-semibold leading-4 text-[#3f403c]" title={weight}>
               {weight}
             </dd>
