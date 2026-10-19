@@ -384,7 +384,7 @@ const VideoManagement = () => {
                                         type="text"
                                         required
                                         className="w-full px-6 py-4 bg-gray-50/50 border-2 border-transparent rounded-2xl outline-none focus:bg-white focus:border-blue-500/20 focus:ring-4 focus:ring-blue-500/5 transition-all text-slate-800 font-bold shadow-inner"
-                                        placeholder="e.g. Exclusive Gold Jewelry Showcase"
+                                        placeholder="e.g. Exclusive Silk Saree Showcase"
                                         value={currentVideo.title}
                                         onChange={(e) => setCurrentVideo({ ...currentVideo, title: e.target.value })}
                                     />

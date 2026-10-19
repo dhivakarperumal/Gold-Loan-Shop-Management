@@ -11,6 +11,8 @@ const videoRouter = require('./videoRouter');
 const reviewRouter = require('./reviewRouter');
 const dealerRouter = require('./dealerRouter');
 const dashboardRouter = require('./dashboardRouter');
+const cartRouter = require('./cartRouter');
+const wishlistRouter = require('./wishlistRouter');
 
 const router = express.Router();
 
@@ -19,6 +21,8 @@ router.use('/auth', authRouter);
 router.use('/categories', categoryRouter);
 router.use('/metals', metalRouter);
 router.use('/products', productRouter);
+router.use('/cart', cartRouter);
+router.use('/wishlist', wishlistRouter);
 router.use('/loan-customers', loanCustomerRouter);
 router.use('/banners', bannerRouter);
 router.use('/gold-rates', goldRateRouter);
