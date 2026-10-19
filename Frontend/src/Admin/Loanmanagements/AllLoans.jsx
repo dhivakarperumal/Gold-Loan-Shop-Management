@@ -8,6 +8,11 @@ import { printLoanAgreement } from "./loanPrint";
 const money = (value) => new Intl.NumberFormat("en-IN", {
   style: "currency", currency: "INR", maximumFractionDigits: 2
 }).format(Number(value || 0));
+const rateText = (value) => {
+  if (value == null || value === "") return "—";
+  const rate = Number(value);
+  return Number.isFinite(rate) ? rate.toFixed(2) : "—";
+};
 const dateText = (value) => value ? new Date(value).toLocaleDateString("en-IN") : "—";
 
 export default function AllLoans() {
@@ -156,7 +161,7 @@ export default function AllLoans() {
                         <td className="px-4 py-4"><div className="flex min-w-[145px] items-center gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-xs font-bold uppercase text-[#087263] ring-1 ring-inset ring-emerald-800/5">{String(loan.customer_name || "?").trim().charAt(0)}</span><span className="min-w-0"><span className="block truncate font-semibold text-slate-800">{loan.customer_name || "—"}</span><span className="mt-0.5 block text-xs text-slate-400">{loan.customer_code || "—"}</span></span></div></td>
                         <td className="whitespace-nowrap px-4 py-4 text-slate-600">{loan.customer_mobile || "—"}</td>
                         <td className="whitespace-nowrap px-4 py-4 font-bold tabular-nums text-slate-800">{money(loan.principal_amount)}</td>
-                        <td className="whitespace-nowrap px-4 py-4 text-slate-600"><span className="font-semibold text-slate-800">{loan.interest_rate}%</span><span className="text-slate-400"> · {String(loan.interest_type || "").replaceAll("_", " ")}</span></td>
+                        <td className="whitespace-nowrap px-4 py-4 text-slate-600"><span className="font-semibold text-slate-800">{rateText(loan.interest_rate)}%</span></td>
                         <td className="whitespace-nowrap px-4 py-4 text-slate-600">{dateText(loan.maturity_date)}</td>
                         <td className="whitespace-nowrap px-4 py-4"><span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1.5 text-xs font-bold capitalize ${getStatusStyle(loan.loan_status)}`}><span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current opacity-70" />{loan.loan_status || "Unknown"}</span></td>
                         <td className="whitespace-nowrap px-4 py-4 pr-5">
@@ -189,7 +194,7 @@ export default function AllLoans() {
                     <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
                       <div><dt className="text-xs font-medium text-slate-400">Loan Amount</dt><dd className="mt-1 font-bold text-[#064A41]">{money(loan.principal_amount)}</dd></div>
                       <div><dt className="text-xs text-slate-500">Maturity</dt><dd className="mt-1 font-semibold text-slate-700">{dateText(loan.maturity_date)}</dd></div>
-                      <div className="col-span-2"><dt className="text-xs font-medium text-slate-400">Interest</dt><dd className="mt-1 font-semibold text-slate-700">{loan.interest_rate}% · {String(loan.interest_type || "").replaceAll("_", " ")}</dd></div>
+                      <div className="col-span-2"><dt className="text-xs font-medium text-slate-400">Interest</dt><dd className="mt-1 font-semibold text-slate-700">{rateText(loan.interest_rate)}%</dd></div>
                     </dl>
                     <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
                       <Link to={`/admin/loans/details/${loan.id}`} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#008577] hover:underline"><FiEye /> View details</Link>
