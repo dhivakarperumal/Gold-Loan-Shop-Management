@@ -109,7 +109,6 @@ function normalizeExchangeItems(value, currentRateSet) {
   if (!Array.isArray(value) || value.length < 1 || value.length > MAX_ITEMS) {
     return { error: `Add between 1 and ${MAX_ITEMS} exchange items` };
   }
-  if (!currentRateSet) return { error: 'No active daily rates are available for exchange valuation' };
   const entries = [];
   for (const [index, item] of value.entries()) {
     if (!item || typeof item !== 'object' || Array.isArray(item)) {
@@ -134,23 +133,28 @@ function normalizeExchangeItems(value, currentRateSet) {
 
     const exchange = details.value[0];
     const rate = findGoldRateForPurity(currentRateSet, exchange.purity, exchange.metal_type);
-    if (!rate) {
+    const enteredRate = item.rate_per_unit == null || item.rate_per_unit === ''
+      ? null
+      : normalizeMoney(item.rate_per_unit, `exchange item ${index + 1} rate`);
+    if (enteredRate?.error) return enteredRate;
+    if (!rate && !enteredRate) {
       return { error: `No active daily rate exists for exchange item ${index + 1} (${exchange.metal_type} ${exchange.purity})` };
     }
     if (weight.value <= 0) return { error: `Exchange item ${index + 1} weight must be greater than zero` };
     const netWeight = Math.round((weight.value - wastageWeight.value) * 1000) / 1000;
-    const ratePerUnit = Number(rate.rate_per_unit ?? rate.rate_per_gram);
+    const ratePerUnit = enteredRate?.value ?? Number(rate.rate_per_unit ?? rate.rate_per_gram);
     if (!Number.isFinite(ratePerUnit) || ratePerUnit <= 0) {
-      return { error: `The daily rate for exchange item ${index + 1} is invalid` };
+      return { error: `The rate for exchange item ${index + 1} is invalid` };
     }
+    const rateUnit = rate?.rate_unit || (exchange.metal_type === 'Diamond' ? 'carat' : 'gram');
     entries.push({
       ...exchange,
       weight: weight.value,
       wastage_weight: wastageWeight.value,
       net_weight: netWeight,
-      weight_unit: rate.rate_unit === 'carat' ? 'carat' : 'gram',
+      weight_unit: rateUnit === 'carat' ? 'carat' : 'gram',
       rate_per_unit: ratePerUnit,
-      rate_unit: rate.rate_unit || 'gram',
+      rate_unit: rateUnit,
       credit_amount: Math.round((netWeight * ratePerUnit + Number.EPSILON) * 100) / 100
     });
   }

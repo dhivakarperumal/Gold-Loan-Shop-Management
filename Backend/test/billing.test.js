@@ -95,6 +95,33 @@ test('uses the selected metal purity daily rate for exchange credit', () => {
   assert.equal(result.billing.exchanges[0].weight_unit, 'gram');
 });
 
+test('allows a manually entered exchange rate and calculates the exchange amount from it', () => {
+  const result = normalizeBilling(billingInput({
+    payment_type: 'EXCHANGE_GOLD',
+    exchanges: [exchangeItem({ rate_per_unit: 1250 })]
+  }), currentRates);
+  assert.equal(result.error, undefined);
+  assert.equal(result.billing.exchanges[0].rate_per_unit, 1250);
+  assert.equal(result.billing.exchanges[0].credit_amount, 2500);
+});
+
+test('accepts a manual exchange rate when no daily rate is available', () => {
+  const result = normalizeBilling(billingInput({
+    payment_type: 'EXCHANGE_GOLD',
+    exchanges: [exchangeItem({ rate_per_unit: 900 })]
+  }));
+  assert.equal(result.error, undefined);
+  assert.equal(result.billing.exchanges[0].credit_amount, 1800);
+});
+
+test('rejects invalid manually entered exchange rates', () => {
+  const result = normalizeBilling(billingInput({
+    payment_type: 'EXCHANGE_GOLD',
+    exchanges: [exchangeItem({ rate_per_unit: -1 })]
+  }), currentRates);
+  assert.match(result.error, /rate/i);
+});
+
 test('accepts a custom GST rate and calculates the GST amount and total', () => {
   const result = normalizeBilling(billingInput({ gst_rate: 3.33 }));
   assert.equal(result.error, undefined);

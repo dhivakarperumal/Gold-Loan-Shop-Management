@@ -69,12 +69,15 @@ function ItemFields({ item, onChange, onCategorySelect, onMetalSelect, categorie
     purityLabel(rate.purity).toLowerCase() === item.purity.toLowerCase()
   ));
   const weightUnit = selectedMetalRate?.rate_unit === "carat" ? "carat" : "g";
+  const rateUnit = selectedMetalRate?.rate_unit || "gram";
+  const dailyRate = Number(selectedMetalRate?.rate_per_unit ?? selectedMetalRate?.rate_per_gram) || 0;
+  const enteredRate = item.rate_per_unit === "" || item.rate_per_unit == null
+    ? dailyRate
+    : Number(item.rate_per_unit) || 0;
   const weight = Math.round((Number(item.weight) || 0) * 1000) / 1000;
   const wastageWeight = Math.round((Number(item.wastage_weight) || 0) * 1000) / 1000;
   const netWeight = Math.round(Math.max(0, weight - wastageWeight) * 1000) / 1000;
-  const exchangeAmount = selectedMetalRate
-    ? Math.round(netWeight * Number(selectedMetalRate.rate_per_unit ?? selectedMetalRate.rate_per_gram) * 100) / 100
-    : 0;
+  const exchangeAmount = Math.round(netWeight * enteredRate * 100) / 100;
 
   return (
     <div className={`grid gap-3 md:grid-cols-2 ${exchange ? "xl:grid-cols-4" : "xl:grid-cols-4"}`}>
@@ -136,22 +139,21 @@ function ItemFields({ item, onChange, onCategorySelect, onMetalSelect, categorie
       )}
       <label className={labelClass}>
         {item.metal_type || "Gold"} Purity<span className="ml-1 text-rose-500">*</span>
-        <select className={inputClass} value={item.purity} onChange={(event) => onChange("purity", event.target.value)} required disabled={exchange && purityOptions.length === 0}>
+        <select className={inputClass} value={item.purity} onChange={(event) => {
+          onChange("purity", event.target.value);
+          if (exchange) onChange("rate_per_unit", "");
+        }} required disabled={exchange && purityOptions.length === 0}>
           {purityOptions.length === 0 && <option value="">No active purity rates</option>}
           {purityOptions.map((purity) => <option key={purity}>{purity}</option>)}
         </select>
-        {exchange && <span className="mt-1 block text-[11px] font-normal text-slate-500">
-          {selectedMetalRate
-            ? `Today's rate: ${currency(selectedMetalRate.rate_per_unit ?? selectedMetalRate.rate_per_gram)} / ${selectedMetalRate.rate_unit === "carat" ? "carat" : "g"}`
-            : "Today's rate is unavailable for this purity"}
-        </span>}
       </label>
       {exchange ? (
         <>
-          <TextField label={`Weight (${weightUnit})`} type="number" value={item.weight} onChange={(value) => onChange("weight", value)} required min="0" step="0.001" placeholder="Enter weight" />
-          <TextField label={`Wastage Weight (${weightUnit})`} type="number" value={item.wastage_weight} onChange={(value) => onChange("wastage_weight", value)} min="0" step="0.001" placeholder="0.000" />
+          <TextField label={`${item.metal_type || "Gold"} Weight (${weightUnit})`} type="number" value={item.weight} onChange={(value) => onChange("weight", value)} required min="0" step="0.001" placeholder="Enter weight" />
+          <TextField label={`${item.metal_type || "Gold"} Wastage Weight (${weightUnit})`} type="number" value={item.wastage_weight} onChange={(value) => onChange("wastage_weight", value)} min="0" step="0.001" placeholder="0.000" />
           <TextField label={`Net Weight (${weightUnit})`} type="number" value={weight > 0 ? netWeight.toFixed(3) : ""} onChange={() => {}} readOnly placeholder="Calculated weight" />
-          <TextField label="Exchange Amount (₹)" type="number" value={weight > 0 && selectedMetalRate ? exchangeAmount.toFixed(2) : ""} onChange={() => {}} readOnly placeholder="Calculated from daily rate" />
+          <TextField label={`Rate (₹ / ${rateUnit})`} type="number" value={item.rate_per_unit === "" || item.rate_per_unit == null ? dailyRate || "" : item.rate_per_unit} onChange={(value) => onChange("rate_per_unit", value)} required min="0.01" step="0.01" placeholder="Enter rate" />
+          <TextField label="Exchange Amount (₹)" type="number" value={weight > 0 && enteredRate > 0 ? exchangeAmount.toFixed(2) : ""} onChange={() => {}} readOnly placeholder="Calculated from rate" />
         </>
       ) : (
         <TextField label="Unit Price (₹)" type="number" value={item.price} onChange={(value) => onChange("price", value)} required min="0" step="0.01" placeholder="0.00" />
@@ -364,7 +366,10 @@ export default function BillingManagement() {
         const weight = Math.round((Number(exchange.weight) || 0) * 1000) / 1000;
         const wastageWeight = Math.round((Number(exchange.wastage_weight) || 0) * 1000) / 1000;
         const netWeight = Math.round(Math.max(0, weight - wastageWeight) * 1000) / 1000;
-        const credit = rate ? netWeight * Number(rate.rate_per_unit ?? rate.rate_per_gram) : 0;
+        const ratePerUnit = exchange.rate_per_unit === "" || exchange.rate_per_unit == null
+          ? Number(rate?.rate_per_unit ?? rate?.rate_per_gram) || 0
+          : Number(exchange.rate_per_unit) || 0;
+        const credit = netWeight * ratePerUnit;
         return sum + (Number.isFinite(credit) ? Math.round(credit * 100) / 100 : 0);
       }, 0)
       : 0,
@@ -449,8 +454,14 @@ export default function BillingManagement() {
       toast.error("Enter a valid weight and wastage weight for each exchange item.");
       return;
     }
-    if (paymentType === "EXCHANGE_GOLD" && exchanges.some((exchange) => !findItemRate(metalRates, exchange.metal_type, exchange.purity))) {
-      toast.error("A current daily rate is unavailable for an exchange item purity.");
+    if (paymentType === "EXCHANGE_GOLD" && exchanges.some((exchange) => {
+      const currentRate = findItemRate(metalRates, exchange.metal_type, exchange.purity);
+      const rate = exchange.rate_per_unit === "" || exchange.rate_per_unit == null
+        ? Number(currentRate?.rate_per_unit ?? currentRate?.rate_per_gram)
+        : Number(exchange.rate_per_unit);
+      return !Number.isFinite(rate) || rate <= 0;
+    })) {
+      toast.error("Enter a valid rate for each exchange item.");
       return;
     }
     if (exchangeCredit > subtotal) {
@@ -477,7 +488,11 @@ export default function BillingManagement() {
             metal_type: exchange.metal_type,
             purity: exchange.purity,
             weight: Number(exchange.weight),
-            wastage_weight: Number(exchange.wastage_weight || 0)
+            wastage_weight: Number(exchange.wastage_weight || 0),
+            rate_per_unit: Number(exchange.rate_per_unit === "" || exchange.rate_per_unit == null
+              ? findItemRate(metalRates, exchange.metal_type, exchange.purity)?.rate_per_unit
+                ?? findItemRate(metalRates, exchange.metal_type, exchange.purity)?.rate_per_gram
+              : exchange.rate_per_unit)
           }))
           : [],
         payment_type: paymentType,
@@ -662,7 +677,7 @@ export default function BillingManagement() {
                 </div>
                 {exchanges.map((exchange, index) => (
                   <div key={`exchange-${index}`} className="space-y-3 rounded-lg border border-amber-100 bg-white p-4">
-                    <div className="flex items-center justify-between"><h4 className="text-sm font-bold text-slate-700">Exchange Item {index + 1}</h4><button type="button" onClick={() => setExchanges((rows) => rows.filter((_, rowIndex) => rowIndex !== index))} className="text-rose-500" aria-label={`Remove exchange item ${index + 1}`}><FiTrash2 /></button></div>
+                    <div className="flex justify-end"><button type="button" onClick={() => setExchanges((rows) => rows.filter((_, rowIndex) => rowIndex !== index))} className="text-rose-500" aria-label={`Remove exchange item ${index + 1}`}><FiTrash2 /></button></div>
                     <ItemFields
                       item={exchange}
                       categories={categories}
@@ -677,7 +692,8 @@ export default function BillingManagement() {
                       onMetalSelect={(metalType, purity) => setExchanges((rows) => rows.map((row, rowIndex) => rowIndex === index ? {
                         ...row,
                         metal_type: metalType,
-                        purity
+                        purity,
+                        rate_per_unit: ""
                       } : row))}
                     />
                   </div>
