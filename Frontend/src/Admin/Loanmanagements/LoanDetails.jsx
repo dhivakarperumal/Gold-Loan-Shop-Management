@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { FiArrowLeft, FiCalendar, FiUser } from "react-icons/fi";
 import { toast } from "react-hot-toast";
-import api from "../../api";
+import api, { getPrivateFile } from "../../api";
 
 const money = (value) => new Intl.NumberFormat("en-IN", {
   style: "currency", currency: "INR", maximumFractionDigits: 2
@@ -17,6 +17,7 @@ export default function LoanDetails() {
   const { id } = useParams();
   const [loan, setLoan] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [goldImage, setGoldImage] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -29,6 +30,28 @@ export default function LoanDetails() {
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
   }, [id]);
+
+  useEffect(() => {
+    if (!loan?.gold_image_url) return undefined;
+    let active = true;
+    let objectUrl = "";
+    getPrivateFile(loan.gold_image_url, { responseType: "blob" })
+      .then(({ data }) => {
+        if (!active) return;
+        objectUrl = URL.createObjectURL(data);
+        setGoldImage({ reference: loan.gold_image_url, url: objectUrl });
+      })
+      .catch((error) => {
+        console.error("Failed to load pledged gold image:", error);
+        if (active) toast.error(error.response?.data?.message || "Could not load the gold image.");
+      });
+    return () => {
+      active = false;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [loan?.gold_image_url]);
+
+  const goldImageUrl = goldImage && goldImage.reference === loan?.gold_image_url ? goldImage.url : "";
 
   if (loading) return <main className="p-6 text-sm text-slate-500">Loading loan details...</main>;
   if (!loan) return <main className="p-6"><p className="text-slate-600">Loan not found.</p><Link to="/admin/loans/allloans" className="mt-3 inline-block text-sm font-semibold text-[#008577]">Back to all loans</Link></main>;
@@ -62,9 +85,17 @@ export default function LoanDetails() {
           <Detail label="Stone Weight" value={`${loan.stone_weight} g`} />
           <Detail label="Net Gold Weight" value={`${loan.net_gold_weight} g`} />
           <Detail label="Gold Valuation" value={money(loan.gold_valuation)} />
+          {loan.gold_rate_per_gram != null && <Detail label="Applied Rate Snapshot" value={`${money(loan.gold_rate_per_gram)} / g`} />}
+          {loan.gold_rate_date && <Detail label="Rate Date" value={dateText(loan.gold_rate_date)} />}
           <Detail label="Loan Amount" value={money(loan.principal_amount)} />
         </div>
       </section>
+      {goldImageUrl && (
+        <section className="rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
+          <h2 className="mb-3 font-bold text-[#003B3B]">Pledged Gold Image</h2>
+          <img src={goldImageUrl} alt={`Pledged ${loan.jewellery_type}`} className="max-h-96 w-auto rounded-lg border border-slate-200 object-contain" />
+        </section>
+      )}
 
       <section className="rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
         <h2 className="mb-4 flex items-center gap-2 font-bold text-[#003B3B]"><FiCalendar /> Contract Terms</h2>

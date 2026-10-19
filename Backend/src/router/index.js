@@ -6,15 +6,25 @@ const productRouter = require('./productRouter');
 const loanCustomerRouter = require('./loanCustomerRouter');
 const loanRouter = require('./loanRouter');
 const bannerRouter = require('./bannerRouter');
+const goldRateRouter = require('./goldRateRouter');
+const videoRouter = require('./videoRouter');
+const reviewRouter = require('./reviewRouter');
+const dealerRouter = require('./dealerRouter');
+const dashboardRouter = require('./dashboardRouter');
 
 const router = express.Router();
 
+router.use('/dashboard', dashboardRouter);
 router.use('/auth', authRouter);
 router.use('/categories', categoryRouter);
 router.use('/metals', metalRouter);
 router.use('/products', productRouter);
 router.use('/loan-customers', loanCustomerRouter);
 router.use('/banners', bannerRouter);
+router.use('/gold-rates', goldRateRouter);
+router.use('/videos', videoRouter);
+router.use('/reviews', reviewRouter);
+router.use('/dealers', dealerRouter);
 router.use(loanRouter);
 
 module.exports = router;

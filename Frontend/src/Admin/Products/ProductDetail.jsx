@@ -12,6 +12,8 @@ import {
 } from "react-icons/fi";
 import { BsQrCode } from "react-icons/bs";
 import api from "../../api";
+import { formatRateDate, getRateForPurity } from "../../PrivateRouter/goldRateUtils";
+import useGoldRates from "../../PrivateRouter/useGoldRates";
 
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
 const money = (value) => new Intl.NumberFormat("en-IN", {
@@ -87,6 +89,7 @@ function ProductDetail() {
   const [activeVariant, setActiveVariant] = useState(0);
   const [activeImage, setActiveImage] = useState(0);
   const [deleting, setDeleting] = useState(false);
+  const { current: activeRateSet, error: rateError } = useGoldRates();
 
   useEffect(() => {
     let active = true;
@@ -162,6 +165,18 @@ function ProductDetail() {
   const variantImages = parseArray(currentVariant.images).map(imagePath).filter(Boolean);
   const displayImages = variantImages.length ? variantImages : mainImages;
   const selectedImage = displayImages[activeImage] || displayImages[0] || "";
+  const currentPurityRate = getRateForPurity(activeRateSet, product.purity);
+  const liveMetalValue = Number(product.net_gold_weight || 0) * Number(currentPurityRate?.rate_per_gram || 0);
+  const liveMakingCharge = String(product.making_charge_type).toLowerCase() === "percentage"
+    ? liveMetalValue * (Number(product.making_charge) || 0) / 100
+    : Number(product.making_charge) || 0;
+  const liveWastageWeight = String(product.wastage_type).toLowerCase() === "percentage"
+    ? Number(product.net_gold_weight || 0) * (Number(product.wastage) || 0) / 100
+    : Number(product.wastage) || 0;
+  const liveWastageCharge = liveWastageWeight * Number(currentPurityRate?.rate_per_gram || 0);
+  const liveSubtotal = liveMetalValue + liveMakingCharge + liveWastageCharge + (Number(product.stone_charges) || 0);
+  const liveTax = liveSubtotal * (Number(product.gst_rate) || 0) / 100;
+  const liveJewelleryPrice = product.price_includes_gst ? liveSubtotal : liveSubtotal + liveTax;
   const detailsLink = typeof window !== "undefined" ? window.location.href : `/admin/products/${id}`;
   const documentFields = [
     ["Size Guide", product.size_guide_chart],
@@ -182,7 +197,8 @@ function ProductDetail() {
     ["Net Gold Weight", product.net_gold_weight != null ? `${product.net_gold_weight} g` : ""],
     ["Stone Weight", product.stone_weight != null ? `${product.stone_weight} g` : ""],
     ["Stone Type", product.stone_type],
-    ["Gold Rate / Gram", product.gold_rate_per_gram != null ? money(product.gold_rate_per_gram) : ""],
+    ["Applied Rate Snapshot / Gram", product.gold_rate_per_gram != null ? money(product.gold_rate_per_gram) : ""],
+    ["Rate Snapshot Date", product.gold_rate_date ? dateText(product.gold_rate_date) : ""],
     ["HUID", product.huid]
   ];
   const measurements = [
@@ -217,6 +233,7 @@ function ProductDetail() {
     ["Final Selling Price", optionalMoney(product.final_selling_price)],
     ["Price Includes GST", product.price_includes_gst],
     ["Making Charge Type", product.making_charge_type],
+    ["Stone Charges", product.stone_charges != null ? money(product.stone_charges) : ""],
     ["Making Charge", product.making_charge != null ? (
       String(product.making_charge_type).toLowerCase() === "percentage"
         ? `${product.making_charge}%`
@@ -270,6 +287,18 @@ function ProductDetail() {
           </button>
         </div>
       </header>
+
+      <section className="rounded-xl border border-emerald-100 bg-emerald-50 p-4">
+        <p className="text-xs font-bold uppercase tracking-wide text-emerald-800">Current global gold rate</p>
+        {currentPurityRate ? (
+          <p className="mt-1 text-sm font-semibold text-slate-800">
+            {money(currentPurityRate.rate_per_gram)} / g for {product.purity} · effective {formatRateDate(activeRateSet.rate_date)}
+            {product.net_gold_weight > 0 && <> · current metal value {money(liveMetalValue)} · estimated jewellery price {money(liveJewelleryPrice)}</>}
+          </p>
+        ) : <p className="mt-1 text-sm text-slate-600">{activeRateSet ? `No rate is configured for ${product.purity}.` : "No active global rate is configured."}</p>}
+        {rateError && <p role="alert" className="mt-2 text-xs font-semibold text-rose-700">Could not refresh the active rate: {rateError}</p>}
+        <p className="mt-1 text-xs text-slate-600">This live reference does not alter the product's saved selling price or applied-rate snapshot.</p>
+      </section>
 
       <div className="grid gap-5 lg:grid-cols-12">
         <section className="space-y-3 lg:col-span-5">
@@ -368,6 +397,7 @@ function ProductDetail() {
                           {variant.color && <span className="h-7 w-7 rounded-lg border border-slate-200" style={{ backgroundColor: variant.color }} />}
                           <span className="font-semibold text-slate-800">{variant.colorName || variant.color || `Variant ${index + 1}`}</span>
                         </div>
+
                         <span className="text-xs font-semibold text-slate-500">{variantStock ? `${variantStock} units` : ""}</span>
                       </div>
                       {selectedSizes.length > 0 && <p className="mt-2 text-xs text-slate-500">Sizes: {selectedSizes.join(", ")}</p>}

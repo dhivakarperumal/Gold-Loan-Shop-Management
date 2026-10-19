@@ -9,6 +9,7 @@ const {
   postCustomerDocuments,
   postCustomerPhoto,
   putCustomer,
+  verifyCustomerKyc,
   removeCustomerDocument,
   removeCustomer
 } = require('../controllers/loanCustomerController');
@@ -47,6 +48,7 @@ router.get('/', getCustomers);
 router.get('/:id', getCustomerById);
 router.post('/', postCustomer);
 router.put('/:id', putCustomer);
+router.patch('/:id/verify-kyc', verifyCustomerKyc);
 router.delete('/:id', removeCustomer);
 
 module.exports = router;

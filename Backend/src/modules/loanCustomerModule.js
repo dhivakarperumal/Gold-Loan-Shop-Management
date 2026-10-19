@@ -2,7 +2,8 @@ const { pool } = require('../config/db');
 
 const CUSTOMER_COLUMNS = `
   id, customer_code, customer_type, full_name, mobile, alternate_mobile,
-  date_of_birth, gender, occupation, address, city, district, state, pincode,
+  email, date_of_birth, gender, occupation, address, city, district, state, pincode,
+  guarantor_name, guarantor_mobile, guarantor_email, guarantor_relationship, guarantor_address,
   kyc_status, photo_url, notes, created_at, updated_at
 `;
 
@@ -15,6 +16,7 @@ async function initializeLoanCustomerModule() {
       full_name VARCHAR(150) NOT NULL,
       mobile VARCHAR(15) NOT NULL,
       alternate_mobile VARCHAR(15) NULL,
+      email VARCHAR(254) NULL,
       date_of_birth DATE NULL,
       gender VARCHAR(30) NULL,
       occupation VARCHAR(100) NULL,
@@ -23,6 +25,11 @@ async function initializeLoanCustomerModule() {
       district VARCHAR(100) NULL,
       state VARCHAR(100) NULL,
       pincode VARCHAR(10) NULL,
+      guarantor_name VARCHAR(150) NULL,
+      guarantor_mobile VARCHAR(15) NULL,
+      guarantor_email VARCHAR(254) NULL,
+      guarantor_relationship VARCHAR(100) NULL,
+      guarantor_address TEXT NULL,
       kyc_status VARCHAR(20) NOT NULL DEFAULT 'Pending',
       photo_url TEXT NULL,
       notes TEXT NULL,
@@ -30,6 +37,21 @@ async function initializeLoanCustomerModule() {
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )
   `);
+  const [customerColumns] = await pool.query('SHOW COLUMNS FROM loan_customers');
+  const existingCustomerColumns = new Set(customerColumns.map((column) => column.Field));
+  const customerColumnMigrations = {
+    email: 'VARCHAR(254) NULL AFTER alternate_mobile',
+    guarantor_name: 'VARCHAR(150) NULL AFTER pincode',
+    guarantor_mobile: 'VARCHAR(15) NULL AFTER guarantor_name',
+    guarantor_email: 'VARCHAR(254) NULL AFTER guarantor_mobile',
+    guarantor_relationship: 'VARCHAR(100) NULL AFTER guarantor_email',
+    guarantor_address: 'TEXT NULL AFTER guarantor_relationship'
+  };
+  for (const [column, definition] of Object.entries(customerColumnMigrations)) {
+    if (!existingCustomerColumns.has(column)) {
+      await pool.query(`ALTER TABLE loan_customers ADD COLUMN \`${column}\` ${definition}`);
+    }
+  }
   await pool.query(`
     CREATE TABLE IF NOT EXISTS loan_customer_documents (
       id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -57,9 +79,9 @@ async function listLoanCustomers(search = '') {
     `SELECT ${CUSTOMER_COLUMNS}
      FROM loan_customers
      WHERE ? = '' OR CAST(id AS CHAR) LIKE ? OR customer_code LIKE ? OR full_name LIKE ? OR mobile LIKE ?
-       OR alternate_mobile LIKE ? OR city LIKE ? OR district LIKE ?
+       OR alternate_mobile LIKE ? OR email LIKE ? OR city LIKE ? OR district LIKE ?
      ORDER BY created_at DESC, id DESC`,
-    [search, term, term, term, term, term, term, term]
+    [search, term, term, term, term, term, term, term, term]
   );
   return rows;
 }

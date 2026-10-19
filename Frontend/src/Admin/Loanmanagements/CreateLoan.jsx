@@ -1,8 +1,10 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { FiArrowLeft, FiCalendar, FiCheck, FiChevronDown, FiSearch, FiUserPlus } from "react-icons/fi";
+import { FiArrowLeft, FiCalendar, FiCheck, FiChevronDown, FiSearch, FiUploadCloud, FiUserPlus } from "react-icons/fi";
 import { toast } from "react-hot-toast";
-import api from "../../api";
+import api, { getPrivateFile } from "../../api";
+import { formatRateDate, getRateForPurity } from "../../PrivateRouter/goldRateUtils";
+import useGoldRates from "../../PrivateRouter/useGoldRates";
 
 const INTEREST_FREQUENCIES = [
   ["daily", "Daily"], ["weekly", "Weekly"], ["monthly", "Monthly"],
@@ -17,6 +19,13 @@ const PAYMENT_FREQUENCIES = [
 const COMPOUND_FREQUENCIES = [
   ["daily", "Daily"], ["weekly", "Weekly"], ["monthly", "Monthly"],
   ["quarterly", "Quarterly"], ["half_yearly", "Half-Yearly"], ["yearly", "Yearly"]
+];
+const GOLD_PURITY_OPTIONS = [
+  ["24K / 999", "24K (999)"],
+  ["22K / 916", "22K (916)"],
+  ["20K / 833", "20K (833)"],
+  ["18K / 750", "18K (750)"],
+  ["14K / 585", "14K (585)"]
 ];
 const fieldClass = "mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition focus:border-[#008577] focus:ring-2 focus:ring-emerald-100";
 const labelClass = "block text-xs font-semibold text-slate-600";
@@ -139,7 +148,7 @@ function calculateEstimate(form, interestType) {
   };
 }
 
-function FormField({ label, name, form, onChange, type = "text", required = false, min, step, help }) {
+function FormField({ label, name, form, onChange, type = "text", required = false, min, step, help, readOnly = false }) {
   return (
     <label className={labelClass}>
       {label}{required && <span className="ml-1 text-rose-500">*</span>}
@@ -152,19 +161,21 @@ function FormField({ label, name, form, onChange, type = "text", required = fals
         required={required}
         min={min}
         step={step}
+        readOnly={readOnly}
       />
       {help && <span className="mt-1 block text-[11px] font-normal text-slate-400">{help}</span>}
     </label>
   );
 }
 
-function FormSelect({ label, name, form, onChange, options, required = false }) {
+function FormSelect({ label, name, form, onChange, options, required = false, disabled = false, help }) {
   return (
     <label className={labelClass}>
       {label}{required && <span className="ml-1 text-rose-500">*</span>}
-      <select className={fieldClass} name={name} value={form[name] ?? ""} onChange={onChange} required={required}>
+      <select className={fieldClass} name={name} value={form[name] ?? ""} onChange={onChange} required={required} disabled={disabled}>
         {options.map(([value, text, disabled]) => <option key={value} value={value} disabled={disabled}>{text}</option>)}
       </select>
+      {help && <span className="mt-1 block text-[11px] font-normal text-slate-400">{help}</span>}
     </label>
   );
 }
@@ -185,6 +196,11 @@ export default function CreateLoan() {
   const [saving, setSaving] = useState(false);
   const [loanRecord, setLoanRecord] = useState(null);
   const [loadedFor, setLoadedFor] = useState(null);
+  const [goldImageFile, setGoldImageFile] = useState(null);
+  const [goldImagePreview, setGoldImagePreview] = useState(null);
+  const goldImageInput = useRef(null);
+  const selectedGoldImagePreview = useRef("");
+  const { current: activeRateSet, loading: ratesLoading, error: ratesError } = useGoldRates();
 
   useEffect(() => {
     let active = true;
@@ -253,6 +269,36 @@ export default function CreateLoan() {
     return () => { active = false; };
   }, [id]);
 
+  useEffect(() => {
+    let active = true;
+    let previewUrl = "";
+    if (goldImageFile || !loanRecord?.gold_image_url) return undefined;
+    if (loanRecord?.gold_image_url) {
+      getPrivateFile(loanRecord.gold_image_url, { responseType: "blob" })
+        .then(({ data }) => {
+          if (!active) return;
+          previewUrl = URL.createObjectURL(data);
+          setGoldImagePreview({ key: loanRecord.gold_image_url, url: previewUrl });
+        })
+        .catch((error) => {
+          console.error("Failed to load pledged gold image:", error);
+          if (active) toast.error(error.response?.data?.message || "Could not load the saved gold image.");
+        });
+    }
+    return () => {
+      active = false;
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+    };
+  }, [goldImageFile, loanRecord?.gold_image_url]);
+
+  useEffect(() => () => {
+    if (selectedGoldImagePreview.current) URL.revokeObjectURL(selectedGoldImagePreview.current);
+  }, []);
+
+  const goldImagePreviewUrl = goldImageFile
+    ? (goldImagePreview && goldImagePreview.key === goldImageFile ? goldImagePreview.url : "")
+    : (goldImagePreview && goldImagePreview.key === loanRecord?.gold_image_url ? goldImagePreview.url : "");
+
   const filteredCustomers = useMemo(() => {
     const search = customerQuery.trim().toLowerCase();
     if (!search) return customers;
@@ -265,6 +311,14 @@ export default function CreateLoan() {
     () => calculateEstimate(form, form.interest_type),
     [form]
   );
+  const activeGoldRate = getRateForPurity(activeRateSet, form.gold_purity);
+  const savedPurityUnchanged = loanRecord?.gold_purity === form.gold_purity;
+  const appliedGoldRate = loanRecord && savedPurityUnchanged
+    ? (loanRecord.gold_rate_per_gram == null ? null : Number(loanRecord.gold_rate_per_gram))
+    : activeGoldRate?.rate_per_gram;
+  const estimatedGoldValuation = loanRecord && savedPurityUnchanged && loanRecord.gold_rate_per_gram == null
+    ? Number(form.gold_valuation) || 0
+    : Math.max(0, Number(form.gross_weight || 0) - Number(form.stone_weight || 0)) * Number(appliedGoldRate || 0);
 
   const selectCustomer = async (selected) => {
     setCustomer(selected);
@@ -298,6 +352,11 @@ export default function CreateLoan() {
     setCustomer(null);
     setCustomerQuery("");
     setCustomerLoans([]);
+    setGoldImageFile(null);
+    if (selectedGoldImagePreview.current) URL.revokeObjectURL(selectedGoldImagePreview.current);
+    selectedGoldImagePreview.current = "";
+    setGoldImagePreview(null);
+    if (goldImageInput.current) goldImageInput.current.value = "";
   };
 
   const handleSubmit = async (event) => {
@@ -316,13 +375,24 @@ export default function CreateLoan() {
       toast.error("Maturity date must be after the loan date.");
       return;
     }
+    if (!loanRecord && !(appliedGoldRate > 0)) {
+      toast.error("An active daily gold rate for the selected purity is required before creating a loan.");
+      return;
+    }
     setSaving(true);
     try {
-      const payload = {
+      const loanData = {
         ...form,
-        customer_id: customer.id,
-        net_gold_weight: (gross - stone).toFixed(3)
+        customer_id: String(customer.id),
+        net_gold_weight: (gross - stone).toFixed(3),
+        gold_valuation: estimatedGoldValuation.toFixed(2)
       };
+      let payload = loanData;
+      if (goldImageFile) {
+        payload = new FormData();
+        Object.entries(loanData).forEach(([key, value]) => payload.append(key, value ?? ""));
+        payload.append("gold_image", goldImageFile);
+      }
       const response = loanRecord
         ? await api.put(`/loans/${loanRecord.id}`, payload)
         : await api.post("/loans", payload);
@@ -471,18 +541,76 @@ export default function CreateLoan() {
 
         <section className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm sm:p-5">
           <h2 className="mb-4 text-base font-bold text-[#003B3B]">Pledged Jewellery</h2>
+          {activeRateSet && <p className="mb-4 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800">
+            Global rate set effective {formatRateDate(activeRateSet.rate_date)}. Loan valuation uses eligible net gold weight × its purity rate; retail making, wastage, stones, and tax are excluded.
+          </p>}
+          {ratesError && <p role="alert" className="mb-4 rounded-lg bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">Could not refresh rates: {ratesError}</p>}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <label className={labelClass}>
               Gold Pledge Number
               <input className={`${fieldClass} bg-slate-50`} value={loanRecord?.gold_pledge_number || "Auto-generated on save"} readOnly />
             </label>
             <FormField label="Jewellery Type" name="jewellery_type" form={form} onChange={handleChange} required />
-            <FormField label="Gold Purity" name="gold_purity" form={form} onChange={handleChange} required help="Example: 22K or 916" />
+            <FormSelect
+              label="Gold Purity"
+              name="gold_purity"
+              form={form}
+              onChange={handleChange}
+              required
+              disabled={Boolean(loanRecord && loanRecord.gold_rate_per_gram == null)}
+              help={loanRecord && loanRecord.gold_rate_per_gram == null
+                ? "This legacy loan has no rate snapshot; its saved purity and valuation are preserved."
+                : "Select the purity matching the pledged gold and active rate."}
+              options={[
+                ["", "Select gold purity"],
+                ...(!GOLD_PURITY_OPTIONS.some(([value]) => value === form.gold_purity) && form.gold_purity
+                  ? [[form.gold_purity, `${form.gold_purity} (saved)`]]
+                  : []),
+                ...GOLD_PURITY_OPTIONS
+              ]}
+            />
             <FormField label="Gross Weight (g)" name="gross_weight" form={form} onChange={handleChange} type="number" min="0.001" step="0.001" required />
             <FormField label="Stone Weight (g)" name="stone_weight" form={form} onChange={handleChange} type="number" min="0" step="0.001" />
             <label className={labelClass}>Net Gold Weight (g)<input className={`${fieldClass} bg-slate-50`} value={Math.max(0, Number(form.gross_weight || 0) - Number(form.stone_weight || 0)).toFixed(3)} readOnly /></label>
-            <FormField label="Gold Valuation (₹)" name="gold_valuation" form={form} onChange={handleChange} type="number" min="0.01" step="0.01" required />
+            <FormField label="Gold Rate / Gram (₹)" name="gold_rate_per_gram" form={{ gold_rate_per_gram: appliedGoldRate ?? "" }} onChange={() => {}} readOnly help={loanRecord && savedPurityUnchanged && loanRecord.gold_rate_per_gram != null ? `Saved loan rate from ${formatRateDate(loanRecord.gold_rate_date)}; today's changes do not alter it.` : loanRecord && savedPurityUnchanged ? "Legacy loan; its saved valuation is preserved." : ratesLoading ? "Loading today's active rate..." : "Selected by the configured purity."} />
+            <FormField label="Gold Valuation (₹)" name="gold_valuation" form={{ gold_valuation: estimatedGoldValuation.toFixed(2) }} onChange={() => {}} readOnly required min="0.01" step="0.01" help="Eligible net gold weight × the applied rate snapshot; not the retail jewellery price." />
             <FormField label="Loan Amount (₹)" name="principal_amount" form={form} onChange={handleChange} type="number" min="0.01" step="0.01" required />
+          </div>
+          <div className="mt-5 rounded-xl border border-dashed border-slate-300 p-4">
+            <label className={labelClass}>
+              Gold Image <span className="font-normal text-slate-400">(optional, PNG or JPG up to 5 MB)</span>
+              <input
+                ref={goldImageInput}
+                className="sr-only"
+                type="file"
+                accept="image/png,image/jpeg"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (!file) return;
+                  if (!["image/png", "image/jpeg"].includes(file.type)) {
+                    toast.error("Choose a PNG or JPG gold image.");
+                    event.target.value = "";
+                    return;
+                  }
+                  if (file.size > 5 * 1024 * 1024) {
+                    toast.error("Gold image must be 5 MB or smaller.");
+                    event.target.value = "";
+                    return;
+                  }
+                  if (selectedGoldImagePreview.current) URL.revokeObjectURL(selectedGoldImagePreview.current);
+                  selectedGoldImagePreview.current = URL.createObjectURL(file);
+                  setGoldImagePreview({ key: file, url: selectedGoldImagePreview.current });
+                  setGoldImageFile(file);
+                }}
+              />
+              <span className="mt-2 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+                <FiUploadCloud className="text-[#008577]" />
+                {goldImageFile ? "Choose a different image" : loanRecord?.gold_image_url ? "Replace gold image" : "Upload gold image"}
+              </span>
+            </label>
+            {goldImagePreviewUrl && (
+              <img src={goldImagePreviewUrl} alt="Pledged gold preview" className="mt-3 h-40 w-40 rounded-lg border border-slate-200 object-cover" />
+            )}
           </div>
         </section>
 

@@ -166,6 +166,7 @@ export default function LoanCustomerDetails() {
           <Detail label="Customer Type" value={customer.customer_type} />
           <Detail label="Primary Mobile" value={customer.mobile} />
           <Detail label="Alternate Mobile" value={customer.alternate_mobile} />
+          <Detail label="Email" value={customer.email} />
           <Detail label="Date of Birth" value={formatDate(customer.date_of_birth)} />
           <Detail label="Gender" value={customer.gender} />
           <Detail label="Occupation" value={customer.occupation} />
@@ -178,6 +179,18 @@ export default function LoanCustomerDetails() {
           </div>
           <Detail label="Customer Since" value={formatDate(customer.created_at, true)} />
           <Detail label="Last Updated" value={formatDate(customer.updated_at, true)} />
+        </div>
+      </section>
+
+      <section className="rounded-xl border border-slate-100 bg-slate-50/70 p-4 sm:p-5">
+        <h2 className="mb-3 text-base font-bold text-[#003B3B]">Guarantor / Surety Details</h2>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <Detail label="Guarantor Name" value={customer.guarantor_name} />
+          <Detail label="Guarantor Mobile" value={customer.guarantor_mobile} />
+          <Detail label="Relationship to Customer" value={customer.guarantor_relationship} />
+          <div className="sm:col-span-2 lg:col-span-3">
+            <Detail label="Guarantor Address" value={customer.guarantor_address} />
+          </div>
         </div>
       </section>
 
