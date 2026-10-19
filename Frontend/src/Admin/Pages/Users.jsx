@@ -221,7 +221,7 @@ const Users = () => {
                     <div>
                         <Link
                             to="/admin/settings"
-                            className="mb-3 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-bold text-slate-600 transition hover:border-emerald-300 hover:text-[#00695C]"
+                            className="mb-3 inline-flex items-center gap-2 rounded-lg bg-[#00695C] px-3 py-2 text-xs font-bold text-white transition hover:bg-[#008577]"
                         >
                             <FiChevronLeft size={16} /> Back to Settings
                         </Link>
@@ -229,7 +229,7 @@ const Users = () => {
                     <button
                         type="button"
                         onClick={openAddModal}
-                        className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#B7791F] to-[#D4A017] px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-amber-900/10 transition hover:brightness-105"
+                        className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#00695C] px-4 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-[#008577]"
                     >
                         <FiPlus /> Add Customer
                     </button>
@@ -380,7 +380,7 @@ const Users = () => {
                                     <div className="flex items-start gap-2"><FiUser className="mt-0.5 shrink-0 text-[#008577]" /><dt className="w-20 shrink-0 text-slate-500">Role</dt><dd className="font-medium capitalize text-slate-700">{selectedUser.role}</dd></div>
                                     <div className="flex items-start gap-2"><FiCalendar className="mt-0.5 shrink-0 text-[#008577]" /><dt className="w-20 shrink-0 text-slate-500">Joined</dt><dd className="font-medium text-slate-700">{formatJoinDate(selectedUser.created_at, { day: "numeric", month: "long", year: "numeric" })}</dd></div>
                                 </dl>
-                                <button type="button" onClick={() => openEditModal(selectedUser)} className="w-full rounded-lg bg-gradient-to-r from-[#B7791F] to-[#D4A017] px-3 py-2.5 text-xs font-bold text-white shadow-sm hover:brightness-105">Edit Customer</button>
+                                <button type="button" onClick={() => openEditModal(selectedUser)} className="w-full rounded-lg bg-[#00695C] px-3 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#008577]">Edit Customer</button>
                             </>
                         ) : (
                             <div className="py-10 text-center text-xs text-slate-400">Choose a customer to view their details.</div>
