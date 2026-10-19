@@ -510,11 +510,6 @@ const Navbar = () => {
                 )}
               </div>
 
-              {isAdmin && (
-                <NavLink to="/admin" className={navLinkClass}>
-                  Admin Panel
-                </NavLink>
-              )}
             </div>
 
             {/* Desktop search and actions */}
@@ -623,6 +618,18 @@ const Navbar = () => {
                         >
                           My Orders
                         </button>
+                        {isAdmin && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAccountOpen(false);
+                              navigate("/admin");
+                            }}
+                            className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-[#174a38] hover:bg-[#f8f0df]"
+                          >
+                            Admin Panel
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={handleLogout}
@@ -838,22 +845,6 @@ const Navbar = () => {
                     </NavLink>
                   ))}
                 </div>
-              )}
-
-              {isAdmin && (
-                <NavLink
-                  to="/admin"
-                  onClick={closeMenus}
-                  className={({ isActive }) =>
-                    `block rounded-lg px-4 py-3 text-sm font-semibold ${
-                      isActive
-                        ? "bg-[#064638] text-[#f3d795]"
-                        : "text-[#173f33] hover:bg-[#f1e5cb]"
-                    }`
-                  }
-                >
-                  Admin Panel
-                </NavLink>
               )}
 
               <button
