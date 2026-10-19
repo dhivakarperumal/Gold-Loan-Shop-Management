@@ -6,7 +6,19 @@ import useGoldRates from "../../PrivateRouter/useGoldRates";
 import { getReceiptSettings } from "./receiptSettings";
 
 const EMPTY_CUSTOMER = { name: "", phone: "", email: "", address: "" };
-const EMPTY_PRODUCT = { product_id: "", product_name: "", category: "", purity: "", price: "" };
+const EMPTY_PRODUCT = {
+  product_id: "",
+  product_name: "",
+  category: "",
+  purity: "",
+  gross_weight: null,
+  net_gold_weight: null,
+  making_charge_type: "",
+  making_charge: null,
+  rate_per_gram: null,
+  rate_unit: "gram",
+  price: ""
+};
 const EMPTY_EXCHANGE = { product_name: "", category: "", category_is_other: false, metal_type: "Gold", purity: "22K", weight: "", wastage_weight: "" };
 const PURITY_LABELS = { "999": "24K", "916": "22K", "833": "20K", "750": "18K", "585": "14K" };
 const inputClass = "mt-1 block w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-[#008577] focus:ring-2 focus:ring-emerald-100";
@@ -51,6 +63,31 @@ function formatMakingCharge(product) {
   return product.making_charge_type === "Percentage" ? `${value}%` : currency(value);
 }
 
+function resolveProductDetails(product, metalRates, activeRateSet) {
+  const metalType = product.metal_type || "Gold";
+  const rate = findItemRate(metalRates, metalType, product.purity);
+  const storedMakingCharge = Number(product.making_charge);
+  const defaultMakingCharge = Number(rate?.making_charge_value ?? activeRateSet?.making_charge_value);
+  const useRateMakingCharge = (!Number.isFinite(storedMakingCharge) || storedMakingCharge === 0)
+    && Number.isFinite(defaultMakingCharge)
+    && defaultMakingCharge > 0;
+  const storedRate = Number(product.rate_per_gram);
+  const activeRate = Number(rate?.rate_per_unit ?? rate?.rate_per_gram);
+  return {
+    ...product,
+    making_charge_type: useRateMakingCharge
+      ? rate?.making_charge_type || activeRateSet?.making_charge_type
+      : product.making_charge_type || rate?.making_charge_type || activeRateSet?.making_charge_type || "",
+    making_charge: useRateMakingCharge ? defaultMakingCharge : product.making_charge,
+    rate_per_gram: Number.isFinite(storedRate) && storedRate > 0
+      ? storedRate
+      : Number.isFinite(activeRate) && activeRate > 0 ? activeRate : null,
+    rate_unit: Number.isFinite(storedRate) && storedRate > 0
+      ? product.rate_unit || "gram"
+      : rate?.rate_unit || product.rate_unit || "gram"
+  };
+}
+
 function TextField({ label, value, onChange, type = "text", required = false, placeholder = "", min, step, readOnly = false }) {
   return (
     <label className={labelClass}>
@@ -71,11 +108,13 @@ function TextField({ label, value, onChange, type = "text", required = false, pl
 }
 
 function findItemRate(metalRates, metalType, purity) {
-  const goldPurity = { "24k": "999", "22k": "916", "20k": "833", "18k": "750", "14k": "585" };
-  const normalizedPurity = metalType === "Gold" ? goldPurity[purity.toLowerCase()] || purity : purity;
+  const normalizedMetal = String(metalType || "").toLowerCase();
+  const purityText = String(purity || "").toLowerCase();
+  const normalizedPurity = purityText.match(/\d{3}/)?.[0]
+    || ({ "24k": "999", "22k": "916", "20k": "833", "18k": "750", "14k": "585" })[purityText.match(/\d{2}k/)?.[0]];
   return metalRates.find((rate) => (
-    rate.metal_type.toLowerCase() === metalType.toLowerCase()
-    && rate.purity.toLowerCase() === String(normalizedPurity).toLowerCase()
+    String(rate.metal_type).toLowerCase() === normalizedMetal
+    && String(rate.purity).toLowerCase() === String(normalizedPurity || purityText).toLowerCase()
   ));
 }
 
@@ -333,13 +372,16 @@ export default function BillingManagement() {
     const catalogProduct = catalogProductDetails.find(
       (item) => String(item.id) === String(product.product_id)
     );
-    return {
+    return resolveProductDetails({
       ...product,
+      metal_type: product.metal_type || catalogProduct?.metal_type,
       gross_weight: product.gross_weight ?? catalogProduct?.gross_weight,
+      net_gold_weight: product.net_gold_weight ?? catalogProduct?.net_gold_weight,
       making_charge_type: product.making_charge_type || catalogProduct?.making_charge_type,
       making_charge: product.making_charge ?? catalogProduct?.making_charge,
-      rate_per_gram: product.rate_per_gram ?? catalogProduct?.gold_rate_per_gram
-    };
+      rate_per_gram: product.rate_per_gram ?? catalogProduct?.gold_rate_per_gram,
+      rate_unit: product.rate_unit || catalogProduct?.rate_unit
+    }, metalRates, currentGoldRates);
   };
 
   const loadBills = useCallback(async () => {
@@ -475,12 +517,11 @@ export default function BillingManagement() {
         category: product.category,
         purity: product.purity,
         makingCharge: formatMakingCharge(product),
-        grossWeight: product.gross_weight,
         weight: null,
         wastageWeight: null,
         netWeight: null,
         rate: product.rate_per_gram,
-        rateUnit: "gram",
+        rateUnit: product.rate_unit || "gram",
         amount: Number(product.price) || 0,
         isExchange: false
       })),
@@ -489,7 +530,6 @@ export default function BillingManagement() {
         category: exchange.category,
         purity: `${exchange.metal_type || ""} ${exchange.purity || ""}`.trim(),
         makingCharge: "—",
-        grossWeight: null,
         weight: exchange.weight,
         wastageWeight: exchange.wastage_weight,
         netWeight: exchange.net_weight,
@@ -506,7 +546,6 @@ export default function BillingManagement() {
         <td>${escapeHtml(item.category || "—")}</td>
         <td>${escapeHtml(item.purity || "—")}</td>
         <td>${escapeHtml(item.makingCharge)}</td>
-        <td>${item.grossWeight == null ? "—" : formatWeight(item.grossWeight, "g")}</td>
         <td>${item.isExchange ? formatWeight(item.weight, item.rateUnit === "carat" ? "carat" : "g") : "—"}</td>
         <td>${item.isExchange ? formatWeight(item.wastageWeight, item.rateUnit === "carat" ? "carat" : "g") : "—"}</td>
         <td>${item.isExchange ? formatWeight(item.netWeight, item.rateUnit === "carat" ? "carat" : "g") : "—"}</td>
@@ -608,8 +647,8 @@ export default function BillingManagement() {
           <div class="customers">${customerDetails || "<p>No customer details</p>"}</div>
           <h2>Items</h2>
           <table>
-            <thead><tr><th>S.No.</th><th>Item</th><th>Category</th><th>Purity</th><th>Making Charge</th><th>Weight in gross</th><th>Weight</th><th>Wastage</th><th>Net Weight</th><th class="amount">Rate</th><th class="amount">Amount</th></tr></thead>
-            <tbody>${rows || '<tr><td colspan="11">No items</td></tr>'}</tbody>
+            <thead><tr><th>S.No.</th><th>Item</th><th>Category</th><th>Purity</th><th>Making Charge</th><th>Weight</th><th>Wastage</th><th>Net Weight</th><th class="amount">Rate</th><th class="amount">Amount</th></tr></thead>
+            <tbody>${rows || '<tr><td colspan="10">No items</td></tr>'}</tbody>
           </table>
           <div class="totals">
             <div class="total-row"><span>Sub-Total</span><span>${currency(bill.sub_total)}</span></div>
@@ -717,13 +756,20 @@ export default function BillingManagement() {
       : Number(selected.final_selling_price) > 0
         ? Number(selected.final_selling_price)
         : Number(selected.mrp || 0);
-    setProductToAdd({
+    setProductToAdd(resolveProductDetails({
       product_id: String(selected.id),
       product_name: selected.name,
       category: selected.category,
       purity: selected.purity || "",
+      metal_type: selected.metal_type || "Gold",
+      gross_weight: selected.gross_weight ?? null,
+      net_gold_weight: selected.net_gold_weight ?? null,
+      making_charge_type: selected.making_charge_type || "",
+      making_charge: selected.making_charge ?? null,
+      rate_per_gram: selected.gold_rate_per_gram ?? null,
+      rate_unit: selected.rate_unit || "gram",
       price
-    });
+    }, metalRates, currentGoldRates));
   };
 
   const addSelectedProduct = () => {
@@ -1076,28 +1122,37 @@ export default function BillingManagement() {
               <p className="rounded-lg border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">No products have been added to this bill.</p>
             ) : (
               <div className="w-full overflow-x-auto rounded-lg border border-slate-200">
-                <table className="w-full min-w-[700px] border-collapse text-left">
+                <table className="w-full min-w-[900px] border-collapse text-left">
                   <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                     <tr>
                       <th className="px-4 py-3 font-semibold">Product</th>
                       <th className="px-4 py-3 font-semibold">Category</th>
                       <th className="px-4 py-3 font-semibold">Purity</th>
+                      <th className="px-4 py-3 text-right font-semibold">Making Charge</th>
+                      <th className="px-4 py-3 text-right font-semibold">Net Weight</th>
+                      <th className="px-4 py-3 text-right font-semibold">Gram Rate</th>
                       <th className="px-4 py-3 font-semibold">Unit Price</th>
                       <th className="px-4 py-3 text-right font-semibold">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {products.map((product, index) => (
+                    {products.map((savedProduct, index) => {
+                      const product = getProductWithCatalogDetails(savedProduct);
+                      return (
                       <tr key={`${product.product_id}-${index}`}>
                         <td className="px-4 py-3 text-sm font-medium text-slate-800">{product.product_name}</td>
                         <td className="px-4 py-3 text-sm text-slate-700">{product.category || "—"}</td>
                         <td className="px-4 py-3 text-sm text-slate-700">{product.purity || "—"}</td>
+                        <td className="px-4 py-3 text-right text-sm text-slate-700">{formatMakingCharge(product)}</td>
+                        <td className="px-4 py-3 text-right text-sm text-slate-700">{product.net_gold_weight == null ? "—" : formatWeight(product.net_gold_weight, "g")}</td>
+                        <td className="px-4 py-3 text-right text-sm text-slate-700">{product.rate_per_gram == null ? "—" : `${currency(product.rate_per_gram)} / ${product.rate_unit || "gram"}`}</td>
                         <td className="px-4 py-3 text-sm font-semibold text-slate-800">{currency(product.price)}</td>
                         <td className="px-4 py-3 text-right">
                           <button type="button" onClick={() => setProducts((rows) => rows.filter((_, rowIndex) => rowIndex !== index))} className="rounded-md p-2 text-rose-500 hover:bg-rose-50" aria-label={`Remove product ${index + 1}`}><FiTrash2 /></button>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1222,7 +1277,7 @@ export default function BillingManagement() {
               </div>
             </div>
             <div className="overflow-x-auto rounded-lg border border-slate-200">
-              <table className="w-full min-w-[1450px] text-left text-sm">
+              <table className="w-full min-w-[1350px] text-left text-sm">
                 <thead className="bg-slate-50 text-xs uppercase text-slate-500">
                   <tr>
                     <th className="px-3 py-2">S.No.</th>
@@ -1230,7 +1285,6 @@ export default function BillingManagement() {
                     <th className="px-3 py-2">Category</th>
                     <th className="px-3 py-2">Purity</th>
                     <th className="px-3 py-2 text-right">Making Charge</th>
-                    <th className="px-3 py-2 text-right">Weight in gross</th>
                     <th className="px-3 py-2 text-right">Weight</th>
                     <th className="px-3 py-2 text-right">Wastage</th>
                     <th className="px-3 py-2 text-right">Net Weight</th>
@@ -1248,11 +1302,10 @@ export default function BillingManagement() {
                         <td className="px-3 py-2">{product.category || "—"}</td>
                         <td className="px-3 py-2">{product.purity || "—"}</td>
                         <td className="px-3 py-2 text-right">{formatMakingCharge(product)}</td>
-                        <td className="px-3 py-2 text-right">{product.gross_weight == null ? "—" : formatWeight(product.gross_weight, "g")}</td>
                         <td className="px-3 py-2 text-right">—</td>
                         <td className="px-3 py-2 text-right">—</td>
                         <td className="px-3 py-2 text-right">—</td>
-                        <td className="px-3 py-2 text-right">{product.rate_per_gram == null ? "—" : `${currency(product.rate_per_gram)} / gram`}</td>
+                        <td className="px-3 py-2 text-right">{product.rate_per_gram == null ? "—" : `${currency(product.rate_per_gram)} / ${product.rate_unit || "gram"}`}</td>
                         <td className="px-3 py-2 text-right">{currency(product.price)}</td>
                       </tr>
                     );
