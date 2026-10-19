@@ -59,7 +59,7 @@ const navItems = [
         label: "All Loans",
         icon: Files
       },
-      { path: "/admin/loans/loanrepayment", label: "Loan Repayment", icon: HandCoins },
+      
       { path: "/admin/loans/loanreniwel", label: "Loan Renewal", icon: RefreshCw },
       { path: "/admin/loans/goldrelease", label: "Gold Release", icon: Gem },
       { path: "/admin/loans/overdueloans", label: "Overdue Loans", icon: Clock3 },
