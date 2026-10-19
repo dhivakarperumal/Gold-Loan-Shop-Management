@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiArrowLeft, FiCalendar, FiChevronRight, FiCreditCard, FiDollarSign, FiEdit2, FiEye, FiGrid, FiList, FiPlus, FiRepeat, FiSave, FiSearch, FiTrash2, FiX } from "react-icons/fi";
+import { FiArrowLeft, FiCalendar, FiChevronRight, FiCreditCard, FiDollarSign, FiEdit2, FiEye, FiGrid, FiList, FiPlus, FiPrinter, FiRepeat, FiSave, FiSearch, FiTrash2, FiX } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api from "../../api";
 import useGoldRates from "../../PrivateRouter/useGoldRates";
@@ -25,6 +25,16 @@ function decodeArray(value) {
   } catch {
     return [];
   }
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;"
+  })[character]);
 }
 
 function TextField({ label, value, onChange, type = "text", required = false, placeholder = "", min, step, readOnly = false }) {
@@ -421,6 +431,105 @@ export default function BillingManagement() {
     });
   }, [bills, billSearch, paymentFilter]);
 
+  const printBill = (bill) => {
+    const printWindow = window.open("", "_blank", "width=900,height=700");
+    if (!printWindow) {
+      toast.error("Allow pop-ups to print this bill.");
+      return;
+    }
+
+    const billCustomers = decodeArray(bill.customers);
+    const billProducts = decodeArray(bill.products);
+    const billExchanges = decodeArray(bill.exchanges);
+    const lineItems = [
+      ...billProducts.map((product) => ({
+        name: product.product_name,
+        category: product.category,
+        purity: product.purity,
+        amount: Number(product.price) || 0,
+        isExchange: false
+      })),
+      ...billExchanges.map((exchange) => ({
+        name: exchange.product_name || "Exchange item",
+        category: exchange.category,
+        purity: `${exchange.metal_type || ""} ${exchange.purity || ""}`.trim(),
+        amount: -(Number(exchange.credit_amount) || 0),
+        isExchange: true
+      }))
+    ];
+    const rows = lineItems.map((item) => `
+      <tr>
+        <td>${escapeHtml(item.name || "—")}</td>
+        <td>${escapeHtml(item.category || "—")}</td>
+        <td>${escapeHtml(item.purity || "—")}</td>
+        <td class="amount">${item.isExchange ? "−" : ""}${currency(Math.abs(item.amount))}</td>
+      </tr>
+    `).join("");
+    const customerDetails = billCustomers.map((customer) => `
+      <div class="customer">
+        <strong>${escapeHtml(customer.name || "Customer")}</strong>
+        ${customer.phone ? `<div>${escapeHtml(customer.phone)}</div>` : ""}
+        ${customer.email ? `<div>${escapeHtml(customer.email)}</div>` : ""}
+        ${customer.address ? `<div>${escapeHtml(customer.address)}</div>` : ""}
+      </div>
+    `).join("");
+    const exchangeTotal = billExchanges.reduce((sum, item) => sum + (Number(item.credit_amount) || 0), 0);
+    const date = bill.created_at ? new Date(bill.created_at).toLocaleDateString("en-IN") : "—";
+
+    printWindow.addEventListener("load", () => {
+      printWindow.focus();
+      printWindow.print();
+    }, { once: true });
+    printWindow.document.write(`<!doctype html>
+      <html lang="en">
+        <head>
+          <meta charset="utf-8" />
+          <title>Bill ${escapeHtml(bill.invoice_no)}</title>
+          <style>
+            * { box-sizing: border-box; }
+            body { margin: 0; padding: 36px; color: #1e293b; font: 14px Arial, sans-serif; }
+            header { display: flex; justify-content: space-between; gap: 24px; padding-bottom: 20px; border-bottom: 2px solid #00695c; }
+            h1 { margin: 0 0 8px; color: #00695c; font-size: 24px; }
+            h2 { margin: 24px 0 10px; font-size: 16px; }
+            p { margin: 4px 0; }
+            .meta { text-align: right; }
+            .customers { display: flex; flex-wrap: wrap; gap: 20px; }
+            .customer { min-width: 200px; line-height: 1.6; }
+            table { width: 100%; margin-top: 12px; border-collapse: collapse; }
+            th, td { padding: 10px 8px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+            th { background: #f1f5f9; font-size: 11px; text-transform: uppercase; }
+            .amount { text-align: right; white-space: nowrap; }
+            th.amount { text-align: right; }
+            .totals { width: min(100%, 340px); margin: 20px 0 0 auto; }
+            .total-row { display: flex; justify-content: space-between; gap: 20px; padding: 6px 0; }
+            .grand-total { margin-top: 6px; padding-top: 12px; border-top: 2px solid #cbd5e1; font-size: 18px; font-weight: 700; }
+            @media print { body { padding: 12mm; } }
+          </style>
+        </head>
+        <body>
+          <header>
+            <div><h1>Invoice</h1><p>Invoice No: <strong>${escapeHtml(bill.invoice_no || "—")}</strong></p></div>
+            <div class="meta"><p>Date: ${escapeHtml(date)}</p><p>Payment: ${bill.payment_type === "EXCHANGE_GOLD" ? "Exchange Gold" : "Full Payment"}</p></div>
+          </header>
+          <h2>Customer${billCustomers.length === 1 ? "" : "s"}</h2>
+          <div class="customers">${customerDetails || "<p>No customer details</p>"}</div>
+          <h2>Items</h2>
+          <table>
+            <thead><tr><th>Item</th><th>Category</th><th>Purity</th><th class="amount">Amount</th></tr></thead>
+            <tbody>${rows || '<tr><td colspan="4">No items</td></tr>'}</tbody>
+          </table>
+          <div class="totals">
+            <div class="total-row"><span>Sub-Total</span><span>${currency(bill.sub_total)}</span></div>
+            ${Number(bill.discount_amount) > 0 ? `<div class="total-row"><span>Discount</span><span>−${currency(bill.discount_amount)}</span></div>` : ""}
+            ${exchangeTotal > 0 ? `<div class="total-row"><span>Exchange Amount</span><span>−${currency(exchangeTotal)}</span></div>` : ""}
+            <div class="total-row"><span>GST</span><span>${currency(bill.gst_amount)}</span></div>
+            <div class="total-row grand-total"><span>Total</span><span>${currency(bill.total_amount)}</span></div>
+          </div>
+        </body>
+      </html>`);
+    printWindow.document.close();
+  };
+
   const resetForm = () => {
     setEditingBillId(null);
     setCustomers([{ ...EMPTY_CUSTOMER }]);
@@ -739,6 +848,7 @@ export default function BillingManagement() {
                         <td className="px-4 py-4">
                           <div className="flex justify-end gap-1">
                             <button type="button" onClick={() => setViewingBill(bill)} className="rounded-md p-2 text-sky-700 hover:bg-sky-50" aria-label={`View bill ${bill.invoice_no}`} title="View"><FiEye /></button>
+                            <button type="button" onClick={() => printBill(bill)} className="rounded-md p-2 text-[#00695C] hover:bg-emerald-50" aria-label={`Print bill ${bill.invoice_no}`} title="Print"><FiPrinter /></button>
                             <button type="button" onClick={() => editBill(bill)} className="rounded-md p-2 text-amber-700 hover:bg-amber-50" aria-label={`Edit bill ${bill.invoice_no}`} title="Edit"><FiEdit2 /></button>
                             <button type="button" onClick={() => deleteBill(bill)} className="rounded-md p-2 text-rose-600 hover:bg-rose-50" aria-label={`Delete bill ${bill.invoice_no}`} title="Delete"><FiTrash2 /></button>
                           </div>
@@ -776,6 +886,7 @@ export default function BillingManagement() {
                       </div>
                       <div className="mt-3 flex justify-end gap-1 border-t border-slate-100 pt-2">
                         <button type="button" onClick={() => setViewingBill(bill)} className="rounded-md p-2 text-sky-700 hover:bg-sky-50" aria-label={`View bill ${bill.invoice_no}`} title="View"><FiEye /></button>
+                        <button type="button" onClick={() => printBill(bill)} className="rounded-md p-2 text-[#00695C] hover:bg-emerald-50" aria-label={`Print bill ${bill.invoice_no}`} title="Print"><FiPrinter /></button>
                         <button type="button" onClick={() => editBill(bill)} className="rounded-md p-2 text-amber-700 hover:bg-amber-50" aria-label={`Edit bill ${bill.invoice_no}`} title="Edit"><FiEdit2 /></button>
                         <button type="button" onClick={() => deleteBill(bill)} className="rounded-md p-2 text-rose-600 hover:bg-rose-50" aria-label={`Delete bill ${bill.invoice_no}`} title="Delete"><FiTrash2 /></button>
                       </div>
