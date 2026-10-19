@@ -17,7 +17,6 @@ import {
   Phone,
   MapPin,
   LogOut,
-  User,
 } from "lucide-react";
 import PageContainer from "./PageContainer";
 import WishlistDrawer from "./WishlistDrawer";
@@ -531,7 +530,9 @@ const Navbar = () => {
                 >
                   <span className={iconCircleClass}>
                     {user ? (
-                      <User size={21} />
+                      <span className="text-base font-semibold uppercase">
+                        {profileName.trim().charAt(0) || "U"}
+                      </span>
                     ) : (
                       <UserRound size={21} />
                     )}
