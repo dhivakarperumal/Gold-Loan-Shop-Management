@@ -296,7 +296,7 @@ export default function BillingManagement() {
                   <TextField label="Customer Name" value={customer.name} onChange={(value) => updateRow(setCustomers, customers, index, "name", value)} required />
                   <TextField label="Phone Number" value={customer.phone} onChange={(value) => updateRow(setCustomers, customers, index, "phone", value)} type="tel" />
                   <TextField label="Email Address" value={customer.email} onChange={(value) => updateRow(setCustomers, customers, index, "email", value)} type="email" />
-                  <label className={`${labelClass} md:col-span-2`}>
+                  <label className={labelClass}>
                     Address
                     <textarea
                       className={`${inputClass} min-h-20`}
