@@ -127,7 +127,13 @@ async function activateRates(req, res, next) {
   try {
     const result = await activateRateBatch(req.params.id, reason, req.adminUser.user_id);
     if (result.error) return sendBatchError(res, result.error);
-    return res.json({ ...result.batch, activation_scope: 'future calculations only; saved records are not recalculated' });
+    return res.json({
+      ...result.batch,
+      price_recalculation: result.priceRecalculation,
+      activation_scope: result.priceRecalculation
+        ? 'applicable product prices recalculated; historical invoices unchanged'
+        : 'future-effective rate; product prices will recalculate after the rate becomes effective'
+    });
   } catch (error) {
     return next(error);
   }

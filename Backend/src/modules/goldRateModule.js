@@ -1,5 +1,6 @@
 const crypto = require('node:crypto');
 const { pool } = require('../config/db');
+const { recalculateProductPrices } = require('../services/productPricing');
 
 const RATE_SPECS = [
   { key: 'gold_999', metal_type: 'Gold', purity: '999', rate_unit: 'gram' },
@@ -358,8 +359,20 @@ async function activateRateBatch(id, reason, userId) {
         previousRate: null, newRate: row.rate_per_gram, action: 'Activated', reason, userId
       });
     }
+    const [[effectiveRow]] = await connection.execute(
+      'SELECT effective_from <= UTC_TIMESTAMP() AS effective_now FROM gold_rates WHERE batch_id = ? LIMIT 1',
+      [batch.batch_id]
+    );
+    let priceRecalculation = null;
+    if (Number(effectiveRow.effective_now) === 1) {
+      priceRecalculation = await recalculateProductPrices(connection, batch.rates, {
+        reason: `Daily rate activated: ${reason}`,
+        rateDate: batch.rate_date,
+        userId
+      });
+    }
     await connection.commit();
-    return { batch: await getRateBatchById(batch.batch_id) };
+    return { batch: await getRateBatchById(batch.batch_id), priceRecalculation };
   } catch (error) {
     await connection.rollback();
     throw error;

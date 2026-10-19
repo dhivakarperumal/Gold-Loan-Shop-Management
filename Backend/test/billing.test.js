@@ -199,7 +199,13 @@ test('uses catalog details and catalog price instead of client-submitted product
       making_charge_type: 'Fixed Amount',
       making_charge: 1200,
       rate_per_gram: 7200,
-      price: 12000
+      gold_value: null,
+      mrp: 15000,
+      offer_type: 'None',
+      offer_price: 12000,
+      discount_amount: 0,
+      tax_amount: 0,
+      price: 12500
     }]
   });
 });

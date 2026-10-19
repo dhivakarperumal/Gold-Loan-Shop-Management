@@ -203,13 +203,16 @@ export default function DailyGoldRate() {
       toast.error(`Enter a valid positive rate for ${missingRate.label}.`);
       return;
     }
-    if (!window.confirm("Save and activate these rates? Pending work may use the new rates. Previously saved bills, products and loans will not be recalculated.")) return;
+    if (!window.confirm("Save and activate these rates? Applicable product prices will be recalculated. Previously issued invoices will retain their saved prices.")) return;
     setSaving(true);
     try {
       const batch = await persistDraft();
-      await api.post(`/gold-rates/${batch.id}/activate`, { reason: form.reason.trim() });
+      const { data: activated } = await api.post(`/gold-rates/${batch.id}/activate`, { reason: form.reason.trim() });
       setForm(blankForm());
-      toast.success("Daily gold rates activated for future calculations.");
+      const updatedCount = activated.price_recalculation?.updated;
+      toast.success(Number.isInteger(updatedCount)
+        ? `Rates activated. ${updatedCount} product prices recalculated; invoice history preserved.`
+        : "Rates activated for their effective time; invoice history is preserved.");
       const [refreshResult] = await Promise.allSettled([refresh(), loadHistory()]);
       setFormOpen(false);
       if (refreshResult.status === "rejected") {

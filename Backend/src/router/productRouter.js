@@ -1,9 +1,12 @@
 const express = require('express');
 const {
   getProduct,
+  getProductPricing,
+  getProductPriceHistory,
   getProducts,
   latestProductCode,
   postProduct,
+  postRecalculatePrices,
   putProduct,
   receiveProductFiles,
   removeProduct,
@@ -28,7 +31,10 @@ function receiveFiles(fields) {
 }
 
 router.get('/', getProducts);
+router.post('/recalculate-prices', requireAdmin, postRecalculatePrices);
 router.get('/latest-code', latestProductCode);
+router.get('/:id/pricing', getProductPricing);
+router.get('/:id/price-history', requireAdmin, getProductPriceHistory);
 router.get('/:id', getProduct);
 router.post('/upload', requireAdmin, receiveFiles([{ name: 'images', maxCount: 10 }]), receiveProductFiles, uploadProductImages);
 router.post('/upload-media', requireAdmin, receiveFiles([

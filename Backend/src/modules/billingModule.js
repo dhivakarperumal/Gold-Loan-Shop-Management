@@ -47,7 +47,8 @@ async function getBillingProductsByIds(productIds) {
   const placeholders = productIds.map(() => '?').join(', ');
   const [rows] = await pool.execute(
     `SELECT id, name, category, purity, gross_weight, net_gold_weight, making_charge_type, making_charge,
-      gold_rate_per_gram, mrp, offer_price, final_selling_price, status
+      gold_rate_per_gram, gold_value, mrp, offer_type, offer_price, applied_discount, tax_amount,
+      final_selling_price, status
      FROM products
      WHERE id IN (${placeholders})`,
     productIds
