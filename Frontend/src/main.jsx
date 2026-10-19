@@ -1,4 +1,4 @@
-import React, { StrictMode } from "react";
+import React from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.jsx";
@@ -46,6 +46,7 @@ const Reviews = React.lazy(() => import("./Admin/Pages/Reviews.jsx"));
 const Settings = React.lazy(() => import("./Admin/Pages/Settings.jsx"));
 const DailyGoldRate = React.lazy(() => import("./Admin/Pages/DailyGoldRate.jsx"));
 const ReceiptSettings = React.lazy(() => import("./Admin/Pages/ReceiptSettings.jsx"));
+const HomeSections = React.lazy(() => import("./Admin/Pages/HomeSections.jsx"));
 const Dealers = React.lazy(() => import("./Admin/Dealers/Dealers.jsx"));
 const CustomerKyc = React.lazy(() => import("./Components/Account/CustomerKyc.jsx"));
 const AdminKyc = React.lazy(() => import("./Admin/Kyc/AdminKyc.jsx"));
@@ -85,9 +86,7 @@ const router = createBrowserRouter([
     element: (
       <PrivateRoute allowedRoles={["admin"]}>
         <AdminProvider>
-          <GoldRatesProvider>
-            <AdminPanel />
-          </GoldRatesProvider>
+          <AdminPanel />
         </AdminProvider>
       </PrivateRoute>
     ),
@@ -126,6 +125,7 @@ const router = createBrowserRouter([
       { path: "settings", element: <Settings /> },
       { path: "settings/daily-gold-rate", element: <DailyGoldRate /> },
       { path: "settings/receipt", element: <ReceiptSettings /> },
+      { path: "settings/home-sections", element: <HomeSections /> },
       // { path: "profile", element: <Profile /> },
     ],
   },
@@ -135,10 +135,12 @@ createRoot(document.getElementById("root")).render(
   <GoogleOAuthProvider clientId="92181265196-n9a9p26qe601hg7lar8acq6s4f1cknq7.apps.googleusercontent.com">
     <AuthProvider>
       <StoreProvider>
-        <Toaster position="top-left" reverseOrder={false} />
-        <React.Suspense fallback={<Loader />}>
-          <RouterProvider router={router} />
-        </React.Suspense>
+        <GoldRatesProvider>
+          <Toaster position="top-left" reverseOrder={false} />
+          <React.Suspense fallback={<Loader />}>
+            <RouterProvider router={router} />
+          </React.Suspense>
+        </GoldRatesProvider>
       </StoreProvider>
     </AuthProvider>
   </GoogleOAuthProvider>

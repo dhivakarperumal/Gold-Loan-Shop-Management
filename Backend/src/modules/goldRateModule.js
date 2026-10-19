@@ -1,5 +1,6 @@
 const crypto = require('node:crypto');
 const { pool } = require('../config/db');
+const { rateForProduct, recalculateProductPrices } = require('../services/productPricing');
 
 const RATE_SPECS = [
   { key: 'gold_999', metal_type: 'Gold', purity: '999', rate_unit: 'gram' },
@@ -140,20 +141,7 @@ async function getCurrentGoldRates() {
 }
 
 function findGoldRateForPurity(current, purity, metalType = 'Gold') {
-  if (!current) return null;
-  const text = String(purity || '').toLowerCase();
-  const exactRate = current.rates.find((rate) => (
-    rate.metal_type.toLowerCase() === String(metalType).toLowerCase()
-    && rate.purity.toLowerCase() === text
-  ));
-  if (exactRate) return exactRate;
-  const purityDigits = text.match(/\d{3}/)?.[0] || ({
-    '24k': '999', '22k': '916', '20k': '833', '18k': '750', '14k': '585'
-  })[text.match(/\d{2}k/)?.[0]];
-  return current.rates.find((rate) => (
-    rate.metal_type.toLowerCase() === String(metalType).toLowerCase()
-    && rate.purity === purityDigits
-  )) || null;
+  return current ? rateForProduct(current.rates, purity, metalType) : null;
 }
 
 async function recordHistory(connection, { batchId, rateId, metalType, purity, rateUnit = 'gram', previousRate, newRate, action, reason, userId }) {
@@ -358,8 +346,20 @@ async function activateRateBatch(id, reason, userId) {
         previousRate: null, newRate: row.rate_per_gram, action: 'Activated', reason, userId
       });
     }
+    const [[effectiveRow]] = await connection.execute(
+      'SELECT effective_from <= UTC_TIMESTAMP() AS effective_now FROM gold_rates WHERE batch_id = ? LIMIT 1',
+      [batch.batch_id]
+    );
+    let priceRecalculation = null;
+    if (Number(effectiveRow.effective_now) === 1) {
+      priceRecalculation = await recalculateProductPrices(connection, batch.rates, {
+        reason: `Daily rate activated: ${reason}`,
+        rateDate: batch.rate_date,
+        userId
+      });
+    }
     await connection.commit();
-    return { batch: await getRateBatchById(batch.batch_id) };
+    return { batch: await getRateBatchById(batch.batch_id), priceRecalculation };
   } catch (error) {
     await connection.rollback();
     throw error;

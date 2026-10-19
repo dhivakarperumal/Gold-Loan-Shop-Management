@@ -17,6 +17,7 @@ const { initializeDealerModule } = require('./src/modules/dealerModule');
 const { initializeStoreModule } = require('./src/modules/storeModule');
 const { initializeBillingModule } = require('./src/modules/billingModule');
 const { initializeReceiptSettingsModule } = require('./src/modules/receiptSettingsModule');
+const { initializeHomeSectionModule } = require('./src/modules/homeSectionModule');
 const apiRouter = require('./src/router');
 const { pool } = require('./src/config/db');
 
@@ -66,6 +67,7 @@ async function startServer() {
   await initializeStoreModule();
   await initializeBillingModule();
   await initializeReceiptSettingsModule();
+  await initializeHomeSectionModule();
   const server = app.listen(PORT, () => {
     console.log(`Backend server is running on port ${PORT}`);
   });

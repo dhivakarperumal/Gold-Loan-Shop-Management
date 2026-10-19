@@ -14,6 +14,7 @@ import {
   Phone,
   MapPin,
   Gem,
+  Sparkles,
   ShieldCheck,
   Truck,
   Headset,
@@ -106,9 +107,9 @@ const Footer = () => {
 
           {[
             {
-              icon: <Truck size={25} strokeWidth={1.5} />,
-              title: "FREE SHIPPING",
-              subtitle: "On all eligible orders",
+              icon: <Sparkles size={25} strokeWidth={1.5} />,
+              title: "TIMELESS DESIGNS",
+              subtitle: "Traditional styles for every occasion",
             },
             {
               icon: <ShieldCheck size={25} strokeWidth={1.5} />,

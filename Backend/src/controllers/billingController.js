@@ -250,10 +250,10 @@ function mapSelectedProducts(rawProducts, catalogProducts) {
     if (!catalogProduct || catalogProduct.status !== 'Active') {
       return { error: `Product ${index + 1} is no longer active in the catalog` };
     }
-    const price = Number(catalogProduct.offer_price) > 0
-      ? Number(catalogProduct.offer_price)
-      : Number(catalogProduct.final_selling_price) > 0
-        ? Number(catalogProduct.final_selling_price)
+    const price = Number(catalogProduct.final_selling_price) > 0
+      ? Number(catalogProduct.final_selling_price)
+      : Number(catalogProduct.offer_price) > 0
+        ? Number(catalogProduct.offer_price)
         : Number(catalogProduct.mrp || 0);
     products.push({
       product_id: productId,
@@ -265,6 +265,12 @@ function mapSelectedProducts(rawProducts, catalogProducts) {
       making_charge_type: catalogProduct.making_charge_type || '',
       making_charge: catalogProduct.making_charge == null ? null : Number(catalogProduct.making_charge),
       rate_per_gram: catalogProduct.gold_rate_per_gram == null ? null : Number(catalogProduct.gold_rate_per_gram),
+      gold_value: catalogProduct.gold_value == null ? null : Number(catalogProduct.gold_value),
+      mrp: catalogProduct.mrp == null ? null : Number(catalogProduct.mrp),
+      offer_type: catalogProduct.offer_type || 'None',
+      offer_price: catalogProduct.offer_price == null ? null : Number(catalogProduct.offer_price),
+      discount_amount: catalogProduct.applied_discount == null ? 0 : Number(catalogProduct.applied_discount),
+      tax_amount: catalogProduct.tax_amount == null ? 0 : Number(catalogProduct.tax_amount),
       price
     });
   }

@@ -203,13 +203,16 @@ export default function DailyGoldRate() {
       toast.error(`Enter a valid positive rate for ${missingRate.label}.`);
       return;
     }
-    if (!window.confirm("Save and activate these rates? Pending work may use the new rates. Previously saved bills, products and loans will not be recalculated.")) return;
+    if (!window.confirm("Save and activate these rates? Applicable product prices will be recalculated. Previously issued invoices will retain their saved prices.")) return;
     setSaving(true);
     try {
       const batch = await persistDraft();
-      await api.post(`/gold-rates/${batch.id}/activate`, { reason: form.reason.trim() });
+      const { data: activated } = await api.post(`/gold-rates/${batch.id}/activate`, { reason: form.reason.trim() });
       setForm(blankForm());
-      toast.success("Daily gold rates activated for future calculations.");
+      const updatedCount = activated.price_recalculation?.updated;
+      toast.success(Number.isInteger(updatedCount)
+        ? `Rates activated. ${updatedCount} product prices recalculated; invoice history preserved.`
+        : "Rates activated for their effective time; invoice history is preserved.");
       const [refreshResult] = await Promise.allSettled([refresh(), loadHistory()]);
       setFormOpen(false);
       if (refreshResult.status === "rejected") {
@@ -223,8 +226,16 @@ export default function DailyGoldRate() {
     }
   };
 
-  const handleEditDraft = (batch) => {
-    setForm({ ...formFromBatch(batch), reason: "" });
+  const handleEditRateBatch = (batch) => {
+    const batchForm = formFromBatch(batch);
+    setForm({
+      ...batchForm,
+      id: batch.status === "Draft" ? batchForm.id : null,
+      expected_updated_at: batch.status === "Draft" ? batchForm.expected_updated_at : null,
+      expected_version: batch.status === "Draft" ? batchForm.expected_version : null,
+      status: "Draft",
+      reason: ""
+    });
     setReasonOption("");
     setFormOpen(true);
   };
@@ -406,7 +417,7 @@ export default function DailyGoldRate() {
               <table className="w-full min-w-[700px] text-left text-sm">
                 <thead className="bg-[#003B3B] text-xs uppercase tracking-wide text-white"><tr><th className="px-4 py-4">Rate date</th><th className="px-4 py-4">Status</th><th className="px-4 py-4">Effective from</th><th className="px-4 py-4">Updated by</th><th className="px-4 py-4">Last updated</th><th className="px-4 py-4">Action</th></tr></thead>
                 <tbody className="divide-y divide-slate-100">{visibleBatches.map((batch) => <tr key={batch.batch_id} className="transition hover:bg-emerald-50/40">
-                  <td className="px-4 py-3 font-semibold text-slate-800">{formatRateDate(batch.rate_date)}</td><td className="px-4 py-3"><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${batch.status === "Active" ? "bg-emerald-50 text-emerald-700" : batch.status === "Draft" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600"}`}>{batch.status}</span></td><td className="px-4 py-3 text-slate-600">{new Date(batch.effective_from).toLocaleString()}</td><td className="px-4 py-3 text-slate-600">{batch.updated_by_name || `Admin ${batch.updated_by}`}</td><td className="px-4 py-3 text-slate-600">{new Date(batch.updated_at).toLocaleString()}</td><td className="px-4 py-3">{batch.status === "Draft" ? <button type="button" onClick={() => handleEditDraft(batch)} className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 font-bold text-[#008577] transition hover:bg-emerald-50"><FiEdit2 />Edit</button> : <span className="text-slate-400">—</span>}</td>
+                  <td className="px-4 py-3 font-semibold text-slate-800">{formatRateDate(batch.rate_date)}</td><td className="px-4 py-3"><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${batch.status === "Active" ? "bg-emerald-50 text-emerald-700" : batch.status === "Draft" ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-600"}`}>{batch.status}</span></td><td className="px-4 py-3 text-slate-600">{new Date(batch.effective_from).toLocaleString()}</td><td className="px-4 py-3 text-slate-600">{batch.updated_by_name || `Admin ${batch.updated_by}`}</td><td className="px-4 py-3 text-slate-600">{new Date(batch.updated_at).toLocaleString()}</td><td className="px-4 py-3">{batch.status === "Draft" || batch.status === "Active" ? <button type="button" onClick={() => handleEditRateBatch(batch)} className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1.5 font-bold text-[#008577] transition hover:bg-emerald-50"><FiEdit2 />{batch.status === "Draft" ? "Edit" : "Edit rates"}</button> : <span className="text-slate-400">—</span>}</td>
                 </tr>)}</tbody>
               </table>
               {!batches.length && <p className="px-4 py-6 text-center text-sm text-slate-500">No rate sets found.</p>}

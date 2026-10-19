@@ -61,6 +61,7 @@ const EMPTY_PRODUCT = {
   wastage: "",
   stone_weight: "0",
   stone_charges: "0",
+  other_charges: "0",
   stone_type: "None",
   huid: "",
   available_sizes: [],
@@ -74,7 +75,9 @@ const EMPTY_PRODUCT = {
   size_guide_chart: "",
   mrp: "",
   offer: "0",
+  offer_type: "Percentage",
   offer_price: "",
+  fixed_discount_amount: "0",
   discount: "0",
   gst_rate: "",
   final_selling_price: "",
@@ -193,6 +196,8 @@ const AddProducts = () => {
             highlights: Array.isArray(product.highlights) ? product.highlights : [],
             images: Array.isArray(product.images) ? product.images : [],
             offer: String(product.offer ?? "0"),
+            offer_type: product.offer_type || (Number(product.offer) > 0 ? "Percentage" : "None"),
+            fixed_discount_amount: String(product.fixed_discount_amount ?? "0"),
             offer_price: String(product.offer_price ?? ""),
             mrp: String(product.mrp ?? ""),
             total_stock: String(product.total_stock ?? "0"),
@@ -225,6 +230,11 @@ const AddProducts = () => {
     ? [formData.purity, ...configuredPurities]
     : configuredPurities;
   const isDiamond = formData.metal_type.toLowerCase() === "diamond";
+  const grossWeight = Number(formData.gross_weight) || 0;
+  const stoneWeight = Number(formData.stone_weight) || 0;
+  const effectiveNetMetalWeight = isDiamond
+    ? Number(formData.net_gold_weight) || 0
+    : Math.max(0, grossWeight - stoneWeight);
   const activePurityRate = getRateForPurity(activeRateSet, formData.purity, formData.metal_type || "Gold");
   const rateUnit = activePurityRate?.rate_unit === "carat" || isDiamond ? "Carat" : "Gram";
   const purityChanged = isEdit && originalPurity !== null
@@ -249,20 +259,9 @@ const AddProducts = () => {
   const subcategories = Array.isArray(selectedCategory?.subcategory) ? selectedCategory.subcategory : [];
 
   const goldValue = useMemo(
-    () => (Number(formData.net_gold_weight) || 0) * effectiveGoldRate,
-    [formData.net_gold_weight, effectiveGoldRate]
+    () => effectiveNetMetalWeight * effectiveGoldRate,
+    [effectiveNetMetalWeight, effectiveGoldRate]
   );
-
-  const pricing = useMemo(() => {
-    const mrp = Number(formData.mrp) || 0;
-    const discount = Number(formData.offer) || 0;
-    const offerPrice = Math.max(0, mrp - mrp * discount / 100);
-    const gstRate = Number(formData.gst_rate) || 0;
-    const finalPrice = formData.price_includes_gst
-      ? offerPrice
-      : offerPrice * (1 + gstRate / 100);
-    return { offerPrice, discount, finalPrice };
-  }, [formData.mrp, formData.offer, formData.gst_rate, formData.price_includes_gst]);
 
   const estimatedPrice = useMemo(() => {
     const metalValue = goldValue;
@@ -270,17 +269,29 @@ const AddProducts = () => {
       ? metalValue * (Number(effectiveMakingCharge) || 0) / 100
       : Number(effectiveMakingCharge) || 0;
     const wastageWeight = effectiveWastageType === "Percentage"
-      ? (Number(formData.net_gold_weight) || 0) * (Number(effectiveWastage) || 0) / 100
+      ? effectiveNetMetalWeight * (Number(effectiveWastage) || 0) / 100
       : Number(effectiveWastage) || 0;
     const wastageCharge = wastageWeight * effectiveGoldRate;
-    const subtotal = metalValue + makingCharge + wastageCharge + (Number(formData.stone_charges) || 0);
+    const subtotal = metalValue + makingCharge + wastageCharge + (Number(formData.stone_charges) || 0) + (Number(formData.other_charges) || 0);
     const tax = subtotal * (Number(formData.gst_rate) || 0) / 100;
     return {
       metalValue, makingCharge, wastageCharge,
       stoneCharges: Number(formData.stone_charges) || 0,
       tax, total: formData.price_includes_gst ? subtotal : subtotal + tax
     };
-  }, [effectiveGoldRate, effectiveMakingCharge, effectiveMakingChargeType, effectiveWastage, effectiveWastageType, formData, goldValue]);
+  }, [effectiveGoldRate, effectiveMakingCharge, effectiveMakingChargeType, effectiveNetMetalWeight, effectiveWastage, effectiveWastageType, formData, goldValue]);
+
+  const pricing = useMemo(() => {
+    const preDiscountPrice = estimatedPrice.total;
+    const offerType = formData.offer_type || "None";
+    const requestedDiscount = offerType === "Percentage"
+      ? preDiscountPrice * (Number(formData.offer) || 0) / 100
+      : offerType === "Fixed Amount" ? Number(formData.fixed_discount_amount) || 0 : 0;
+    const discount = Math.min(preDiscountPrice, requestedDiscount);
+    const offerPrice = Math.max(0, preDiscountPrice - discount);
+    return { preDiscountPrice, offerPrice, discount, finalPrice: offerPrice };
+  }, [estimatedPrice.total, formData.offer_type, formData.offer, formData.fixed_discount_amount]);
+  const effectiveMrp = formData.mrp === "" ? estimatedPrice.total : Number(formData.mrp) || 0;
 
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target;
@@ -365,6 +376,10 @@ const AddProducts = () => {
       toast.error("Product name, SKU, and category are required.");
       return;
     }
+    if (!isDiamond && stoneWeight > grossWeight) {
+      toast.error("Stone weight cannot exceed gross weight.");
+      return;
+    }
     const stock = Math.max(0, Math.floor(Number(formData.total_stock) || 0));
     const offerPrice = pricing.offerPrice;
     const gst = Number(formData.gst_rate) || 0;
@@ -376,14 +391,16 @@ const AddProducts = () => {
       brand: formData.brand.trim() || GOLD_SHOP,
       total_stock: stock,
       stock_status: stock <= 0 ? "Out of Stock" : stock < 10 ? "Low Stock" : "In Stock",
-      mrp: Number(formData.mrp) || 0,
+      mrp: Number(effectiveMrp.toFixed(2)),
       offer: Number(formData.offer) || 0,
+      offer_type: formData.offer_type || "None",
+      fixed_discount_amount: Number(formData.fixed_discount_amount) || 0,
       offer_price: offerPrice,
       discount: pricing.discount,
       gst_rate: gst,
       final_selling_price: Number(finalPrice.toFixed(2)),
       gross_weight: Number(formData.gross_weight) || 0,
-      net_gold_weight: Number(formData.net_gold_weight) || 0,
+      net_gold_weight: effectiveNetMetalWeight,
       gold_rate_per_gram: effectiveGoldRate,
       making_charge_type: effectiveMakingChargeType,
       making_charge: Number(effectiveMakingCharge) || 0,
@@ -391,6 +408,7 @@ const AddProducts = () => {
       wastage: Number(effectiveWastage) || 0,
       stone_weight: Number(formData.stone_weight) || 0,
       stone_charges: Number(formData.stone_charges) || 0,
+      other_charges: Number(formData.other_charges) || 0,
       rating: Number(formData.rating) || 0,
       total_reviews: Number(formData.total_reviews) || 0,
       price_includes_gst: Boolean(formData.price_includes_gst),
@@ -466,7 +484,21 @@ const AddProducts = () => {
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <SelectField label={isDiamond ? "Diamond Grade" : "Purity"} name="purity" value={formData.purity} onChange={handleChange} options={purityOptions} />
               <Field label="Gross Weight (g)" name="gross_weight" type="number" min="0" step="0.001" value={formData.gross_weight} onChange={handleChange} placeholder="10" />
-              <Field label={isDiamond ? "Net Diamond Weight (ct)" : "Net Metal Weight (g)"} name="net_gold_weight" type="number" min="0" step="0.001" value={formData.net_gold_weight} onChange={handleChange} placeholder={isDiamond ? "e.g. 0.50" : "10"} />
+              <Field
+                label={isDiamond ? "Net Diamond Weight (ct)" : "Net Metal Weight (g)"}
+                name="net_gold_weight"
+                type="number"
+                min="0"
+                step="0.001"
+                value={isDiamond
+                  ? formData.net_gold_weight
+                  : formData.gross_weight
+                    ? effectiveNetMetalWeight.toFixed(3)
+                    : ""}
+                onChange={handleChange}
+                placeholder={isDiamond ? "e.g. 0.50" : "Auto-calculated"}
+                readOnly={!isDiamond}
+              />
               <Field label={`Rate / ${rateUnit} (₹)`} name="gold_rate_per_gram" type="number" min="0" step="0.01" value={effectiveGoldRate || ""} onChange={handleChange} placeholder={ratesLoading ? "Loading current rate..." : "No active rate"} readOnly />
               <SelectField label="Making Charge Type" name="making_charge_type" value={effectiveMakingChargeType} onChange={handleChange} options={["Percentage", "Fixed Amount"]} />
               <Field label={effectiveMakingChargeType === "Percentage" ? "Making Charge (%)" : "Making Charge (₹)"} name="making_charge" type="number" min="0" step="0.01" value={effectiveMakingCharge} onChange={handleChange} placeholder={effectiveMakingChargeType === "Percentage" ? "10" : "500"} />
@@ -488,9 +520,12 @@ const AddProducts = () => {
             )}
             {goldValue > 0 && (
               <div className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-950">
-                <p className="font-bold">Estimated jewellery price: ₹{estimatedPrice.total.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</p>
                 <p className="mt-1 text-xs">Metal ₹{estimatedPrice.metalValue.toFixed(2)} + making ₹{estimatedPrice.makingCharge.toFixed(2)} + wastage ₹{estimatedPrice.wastageCharge.toFixed(2)} + stones ₹{estimatedPrice.stoneCharges.toFixed(2)} + applicable tax ₹{estimatedPrice.tax.toFixed(2)}{formData.price_includes_gst ? " (included)" : ""}.</p>
-                <p className="mt-1 text-xs">This estimate does not change the entered MRP or existing offer/tax calculation.</p>
+                <p className="mt-1 text-xs">
+                  {formData.mrp === ""
+                    ? "MRP is estimated automatically. Enter a value in the MRP field to override it."
+                    : "MRP uses your entered value; daily rate changes will not overwrite it."}
+                </p>
               </div>
             )}
           </Section>
@@ -536,11 +571,39 @@ const AddProducts = () => {
 
           <Section title="4. Pricing & Offers">
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <Field label="MRP (₹)" name="mrp" type="number" min="0" step="0.01" value={formData.mrp} onChange={handleChange} placeholder="100000" required />
-              <Field label="Offer (%)" name="offer" type="number" min="0" step="0.01" value={formData.offer} onChange={handleChange} placeholder="5" />
+              <div>
+                <span className={labelClass}>MRP (₹)<span className="ml-1 text-red-500">*</span></span>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-semibold text-gray-500">₹</span>
+                  <input
+                    className={`${inputClass} pl-8`}
+                    type="number"
+                    inputMode="decimal"
+                    name="mrp"
+                    min="0"
+                    step="0.01"
+                    value={formData.mrp || (estimatedPrice.total > 0 ? estimatedPrice.total.toFixed(2) : "")}
+                    onChange={handleChange}
+                    placeholder="Enter MRP"
+                    required
+                  />
+                </div>
+                <p className="mt-1 text-[11px] font-medium text-gray-500">
+                  Estimated jewellery price: ₹{estimatedPrice.total.toLocaleString("en-IN", { maximumFractionDigits: 2 })}. Edit the value above to set a different MRP.
+                </p>
+              </div>
+              <label className={labelClass}>Offer Type
+                <select className={inputClass} name="offer_type" value={formData.offer_type} onChange={handleChange}>
+                  <option value="None">No offer</option>
+                  <option value="Percentage">Percentage discount</option>
+                  <option value="Fixed Amount">Fixed amount discount</option>
+                </select>
+              </label>
+              {formData.offer_type === "Percentage" && <Field label="Discount (%)" name="offer" type="number" min="0" max="100" step="0.01" value={formData.offer} onChange={handleChange} placeholder="5" />}
+              {formData.offer_type === "Fixed Amount" && <Field label="Fixed Discount (₹)" name="fixed_discount_amount" type="number" min="0" step="0.01" value={formData.fixed_discount_amount} onChange={handleChange} placeholder="500" />}
               <Field label="Offer Price (₹)" name="offer_price" type="number" value={pricing.offerPrice.toFixed(2)} onChange={() => {}} readOnly />
+              <Field label="Other Charges (₹)" name="other_charges" type="number" min="0" step="0.01" value={formData.other_charges} onChange={handleChange} />
               <Field label="GST (%)" name="gst_rate" type="number" min="0" step="0.01" value={formData.gst_rate} onChange={handleChange} placeholder="Applicable GST" />
-              <Field label="Final Selling Price (₹)" name="final_selling_price" type="number" value={pricing.finalPrice.toFixed(2)} onChange={() => {}} readOnly />
             </div>
             <label className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-slate-700">
               <input type="checkbox" name="price_includes_gst" checked={formData.price_includes_gst} onChange={handleChange} className="h-4 w-4 accent-[#003B3B]" />

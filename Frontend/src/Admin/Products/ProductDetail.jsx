@@ -82,6 +82,7 @@ function ProductDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [product, setProduct] = useState(null);
+  const [priceHistory, setPriceHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadedProductId, setLoadedProductId] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -116,6 +117,18 @@ function ProductDetail() {
       })
       .finally(() => {
         if (active) setLoading(false);
+      });
+    return () => { active = false; };
+  }, [id, refreshKey]);
+
+  useEffect(() => {
+    let active = true;
+    api.get(`/products/${id}/price-history`)
+      .then(({ data }) => {
+        if (active) setPriceHistory(Array.isArray(data.history) ? data.history : []);
+      })
+      .catch((error) => {
+        if (active) console.error("Failed to load product price history:", error);
       });
     return () => { active = false; };
   }, [id, refreshKey]);
@@ -166,17 +179,6 @@ function ProductDetail() {
   const displayImages = variantImages.length ? variantImages : mainImages;
   const selectedImage = displayImages[activeImage] || displayImages[0] || "";
   const currentPurityRate = getRateForPurity(activeRateSet, product.purity);
-  const liveMetalValue = Number(product.net_gold_weight || 0) * Number(currentPurityRate?.rate_per_gram || 0);
-  const liveMakingCharge = String(product.making_charge_type).toLowerCase() === "percentage"
-    ? liveMetalValue * (Number(product.making_charge) || 0) / 100
-    : Number(product.making_charge) || 0;
-  const liveWastageWeight = String(product.wastage_type).toLowerCase() === "percentage"
-    ? Number(product.net_gold_weight || 0) * (Number(product.wastage) || 0) / 100
-    : Number(product.wastage) || 0;
-  const liveWastageCharge = liveWastageWeight * Number(currentPurityRate?.rate_per_gram || 0);
-  const liveSubtotal = liveMetalValue + liveMakingCharge + liveWastageCharge + (Number(product.stone_charges) || 0);
-  const liveTax = liveSubtotal * (Number(product.gst_rate) || 0) / 100;
-  const liveJewelleryPrice = product.price_includes_gst ? liveSubtotal : liveSubtotal + liveTax;
   const detailsLink = typeof window !== "undefined" ? window.location.href : `/admin/products/${id}`;
   const documentFields = [
     ["Size Guide", product.size_guide_chart],
@@ -289,15 +291,21 @@ function ProductDetail() {
       </header>
 
       <section className="rounded-xl border border-emerald-100 bg-emerald-50 p-4">
-        <p className="text-xs font-bold uppercase tracking-wide text-emerald-800">Current global gold rate</p>
-        {currentPurityRate ? (
-          <p className="mt-1 text-sm font-semibold text-slate-800">
-            {money(currentPurityRate.rate_per_gram)} / g for {product.purity} · effective {formatRateDate(activeRateSet.rate_date)}
-            {product.net_gold_weight > 0 && <> · current metal value {money(liveMetalValue)} · estimated jewellery price {money(liveJewelleryPrice)}</>}
+        <p className="text-xs font-bold uppercase tracking-wide text-emerald-800">Saved product price snapshot</p>
+        <p className="mt-1 text-sm font-semibold text-slate-800">
+          Applied rate {product.gold_rate_per_gram == null ? "—" : `${money(product.gold_rate_per_gram)} / g`}
+          {product.gold_rate_date && ` · ${formatRateDate(product.gold_rate_date)}`}
+          {product.gold_value != null && <> · Gold value {money(product.gold_value)}</>}
+          {product.final_selling_price != null && <> · Final price {money(product.final_selling_price)}</>}
+        </p>
+        {currentPurityRate && Number(currentPurityRate.rate_per_gram) !== Number(product.gold_rate_per_gram) && (
+          <p className="mt-2 text-xs font-semibold text-amber-800">
+            Current rate is {money(currentPurityRate.rate_per_gram)} / g. The saved price is updated when the rate batch is activated.
           </p>
-        ) : <p className="mt-1 text-sm text-slate-600">{activeRateSet ? `No rate is configured for ${product.purity}.` : "No active global rate is configured."}</p>}
+        )}
+        {!currentPurityRate && <p className="mt-2 text-xs text-slate-600">{activeRateSet ? `No current rate is configured for ${product.purity}.` : "No active global rate is configured."}</p>}
         {rateError && <p role="alert" className="mt-2 text-xs font-semibold text-rose-700">Could not refresh the active rate: {rateError}</p>}
-        <p className="mt-1 text-xs text-slate-600">This live reference does not alter the product's saved selling price or applied-rate snapshot.</p>
+        <p className="mt-1 text-xs text-slate-600">Rate changes update stored product prices and do not alter historical invoices.</p>
       </section>
 
       <div className="grid gap-5 lg:grid-cols-12">
@@ -363,6 +371,41 @@ function ProductDetail() {
           )}
           <DetailSection title="Product Information" fields={productInfo} />
           <DetailSection title="Gold & Material Details" fields={goldInfo} />
+          <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+            <div className="border-b border-slate-100 bg-[#003B3B]/5 px-5 py-4">
+              <h2 className="font-bold text-[#003B3B]">Price History</h2>
+            </div>
+            {priceHistory.length === 0 ? (
+              <p className="p-5 text-sm text-slate-500">No price recalculation history yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[700px] text-left text-sm">
+                  <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+                    <tr>
+                      <th className="px-5 py-3">Changed</th>
+                      <th className="px-5 py-3">Previous Price</th>
+                      <th className="px-5 py-3">New Price</th>
+                      <th className="px-5 py-3">Rate / g</th>
+                      <th className="px-5 py-3">Reason</th>
+                      <th className="px-5 py-3">Changed By</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {priceHistory.map((entry) => (
+                      <tr key={entry.id}>
+                        <td className="px-5 py-3 text-slate-600">{dateText(entry.changed_at)}</td>
+                        <td className="px-5 py-3 text-slate-600">{entry.previous_price == null ? "—" : money(entry.previous_price)}</td>
+                        <td className="px-5 py-3 font-bold text-[#003B3B]">{money(entry.new_price)}</td>
+                        <td className="px-5 py-3 text-slate-600">{money(entry.rate_per_gram)}</td>
+                        <td className="px-5 py-3 text-slate-600">{entry.reason}</td>
+                        <td className="px-5 py-3 text-slate-600">{entry.changed_by_name || "System"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </section>
           <DetailSection title="Pricing & Charges" fields={pricing} />
           <DetailSection title="Sizes & Measurements" fields={measurements} />
           <DetailSection title="Inventory & Publishing" fields={inventory} />
