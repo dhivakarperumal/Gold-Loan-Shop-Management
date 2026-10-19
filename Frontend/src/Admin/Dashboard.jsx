@@ -137,100 +137,7 @@ const DEFAULT_DASHBOARD_DATA = {
     Overdue: 0
   },
   revenueTrends: [],
-  recentLoans: [
-    {
-      id: "#SG1001",
-      customer: "Priya S",
-      jewellery: "Gold Necklace Set",
-      amount: "₹ 56,800",
-      status: "Active",
-      date: "Oct 16, 2026",
-      img: "/images/categories/necklacecat.png",
-      rawId: 1
-    },
-    {
-      id: "#SG1002",
-      customer: "Karthik R",
-      jewellery: "Gold Earrings",
-      amount: "₹ 32,450",
-      status: "Processing",
-      date: "Oct 15, 2026",
-      img: "/images/categories/earrings.png",
-      rawId: 2
-    },
-    {
-      id: "#SG1003",
-      customer: "Divya M",
-      jewellery: "Gold Ring",
-      amount: "₹ 18,900",
-      status: "Pending",
-      date: "Oct 15, 2026",
-      img: "/images/categories/rings.png",
-      rawId: 3
-    },
-    {
-      id: "#SG1004",
-      customer: "Suresh K",
-      jewellery: "Gold Bracelet",
-      amount: "₹ 74,200",
-      status: "Active",
-      date: "Oct 14, 2026",
-      img: "/images/categories/bangles.png",
-      rawId: 4
-    },
-    {
-      id: "#SG1005",
-      customer: "Anitha V",
-      jewellery: "Gold Chain",
-      amount: "₹ 26,350",
-      status: "Overdue",
-      date: "Oct 14, 2026",
-      img: "/images/categories/choker.png",
-      rawId: 5
-    }
-  ],
-  topProducts: [
-    {
-      id: 1,
-      name: "Gold Necklace Set",
-      cat: "Necklaces",
-      sales: "120 sales",
-      amount: "₹ 12,45,600",
-      img: "/images/categories/necklacecat.png"
-    },
-    {
-      id: 2,
-      name: "Gold Earrings",
-      cat: "Earrings",
-      sales: "95 sales",
-      amount: "₹ 6,82,300",
-      img: "/images/categories/earrings.png"
-    },
-    {
-      id: 3,
-      name: "Gold Ring",
-      cat: "Rings",
-      sales: "80 sales",
-      amount: "₹ 4,56,800",
-      img: "/images/categories/rings.png"
-    },
-    {
-      id: 4,
-      name: "Gold Bracelet",
-      cat: "Bangles",
-      sales: "65 sales",
-      amount: "₹ 3,24,500",
-      img: "/images/categories/bangles.png"
-    },
-    {
-      id: 5,
-      name: "Gold Chain",
-      cat: "Chains",
-      sales: "52 sales",
-      amount: "₹ 2,98,600",
-      img: "/images/categories/choker.png"
-    }
-  ]
+  topProducts: []
 };
 
 const Dashboard = () => {
@@ -273,8 +180,8 @@ const Dashboard = () => {
   // Safe resolved data (merged with defaults so it ALWAYS renders properly)
   const data = dashboardData || DEFAULT_DASHBOARD_DATA;
   const stats = dashboardData?.stats || [];
-  const recentLoans = data.recentLoans?.length ? data.recentLoans : DEFAULT_DASHBOARD_DATA.recentLoans;
-  const topProducts = data.topProducts?.length ? data.topProducts : DEFAULT_DASHBOARD_DATA.topProducts;
+  const recentLoans = Array.isArray(data.recentLoans) ? data.recentLoans : [];
+  const topProducts = Array.isArray(data.topProducts) ? data.topProducts : [];
   const loanStatusCounts = data.loanStatusCounts || DEFAULT_DASHBOARD_DATA.loanStatusCounts;
   const revenueTrends = Array.isArray(dashboardData?.revenueTrends) ? dashboardData.revenueTrends : [];
   const totalLoansCount = data.totalLoansCount ?? 0;
@@ -779,7 +686,13 @@ const Dashboard = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {recentLoans.map((loan, idx) => (
+                {recentLoans.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-sm font-medium text-slate-400">
+                      No recent loans found.
+                    </td>
+                  </tr>
+                ) : recentLoans.map((loan, idx) => (
                   <tr key={idx} className="hover:bg-slate-50/70 transition-colors group">
                     <td className="py-3.5 font-bold text-slate-700">{loan.id}</td>
                     <td className="py-3.5 font-semibold text-slate-800">{loan.customer}</td>
@@ -825,7 +738,7 @@ const Dashboard = () => {
         {/* Right: Top Selling Products (35% width, Matching Screenshot) */}
         <div className="lg:col-span-4 bg-white p-5 sm:p-6 rounded-2xl border border-slate-100 shadow-sm flex flex-col justify-between">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-base sm:text-lg font-bold text-slate-800">Top Selling Products</h3>
+            <h3 className="text-base sm:text-lg font-bold text-slate-800">Latest Products</h3>
             <button
               onClick={() => navigate('/admin/products/all')}
               className="text-xs font-bold text-[#008577] hover:underline flex items-center gap-1"
@@ -835,14 +748,13 @@ const Dashboard = () => {
           </div>
 
           <div className="space-y-3.5 my-auto">
-            {topProducts.map((prod, i) => (
-              <div key={i} className="flex items-center justify-between gap-3 group">
+            {topProducts.length === 0 ? (
+              <p className="py-8 text-center text-sm font-medium text-slate-400">
+                No products found.
+              </p>
+            ) : topProducts.map((prod) => (
+              <div key={prod.id} className="flex items-center justify-between gap-3 group">
                 <div className="flex items-center gap-3 min-w-0">
-                  {/* Gold Ranked Badge */}
-                  <span className="w-6 h-6 rounded-full bg-amber-400 text-white text-[11px] font-black flex items-center justify-center shrink-0 shadow-2xs">
-                    {i + 1}
-                  </span>
-                  {/* Thumbnail */}
                   <img
                     src={getDashboardImageUrl(prod.img)}
                     alt={prod.name}
@@ -857,13 +769,13 @@ const Dashboard = () => {
                       {prod.name}
                     </p>
                     <p className="text-[10px] text-slate-400 font-medium mt-0.5">
-                      {prod.sales}
+                      {prod.cat}
                     </p>
                   </div>
                 </div>
                 <div className="text-right shrink-0">
                   <span className="text-xs sm:text-sm font-extrabold text-slate-800">
-                    {prod.amount}
+                    {prod.price == null ? "—" : `₹ ${Number(prod.price).toLocaleString('en-IN')}`}
                   </span>
                 </div>
               </div>
