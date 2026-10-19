@@ -1,7 +1,8 @@
 const { pool } = require('../config/db');
+const { insertUser } = require('./authModule');
 
 const CUSTOMER_COLUMNS = `
-  id, customer_code, customer_type, full_name, mobile, alternate_mobile,
+  id, customer_code, user_id, customer_type, full_name, mobile, alternate_mobile,
   email, date_of_birth, gender, occupation, address, city, district, state, pincode,
   guarantor_name, guarantor_mobile, guarantor_email, guarantor_relationship, guarantor_address,
   kyc_status, photo_url, notes, created_at, updated_at
@@ -12,6 +13,7 @@ async function initializeLoanCustomerModule() {
     CREATE TABLE IF NOT EXISTS loan_customers (
       id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
       customer_code VARCHAR(30) NULL UNIQUE,
+      user_id INT UNSIGNED NULL UNIQUE,
       customer_type VARCHAR(20) NOT NULL DEFAULT 'Individual',
       full_name VARCHAR(150) NOT NULL,
       mobile VARCHAR(15) NOT NULL,
@@ -39,6 +41,9 @@ async function initializeLoanCustomerModule() {
   `);
   const [customerColumns] = await pool.query('SHOW COLUMNS FROM loan_customers');
   const existingCustomerColumns = new Set(customerColumns.map((column) => column.Field));
+  if (!existingCustomerColumns.has('user_id')) {
+    await pool.query('ALTER TABLE loan_customers ADD COLUMN user_id INT UNSIGNED NULL UNIQUE AFTER customer_code');
+  }
   const customerColumnMigrations = {
     email: 'VARCHAR(254) NULL AFTER alternate_mobile',
     guarantor_name: 'VARCHAR(150) NULL AFTER pincode',
@@ -94,16 +99,34 @@ async function getLoanCustomerById(id) {
   return rows[0] || null;
 }
 
-async function createLoanCustomer(customer) {
+async function createLoanCustomer(customer, username) {
   const connection = await pool.getConnection();
   let id;
   try {
     await connection.beginTransaction();
-    const fields = Object.keys(customer);
+    const [existingUsers] = await connection.execute(
+      'SELECT user_id FROM users WHERE username = ? LIMIT 1 FOR UPDATE',
+      [username]
+    );
+    if (existingUsers.length > 0) {
+      const error = new Error('Username is already registered');
+      error.code = 'ER_DUP_ENTRY';
+      throw error;
+    }
+    const userId = await insertUser(connection, {
+      username,
+      name: customer.full_name,
+      email: customer.email.toLowerCase(),
+      phone: customer.mobile,
+      password: customer.mobile,
+      status: 'Active',
+      role: 'user'
+    });
+    const fields = ['user_id', ...Object.keys(customer)];
     const [result] = await connection.execute(
       `INSERT INTO loan_customers (${fields.map((field) => `\`${field}\``).join(', ')})
        VALUES (${fields.map(() => '?').join(', ')})`,
-      fields.map((field) => customer[field])
+      fields.map((field) => field === 'user_id' ? userId : customer[field])
     );
     id = result.insertId;
     const customerCode = `CUS-${String(id).padStart(6, '0')}`;

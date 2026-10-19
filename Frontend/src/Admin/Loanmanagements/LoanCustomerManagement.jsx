@@ -152,6 +152,7 @@ export default function LoanCustomerManagement() {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [form, setForm] = useState(EMPTY_CUSTOMER);
+  const [username, setUsername] = useState("");
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoPreview, setPhotoPreview] = useState({ reference: "", url: "" });
@@ -244,6 +245,7 @@ export default function LoanCustomerManagement() {
   const openAddCustomer = () => {
     setEditingCustomer(null);
     setForm(EMPTY_CUSTOMER);
+    setUsername("");
     setDocuments([]);
     setPendingDocuments([]);
     setDocumentType("");
@@ -460,7 +462,7 @@ export default function LoanCustomerManagement() {
         const response = await api.put(`/loan-customers/${editingCustomer.id}`, payload);
         savedCustomer = response.data;
       } else {
-        const response = await api.post("/loan-customers", payload);
+        const response = await api.post("/loan-customers", { ...payload, username: username.trim() });
         savedCustomer = response.data;
       }
       customerPersisted = true;
@@ -739,9 +741,29 @@ export default function LoanCustomerManagement() {
               <div className="flex-1 space-y-4 overflow-y-auto p-5">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <CustomerField label="Full Name" name="full_name" value={form.full_name} onChange={handleChange} required placeholder="Enter full name" />
+                  {!editingCustomer && (
+                    <label className={labelClass}>
+                      Username<span className="ml-1 text-red-500">*</span>
+                      <input
+                        className={inputClass}
+                        name="username"
+                        value={username}
+                        onChange={(event) => setUsername(event.target.value)}
+                        required
+                        maxLength={100}
+                        autoComplete="username"
+                        placeholder="Choose a login username"
+                      />
+                    </label>
+                  )}
                   <CustomerField label="Primary Mobile" name="mobile" value={form.mobile} onChange={handleChange} required placeholder="Enter phone number" />
                   <CustomerField label="Alternate Mobile" name="alternate_mobile" value={form.alternate_mobile} onChange={handleChange} placeholder="Enter alternate phone number" />
                   <CustomerField label="Email" name="email" type="email" value={form.email} onChange={handleChange} required placeholder="name@example.com" />
+                  {!editingCustomer && (
+                    <p className="text-xs text-slate-500 sm:col-span-2">
+                      The customer account will use this email and username. Their initial password will be the primary mobile number.
+                    </p>
+                  )}
                   <CustomerField label="Date of Birth" name="date_of_birth" type="date" value={form.date_of_birth} onChange={handleChange} placeholder="dd-mm-yyyy" />
                   <CustomerSelect label="Gender" name="gender" value={form.gender} onChange={handleChange} options={["", "Male", "Female", "Other", "Prefer not to say"]} required />
                   <CustomerField label="Occupation" name="occupation" value={form.occupation} onChange={handleChange} placeholder="Enter occupation" />

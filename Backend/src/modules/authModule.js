@@ -18,7 +18,7 @@ async function initializeAuthModule() {
     CREATE TABLE IF NOT EXISTS users (
       user_id INT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
       username VARCHAR(100) NOT NULL,
-      name VARCHAR(100) NOT NULL,
+      name VARCHAR(150) NOT NULL,
       email VARCHAR(254) NOT NULL UNIQUE,
       phone VARCHAR(32) NULL UNIQUE,
       password_hash VARCHAR(255) NOT NULL,
@@ -28,17 +28,26 @@ async function initializeAuthModule() {
       updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )
   `);
+  const [nameColumns] = await pool.query("SHOW COLUMNS FROM users LIKE 'name'");
+  const nameLength = Number(String(nameColumns[0]?.Type || '').match(/^varchar\((\d+)\)$/i)?.[1] || 0);
+  if (nameLength < 150) {
+    await pool.query('ALTER TABLE users MODIFY COLUMN name VARCHAR(150) NOT NULL');
+  }
+}
+
+async function insertUser(connection, { username, name = username, email, phone, password, status, role = 'user' }) {
+  const passwordHash = await bcrypt.hash(password, 12);
+  const [result] = await connection.execute(
+    `INSERT INTO users (username, name, email, phone, password_hash, role, status)
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [username, name, email, phone || null, passwordHash, role, status]
+  );
+  return result.insertId;
 }
 
 async function createUser({ username, email, phone, password, status, role = 'user' }) {
-  const passwordHash = await bcrypt.hash(password, 12);
-  const [result] = await pool.execute(
-    `INSERT INTO users (username, name, email, phone, password_hash, role, status)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
-    [username, username, email, phone || null, passwordHash, role, status]
-  );
-
-  return getUserById(result.insertId);
+  const userId = await insertUser(pool, { username, email, phone, password, status, role });
+  return getUserById(userId);
 }
 
 async function getUserById(userId) {
@@ -107,6 +116,7 @@ module.exports = {
   findUserForLogin,
   getUserById,
   initializeAuthModule,
+  insertUser,
   listUsers,
   updateUser,
   verifyPassword
