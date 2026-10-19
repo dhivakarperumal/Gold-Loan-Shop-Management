@@ -66,7 +66,7 @@ const Hero = () => {
 
   return (
     <section className="relative w-full overflow-hidden bg-[#032e25] text-white">
-      <div className="relative isolate h-[450px] w-full sm:h-[540px] lg:h-[590px]">
+      <div className="relative isolate h-[450px] w-full sm:h-[500px] lg:h-[600px]">
 
         {/* Swiper background images */}
         {slides.length > 0 && (
