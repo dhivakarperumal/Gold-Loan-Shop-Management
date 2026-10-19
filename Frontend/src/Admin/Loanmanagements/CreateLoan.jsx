@@ -631,7 +631,6 @@ export default function CreateLoan() {
             {form.interest_frequency === "custom_period" && <FormField label="Custom Period (days)" name="custom_period_days" form={form} onChange={handleChange} type="number" min="1" max="3650" step="1" required />}
             {form.interest_type === "fixed" && <FormField label="Fixed Interest Amount (₹/period)" name="fixed_interest_amount" form={form} onChange={handleChange} type="number" min="0.01" step="0.01" required />}
             {form.interest_type === "compound" && <FormSelect label="Compounding Frequency" name="compounding_frequency" form={form} onChange={handleChange} options={COMPOUND_FREQUENCIES} required />}
-            <FormSelect label="Day-Count Convention" name="day_count_convention" form={form} onChange={handleChange} options={[["actual_365", "Actual / 365"], ["actual_360", "Actual / 360"], ["30_360", "30 / 360"]]} />
             <FormField label="Calculation Start Date" name="interest_calculation_start_date" form={form} onChange={handleChange} type="date" required />
             <FormSelect label="Loan Status" name="loan_status" form={form} onChange={handleChange} options={(loanRecord ? ["Active", "Pending", "Inactive", "Completed"] : ["Active", "Pending"]).map((status) => [status, status])} required />
             <FormField label="Other Authorized Charges (₹)" name="other_charges" form={form} onChange={handleChange} type="number" min="0" step="0.01" />
