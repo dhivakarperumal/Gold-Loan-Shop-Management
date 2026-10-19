@@ -1,11 +1,24 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiArrowLeft, FiCalendar, FiChevronRight, FiCreditCard, FiDollarSign, FiEdit2, FiEye, FiGrid, FiList, FiPlus, FiRepeat, FiSave, FiSearch, FiTrash2, FiX } from "react-icons/fi";
+import { FiArrowLeft, FiCalendar, FiChevronRight, FiCreditCard, FiDollarSign, FiEdit2, FiEye, FiGrid, FiList, FiPlus, FiPrinter, FiRepeat, FiSave, FiSearch, FiTrash2, FiX } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api from "../../api";
 import useGoldRates from "../../PrivateRouter/useGoldRates";
+import { getReceiptSettings } from "./receiptSettings";
 
 const EMPTY_CUSTOMER = { name: "", phone: "", email: "", address: "" };
-const EMPTY_PRODUCT = { product_id: "", product_name: "", category: "", purity: "", price: "" };
+const EMPTY_PRODUCT = {
+  product_id: "",
+  product_name: "",
+  category: "",
+  purity: "",
+  gross_weight: null,
+  net_gold_weight: null,
+  making_charge_type: "",
+  making_charge: null,
+  rate_per_gram: null,
+  rate_unit: "gram",
+  price: ""
+};
 const EMPTY_EXCHANGE = { product_name: "", category: "", category_is_other: false, metal_type: "Gold", purity: "22K", weight: "", wastage_weight: "" };
 const PURITY_LABELS = { "999": "24K", "916": "22K", "833": "20K", "750": "18K", "585": "14K" };
 const inputClass = "mt-1 block w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-[#008577] focus:ring-2 focus:ring-emerald-100";
@@ -25,6 +38,54 @@ function decodeArray(value) {
   } catch {
     return [];
   }
+}
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, (character) => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    "\"": "&quot;",
+    "'": "&#39;"
+  })[character]);
+}
+
+function formatWeight(value, unit = "") {
+  if (value == null || value === "") return "—";
+  const formatted = Number(value).toLocaleString("en-IN", { maximumFractionDigits: 3 });
+  return unit ? `${formatted} ${unit}` : formatted;
+}
+
+function formatMakingCharge(product) {
+  if (product.making_charge == null || product.making_charge === "") return "—";
+  const value = Number(product.making_charge);
+  if (!Number.isFinite(value)) return "—";
+  return product.making_charge_type === "Percentage" ? `${value}%` : currency(value);
+}
+
+function resolveProductDetails(product, metalRates, activeRateSet) {
+  const metalType = product.metal_type || "Gold";
+  const rate = findItemRate(metalRates, metalType, product.purity);
+  const storedMakingCharge = Number(product.making_charge);
+  const defaultMakingCharge = Number(rate?.making_charge_value ?? activeRateSet?.making_charge_value);
+  const useRateMakingCharge = (!Number.isFinite(storedMakingCharge) || storedMakingCharge === 0)
+    && Number.isFinite(defaultMakingCharge)
+    && defaultMakingCharge > 0;
+  const storedRate = Number(product.rate_per_gram);
+  const activeRate = Number(rate?.rate_per_unit ?? rate?.rate_per_gram);
+  return {
+    ...product,
+    making_charge_type: useRateMakingCharge
+      ? rate?.making_charge_type || activeRateSet?.making_charge_type
+      : product.making_charge_type || rate?.making_charge_type || activeRateSet?.making_charge_type || "",
+    making_charge: useRateMakingCharge ? defaultMakingCharge : product.making_charge,
+    rate_per_gram: Number.isFinite(storedRate) && storedRate > 0
+      ? storedRate
+      : Number.isFinite(activeRate) && activeRate > 0 ? activeRate : null,
+    rate_unit: Number.isFinite(storedRate) && storedRate > 0
+      ? product.rate_unit || "gram"
+      : rate?.rate_unit || product.rate_unit || "gram"
+  };
 }
 
 function TextField({ label, value, onChange, type = "text", required = false, placeholder = "", min, step, readOnly = false }) {
@@ -47,11 +108,13 @@ function TextField({ label, value, onChange, type = "text", required = false, pl
 }
 
 function findItemRate(metalRates, metalType, purity) {
-  const goldPurity = { "24k": "999", "22k": "916", "20k": "833", "18k": "750", "14k": "585" };
-  const normalizedPurity = metalType === "Gold" ? goldPurity[purity.toLowerCase()] || purity : purity;
+  const normalizedMetal = String(metalType || "").toLowerCase();
+  const purityText = String(purity || "").toLowerCase();
+  const normalizedPurity = purityText.match(/\d{3}/)?.[0]
+    || ({ "24k": "999", "22k": "916", "20k": "833", "18k": "750", "14k": "585" })[purityText.match(/\d{2}k/)?.[0]];
   return metalRates.find((rate) => (
-    rate.metal_type.toLowerCase() === metalType.toLowerCase()
-    && rate.purity.toLowerCase() === String(normalizedPurity).toLowerCase()
+    String(rate.metal_type).toLowerCase() === normalizedMetal
+    && String(rate.purity).toLowerCase() === String(normalizedPurity || purityText).toLowerCase()
   ));
 }
 
@@ -284,9 +347,10 @@ export default function BillingManagement() {
   const [categories, setCategories] = useState([]);
   const { current: currentGoldRates } = useGoldRates();
   const [catalogProducts, setCatalogProducts] = useState([]);
+  const [catalogProductDetails, setCatalogProductDetails] = useState([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(() => new URLSearchParams(window.location.search).get("new") === "1");
   const [editingBillId, setEditingBillId] = useState(null);
   const [viewingBill, setViewingBill] = useState(null);
   const [billSearch, setBillSearch] = useState("");
@@ -304,6 +368,32 @@ export default function BillingManagement() {
     () => currentGoldRates?.rates || [],
     [currentGoldRates]
   );
+  const getProductWithCatalogDetails = (product) => {
+    const catalogProduct = catalogProductDetails.find(
+      (item) => String(item.id) === String(product.product_id)
+    );
+    const useCatalogMakingCharge = !(Number(product.making_charge) > 0)
+      && Number(catalogProduct?.making_charge) > 0;
+    const catalogRate = Number(catalogProduct?.gold_rate_per_gram);
+    return resolveProductDetails({
+      ...product,
+      metal_type: product.metal_type || catalogProduct?.metal_type,
+      gross_weight: product.gross_weight ?? catalogProduct?.gross_weight,
+      net_gold_weight: product.net_gold_weight ?? catalogProduct?.net_gold_weight,
+      making_charge_type: useCatalogMakingCharge
+        ? catalogProduct.making_charge_type
+        : product.making_charge_type || catalogProduct?.making_charge_type,
+      making_charge: useCatalogMakingCharge
+        ? catalogProduct.making_charge
+        : product.making_charge ?? catalogProduct?.making_charge,
+      rate_per_gram: Number(product.rate_per_gram) > 0
+        ? product.rate_per_gram
+        : Number.isFinite(catalogRate) && catalogRate > 0
+          ? catalogRate
+          : product.rate_per_gram ?? catalogProduct?.gold_rate_per_gram,
+      rate_unit: product.rate_unit || catalogProduct?.rate_unit
+    }, metalRates, currentGoldRates);
+  };
 
   const loadBills = useCallback(async () => {
     setLoading(true);
@@ -327,7 +417,7 @@ export default function BillingManagement() {
       const productsFromCatalog = [];
       do {
         const response = await api.get("/products", {
-          params: { page, limit: 100, status: "Active" }
+          params: { page, limit: 100 }
         });
         if (!Array.isArray(response.data?.products)) {
           throw new Error("The server returned an invalid product catalog.");
@@ -336,7 +426,8 @@ export default function BillingManagement() {
         totalPages = Math.max(1, Number(response.data.pagination?.totalPages) || 1);
         page += 1;
       } while (page <= totalPages);
-      setCatalogProducts(productsFromCatalog);
+      setCatalogProductDetails(productsFromCatalog);
+      setCatalogProducts(productsFromCatalog.filter((product) => product.status === "Active"));
     } catch (error) {
       console.error("Failed to load billing product catalog:", error);
       toast.error(error.response?.data?.message || error.message || "Could not load catalog products.");
@@ -421,6 +512,198 @@ export default function BillingManagement() {
     });
   }, [bills, billSearch, paymentFilter]);
 
+  const printBill = async (bill) => {
+    const printWindow = window.open("", "_blank", "width=900,height=700");
+    if (!printWindow) {
+      toast.error("Allow pop-ups to print this bill.");
+      return;
+    }
+
+    const billCustomers = decodeArray(bill.customers);
+    const billProducts = decodeArray(bill.products).map(getProductWithCatalogDetails);
+    const billExchanges = decodeArray(bill.exchanges);
+    const lineItems = [
+      ...billProducts.map((product) => ({
+        name: product.product_name,
+        category: product.category,
+        purity: product.purity,
+        makingCharge: formatMakingCharge(product),
+        weight: null,
+        wastageWeight: null,
+        netWeight: null,
+        rate: product.rate_per_gram,
+        rateUnit: product.rate_unit || "gram",
+        amount: Number(product.price) || 0,
+        isExchange: false
+      })),
+      ...billExchanges.map((exchange) => ({
+        name: exchange.product_name || "Exchange item",
+        category: exchange.category,
+        purity: `${exchange.metal_type || ""} ${exchange.purity || ""}`.trim(),
+        makingCharge: "—",
+        weight: exchange.weight,
+        wastageWeight: exchange.wastage_weight,
+        netWeight: exchange.net_weight,
+        rate: exchange.rate_per_unit,
+        rateUnit: exchange.rate_unit || "gram",
+        amount: -(Number(exchange.credit_amount) || 0),
+        isExchange: true
+      }))
+    ];
+    const rows = lineItems.map((item, index) => `
+      <tr>
+        <td>${index + 1}</td>
+        <td class="${item.isExchange ? "exchange" : ""}">${escapeHtml(item.name || "—")}</td>
+        <td>${escapeHtml(item.category || "—")}</td>
+        <td>${escapeHtml(item.purity || "—")}</td>
+        <td>${escapeHtml(item.makingCharge)}</td>
+        <td>${item.isExchange ? formatWeight(item.weight, item.rateUnit === "carat" ? "carat" : "g") : "—"}</td>
+        <td>${item.isExchange ? formatWeight(item.wastageWeight, item.rateUnit === "carat" ? "carat" : "g") : "—"}</td>
+        <td>${item.isExchange ? formatWeight(item.netWeight, item.rateUnit === "carat" ? "carat" : "g") : "—"}</td>
+        <td class="amount">${item.rate == null || item.rate === "" ? "—" : `${currency(item.rate)} / ${escapeHtml(item.rateUnit)}`}</td>
+        <td class="amount ${item.isExchange ? "exchange" : ""}">${item.isExchange ? "−" : ""}${currency(Math.abs(item.amount))}</td>
+      </tr>
+    `).join("");
+    const customerDetails = billCustomers.map((customer) => `
+      <div class="customer">
+        <strong>${escapeHtml(customer.name || "Customer")}</strong>
+        ${customer.phone ? `<div>${escapeHtml(customer.phone)}</div>` : ""}
+        ${customer.email ? `<div>${escapeHtml(customer.email)}</div>` : ""}
+        ${customer.address ? `<div>${escapeHtml(customer.address)}</div>` : ""}
+      </div>
+    `).join("");
+    const exchangeTotal = billExchanges.reduce((sum, item) => sum + (Number(item.credit_amount) || 0), 0);
+    const date = bill.created_at ? new Date(bill.created_at).toLocaleDateString("en-IN") : "—";
+    let receiptSettings;
+    try {
+      receiptSettings = await getReceiptSettings();
+    } catch (error) {
+      printWindow.close();
+      console.error("Failed to load receipt settings for printing:", error);
+      toast.error(error.response?.data?.message || "Could not load receipt settings.");
+      return;
+    }
+    let logoUrl = "";
+    if (receiptSettings.logoUrl) {
+      try {
+        if (/^data:image\/(?:png|jpeg|webp);base64,/i.test(receiptSettings.logoUrl)) {
+          logoUrl = receiptSettings.logoUrl;
+        } else {
+          const parsedLogoUrl = new URL(receiptSettings.logoUrl, window.location.origin);
+          if (!["http:", "https:"].includes(parsedLogoUrl.protocol)) {
+            throw new Error("Logo URL must use HTTP or HTTPS.");
+          }
+          logoUrl = parsedLogoUrl.href;
+        }
+      } catch (error) {
+        toast.error("Receipt logo URL is invalid.");
+        console.error("Invalid receipt logo URL:", error);
+        printWindow.close();
+        return;
+      }
+    }
+    const shopName = escapeHtml(receiptSettings.shopName);
+    const shopAddress = escapeHtml(receiptSettings.address);
+    const shopGstNumber = escapeHtml(receiptSettings.gstNumber);
+    const footerMessage = escapeHtml(receiptSettings.footerMessage);
+
+    try {
+      printWindow.document.open();
+      printWindow.document.write(`<!doctype html>
+      <html lang="en">
+        <head>
+          <meta charset="utf-8" />
+          <title>Bill ${escapeHtml(bill.invoice_no)}</title>
+          <style>
+            * { box-sizing: border-box; }
+            body { margin: 0; padding: 36px; color: #1e293b; font: 14px Arial, sans-serif; }
+            header { display: flex; flex-direction: column; align-items: center; gap: 12px; padding-bottom: 12px; text-align: center; }
+            .brand { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+            .logo { display: block; width: 96px; height: 76px; object-fit: contain; }
+            h1 { margin: 0 0 6px; color: #00695c; font-size: 26px; }
+            .address { max-width: 620px; color: #475569; line-height: 1.5; }
+            .invoice-meta { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 12px 0; border-top: 1px solid #cbd5e1; border-bottom: 2px solid #00695c; }
+            .invoice-meta-right { text-align: right; }
+            h2 { margin: 24px 0 10px; font-size: 16px; }
+            p { margin: 4px 0; }
+            .customers { display: flex; flex-wrap: wrap; gap: 20px; }
+            .customer { min-width: 200px; line-height: 1.6; }
+            table { width: 100%; margin-top: 12px; border-collapse: collapse; }
+            th, td { padding: 10px 8px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+            th { background: #f1f5f9; font-size: 11px; text-transform: uppercase; }
+            .amount { text-align: right; white-space: nowrap; }
+            .exchange { color: #be123c; font-weight: 600; }
+            th.amount { text-align: right; }
+            .totals { width: min(100%, 340px); margin: 20px 0 0 auto; }
+            .total-row { display: flex; justify-content: space-between; gap: 20px; padding: 6px 0; }
+            .grand-total { margin-top: 6px; padding-top: 12px; border-top: 2px solid #cbd5e1; font-size: 18px; font-weight: 700; }
+            footer { margin-top: 36px; padding-top: 16px; border-top: 1px solid #cbd5e1; color: #475569; text-align: center; line-height: 1.6; }
+            footer strong { display: block; margin-bottom: 4px; color: #00695c; font-size: 15px; }
+            footer .thanks { color: #1e293b; font-weight: 600; }
+            @page { margin: 0; }
+            @media print { body { padding: 12mm; } }
+          </style>
+        </head>
+        <body>
+          <header>
+            <div class="brand">
+              ${logoUrl ? `<img id="shop-logo" class="logo" src="${escapeHtml(logoUrl)}" alt="${shopName} logo" />` : ""}
+              <div>
+                <h1>${shopName}</h1>
+                ${shopAddress ? `<p class="address">${shopAddress}</p>` : ""}
+                ${shopGstNumber ? `<p class="address"><strong>GSTIN:</strong> ${shopGstNumber}</p>` : ""}
+              </div>
+            </div>
+          </header>
+          <div class="invoice-meta">
+            <p>Invoice No: <strong>${escapeHtml(bill.invoice_no || "—")}</strong></p>
+            <div class="invoice-meta-right">
+              <p>Date: ${escapeHtml(date)}</p>
+              <p>Payment: ${bill.payment_type === "EXCHANGE_GOLD" ? "Exchange Gold" : "Full Payment"}</p>
+            </div>
+          </div>
+          <h2>Customer${billCustomers.length === 1 ? "" : "s"}</h2>
+          <div class="customers">${customerDetails || "<p>No customer details</p>"}</div>
+          <h2>Items</h2>
+          <table>
+            <thead><tr><th>S.No.</th><th>Item</th><th>Category</th><th>Purity</th><th>Making Charge</th><th>Weight</th><th>Wastage</th><th>Net Weight</th><th class="amount">Rate</th><th class="amount">Amount</th></tr></thead>
+            <tbody>${rows || '<tr><td colspan="10">No items</td></tr>'}</tbody>
+          </table>
+          <div class="totals">
+            <div class="total-row"><span>Sub-Total</span><span>${currency(bill.sub_total)}</span></div>
+            ${Number(bill.discount_amount) > 0 ? `<div class="total-row"><span>Discount</span><span>−${currency(bill.discount_amount)}</span></div>` : ""}
+            ${exchangeTotal > 0 ? `<div class="total-row"><span>Exchange Amount</span><span>−${currency(exchangeTotal)}</span></div>` : ""}
+            <div class="total-row"><span>GST</span><span>${currency(bill.gst_amount)}</span></div>
+            <div class="total-row grand-total"><span>Total</span><span>${currency(bill.total_amount)}</span></div>
+          </div>
+          <footer>
+            ${footerMessage ? `<div class="thanks">${footerMessage}</div>` : ""}
+          </footer>
+        </body>
+      </html>`);
+      printWindow.document.close();
+      printWindow.focus();
+      let printStarted = false;
+      const startPrint = () => {
+        if (printStarted || printWindow.closed) return;
+        printStarted = true;
+        printWindow.focus();
+        printWindow.print();
+      };
+      const logo = printWindow.document.getElementById("shop-logo");
+      if (!logo || logo.complete) startPrint();
+      else {
+        logo?.addEventListener("load", startPrint, { once: true });
+        logo?.addEventListener("error", startPrint, { once: true });
+        printWindow.setTimeout(startPrint, 1000);
+      }
+    } catch (error) {
+      printWindow.close();
+      console.error("Failed to open bill print dialog:", error);
+      toast.error("Could not open the print dialog. Please try again.");
+    }
+  };
+
   const resetForm = () => {
     setEditingBillId(null);
     setCustomers([{ ...EMPTY_CUSTOMER }]);
@@ -492,13 +775,20 @@ export default function BillingManagement() {
       : Number(selected.final_selling_price) > 0
         ? Number(selected.final_selling_price)
         : Number(selected.mrp || 0);
-    setProductToAdd({
+    setProductToAdd(resolveProductDetails({
       product_id: String(selected.id),
       product_name: selected.name,
       category: selected.category,
       purity: selected.purity || "",
+      metal_type: selected.metal_type || "Gold",
+      gross_weight: selected.gross_weight ?? null,
+      net_gold_weight: selected.net_gold_weight ?? null,
+      making_charge_type: selected.making_charge_type || "",
+      making_charge: selected.making_charge ?? null,
+      rate_per_gram: selected.gold_rate_per_gram ?? null,
+      rate_unit: selected.rate_unit || "gram",
       price
-    });
+    }, metalRates, currentGoldRates));
   };
 
   const addSelectedProduct = () => {
@@ -601,13 +891,6 @@ export default function BillingManagement() {
     <main className="min-h-screen space-y-5 bg-[#F4F7F6] py-1 text-slate-800">
       {!showForm ? (
         <>
-          <header className="flex flex-wrap items-end justify-between gap-4">
-            <div>
-              <p className="text-xs font-medium text-slate-500">Admin / Billing</p>
-              <h1 className="mt-1 text-2xl font-extrabold text-slate-900">Show All Bills</h1>
-              <p className="mt-1 text-sm text-slate-500">Create and review jewelry invoices.</p>
-            </div>
-          </header>
           <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Billing totals">
             {[
               { label: "Total Amount", value: totalBilled, trend: `${bills.length} bill${bills.length === 1 ? "" : "s"} recorded`, icon: <FiDollarSign />, color: "green" },
@@ -739,6 +1022,7 @@ export default function BillingManagement() {
                         <td className="px-4 py-4">
                           <div className="flex justify-end gap-1">
                             <button type="button" onClick={() => setViewingBill(bill)} className="rounded-md p-2 text-sky-700 hover:bg-sky-50" aria-label={`View bill ${bill.invoice_no}`} title="View"><FiEye /></button>
+                            <button type="button" onClick={() => printBill(bill)} className="rounded-md p-2 text-[#00695C] hover:bg-emerald-50" aria-label={`Print bill ${bill.invoice_no}`} title="Print"><FiPrinter /></button>
                             <button type="button" onClick={() => editBill(bill)} className="rounded-md p-2 text-amber-700 hover:bg-amber-50" aria-label={`Edit bill ${bill.invoice_no}`} title="Edit"><FiEdit2 /></button>
                             <button type="button" onClick={() => deleteBill(bill)} className="rounded-md p-2 text-rose-600 hover:bg-rose-50" aria-label={`Delete bill ${bill.invoice_no}`} title="Delete"><FiTrash2 /></button>
                           </div>
@@ -776,6 +1060,7 @@ export default function BillingManagement() {
                       </div>
                       <div className="mt-3 flex justify-end gap-1 border-t border-slate-100 pt-2">
                         <button type="button" onClick={() => setViewingBill(bill)} className="rounded-md p-2 text-sky-700 hover:bg-sky-50" aria-label={`View bill ${bill.invoice_no}`} title="View"><FiEye /></button>
+                        <button type="button" onClick={() => printBill(bill)} className="rounded-md p-2 text-[#00695C] hover:bg-emerald-50" aria-label={`Print bill ${bill.invoice_no}`} title="Print"><FiPrinter /></button>
                         <button type="button" onClick={() => editBill(bill)} className="rounded-md p-2 text-amber-700 hover:bg-amber-50" aria-label={`Edit bill ${bill.invoice_no}`} title="Edit"><FiEdit2 /></button>
                         <button type="button" onClick={() => deleteBill(bill)} className="rounded-md p-2 text-rose-600 hover:bg-rose-50" aria-label={`Delete bill ${bill.invoice_no}`} title="Delete"><FiTrash2 /></button>
                       </div>
@@ -856,28 +1141,37 @@ export default function BillingManagement() {
               <p className="rounded-lg border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">No products have been added to this bill.</p>
             ) : (
               <div className="w-full overflow-x-auto rounded-lg border border-slate-200">
-                <table className="w-full min-w-[700px] border-collapse text-left">
+                <table className="w-full min-w-[900px] border-collapse text-left">
                   <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                     <tr>
                       <th className="px-4 py-3 font-semibold">Product</th>
                       <th className="px-4 py-3 font-semibold">Category</th>
                       <th className="px-4 py-3 font-semibold">Purity</th>
+                      <th className="px-4 py-3 text-right font-semibold">Making Charge</th>
+                      <th className="px-4 py-3 text-right font-semibold">Net Weight</th>
+                      <th className="px-4 py-3 text-right font-semibold">Gram Rate</th>
                       <th className="px-4 py-3 font-semibold">Unit Price</th>
                       <th className="px-4 py-3 text-right font-semibold">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {products.map((product, index) => (
+                    {products.map((savedProduct, index) => {
+                      const product = getProductWithCatalogDetails(savedProduct);
+                      return (
                       <tr key={`${product.product_id}-${index}`}>
                         <td className="px-4 py-3 text-sm font-medium text-slate-800">{product.product_name}</td>
                         <td className="px-4 py-3 text-sm text-slate-700">{product.category || "—"}</td>
                         <td className="px-4 py-3 text-sm text-slate-700">{product.purity || "—"}</td>
+                        <td className="px-4 py-3 text-right text-sm text-slate-700">{formatMakingCharge(product)}</td>
+                        <td className="px-4 py-3 text-right text-sm text-slate-700">{product.net_gold_weight == null ? "—" : formatWeight(product.net_gold_weight, "g")}</td>
+                        <td className="px-4 py-3 text-right text-sm text-slate-700">{product.rate_per_gram == null ? "—" : `${currency(product.rate_per_gram)} / ${product.rate_unit || "gram"}`}</td>
                         <td className="px-4 py-3 text-sm font-semibold text-slate-800">{currency(product.price)}</td>
                         <td className="px-4 py-3 text-right">
                           <button type="button" onClick={() => setProducts((rows) => rows.filter((_, rowIndex) => rowIndex !== index))} className="rounded-md p-2 text-rose-500 hover:bg-rose-50" aria-label={`Remove product ${index + 1}`}><FiTrash2 /></button>
                         </td>
                       </tr>
-                    ))}
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1002,19 +1296,51 @@ export default function BillingManagement() {
               </div>
             </div>
             <div className="overflow-x-auto rounded-lg border border-slate-200">
-              <table className="w-full min-w-[600px] text-left text-sm">
+              <table className="w-full min-w-[1350px] text-left text-sm">
                 <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-                  <tr><th className="px-3 py-2">Item</th><th className="px-3 py-2">Category</th><th className="px-3 py-2">Purity</th><th className="px-3 py-2 text-right">Amount</th></tr>
+                  <tr>
+                    <th className="px-3 py-2">S.No.</th>
+                    <th className="px-3 py-2">Item</th>
+                    <th className="px-3 py-2">Category</th>
+                    <th className="px-3 py-2">Purity</th>
+                    <th className="px-3 py-2 text-right">Making Charge</th>
+                    <th className="px-3 py-2 text-right">Weight</th>
+                    <th className="px-3 py-2 text-right">Wastage</th>
+                    <th className="px-3 py-2 text-right">Net Weight</th>
+                    <th className="px-3 py-2 text-right">Rate</th>
+                    <th className="px-3 py-2 text-right">Amount</th>
+                  </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {decodeArray(viewingBill.products).map((product, index) => (
-                    <tr key={`view-product-${index}`}>
-                      <td className="px-3 py-2">{product.product_name}</td><td className="px-3 py-2">{product.category || "—"}</td><td className="px-3 py-2">{product.purity || "—"}</td><td className="px-3 py-2 text-right">{currency(product.price)}</td>
-                    </tr>
-                  ))}
+                  {decodeArray(viewingBill.products).map((savedProduct, index) => {
+                    const product = getProductWithCatalogDetails(savedProduct);
+                    return (
+                      <tr key={`view-product-${index}`}>
+                        <td className="px-3 py-2 text-slate-500">{index + 1}</td>
+                        <td className="px-3 py-2">{product.product_name}</td>
+                        <td className="px-3 py-2">{product.category || "—"}</td>
+                        <td className="px-3 py-2">{product.purity || "—"}</td>
+                        <td className="px-3 py-2 text-right">{formatMakingCharge(product)}</td>
+                        <td className="px-3 py-2 text-right">—</td>
+                        <td className="px-3 py-2 text-right">—</td>
+                        <td className="px-3 py-2 text-right">—</td>
+                        <td className="px-3 py-2 text-right">{product.rate_per_gram == null ? "—" : `${currency(product.rate_per_gram)} / ${product.rate_unit || "gram"}`}</td>
+                        <td className="px-3 py-2 text-right">{currency(product.price)}</td>
+                      </tr>
+                    );
+                  })}
                   {decodeArray(viewingBill.exchanges).map((exchange, index) => (
-                    <tr key={`view-exchange-${index}`}>
-                      <td className="px-3 py-2">{exchange.product_name}</td><td className="px-3 py-2">{exchange.category || "—"}</td><td className="px-3 py-2">{exchange.metal_type} {exchange.purity}</td><td className="px-3 py-2 text-right text-amber-700">−{currency(exchange.credit_amount)}</td>
+                    <tr key={`view-exchange-${index}`} className="text-rose-700">
+                      <td className="px-3 py-2 text-slate-500">{decodeArray(viewingBill.products).length + index + 1}</td>
+                      <td className="px-3 py-2">{exchange.product_name || "Exchange item"}</td>
+                      <td className="px-3 py-2">{exchange.category || "—"}</td>
+                      <td className="px-3 py-2">{exchange.metal_type} {exchange.purity}</td>
+                      <td className="px-3 py-2 text-right">—</td>
+                      <td className="px-3 py-2 text-right">{formatWeight(exchange.weight, exchange.weight_unit === "carat" ? "carat" : "g")}</td>
+                      <td className="px-3 py-2 text-right">{formatWeight(exchange.wastage_weight, exchange.weight_unit === "carat" ? "carat" : "g")}</td>
+                      <td className="px-3 py-2 text-right">{formatWeight(exchange.net_weight, exchange.weight_unit === "carat" ? "carat" : "g")}</td>
+                      <td className="px-3 py-2 text-right">{currency(exchange.rate_per_unit)} / {exchange.rate_unit || "gram"}</td>
+                      <td className="px-3 py-2 text-right font-semibold">−{currency(exchange.credit_amount)}</td>
                     </tr>
                   ))}
                 </tbody>

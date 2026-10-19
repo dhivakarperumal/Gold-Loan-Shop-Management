@@ -20,6 +20,7 @@ import {
     FiX,
 } from "react-icons/fi";
 import { toast } from "react-hot-toast";
+import { Link } from "react-router-dom";
 
 const PAGE_SIZE = 8;
 
@@ -218,14 +219,17 @@ const Users = () => {
             <div className="mx-auto max-w-[1600px] space-y-4">
                 <header className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
                     <div>
-                        <p className="mb-1 text-xs font-medium text-slate-500">⌂　›　Customers</p>
-                        <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Customers</h1>
-                        <p className="mt-1 text-sm text-slate-500">Manage customer accounts and contact details.</p>
+                        <Link
+                            to="/admin/settings"
+                            className="mb-3 inline-flex items-center gap-2 rounded-lg bg-[#00695C] px-3 py-2 text-xs font-bold text-white transition hover:bg-[#008577]"
+                        >
+                            <FiChevronLeft size={16} /> Back to Settings
+                        </Link>
                     </div>
                     <button
                         type="button"
                         onClick={openAddModal}
-                        className="inline-flex items-center justify-center gap-2 rounded-lg bg-gradient-to-r from-[#B7791F] to-[#D4A017] px-4 py-2.5 text-sm font-bold text-white shadow-md shadow-amber-900/10 transition hover:brightness-105"
+                        className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#00695C] px-4 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-[#008577]"
                     >
                         <FiPlus /> Add Customer
                     </button>
@@ -376,7 +380,7 @@ const Users = () => {
                                     <div className="flex items-start gap-2"><FiUser className="mt-0.5 shrink-0 text-[#008577]" /><dt className="w-20 shrink-0 text-slate-500">Role</dt><dd className="font-medium capitalize text-slate-700">{selectedUser.role}</dd></div>
                                     <div className="flex items-start gap-2"><FiCalendar className="mt-0.5 shrink-0 text-[#008577]" /><dt className="w-20 shrink-0 text-slate-500">Joined</dt><dd className="font-medium text-slate-700">{formatJoinDate(selectedUser.created_at, { day: "numeric", month: "long", year: "numeric" })}</dd></div>
                                 </dl>
-                                <button type="button" onClick={() => openEditModal(selectedUser)} className="w-full rounded-lg bg-gradient-to-r from-[#B7791F] to-[#D4A017] px-3 py-2.5 text-xs font-bold text-white shadow-sm hover:brightness-105">Edit Customer</button>
+                                <button type="button" onClick={() => openEditModal(selectedUser)} className="w-full rounded-lg bg-[#00695C] px-3 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#008577]">Edit Customer</button>
                             </>
                         ) : (
                             <div className="py-10 text-center text-xs text-slate-400">Choose a customer to view their details.</div>

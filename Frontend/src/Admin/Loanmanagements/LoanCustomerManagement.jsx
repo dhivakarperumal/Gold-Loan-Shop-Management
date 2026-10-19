@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
+  FiCamera,
   FiCheckCircle,
   FiDownload,
   FiEdit2,
   FiEye,
-  FiEyeOff,
   FiFilter,
   FiGrid,
   FiList,
@@ -154,7 +154,6 @@ export default function LoanCustomerManagement() {
   const [editingCustomer, setEditingCustomer] = useState(null);
   const [form, setForm] = useState(EMPTY_CUSTOMER);
   const [accountPassword, setAccountPassword] = useState("");
-  const [showAccountPassword, setShowAccountPassword] = useState(false);
   const [saving, setSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [photoPreview, setPhotoPreview] = useState({ reference: "", url: "" });
@@ -248,7 +247,6 @@ export default function LoanCustomerManagement() {
     setEditingCustomer(null);
     setForm(EMPTY_CUSTOMER);
     setAccountPassword("");
-    setShowAccountPassword(false);
     setDocuments([]);
     setPendingDocuments([]);
     setDocumentType("");
@@ -268,7 +266,6 @@ export default function LoanCustomerManagement() {
       photo_url: customer.photo_url || ""
     });
     setAccountPassword("");
-    setShowAccountPassword(false);
     setIsFormOpen(true);
     try {
       const response = await api.get(`/loan-customers/${customer.id}/documents`);
@@ -442,6 +439,10 @@ export default function LoanCustomerManagement() {
 
   const handleSave = async (event) => {
     event.preventDefault();
+    if (!form.photo_url.trim()) {
+      toast.error("Upload a customer photo before saving.");
+      return;
+    }
     const stagedTypes = new Set(pendingDocuments.map((document) => document.document_type));
     for (const type of stagedTypes) {
       const savedSides = new Set(documents
@@ -752,50 +753,9 @@ export default function LoanCustomerManagement() {
               <div className="flex-1 space-y-4 overflow-y-auto p-5">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <CustomerField label="Full Name" name="full_name" value={form.full_name} onChange={handleChange} required placeholder="Enter full name" />
-                  {!editingCustomer && (
-                    <label className={labelClass}>
-                      Username<span className="ml-1 text-red-500">*</span>
-                      <input
-                        className={inputClass}
-                        name="username"
-                        value={form.full_name}
-                        readOnly
-                        required
-                        autoComplete="username"
-                        placeholder="Enter full name"
-                      />
-                    </label>
-                  )}
                   <CustomerField label="Mobile" name="mobile" value={form.mobile} onChange={handleChange} required placeholder="Enter phone number" />
-                  {!editingCustomer && (
-                    <label className={labelClass}>
-                      Password<span className="ml-1 text-red-500">*</span>
-                      <span className="relative block">
-                        <input
-                          className={`${inputClass} pr-10`}
-                          type={showAccountPassword ? "text" : "password"}
-                          name="password"
-                          value={accountPassword}
-                          onChange={(event) => setAccountPassword(event.target.value)}
-                          required
-                          minLength={8}
-                          autoComplete="new-password"
-                          placeholder="Initial password (defaults to mobile)"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowAccountPassword((visible) => !visible)}
-                          aria-label={showAccountPassword ? "Hide password" : "Show password"}
-                          aria-pressed={showAccountPassword}
-                          className="absolute inset-y-0 right-2 flex items-center px-1 text-slate-500 hover:text-[#008577]"
-                        >
-                          {showAccountPassword ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}
-                        </button>
-                      </span>
-                    </label>
-                  )}
                   <CustomerField label="Alternate Mobile" name="alternate_mobile" value={form.alternate_mobile} onChange={handleChange} placeholder="Enter alternate phone number" />
-                  <CustomerField label="Email" name="email" type="email" value={form.email} onChange={handleChange} required placeholder="name@example.com" />
+                  <CustomerField label="Email" name="email" type="email" value={form.email} onChange={handleChange} placeholder="name@example.com" />
                   {!editingCustomer && (
                     <p className="text-xs text-slate-500 sm:col-span-2">
                       The initial password defaults to the primary mobile number; you can change it here.
@@ -823,8 +783,6 @@ export default function LoanCustomerManagement() {
                       ))}
                     </div>
                   </fieldset>
-                  <CustomerField label="Occupation" name="occupation" value={form.occupation} onChange={handleChange} placeholder="Enter occupation" />
-                  <CustomerSelect label="KYC Status" name="kyc_status" value={form.kyc_status} onChange={handleChange} options={["Pending", "Verified", "Rejected"]} />
                   <CustomerField label="City / Town" name="city" value={form.city} onChange={handleChange} required placeholder="Enter city or town" />
                   <CustomerField label="District" name="district" value={form.district} onChange={handleChange} required placeholder="Enter district" />
                   <CustomerSelect label="State" name="state" value={form.state} onChange={handleChange} options={["", ...INDIAN_STATES_AND_UTS]} required />
@@ -836,20 +794,20 @@ export default function LoanCustomerManagement() {
                 <section className="space-y-3 rounded-xl border border-slate-200 p-4">
                   <div>
                     <h3 className="text-sm font-bold text-[#003B3B]">Guarantor / Surety Details</h3>
-                    <p className="mt-1 text-xs text-slate-500">All guarantor details are required.</p>
+                    <p className="mt-1 text-xs text-slate-500">Guarantor address is optional; other details are required.</p>
                   </div>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <CustomerField label="Guarantor Name" name="guarantor_name" value={form.guarantor_name} onChange={handleChange} required placeholder="Enter guarantor's full name" />
                     <CustomerField label="Guarantor Mobile" name="guarantor_mobile" value={form.guarantor_mobile} onChange={handleChange} required placeholder="Enter phone number" />
                     <CustomerField label="Relationship to Customer" name="guarantor_relationship" value={form.guarantor_relationship} onChange={handleChange} required placeholder="e.g. Spouse, Parent, Friend" />
-                    <label className={labelClass} htmlFor="guarantor-address">Guarantor Address<span className="ml-1 text-red-500">*</span>
-                      <textarea id="guarantor-address" className={`${inputClass} min-h-20`} name="guarantor_address" value={form.guarantor_address || ""} onChange={handleChange} rows="2" required placeholder="Enter guarantor's full address" />
+                    <label className={labelClass} htmlFor="guarantor-address">Guarantor Address
+                      <textarea id="guarantor-address" className={`${inputClass} min-h-20`} name="guarantor_address" value={form.guarantor_address || ""} onChange={handleChange} rows="2" placeholder="Enter guarantor's full address" />
                     </label>
                   </div>
                 </section>
-                <div>
-                  <p className={labelClass}>Customer Photo</p>
-                  <p className="mt-1 text-xs text-slate-500">Upload a PNG or JPG (up to 5 MB). Photos are stored privately.</p>
+                <div className="rounded-xl border border-slate-200 p-4">
+                  <p className={labelClass}>Customer Photo<span className="ml-1 text-red-500">*</span></p>
+                  <p className="mt-1 text-xs text-slate-500">Required. Upload a PNG or JPG (up to 5 MB). Photos are stored privately.</p>
                   {photoPreview.reference === form.photo_url && photoPreview.url && (
                     <div className="mt-3 flex items-center gap-3">
                       <img src={photoPreview.url} alt="Customer photo preview" className="h-20 w-20 rounded-lg border border-slate-200 object-cover" />
@@ -865,10 +823,16 @@ export default function LoanCustomerManagement() {
                       </button>
                     </div>
                   )}
-                  <label className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#008577]/30 px-3 py-2 text-sm font-semibold text-[#00695C] transition hover:bg-emerald-50">
-                    <FiPlus /> {uploadingPhoto ? "Uploading..." : form.photo_url ? "Replace Photo" : "Upload Photo"}
-                    <input type="file" accept="image/png,image/jpeg" onChange={handlePhotoUpload} disabled={uploadingPhoto} className="sr-only" />
-                  </label>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#008577]/30 px-3 py-2 text-sm font-semibold text-[#00695C] transition hover:bg-emerald-50">
+                      <FiPlus /> {uploadingPhoto ? "Uploading..." : form.photo_url ? "Choose Replacement" : "Choose Photo"}
+                      <input type="file" accept="image/png,image/jpeg" onChange={handlePhotoUpload} disabled={uploadingPhoto} className="sr-only" />
+                    </label>
+                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#008577]/30 px-3 py-2 text-sm font-semibold text-[#00695C] transition hover:bg-emerald-50">
+                      <FiCamera /> Take Photo
+                      <input type="file" accept="image/png,image/jpeg" capture="environment" onChange={handlePhotoUpload} disabled={uploadingPhoto} className="sr-only" />
+                    </label>
+                  </div>
                   {form.photo_url && <p className="mt-2 break-all text-[11px] text-slate-400">Secure reference saved</p>}
                 </div>
                         <section className="space-y-3 rounded-xl border border-slate-200 p-4">
@@ -918,10 +882,16 @@ export default function LoanCustomerManagement() {
                                   </button>
                                 )}
                                 {!staged && !saved && <p className="mt-2 text-xs text-slate-400">No file selected</p>}
-                                <label className={`mt-3 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#008577] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#00695C] ${!documentType || isAtCapacity ? "pointer-events-none opacity-50" : ""}`}>
-                                  <FiPlus /> {staged || saved ? "Replace File" : "Choose File"}
-                                  <input type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" onChange={(event) => handleDocumentUpload(event, side)} disabled={!documentType || isAtCapacity} className="sr-only" />
-                                </label>
+                                <div className="mt-3 flex flex-col gap-2">
+                                  <label className={`inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#008577] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#00695C] ${!documentType || isAtCapacity ? "pointer-events-none opacity-50" : ""}`}>
+                                    <FiPlus /> {staged || saved ? "Replace File" : "Choose File"}
+                                    <input type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" onChange={(event) => handleDocumentUpload(event, side)} disabled={!documentType || isAtCapacity} className="sr-only" />
+                                  </label>
+                                  <label className={`inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-[#008577]/30 px-3 py-2 text-xs font-semibold text-[#00695C] transition hover:bg-emerald-50 ${!documentType || isAtCapacity ? "pointer-events-none opacity-50" : ""}`}>
+                                    <FiCamera /> Take Photo
+                                    <input type="file" accept="image/png,image/jpeg" capture="environment" onChange={(event) => handleDocumentUpload(event, side)} disabled={!documentType || isAtCapacity} className="sr-only" />
+                                  </label>
+                                </div>
                               </div>
                             );
                           })}
@@ -970,6 +940,7 @@ export default function LoanCustomerManagement() {
                 <label className={labelClass}>Internal Notes
                   <textarea className={`${inputClass} min-h-20`} name="notes" value={form.notes || ""} onChange={handleChange} rows="3" />
                 </label>
+                <CustomerSelect label="KYC Status" name="kyc_status" value={form.kyc_status} onChange={handleChange} options={["Pending", "Verified", "Rejected"]} />
               </div>
               <footer className="flex justify-end gap-2 border-t border-slate-100 p-4">
                 <button type="button" onClick={closeForm} disabled={saving || uploadingPhoto} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50">Close</button>

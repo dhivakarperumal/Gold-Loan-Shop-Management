@@ -178,6 +178,11 @@ test('uses catalog details and catalog price instead of client-submitted product
     name: 'Catalog necklace',
     category: 'Necklace',
     purity: '22K',
+    gross_weight: 8.25,
+    net_gold_weight: 7.5,
+    making_charge_type: 'Fixed Amount',
+    making_charge: 1200,
+    gold_rate_per_gram: 7200,
     offer_price: 12000,
     final_selling_price: 12500,
     mrp: 15000,
@@ -189,6 +194,11 @@ test('uses catalog details and catalog price instead of client-submitted product
       product_name: 'Catalog necklace',
       category: 'Necklace',
       purity: '22K',
+      gross_weight: 8.25,
+      net_gold_weight: 7.5,
+      making_charge_type: 'Fixed Amount',
+      making_charge: 1200,
+      rate_per_gram: 7200,
       price: 12000
     }]
   });

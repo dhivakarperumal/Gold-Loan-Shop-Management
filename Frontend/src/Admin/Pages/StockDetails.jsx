@@ -15,10 +15,9 @@ import {
     FiGrid,
     FiList,
 } from "react-icons/fi";
-import { useNavigate } from "react-router-dom";
+import AddStock from "../Products/AddStock";
 
 const StockDetails = () => {
-    const navigate = useNavigate();
     const { stockCache, setStockCached } = useAdmin();
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("All");
@@ -39,6 +38,7 @@ const StockDetails = () => {
 
     // Modal state
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const [isAddStockOpen, setIsAddStockOpen] = useState(false);
     const [pagination, setPagination] = useState(pageData?.pagination || { total: 0, totalPages: 1 });
     const [stats, setStats] = useState(pageData?.stats || { total: 0, active: 0, lowStock: 0, outOfStock: 0 });
     const [selectedProduct, setSelectedProduct] = useState(null);
@@ -349,7 +349,7 @@ const StockDetails = () => {
                 </div>
                 <button
                     type="button"
-                    onClick={() => navigate("/admin/products/stock/add")}
+                    onClick={() => setIsAddStockOpen(true)}
                     className="flex items-center justify-center gap-2 rounded-xl bg-[#006B62] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#00564f]"
                 >
                     <FiPlus size={17} /> Add Stock
@@ -369,16 +369,16 @@ const StockDetails = () => {
                         <table className="w-full text-left">
                             <thead>
                                 <tr className="bg-gradient-to-r from-[#003B3B] to-[#006B62] border-b border-[#006B62]">
-                                    <th className="px-4 py-4 text-[11px] font-bold text-[#F5C45E] uppercase tracking-wider w-10">
+                                    <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider w-10">
                                         <input type="checkbox" className="rounded border-[#F5C45E]/40 accent-[#F5C45E]" />
                                     </th>
-                                    <th className="px-4 py-4 text-[11px] font-bold text-[#F5C45E] uppercase tracking-wider w-12">S.No.</th>
-                                    <th className="px-4 py-4 text-[11px] font-bold text-[#F5C45E] uppercase tracking-wider">Product</th>
-                                    <th className="px-4 py-4 text-[11px] font-bold text-[#F5C45E] uppercase tracking-wider">Category</th>
-                                    <th className="px-4 py-4 text-[11px] font-bold text-[#F5C45E] uppercase tracking-wider">Price</th>
-                                    <th className="px-4 py-4 text-[11px] font-bold text-[#F5C45E] uppercase tracking-wider">Stock</th>
-                                    <th className="px-4 py-4 text-[11px] font-bold text-[#F5C45E] uppercase tracking-wider">Status</th>
-                                    <th className="px-4 py-4 text-[11px] font-bold text-[#F5C45E] uppercase tracking-wider">Actions</th>
+                                    <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider w-12">S.No.</th>
+                                    <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Product</th>
+                                    <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Category</th>
+                                    <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Price</th>
+                                    <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Stock</th>
+                                    <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Status</th>
+                                    <th className="px-4 py-4 text-[11px] font-bold text-white uppercase tracking-wider">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-50">
@@ -670,6 +670,15 @@ const StockDetails = () => {
                 </div>,
                 document.body
                 )
+            )}
+
+            {isAddStockOpen && (
+                <AddStock
+                    onClose={() => {
+                        setIsAddStockOpen(false);
+                        void fetchProducts();
+                    }}
+                />
             )}
 
         </div>

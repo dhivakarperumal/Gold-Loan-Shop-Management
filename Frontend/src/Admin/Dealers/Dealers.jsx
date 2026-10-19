@@ -55,279 +55,450 @@ function SelectField({ label, value, onChange, children, required = false }) {
 }
 
 const Dealers = () => {
-    const navigate = useNavigate();
-    const [dealers, setDealers] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [selectedDealer, setSelectedDealer] = useState(null);
-    const [showHistory, setShowHistory] = useState(false);
-    const [showAddDealer, setShowAddDealer] = useState(false);
-    const [searchTerm, setSearchTerm] = useState("");
-    const [statusFilter, setStatusFilter] = useState("All");
-    const [viewMode, setViewMode] = useState("table");
+  const location = useLocation();
+  const navigate = useNavigate();
+  const section = location.pathname.endsWith("/purchases") ? "purchases"
+    : location.pathname.endsWith("/jobs") ? "jobs"
+      : location.pathname.endsWith("/refining") ? "refining" : "dealers";
+  const [dealers, setDealers] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [summary, setSummary] = useState(null);
+  const [purchases, setPurchases] = useState([]);
+  const [linkedInvoices, setLinkedInvoices] = useState([]);
+  const [jobs, setJobs] = useState([]);
+  const [oldGoldReceipts, setOldGoldReceipts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [categoryFilter, setCategoryFilter] = useState("All");
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
+  const [dialog, setDialog] = useState("");
+  const [editingDealer, setEditingDealer] = useState(null);
+  const [selectedDealer, setSelectedDealer] = useState(null);
+  const [statement, setStatement] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState(initialDealer);
+  const [purchaseForm, setPurchaseForm] = useState({
+    dealer_id: "", document_type: "invoice", supplier_invoice_number: "",
+    document_date: today(), due_date: "", notes: "", lines: [blankLine()]
+  });
+  const [paymentForm, setPaymentForm] = useState({
+    dealer_id: "", amount: "", payment_date: today(), method: "Bank", reference: "", purchase_id: "", allocation: ""
+  });
+  const [outstanding, setOutstanding] = useState([]);
+  const [jobForm, setJobForm] = useState({ dealer_id: "", description: "", due_date: "", labour_charge: "0", approved_wastage: "0" });
+  const [metalForm, setMetalForm] = useState({ job_id: "", metal_type: "Gold", purity: "916", weight: "", receipt_type: "finished", labour_charge: "0" });
+  const [reconcileForm, setReconcileForm] = useState({ job_id: "", approved_loss: "0", reason: "" });
+  const [oldGoldForm, setOldGoldForm] = useState({ dealer_id: "", gross_weight: "", stone_weight: "0", net_weight: "", tested_purity: "916", agreed_rate: "", rate_source: "Global" });
+  const [refiningForm, setRefiningForm] = useState({ dealer_id: "", old_gold_receipt_id: "", recovered_metal_type: "Gold", recovered_purity: "999", recovered_weight: "", refining_charges: "0" });
+  const [documentForm, setDocumentForm] = useState({ type: "GST Certificate", file: null });
 
-    // Mock history data
-    const mockHistory = [
-        { id: "#INV-2024-001", date: "2024-03-01", items: "Wedding Silk Saree x 5", amount: "₹45,000", status: "Paid" },
-        { id: "#INV-2024-042", date: "2024-02-15", items: "Cotton Saree x 12", amount: "₹18,000", status: "Paid" },
-        { id: "#INV-2023-118", date: "2024-01-20", items: "Linen Saree x 2", amount: "₹4,200", status: "Pending" },
-    ];
+  const fetchDealers = useCallback(async () => {
+    const response = await api.get("/dealers", { params: {
+      page, limit: 25, search: search.trim(),
+      status: statusFilter === "All" ? undefined : statusFilter,
+      category_id: categoryFilter === "All" ? undefined : categoryFilter
+    } });
+    setDealers(response.data.dealers || []);
+    setPagination(response.data.pagination || { total: 0, totalPages: 1 });
+  }, [page, search, statusFilter, categoryFilter]);
 
-    useEffect(() => {
-        fetchDealers();
-    }, []);
+  const fetchAll = useCallback(async () => {
+    setError("");
+    setLoading(true);
+    try {
+      const [categoriesResult, summaryResult] = await Promise.all([
+        api.get("/dealers/categories"), api.get("/dealers/summary")
+      ]);
+      setCategories(categoriesResult.data || []);
+      setSummary(summaryResult.data);
+      if (section === "dealers") await fetchDealers();
+      if (section === "purchases") {
+        const result = await api.get("/dealers/purchases", { params: { page: 1, limit: 50 } });
+        setPurchases(result.data.purchases || []);
+      }
+      if (section === "jobs") {
+        const result = await api.get("/dealers/jobs", { params: { page: 1, limit: 50 } });
+        setJobs(result.data.jobs || []);
+      }
+      if (section === "refining") {
+        const [receiptsResult, jobResult] = await Promise.all([
+          api.get("/dealers/old-gold", { params: { page: 1, limit: 100 } }),
+          api.get("/dealers/jobs", { params: { page: 1, limit: 100 } })
+        ]);
+        setOldGoldReceipts(receiptsResult.data.receipts || []);
+        setJobs(jobResult.data.jobs || []);
+      }
+    } catch (requestError) {
+      console.error("Dealer management load failed:", requestError);
+      const message = requestError.response?.data?.message || "Unable to load dealer management data";
+      setError(message);
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  }, [fetchDealers, section]);
 
-    const fetchDealers = async () => {
-        setLoading(true);
-        try {
-            const res = await api.get("/dealers");
-            setDealers(res.data);
-        } catch (error) {
-            console.error("Fetch Dealers Error:", error);
-            toast.error("Failed to load dealers");
-        } finally {
-            setLoading(false);
-        }
+  useEffect(() => {
+    const timeout = setTimeout(() => { void fetchAll(); }, 250);
+    return () => clearTimeout(timeout);
+  }, [fetchAll]);
+
+  useEffect(() => {
+    if (dialog !== "purchase" || purchaseForm.document_type === "invoice" || !purchaseForm.dealer_id) return;
+    api.get("/dealers/purchases", { params: { dealer_id: purchaseForm.dealer_id, page: 1, limit: 100 } })
+      .then((response) => setLinkedInvoices((response.data.purchases || []).filter((item) => item.document_type === "invoice")))
+      .catch((requestError) => {
+        console.error("Dealer invoices could not be loaded for adjustment:", requestError);
+        toast.error(requestError.response?.data?.message || "Unable to load supplier invoices for linking");
+      });
+  }, [dialog, purchaseForm.dealer_id, purchaseForm.document_type]);
+
+  const refresh = async () => {
+    await fetchAll();
+  };
+
+  const setDealerField = (key, value) => setForm((previous) => ({ ...previous, [key]: value }));
+  const setPurchaseLine = (index, key, value) => setPurchaseForm((previous) => ({
+    ...previous, lines: previous.lines.map((line, lineIndex) => lineIndex === index ? { ...line, [key]: value } : line)
+  }));
+
+  const startDealerEdit = (dealer = null) => {
+    setEditingDealer(dealer);
+    const address = dealer?.billing_address || {};
+    const shipping = dealer?.shipping_address || {};
+    const bank = dealer?.bank_details || {};
+    setForm(dealer ? {
+      ...initialDealer, ...dealer,
+      billing_address_line1: address.line1 || "", billing_city: address.city || "",
+      billing_state: address.state || "", billing_pincode: address.pincode || "",
+      shipping_address_line1: shipping.line1 || "", shipping_city: shipping.city || "",
+      shipping_state: shipping.state || "", shipping_pincode: shipping.pincode || "",
+      bank_name: bank.bank_name || "", bank_account_name: bank.account_name || "",
+      bank_account_number: bank.account_number || "", bank_ifsc: bank.ifsc || ""
+    } : { ...initialDealer, category_id: categories[0]?.id || "" });
+    setDialog("dealer");
+  };
+
+  const submitDealer = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+    const payload = {
+      ...form,
+      category_id: Number(form.category_id),
+      billing_address: { line1: form.billing_address_line1, city: form.billing_city, state: form.billing_state, pincode: form.billing_pincode },
+      shipping_address: { line1: form.shipping_address_line1, city: form.shipping_city, state: form.shipping_state, pincode: form.shipping_pincode },
+      bank_details: { bank_name: form.bank_name, account_name: form.bank_account_name, account_number: form.bank_account_number, ifsc: form.bank_ifsc }
     };
+    payload.opening_metal_balances = form.opening_metal_weight ? [{
+      metal_type: form.opening_metal_type, purity: form.opening_metal_purity, weight: Number(form.opening_metal_weight)
+    }] : [];
+    try {
+      if (editingDealer) {
+        await api.put(`/dealers/${editingDealer.id}`, payload);
+        toast.success("Dealer profile updated");
+      } else {
+        await api.post("/dealers", payload);
+        toast.success("Dealer registered with opening balances");
+      }
+      setDialog("");
+      await refresh();
+    } catch (requestError) {
+      toast.error(requestError.response?.data?.message || "Unable to save dealer");
+    } finally {
+      setSaving(false);
+    }
+  };
 
-    const filteredDealers = dealers.filter(dealer => {
-        const search = searchTerm.toLowerCase();
-        const matchesSearch = dealer.name?.toLowerCase().includes(search) ||
-            dealer.contact?.toLowerCase().includes(search) ||
-            dealer.location?.toLowerCase().includes(search) ||
-            dealer.email?.toLowerCase().includes(search);
-        const matchesStatus = statusFilter === "All" || dealer.status === statusFilter;
-        return matchesSearch && matchesStatus;
-    });
+  const openStatement = async (dealer) => {
+    try {
+      const response = await api.get(`/dealers/${dealer.id}/statement`);
+      setSelectedDealer(dealer);
+      setStatement(response.data);
+      setDialog("statement");
+    } catch (requestError) {
+      toast.error(requestError.response?.data?.message || "Unable to load dealer statement");
+    }
+  };
 
-    const totalDealers = dealers.length;
-    const activeDealers = dealers.filter(dealer => String(dealer.status || "Active").toLowerCase() === "active").length;
-    const inactiveDealers = dealers.filter(dealer => String(dealer.status || "Active").toLowerCase() === "inactive").length;
-    const totalOrders = dealers.reduce((total, dealer) => total + (Number(dealer.orders) || 0), 0);
+  const exportCsv = (rows, filename) => {
+    const csvEscape = (value) => `"${String(value ?? "").replaceAll('"', '""')}"`;
+    const csv = rows.map((row) => row.map(csvEscape).join(",")).join("\r\n");
+    const url = URL.createObjectURL(new Blob(["\uFEFF", csv], { type: "text/csv;charset=utf-8" }));
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = filename;
+    anchor.click();
+    URL.revokeObjectURL(url);
+  };
 
-    const handleContact = (dealer) => {
-        toast.promise(
-            new Promise((resolve) => setTimeout(resolve, 800)),
-            {
-                loading: `Opening secure chat with ${dealer.name}...`,
-                success: `Connected to ${dealer.contact}!`,
-                error: 'Connection failed',
-            }
-        );
-    };
+  const printStatement = () => {
+    if (!statement || !selectedDealer) return;
+    const safe = (value) => String(value ?? "").replace(/[&<>"']/g, (char) => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    })[char]);
+    const rows = statement.financial.map((entry) => `<tr><td>${safe(new Date(entry.created_at).toLocaleDateString())}</td><td>${safe(entry.entry_number)}</td><td>${safe(entry.description)}</td><td>${currency(entry.payable_delta)}</td><td>${currency(entry.receivable_delta)}</td><td>${currency(entry.payable_balance)}</td></tr>`).join("");
+    const printWindow = window.open("", "_blank", "noopener,noreferrer");
+    if (!printWindow) return toast.error("Allow pop-ups to print the statement");
+    printWindow.document.write(`<html><head><title>Dealer Statement</title><style>body{font:14px Arial;padding:30px;color:#1e293b}h1{color:#003B3B}table{border-collapse:collapse;width:100%;margin-top:20px}th,td{border:1px solid #cbd5e1;padding:9px;text-align:left}th{background:#003B3B;color:white}@media print{button{display:none}}</style></head><body><h1>Sri Vengateswara Gold Shop</h1><h2>Dealer Statement - ${safe(selectedDealer.name)} (${safe(selectedDealer.dealer_code)})</h2><p>Generated ${safe(new Date(statement.generated_at).toLocaleString())}</p><table><thead><tr><th>Date</th><th>Entry</th><th>Description</th><th>Payable Δ</th><th>Receivable Δ</th><th>Payable balance</th></tr></thead><tbody>${rows}</tbody></table><script>window.print()</script></body></html>`);
+    printWindow.document.close();
+  };
 
-    const handleViewHistory = (dealer) => {
-        setSelectedDealer(dealer);
-        setShowHistory(true);
-    };
+  const reversePaymentEntry = async (entry) => {
+    const reason = window.prompt(`Enter the reason for reversing this posted payment (${entry.entry_number}):`);
+    if (!reason?.trim()) return;
+    try {
+      await api.post(`/dealers/payments/${entry.source_id}/reverse`, { reason: reason.trim() });
+      toast.success("Payment reversed; invoice allocations and dealer balances were adjusted");
+      if (selectedDealer) await openStatement(selectedDealer);
+      await fetchAll();
+    } catch (requestError) {
+      toast.error(requestError.response?.data?.message || "Unable to reverse payment");
+    }
+  };
 
-    const handleImportExcel = () => {
-        const input = document.createElement('input');
-        input.type = 'file';
-        input.accept = '.xlsx, .xls, .csv';
-        input.onchange = (e) => {
-            const file = e.target.files[0];
-            if (file) {
-                toast.loading(`Importing ${file.name}...`);
-                setTimeout(() => {
-                    toast.dismiss();
-                    toast.success("All partners imported successfully!");
-                }, 1500);
-            }
-        };
-        input.click();
-    };
+  const submitPurchase = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      const payload = {
+        ...purchaseForm,
+        dealer_id: Number(purchaseForm.dealer_id),
+        lines: purchaseForm.lines.map((line) => ({
+          ...line, quantity: Number(line.quantity || 1), net_weight: Number(line.net_weight || 0),
+          rate_per_gram: Number(line.rate_per_gram || 0), unit_price: Number(line.unit_price || 0),
+          making_charge: Number(line.making_charge || 0), wastage_charge: Number(line.wastage_charge || 0),
+          stone_charge: Number(line.stone_charge || 0), discount: Number(line.discount || 0),
+          tax_rate: Number(line.tax_rate || 0)
+        }))
+      };
+      const response = await api.post("/dealers/purchases", payload);
+      toast.success(`Posted ${response.data.document_number} for ${currency(response.data.total)}`);
+      setDialog("");
+      setPurchaseForm({ dealer_id: "", document_type: "invoice", supplier_invoice_number: "", document_date: today(), due_date: "", notes: "", lines: [blankLine()] });
+      await refresh();
+    } catch (requestError) {
+      toast.error(requestError.response?.data?.message || "Unable to post purchase document");
+    } finally {
+      setSaving(false);
+    }
+  };
 
-    const getStatusStyle = (status) => {
-        switch (status) {
-            case "Premium": return "bg-amber-100 text-amber-700 border-amber-200";
-            case "Verified": return "bg-emerald-100 text-emerald-700 border-emerald-200";
-            case "Pending": return "bg-gray-100 text-gray-700 border-gray-200";
-            default: return "bg-gray-100 text-gray-500 border-gray-100";
-        }
-    };
+  const openPayment = async () => {
+    try {
+      const response = await api.get("/dealers/purchases", { params: { page: 1, limit: 100 } });
+      setOutstanding((response.data.purchases || []).filter((item) => item.document_type === "invoice" && Number(item.outstanding) > 0));
+      setPaymentForm({ dealer_id: "", amount: "", payment_date: today(), method: "Bank", reference: "", purchase_id: "", allocation: "", idempotency_key: crypto.randomUUID() });
+      setDialog("payment");
+    } catch (requestError) {
+      toast.error(requestError.response?.data?.message || "Unable to load outstanding invoices");
+    }
+  };
 
-    return (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-            <Toaster position="top-right" />
-            {/* Dealer Analytics */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shrink-0"><FiTruck size={22} /></div>
-                    <div><p className="text-xs text-gray-400 font-medium">Total Dealers</p><h3 className="text-3xl font-black text-slate-800 leading-none my-0.5">{totalDealers.toLocaleString()}</h3><p className="text-[10px] text-gray-400">All registered partners</p></div>
-                </div>
-                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white shadow-lg shrink-0"><FiCheck size={22} /></div>
-                    <div><p className="text-xs text-gray-400 font-medium">Active Dealers</p><h3 className="text-3xl font-black text-slate-800 leading-none my-0.5">{activeDealers.toLocaleString()}</h3><p className="text-[10px] text-gray-400">Currently active</p></div>
-                </div>
-                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-rose-400 to-pink-500 flex items-center justify-center text-white shadow-lg shrink-0"><FiX size={22} /></div>
-                    <div><p className="text-xs text-gray-400 font-medium">Inactive Dealers</p><h3 className="text-3xl font-black text-slate-800 leading-none my-0.5">{inactiveDealers.toLocaleString()}</h3><p className="text-[10px] text-gray-400">Needs follow-up</p></div>
-                </div>
-                <div className="bg-white p-5 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:shadow-md transition-all">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-400 to-amber-500 flex items-center justify-center text-white shadow-lg shrink-0"><FiPackage size={22} /></div>
-                    <div><p className="text-xs text-gray-400 font-medium">Total Orders</p><h3 className="text-3xl font-black text-slate-800 leading-none my-0.5">{totalOrders.toLocaleString()}</h3><p className="text-[10px] text-gray-400">Across all dealers</p></div>
-                </div>
-            </div>
-            {/* Page Header */}
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-4 flex flex-col xl:flex-row xl:items-center justify-between gap-4">
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3 flex-1">
-                    <div className="relative w-full sm:w-72">
-                        <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
-                        <input
-                            type="text"
-                            placeholder="Search dealers..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full pl-11 pr-4 py-2.5 bg-white border border-gray-200 rounded-lg outline-none focus:border-blue-500 transition-all text-sm font-medium"
-                        />
-                    </div>
-                    <div className="relative w-full sm:w-40">
-                        <FiFilter className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" size={15} />
-                        <select
-                            value={statusFilter}
-                            onChange={(e) => setStatusFilter(e.target.value)}
-                            className="w-full appearance-none pl-9 pr-8 py-2.5 bg-white border border-gray-200 rounded-lg text-sm font-medium outline-none focus:border-blue-500"
-                        >
-                            <option value="All">All Status</option>
-                            <option value="Premium">Premium</option>
-                            <option value="Verified">Verified</option>
-                            <option value="Pending">Pending</option>
-                            <option value="Active">Active</option>
-                            <option value="Inactive">Inactive</option>
-                        </select>
-                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-[10px] pointer-events-none">▼</span>
-                    </div>
-                </div>
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                    <div className="flex items-center gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1">
-                        <button type="button" onClick={() => setViewMode("table")} className={`p-2 rounded-md transition-colors ${viewMode === "table" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-blue-600"}`} aria-label="Table mode" title="Table mode">
-                            <FiList size={16} />
-                        </button>
-                        <button type="button" onClick={() => setViewMode("card")} className={`p-2 rounded-md transition-colors ${viewMode === "card" ? "bg-white text-blue-600 shadow-sm" : "text-gray-500 hover:text-blue-600"}`} aria-label="Card mode" title="Card mode">
-                            <FiGrid size={16} />
-                        </button>
-                    </div>
-                    <button
-                        onClick={handleImportExcel}
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#4b0b78] border border-[#4b0b78] text-white px-5 py-2.5 rounded-lg font-bold transition-all hover:bg-[#260642] active:scale-95 shadow-sm"
-                    >
-                        <FiUpload /> Import Partners
-                    </button>
+  const submitPayment = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      await api.post("/dealers/payments", {
+        dealer_id: Number(paymentForm.dealer_id),
+        amount: Number(paymentForm.amount),
+        payment_date: paymentForm.payment_date,
+        method: paymentForm.method,
+        reference: paymentForm.reference,
+        idempotency_key: paymentForm.idempotency_key,
+        allocations: paymentForm.purchase_id && paymentForm.allocation
+          ? [{ purchase_id: Number(paymentForm.purchase_id), amount: Number(paymentForm.allocation) }] : []
+      });
+      toast.success("Payment posted to the immutable dealer ledger");
+      setDialog("");
+      await refresh();
+    } catch (requestError) {
+      toast.error(requestError.response?.data?.message || "Unable to post payment");
+    } finally {
+      setSaving(false);
+    }
+  };
 
-                    <button
-                        onClick={() => setShowAddDealer(true)}
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 bg-[#4b0b78] hover:bg-[#260642] text-white px-6 py-2.5 rounded-lg font-bold transition-all shadow-lg shadow-purple-200 active:scale-95"
-                    >
-                        <FiPlus /> New Partnership
-                    </button>
-                </div>
-            </div>
+  const loadDealerRate = async (metal, purity, setRate) => {
+    try {
+      const response = await api.get("/dealers/global-rate", { params: { metal_type: metal, purity } });
+      setRate(String(response.data.rate_per_gram));
+    } catch (requestError) {
+      setRate("");
+      toast.error(requestError.response?.data?.message || "No current rate found; enter an authorized negotiated rate");
+    }
+  };
 
-            {/* Table View */}
-            {viewMode === "table" && (
-                <div className="bg-white rounded-xl border border-gray-100 shadow-sm overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left border-collapse whitespace-nowrap">
-                            <thead>
-                                <tr className="bg-gradient-to-r from-[#260642] to-[#4b0b78] text-[11px] font-black text-[#facc15] uppercase tracking-wider">
-                                    <th className="px-4 py-4 text-center"><input type="checkbox" className="rounded border-white/70 text-[#facc15] focus:ring-[#facc15]" aria-label="Select all dealers" /></th>
-                                    <th className="px-4 py-4 text-center">S No</th>
-                                    <th className="px-6 py-4">Dealer</th>
-                                    <th className="px-6 py-4">Contact</th>
-                                    <th className="px-6 py-4">Location</th>
-                                    <th className="px-6 py-4 text-center">Rating</th>
-                                    <th className="px-6 py-4 text-center">Orders</th>
-                                    <th className="px-6 py-4">Status</th>
-                                    <th className="px-6 py-4 text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {loading ? (
-                                    <tr><td colSpan="9" className="px-6 py-10 text-center text-gray-400 text-sm font-semibold">Loading dealers...</td></tr>
-                                ) : filteredDealers.length === 0 ? (
-                                    <tr><td colSpan="9" className="px-6 py-10 text-center text-gray-400 text-sm font-semibold">No dealers found.</td></tr>
-                                ) : filteredDealers.map((dealer, index) => (
-                                    <tr key={dealer.id} className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors">
-                                        <td className="px-4 py-4 text-center"><input type="checkbox" className="rounded border-gray-300 text-[#4318FF] focus:ring-[#4318FF]" aria-label={`Select ${dealer.name}`} /></td>
-                                        <td className="px-4 py-4 text-center text-sm font-bold text-gray-400">{index + 1}</td>
-                                        <td className="px-6 py-4"><div className="flex items-center gap-3"><div className="w-10 h-10 rounded-xl bg-blue-50 overflow-hidden flex items-center justify-center text-blue-600 font-black">{dealer.image ? <img src={dealer.image} alt={dealer.name} className="w-full h-full object-cover" /> : dealer.name?.charAt(0)}</div><div><p className="font-bold text-slate-800">{dealer.name}</p><p className="text-xs text-gray-400">#{dealer.id}</p></div></div></td>
-                                        <td className="px-6 py-4"><p className="text-sm font-medium text-slate-700">{dealer.phone || dealer.contact || "-"}</p><p className="text-xs text-gray-400">{dealer.email || "-"}</p></td>
-                                        <td className="px-6 py-4 text-sm text-gray-500">{dealer.location || "-"}</td>
-                                        <td className="px-6 py-4 text-center font-bold text-amber-500"><span className="inline-flex items-center gap-1"><FiStar fill="currentColor" />{dealer.rating || "-"}</span></td>
-                                        <td className="px-6 py-4 text-center font-bold text-blue-600">{dealer.orders || 0}</td>
-                                        <td className="px-6 py-4"><span className={`px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border ${getStatusStyle(dealer.status)}`}>{dealer.status || "Pending"}</span></td>
-                                        <td className="px-6 py-4"><div className="flex justify-end gap-2"><button onClick={() => handleContact(dealer)} className="px-3 py-2 rounded-lg bg-[#4b0b78] text-white text-xs font-bold hover:bg-[#260642]">Contact</button><button onClick={() => navigate(`/admin/invoices/add?dealerId=${dealer.id}`)} className="px-3 py-2 rounded-lg bg-[#4b0b78] text-white text-xs font-bold hover:bg-[#260642]">Invoice</button><button onClick={() => handleViewHistory(dealer)} className="px-3 py-2 rounded-lg bg-[#4b0b78] text-white text-xs font-bold hover:bg-[#260642]">History</button></div></td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            )}
+  const submitJob = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      const response = await api.post("/dealers/jobs", { ...jobForm, dealer_id: Number(jobForm.dealer_id), labour_charge: Number(jobForm.labour_charge), approved_wastage: Number(jobForm.approved_wastage) });
+      toast.success(`Job order ${response.data.job_number} created`);
+      setDialog("");
+      await refresh();
+    } catch (requestError) {
+      toast.error(requestError.response?.data?.message || "Unable to create job order");
+    } finally { setSaving(false); }
+  };
 
-            {/* Dealers Grid */}
-            {viewMode === "card" && <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {loading ? (
-                    Array(3).fill(0).map((_, i) => (
-                        <div key={i} className="animate-pulse bg-white rounded-[2rem] border border-gray-100 p-6 h-80 shadow-sm">
-                            <div className="flex gap-4 mb-6">
-                                <div className="w-16 h-16 bg-gray-200 rounded-2xl shrink-0"></div>
-                                <div className="flex-1 space-y-2 py-1">
-                                    <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-                                    <div className="h-4 bg-gray-200 rounded w-1/4"></div>
-                                </div>
-                            </div>
-                            <div className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="h-10 bg-gray-100 rounded-2xl"></div>
-                                    <div className="h-10 bg-gray-100 rounded-2xl"></div>
-                                </div>
-                                <div className="h-4 bg-gray-100 rounded w-full"></div>
-                                <div className="h-4 bg-gray-100 rounded w-2/3"></div>
-                            </div>
-                        </div>
-                    ))
-                ) : filteredDealers.map((dealer) => (
-                    <div key={dealer.id} className="bg-white rounded-[2rem] border border-gray-100 shadow-sm hover:shadow-xl transition-all group p-6">
-                        <div className="flex items-start justify-between mb-6">
-                            <div className="flex items-center gap-4">
-                                <div className="w-16 h-16 rounded-2xl bg-gray-50 overflow-hidden border border-gray-100 flex items-center justify-center">
-                                    {dealer.image ? (
-                                        <img src={dealer.image} alt={dealer.name} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                                    ) : (
-                                        <span className="text-xl font-black text-blue-600 bg-blue-50 w-full h-full flex items-center justify-center capitalize">{dealer.name?.charAt(0)}</span>
-                                    )}
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-bold text-slate-800 group-hover:text-blue-600 transition-colors">{dealer.name}</h3>
-                                    <span className={`mt-1 px-2.5 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest border ${getStatusStyle(dealer.status)}`}>
-                                        {dealer.status}
-                                    </span>
-                                </div>
-                            </div>
-                            <button
-                                onClick={() => toast.error("Quick actions not configured yet.")}
-                                className="p-2 text-gray-400 hover:bg-gray-100 rounded-xl transition-all"
-                            >
-                                <FiMoreVertical />
-                            </button>
-                        </div>
+  const submitMetal = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      if (dialog === "issue") await api.post("/dealers/jobs/issue", { ...metalForm, job_id: Number(metalForm.job_id), weight: Number(metalForm.weight) });
+      else await api.post("/dealers/jobs/receipt", { ...metalForm, job_id: Number(metalForm.job_id), weight: Number(metalForm.weight), labour_charge: Number(metalForm.labour_charge) });
+      toast.success(dialog === "issue" ? "Metal issue voucher posted" : "Finished goods / scrap receipt posted");
+      setDialog("");
+      await refresh();
+    } catch (requestError) {
+      toast.error(requestError.response?.data?.message || "Unable to post job-work movement");
+    } finally { setSaving(false); }
+  };
 
-                        <div className="space-y-4">
-                            <div className="grid grid-cols-2 gap-4">
-                                <div className="p-3 bg-gray-50/50 rounded-2xl flex flex-col items-center">
-                                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-1">Rating</p>
-                                    <div className="flex items-center gap-1 text-amber-500 font-bold">
-                                        <FiStar fill="currentColor" /> {dealer.rating}
-                                    </div>
-                                </div>
-                                <div className="p-3 bg-gray-50/50 rounded-2xl flex flex-col items-center">
-                                    <p className="text-[10px] font-black uppercase text-gray-400 tracking-wider mb-1">Orders</p>
-                                    <div className="flex items-center gap-1 text-blue-600 font-bold">
-                                        <FiPackage /> {dealer.orders}
-                                    </div>
-                                </div>
-                            </div>
+  const submitReconciliation = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      const response = await api.post(`/dealers/jobs/${reconcileForm.job_id}/reconcile`, {
+        approved_loss: Number(reconcileForm.approved_loss), reason: reconcileForm.reason.trim()
+      });
+      if (response.data.status === "Pending" && reconcileForm.reason.trim()) {
+        await api.post(`/dealers/jobs/${reconcileForm.job_id}/reconcile/approve`, { reason: reconcileForm.reason.trim() });
+      }
+      toast.success(`Reconciliation ${response.data.status === "Pending" && reconcileForm.reason.trim() ? "approved" : response.data.status.toLowerCase()} with variance ${Number(response.data.variance).toFixed(3)} fine grams`);
+      setDialog("");
+      await refresh();
+    } catch (requestError) {
+      toast.error(requestError.response?.data?.message || "Unable to reconcile job");
+    } finally { setSaving(false); }
+  };
+
+  const approveReconciliation = async (job) => {
+    const reason = window.prompt(`Authorize reconciliation variance of ${Number(job.reconciliation_variance).toFixed(3)} fine grams. Enter the approval reason:`);
+    if (!reason?.trim()) return;
+    try {
+      await api.post(`/dealers/jobs/${job.id}/reconcile/approve`, { reason: reason.trim() });
+      toast.success(`Reconciliation for ${job.job_number} approved`);
+      await refresh();
+    } catch (requestError) {
+      toast.error(requestError.response?.data?.message || "Unable to approve reconciliation");
+    }
+  };
+
+  const submitOldGold = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      const response = await api.post("/dealers/old-gold", {
+        ...oldGoldForm, dealer_id: Number(oldGoldForm.dealer_id), gross_weight: Number(oldGoldForm.gross_weight),
+        stone_weight: Number(oldGoldForm.stone_weight), net_weight: Number(oldGoldForm.net_weight),
+        agreed_rate: Number(oldGoldForm.agreed_rate)
+      });
+      toast.success(`Receipt ${response.data.receipt_number} posted; settlement ${currency(response.data.settlement_amount)}`);
+      setDialog("");
+      setRefiningForm((current) => ({ ...current, dealer_id: oldGoldForm.dealer_id, old_gold_receipt_id: response.data.id }));
+      await refresh();
+    } catch (requestError) {
+      toast.error(requestError.response?.data?.message || "Unable to record old gold");
+    } finally { setSaving(false); }
+  };
+
+  const submitRefining = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+    try {
+      const response = await api.post("/dealers/refining", {
+        ...refiningForm, dealer_id: Number(refiningForm.dealer_id),
+        old_gold_receipt_id: Number(refiningForm.old_gold_receipt_id),
+        recovered_weight: Number(refiningForm.recovered_weight), refining_charges: Number(refiningForm.refining_charges)
+      });
+      toast.success(`Refining receipt ${response.data.refining_number} recorded; fine recovery variance ${Number(response.data.recovery_variance).toFixed(3)} g`);
+      setDialog("");
+      await refresh();
+    } catch (requestError) {
+      toast.error(requestError.response?.data?.message || "Unable to record refining receipt");
+    } finally { setSaving(false); }
+  };
+
+  const openDealerDocs = async (dealer) => {
+    try {
+      const [detail, docs, audit] = await Promise.all([
+        api.get(`/dealers/${dealer.id}`), api.get(`/dealers/${dealer.id}/documents`), api.get(`/dealers/${dealer.id}/audit`)
+      ]);
+      setSelectedDealer({ ...detail.data, documents: docs.data, audit: audit.data });
+      setDialog("profile");
+    } catch (requestError) {
+      toast.error(requestError.response?.data?.message || "Unable to load dealer profile");
+    }
+  };
+
+  const uploadDealerDocument = async (event) => {
+    event.preventDefault();
+    if (!selectedDealer || !documentForm.file) return;
+    const payload = new FormData();
+    payload.append("document", documentForm.file);
+    payload.append("document_type", documentForm.type);
+    try {
+      await api.post(`/dealers/${selectedDealer.id}/documents`, payload);
+      toast.success("Private dealer document uploaded");
+      await openDealerDocs(selectedDealer);
+    } catch (requestError) {
+      toast.error(requestError.response?.data?.message || "Unable to upload document");
+    }
+  };
+
+  const downloadDealerDocument = async (documentRecord) => {
+    try {
+      const response = await api.get(`/dealers/documents/${documentRecord.id}/download`, { responseType: "blob" });
+      const url = URL.createObjectURL(response.data);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = documentRecord.original_name;
+      anchor.click();
+      URL.revokeObjectURL(url);
+    } catch (requestError) {
+      toast.error(requestError.response?.data?.message || "Unable to download private document");
+    }
+  };
+
+  const removeDealerDocument = async (documentRecord) => {
+    if (!window.confirm(`Delete private document "${documentRecord.original_name}"?`)) return;
+    try {
+      await api.delete(`/dealers/documents/${documentRecord.id}`);
+      toast.success("Dealer document deleted");
+      await openDealerDocs(selectedDealer);
+    } catch (requestError) {
+      toast.error(requestError.response?.data?.message || "Unable to delete document");
+    }
+  };
+
+  const visibleDealers = useMemo(() => dealers, [dealers]);
+  const openJobs = jobs.filter((job) => !["Reconciled", "Cancelled"].includes(job.status));
+  const tabs = [
+    ["dealers", "Dealer Master", "/admin/dealers"],
+    ["purchases", "Purchases & Payables", "/admin/dealers/purchases"],
+    ["jobs", "Goldsmith Job Work", "/admin/dealers/jobs"],
+    ["refining", "Old Gold & Refining", "/admin/dealers/refining"]
+  ];
+
+  return <div className="space-y-6">
+    <div className="flex flex-wrap items-center justify-between gap-4">
+      <div>
+        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#008577]">Sri Vengateswara Gold Shop</p>
+        <h1 className="mt-1 text-2xl font-black text-slate-900">Dealer Management</h1>
+        <p className="mt-1 text-sm text-slate-500">Supplier accounts, metal custody, job work and settlements</p>
+      </div>
+      <div className="flex gap-2">
+        <button type="button" onClick={() => void refresh()} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"><RefreshCw size={16} /> Refresh</button>
+        {section === "dealers" && <button type="button" onClick={() => startDealerEdit()} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#008577]"><Plus size={17} /> Register Dealer</button>}
+        {section === "purchases" && <><button type="button" onClick={openPayment} className="inline-flex items-center gap-2 rounded-lg border border-[#003B3B] px-4 py-2.5 text-sm font-bold text-[#003B3B]"><Wallet size={16} /> Record Payment</button><button type="button" onClick={() => setDialog("purchase")} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#008577]"><Plus size={17} /> New Purchase</button></>}
+        {section === "jobs" && <button type="button" onClick={() => setDialog("job")} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#008577]"><Plus size={17} /> Create Job Order</button>}
+        {section === "refining" && <><button type="button" onClick={() => setDialog("oldGold")} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#008577]"><Plus size={17} /> Receive Old Gold</button><button type="button" onClick={() => setDialog("refining")} className="inline-flex items-center gap-2 rounded-lg border border-[#003B3B] px-4 py-2.5 text-sm font-bold text-[#003B3B]"><ArrowDownToLine size={16} /> Refining Receipt</button></>}
+      </div>
+    </div>
 
     <nav className="flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1.5">
       {tabs.map(([key, label, route]) => <button key={key} type="button" onClick={() => navigate(route)}
