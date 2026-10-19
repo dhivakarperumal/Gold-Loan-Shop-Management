@@ -106,7 +106,6 @@ function CatalogProductFields({ product, catalogProducts, loading, onSelect, sel
             className={inputClass}
             value={product.product_id}
             onChange={(event) => onSelect(event.target.value)}
-            required
             disabled={loading}
           >
             <option value="">{loading ? "Loading products..." : "Choose a catalog product"}</option>
@@ -195,7 +194,7 @@ export default function BillingManagement() {
   const [customers, setCustomers] = useState([{ ...EMPTY_CUSTOMER }]);
   const [products, setProducts] = useState([]);
   const [productToAdd, setProductToAdd] = useState({ ...EMPTY_PRODUCT });
-  const [gstRateInput, setGstRateInput] = useState("3");
+  const [gstRateInput, setGstRateInput] = useState("0");
   const [discountInput, setDiscountInput] = useState("");
   const [exchanges, setExchanges] = useState([]);
   const [paymentType, setPaymentType] = useState("FULL_PAYMENT");
@@ -258,7 +257,7 @@ export default function BillingManagement() {
     && discountAmount >= 0
     && discountAmount <= subtotal
     && discountAmount + exchangeCredit <= subtotal;
-  const gstRate = gstRateInput.trim() === "" ? 3 : Number(gstRateInput);
+  const gstRate = gstRateInput.trim() === "" ? 0 : Number(gstRateInput);
   const validGst = Number.isFinite(gstRate) && gstRate >= 0 && gstRate <= 100;
   const gst = validGst && validDiscount
     ? Math.round(Math.max(0, subtotal - discountAmount - exchangeCredit) * gstRate) / 100
@@ -269,7 +268,7 @@ export default function BillingManagement() {
     setCustomers([{ ...EMPTY_CUSTOMER }]);
     setProducts([]);
     setProductToAdd({ ...EMPTY_PRODUCT });
-    setGstRateInput("3");
+    setGstRateInput("0");
     setDiscountInput("");
     setExchanges([]);
     setPaymentType("FULL_PAYMENT");
@@ -563,7 +562,7 @@ export default function BillingManagement() {
                 step="0.01"
                 value={gstRateInput}
                 onChange={(event) => setGstRateInput(event.target.value)}
-                placeholder="3"
+                placeholder="0"
                 aria-invalid={!validGst}
               
               />
