@@ -66,7 +66,7 @@ const Hero = () => {
 
   return (
     <section className="relative w-full overflow-hidden bg-[#032e25] text-white">
-      <div className="relative isolate h-[520px] min-h-[490px] w-full sm:min-h-[500px] md:h-[540px] lg:h-[560px]">
+      <div className="relative isolate w-full">
 
         {/* Swiper background images */}
         {slides.length > 0 && (
@@ -91,7 +91,7 @@ const Hero = () => {
             {slides.map((item) => (
               <SwiperSlide key={item.id} className="h-full w-full">
                 <div
-                  className="h-full w-full bg-contain bg-center bg-no-repeat"
+                  className="h-full w-full bg-cover bg-center bg-no-repeat sm:bg-contain"
                   style={{
                     backgroundImage: `url("${getBannerImageUrl(item.image)}")`,
                   }}
@@ -102,7 +102,7 @@ const Hero = () => {
         )}
 
         {/* Subtle overlay on the left only */}
-        <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-r from-[#00271e]/65 via-[#003326]/20 to-transparent" />
+        <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-r from-[#00271e]/80 via-[#003326]/45 to-[#003326]/10 sm:from-[#00271e]/65 sm:via-[#003326]/20 sm:to-transparent" />
 
         {/* Decorative gold border */}
         <div className="pointer-events-none absolute inset-2 z-10 border border-[#d2b56e]/60 sm:inset-3">
@@ -113,16 +113,16 @@ const Hero = () => {
         </div>
 
         {/* Hero content */}
-        <div className="pointer-events-none absolute inset-0 z-[2] flex items-center px-9 sm:px-14 md:px-16 lg:px-20 xl:px-24">
-          <div className="pointer-events-auto w-full max-w-[560px] py-10">
+        <div className="pointer-events-none relative z-[2] flex min-h-[620px] items-center px-6 py-12 sm:min-h-[540px] sm:px-10 sm:py-10 md:h-[540px] md:min-h-0 md:px-16 md:py-0 lg:h-[560px] lg:px-20 xl:px-24">
+          <div className="pointer-events-auto w-full max-w-[560px]">
 
             {slide ? (
               <>
-                <p className="mb-5 flex flex-wrap items-center gap-x-3 gap-y-2 text-[9px] font-medium uppercase tracking-[0.18em] text-[#f1dba4] sm:text-[10px] sm:tracking-[0.22em]">
+                <p className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-[9px] font-medium uppercase tracking-[0.14em] text-[#f1dba4] sm:mb-5 sm:text-[10px] sm:tracking-[0.22em]">
                   {slide.subtitle}
                 </p>
 
-                <h1 className="font-serif text-[38px] leading-[1.04] tracking-[-1.5px] drop-shadow-lg sm:text-5xl md:text-6xl lg:text-[68px]">
+                <h1 className="font-serif text-[clamp(2.25rem,9vw,3rem)] leading-[1.04] tracking-[-1px] drop-shadow-lg sm:text-5xl sm:tracking-[-1.5px] md:text-6xl lg:text-[68px]">
                   {heading.title}
                   {heading.title && <br />}
                   <span className="mt-1 inline-block bg-gradient-to-r from-[#fff0b5] via-[#eac66b] to-[#c99a36] bg-clip-text font-semibold italic text-transparent">
@@ -130,13 +130,13 @@ const Hero = () => {
                   </span>
                 </h1>
 
-                <p className="mt-5 max-w-[390px] font-serif text-sm leading-6 text-[#f7ead0] sm:text-base md:text-lg">
+                <p className="mt-4 max-w-[390px] font-serif text-sm leading-6 text-[#f7ead0] sm:mt-5 sm:text-base md:text-lg">
                   {slide.description}
                 </p>
 
                 <a
                   href={slide.link || "#collections"}
-                  className="group mt-7 inline-flex items-center gap-5 rounded-sm border border-[#f6d88b] bg-gradient-to-r from-[#f5d17c] to-[#dba53c] px-6 py-3.5 text-xs font-bold text-[#17372a] shadow-md transition duration-300 hover:-translate-y-1 hover:brightness-110 sm:px-8 sm:text-sm"
+                  className="group mt-6 inline-flex items-center gap-3 rounded-sm border border-[#f6d88b] bg-gradient-to-r from-[#f5d17c] to-[#dba53c] px-4 py-3 text-xs font-bold text-[#17372a] shadow-md transition duration-300 hover:-translate-y-1 hover:brightness-110 sm:mt-7 sm:gap-5 sm:px-8 sm:py-3.5 sm:text-sm"
                 >
                   Explore Collections
                   <ArrowRight
@@ -152,10 +152,10 @@ const Hero = () => {
             ) : null}
 
             {/* Trust indicators */}
-            <div className="mt-8 flex max-w-[490px] flex-wrap gap-x-5 gap-y-4 sm:gap-x-7">
+            <div className="mt-7 flex max-w-[490px] flex-wrap gap-x-3 gap-y-3 sm:mt-8 sm:gap-x-7 sm:gap-y-4">
               <div className="flex items-center gap-2.5">
-                <Gem className="h-9 w-9 shrink-0 rounded-full border border-[#d6b65f] p-2 text-[#f0d17e]" />
-                <span className="text-[10px] leading-4 text-[#fff5e2] sm:text-[11px]">
+                <Gem className="h-8 w-8 shrink-0 rounded-full border border-[#d6b65f] p-1.5 text-[#f0d17e] sm:h-9 sm:w-9 sm:p-2" />
+                <span className="text-[9px] leading-4 text-[#fff5e2] sm:text-[11px]">
                   100%
                   <br />
                   BIS Hallmarked
@@ -163,8 +163,8 @@ const Hero = () => {
               </div>
 
               <div className="flex items-center gap-2.5">
-                <ShieldCheck className="h-9 w-9 shrink-0 rounded-full border border-[#d6b65f] p-2 text-[#f0d17e]" />
-                <span className="text-[10px] leading-4 text-[#fff5e2] sm:text-[11px]">
+                <ShieldCheck className="h-8 w-8 shrink-0 rounded-full border border-[#d6b65f] p-1.5 text-[#f0d17e] sm:h-9 sm:w-9 sm:p-2" />
+                <span className="text-[9px] leading-4 text-[#fff5e2] sm:text-[11px]">
                   Trusted
                   <br />
                   Since Generations
@@ -172,8 +172,8 @@ const Hero = () => {
               </div>
 
               <div className="flex items-center gap-2.5">
-                <Truck className="h-9 w-9 shrink-0 rounded-full border border-[#d6b65f] p-2 text-[#f0d17e]" />
-                <span className="text-[10px] leading-4 text-[#fff5e2] sm:text-[11px]">
+                <Truck className="h-8 w-8 shrink-0 rounded-full border border-[#d6b65f] p-1.5 text-[#f0d17e] sm:h-9 sm:w-9 sm:p-2" />
+                <span className="text-[9px] leading-4 text-[#fff5e2] sm:text-[11px]">
                   Secure & Insured
                   <br />
                   Delivery
