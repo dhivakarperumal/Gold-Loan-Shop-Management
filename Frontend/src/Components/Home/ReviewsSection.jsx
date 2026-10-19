@@ -46,11 +46,14 @@ const ReviewCard = ({ review }) => (
 
     {/* Review image (optional) */}
     {review.review_image && (
-      <div className="mt-3 overflow-hidden rounded-xl" style={{ maxHeight: "120px" }}>
+      <div
+        className="mt-3 overflow-hidden rounded-xl"
+        style={{ aspectRatio: "1 / 1", background: "#f9f5ee" }}
+      >
         <img
           src={resolveReviewImage(review.review_image)}
           alt="Review"
-          className="h-[120px] w-full object-cover"
+          className="h-full w-full object-contain"
         />
       </div>
     )}
@@ -153,9 +156,9 @@ const ReviewsSection = () => {
         ) : (
           <Swiper
             modules={[Autoplay]}
-            loop={reviews.length > 5}
+            loop={reviews.length > 4}
             autoplay={
-              reviews.length > 5
+              reviews.length > 4
                 ? { delay: 3000, disableOnInteraction: false, pauseOnMouseEnter: true }
                 : false
             }
@@ -166,7 +169,6 @@ const ReviewsSection = () => {
               640:  { slidesPerView: 2 },
               1024: { slidesPerView: 3 },
               1280: { slidesPerView: 4 },
-              1536: { slidesPerView: 5 },
             }}
             grabCursor
             centeredSlides={reviews.length === 1}
