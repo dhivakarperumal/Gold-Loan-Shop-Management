@@ -1210,7 +1210,7 @@ export default function BillingManagement() {
             </section>
 
           <section className="min-w-0 space-y-4 rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
-            <div><h2 className="font-bold text-slate-900">Payment Details</h2><p className="text-xs text-slate-500">Choose how the customer paid and select the billing type.</p></div>
+            <div><h2 className="font-bold text-slate-900">Payment Details</h2></div>
             <div className="grid gap-3 md:grid-cols-3">
               <label className={labelClass}>
                 Payment Method<span className="ml-1 text-rose-500">*</span>
