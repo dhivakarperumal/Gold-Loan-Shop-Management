@@ -18,6 +18,7 @@ const RATE_FIELDS = [
   { key: "diamond_gh_vs", label: "Diamond G–H / VS", metal: "Diamond", purity: "G-H / VS", unit: "carat" },
   { key: "diamond_ij_si", label: "Diamond I–J / SI", metal: "Diamond", purity: "I-J / SI", unit: "carat" }
 ];
+const RATE_METALS = ["Gold", "Silver", "Platinum", "Diamond"];
 
 const inputClassName = "mt-2 block w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm font-semibold text-slate-800 shadow-sm outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-[#008577] focus:ring-4 focus:ring-emerald-100";
 const HISTORY_PAGE_SIZE = 10;
@@ -319,17 +320,24 @@ export default function DailyGoldRate() {
           <section className="border-t border-slate-100 pt-6">
             <div className="mb-4 flex items-center gap-3">
               <span className="grid h-9 w-9 place-items-center rounded-xl bg-amber-50 text-sm font-black text-amber-700">02</span>
-              <div><h3 className="font-bold text-slate-900">Metal & diamond prices</h3><p className="text-xs text-slate-500">Enter metals per gram and diamond quality rates per carat.</p></div>
+              <div><h3 className="font-bold text-slate-900">Metal & diamond prices</h3><p className="text-xs text-slate-500">Enter prices in separate sections for each metal.</p></div>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-              {RATE_FIELDS.map(({ key, label, unit }) => (
-                <label key={key} className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 text-xs font-bold text-slate-700 transition focus-within:border-[#008577] focus-within:bg-emerald-50/30">
-                  <span className="flex items-center justify-between gap-2"><span>{label}</span><span className="rounded-md bg-white px-2 py-1 text-[10px] font-semibold text-slate-500">₹ / {unit}</span></span>
-                  <div className="relative mt-2">
-                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">₹</span>
-                    <input className="block w-full rounded-lg border border-slate-200 bg-white py-3 pl-8 pr-3 text-sm font-bold text-slate-900 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-[#008577] focus:ring-4 focus:ring-emerald-100" type="number" min="0.01" step="0.01" required value={form.rates[key]} onChange={(event) => setRate(key, event.target.value)} placeholder="Enter price" />
+            <div className="space-y-6">
+              {RATE_METALS.map((metal) => (
+                <div key={metal} className="border-t border-slate-100 pt-5 first:border-t-0 first:pt-0">
+                  <h4 className="mb-3 text-sm font-bold text-slate-800">{metal}</h4>
+                  <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                    {RATE_FIELDS.filter((field) => field.metal === metal).map(({ key, label, unit }) => (
+                      <label key={key} className="rounded-xl border border-slate-200 bg-slate-50/70 p-4 text-xs font-bold text-slate-700 transition focus-within:border-[#008577] focus-within:bg-emerald-50/30">
+                        <span className="flex items-center justify-between gap-2"><span>{label}</span><span className="rounded-md bg-white px-2 py-1 text-[10px] font-semibold text-slate-500">₹ / {unit}</span></span>
+                        <div className="relative mt-2">
+                          <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-400">₹</span>
+                          <input className="block w-full rounded-lg border border-slate-200 bg-white py-3 pl-8 pr-3 text-sm font-bold text-slate-900 outline-none transition placeholder:font-normal placeholder:text-slate-400 focus:border-[#008577] focus:ring-4 focus:ring-emerald-100" type="number" min="0.01" step="0.01" required value={form.rates[key]} onChange={(event) => setRate(key, event.target.value)} placeholder="Enter price" />
+                        </div>
+                      </label>
+                    ))}
                   </div>
-                </label>
+                </div>
               ))}
             </div>
           </section>
