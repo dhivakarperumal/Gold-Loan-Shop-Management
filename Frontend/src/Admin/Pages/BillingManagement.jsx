@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiArrowLeft, FiEdit2, FiEye, FiPlus, FiSave, FiSearch, FiTrash2, FiX } from "react-icons/fi";
+import { FiArrowLeft, FiCalendar, FiChevronRight, FiCreditCard, FiDollarSign, FiEdit2, FiEye, FiPlus, FiRepeat, FiSave, FiSearch, FiTrash2, FiX } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api from "../../api";
 import useGoldRates from "../../PrivateRouter/useGoldRates";
@@ -596,14 +596,48 @@ export default function BillingManagement() {
           </header>
           <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Billing totals">
             {[
-              { label: "Total Amount", value: totalBilled, style: "border-emerald-100 bg-emerald-50 text-emerald-800" },
-              { label: "Today's Amount", value: todayBilled, style: "border-sky-100 bg-sky-50 text-sky-800" },
-              { label: "Exchange Amount", value: totalExchangeAmount, style: "border-amber-100 bg-amber-50 text-amber-800" },
-              { label: "Full Payment Amount", value: fullPaymentAmount, style: "border-violet-100 bg-violet-50 text-violet-800" }
+              { label: "Total Amount", value: totalBilled, trend: `${bills.length} bill${bills.length === 1 ? "" : "s"} recorded`, icon: <FiDollarSign />, color: "green" },
+              { label: "Today's Amount", value: todayBilled, trend: "Today's billing total", icon: <FiCalendar />, color: "blue" },
+              { label: "Exchange Amount", value: totalExchangeAmount, trend: "Exchange items total", icon: <FiRepeat />, color: "amber" },
+              { label: "Full Payment Amount", value: fullPaymentAmount, trend: "Full payment bills", icon: <FiCreditCard />, color: "red" }
             ].map((card) => (
-              <article key={card.label} className={`rounded-xl border p-5 shadow-sm ${card.style}`}>
-                <h2 className="text-sm font-semibold">{card.label}</h2>
-                <p className="mt-2 text-2xl font-extrabold">{currency(card.value)}</p>
+              <article
+                key={card.label}
+                className={`relative flex h-[160px] min-w-0 items-center gap-3 overflow-hidden rounded-xl border-y border-r border-l-4 p-3 shadow-[0_3px_12px_rgba(30,41,59,0.1)] transition-all hover:-translate-y-0.5 hover:shadow-md ${
+                  card.color === "green" ? "border-l-emerald-500 border-y-emerald-900/20 border-r-emerald-900/20 bg-[#123f35]" :
+                  card.color === "blue" ? "border-l-sky-500 border-y-sky-900/20 border-r-sky-900/20 bg-[#173750]" :
+                  card.color === "amber" ? "border-l-amber-500 border-y-amber-900/20 border-r-amber-900/20 bg-[#40351c]" :
+                  "border-l-rose-500 border-y-rose-900/20 border-r-rose-900/20 bg-[#4a2a22]"
+                }`}
+              >
+                <div className={`z-10 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-xl text-white shadow-md ${
+                  card.color === "green" ? "bg-emerald-700" :
+                  card.color === "blue" ? "bg-cyan-700" :
+                  card.color === "amber" ? "bg-amber-500" : "bg-rose-700"
+                }`}>
+                  {card.icon}
+                </div>
+                <div className="relative z-10 min-w-0 self-center">
+                  <h2 className="truncate text-[11px] font-semibold text-slate-200">{card.label}</h2>
+                  <p className="mt-1 truncate text-[19px] font-black leading-tight tracking-tight text-white">{currency(card.value)}</p>
+                  <div className="mt-2 flex items-center gap-1 text-[11px] font-extrabold text-emerald-300">
+                    <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-current" />
+                    <span className="truncate">{card.trend}</span>
+                  </div>
+                  <p className="mt-0.5 text-[9px] font-medium text-slate-300">Based on saved bills</p>
+                </div>
+                <span aria-hidden="true" className="absolute right-2 top-2 flex h-5 w-5 items-center justify-center rounded-full border border-black/5 bg-white/65 text-[10px] text-slate-700">
+                  <FiChevronRight />
+                </span>
+                <div aria-hidden="true" className={`absolute bottom-3 right-3 flex h-7 items-end gap-[3px] ${
+                  card.color === "green" ? "text-emerald-300" :
+                  card.color === "blue" ? "text-sky-300" :
+                  card.color === "amber" ? "text-amber-300" : "text-rose-300"
+                }`}>
+                  {[11, 17, 13, 23].map((height, index) => (
+                    <span key={index} className="w-[4px] rounded-t-sm bg-current" style={{ height: `${height}px` }} />
+                  ))}
+                </div>
               </article>
             ))}
           </section>
