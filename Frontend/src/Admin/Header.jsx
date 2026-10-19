@@ -716,14 +716,15 @@ const Header = ({ onMenuClick }) => {
                     <User className="w-4 h-4 opacity-50" /> Profile
                   </Link>
 
-                  {/* <Link
+                  <Link
                     to="/admin/settings"
+                    onClick={() => setShowDropdown(false)}
                     className="flex items-center gap-3 px-3 py-2.5 
-                    rounded-xl hover:bg-blue-50 hover:text-blue-600
+                    rounded-xl hover:bg-emerald-50 hover:text-[#004D40]
                     text-sm text-slate-600 transition font-bold"
                   >
-                    <Settings className="w-4 h-4 opacity-50" /> Settings
-                  </Link> */}
+                    <Settings className="w-4 h-4 opacity-50" /> All Settings
+                  </Link>
 
                   <button
                     onClick={handleLogout}
