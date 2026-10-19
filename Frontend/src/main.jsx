@@ -14,7 +14,6 @@ import Loader from "./Components/CommenComponents/Loader.jsx";
 
 // Lazy Load Main Components
 const Home = React.lazy(() => import("./Components/Home/Home.jsx"));
-const Shop = React.lazy(() => import("./Components/Shop.jsx"));
 const StoreProductDetail = React.lazy(() => import("./Components/Products/ProductDetail.jsx"));
 const Explore = React.lazy(() => import("./Components/Products/Explore.jsx"));
 
@@ -57,7 +56,7 @@ const router = createBrowserRouter([
     errorElement: <ErrorPage />,
     children: [
       { path: "/", element: <Home /> },
-      { path: "shop", element: <Shop /> },
+      { path: "explore", element: <Explore /> },
       { path: "product/:id", element: <StoreProductDetail /> },
       {
         path: "/account/kyc",

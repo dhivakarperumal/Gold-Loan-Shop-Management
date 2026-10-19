@@ -137,7 +137,7 @@ const Navbar = () => {
     if (!query) return;
 
     // Keep this route aligned with your existing shop search implementation.
-    navigate(`/shop?search=${encodeURIComponent(query)}`);
+    navigate(`/explore?search=${encodeURIComponent(query)}`);
   };
 
   const getSearchProductImage = (product) => {
@@ -230,12 +230,12 @@ const Navbar = () => {
     closeMenus();
     const params = new URLSearchParams({ category: category.name });
     if (subcategory) params.set("subcategory", subcategory);
-    navigate(`/shop?${params.toString()}`);
+    navigate(`/explore?${params.toString()}`);
   };
 
   const handleMetalClick = (metalName) => {
     closeMenus();
-    navigate(`/shop?metal=${encodeURIComponent(metalName)}`);
+    navigate(`/explore?metal=${encodeURIComponent(metalName)}`);
   };
 
   const getImageUrl = (image) => {
@@ -295,7 +295,7 @@ const Navbar = () => {
                 Home
               </NavLink>
 
-              <NavLink to="/shop" className={navLinkClass}>
+              <NavLink to="/explore" className={navLinkClass}>
                 Explore
               </NavLink>
 
@@ -678,7 +678,7 @@ const Navbar = () => {
               </NavLink>
 
               <NavLink
-                to="/shop"
+                to="/explore"
                 onClick={closeMenus}
                 className="block rounded-lg px-4 py-3 text-sm font-semibold text-[#173f33] hover:bg-[#f1e5cb]"
               >

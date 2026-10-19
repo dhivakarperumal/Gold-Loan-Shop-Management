@@ -57,14 +57,15 @@ const Explore = () => {
     rating: true,
     availability: true,
   });
-  const [selectedCategories, setSelectedCategories] = useState([]);
-  const [selectedMetals, setSelectedMetals] = useState([]);
   const [offerThreshold, setOfferThreshold] = useState(0);
   const [minimumPrice, setMinimumPrice] = useState("");
   const [maximumPrice, setMaximumPrice] = useState("");
   const [minimumRating, setMinimumRating] = useState(0);
   const [availability, setAvailability] = useState("");
   const searchQuery = searchParams.get("search")?.trim() || "";
+  const selectedCategories = searchParams.getAll("category");
+  const selectedMetals = searchParams.getAll("metal");
+  const subcategoryFilter = searchParams.get("subcategory")?.trim().toLowerCase() || "";
 
   useEffect(() => {
     const controller = new AbortController();
@@ -161,8 +162,14 @@ const Explore = () => {
         product.product_type,
         product.brand,
       ].some((value) => String(value || "").toLowerCase().includes(normalizedQuery));
-      const matchesCategory = !selectedCategories.length || selectedCategories.includes(product.category);
-      const matchesMetal = !selectedMetals.length || selectedMetals.includes(product.metal_type);
+      const matchesCategory = !selectedCategories.length || selectedCategories.some(
+        (category) => category.toLowerCase() === String(product.category || "").trim().toLowerCase()
+      );
+      const matchesSubcategory = !subcategoryFilter
+        || subcategoryFilter === String(product.subcategory || "").trim().toLowerCase();
+      const matchesMetal = !selectedMetals.length || selectedMetals.some(
+        (metal) => metal.toLowerCase() === String(product.metal_type || "").trim().toLowerCase()
+      );
       const matchesOffer = !offerThreshold || getDiscount(product) >= offerThreshold;
       const price = getProductPrice(product);
       const matchesMinPrice = minimumPrice === "" || price >= Number(minimumPrice);
@@ -171,7 +178,7 @@ const Explore = () => {
       const inStock = productIsInStock(product);
       const matchesAvailability = !availability
         || (availability === "in-stock" ? inStock : !inStock);
-      return matchesSearch && matchesCategory && matchesMetal && matchesOffer
+      return matchesSearch && matchesCategory && matchesSubcategory && matchesMetal && matchesOffer
         && matchesMinPrice && matchesMaxPrice && matchesRating && matchesAvailability;
     });
 
@@ -194,11 +201,10 @@ const Explore = () => {
     selectedCategories,
     selectedMetals,
     sortBy,
+    subcategoryFilter,
   ]);
 
   const clearFilters = () => {
-    setSelectedCategories([]);
-    setSelectedMetals([]);
     setOfferThreshold(0);
     setMinimumPrice("");
     setMaximumPrice("");
@@ -206,6 +212,16 @@ const Explore = () => {
     setAvailability("");
     setSortBy("newest");
     setSearchParams({});
+  };
+
+  const toggleQueryFilter = (key, value) => {
+    const nextParams = new URLSearchParams(searchParams);
+    const values = nextParams.getAll(key);
+    nextParams.delete(key);
+    if (key === "category") nextParams.delete("subcategory");
+    const nextValues = toggleValue(values, value);
+    nextValues.forEach((nextValue) => nextParams.append(key, nextValue));
+    setSearchParams(nextParams);
   };
 
   const setSearchFilter = (value) => {
@@ -328,7 +344,7 @@ const Explore = () => {
               availableCategories.map((category) => checkboxOption(
                 category.name,
                 selectedCategories.includes(category.name),
-                () => setSelectedCategories((current) => toggleValue(current, category.name)),
+                () => toggleQueryFilter("category", category.name),
                 categoryCounts[category.name] || 0
               ))
             ) : <p className="text-xs text-[#81786b]">No categories found.</p>)}
@@ -337,7 +353,7 @@ const Explore = () => {
               availableMetals.map((metal) => checkboxOption(
                 metal.name,
                 selectedMetals.includes(metal.name),
-                () => setSelectedMetals((current) => toggleValue(current, metal.name)),
+                () => toggleQueryFilter("metal", metal.name),
                 metalCounts[metal.name] || 0
               ))
             ) : <p className="text-xs text-[#81786b]">No metals found.</p>)}
