@@ -1162,53 +1162,54 @@ export default function BillingManagement() {
             </div>
           </div>
 
-          <section className="w-full space-y-4 rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
-            <div>
-              <h2 className="font-bold text-slate-900">Products in Bill</h2>
-              <p className="text-xs text-slate-500">Products you add will appear in this table.</p>
-            </div>
-            {products.length === 0 ? (
-              <p className="rounded-lg border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">No products have been added to this bill.</p>
-            ) : (
-              <div className="w-full overflow-x-auto rounded-lg border border-slate-200">
-                <table className="w-full min-w-[900px] border-collapse text-left">
-                  <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-                    <tr>
-                      <th className="px-4 py-3 font-semibold">Product</th>
-                      <th className="px-4 py-3 font-semibold">Category</th>
-                      <th className="px-4 py-3 font-semibold">Purity</th>
-                      <th className="px-4 py-3 text-right font-semibold">Making Charge</th>
-                      <th className="px-4 py-3 text-right font-semibold">Net Weight</th>
-                      <th className="px-4 py-3 text-right font-semibold">Gram Rate</th>
-                      <th className="px-4 py-3 font-semibold">Unit Price</th>
-                      <th className="px-4 py-3 text-right font-semibold">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {products.map((savedProduct, index) => {
-                      const product = getProductWithCatalogDetails(savedProduct);
-                      return (
-                      <tr key={`${product.product_id}-${index}`}>
-                        <td className="px-4 py-3 text-sm font-medium text-slate-800">{product.product_name}</td>
-                        <td className="px-4 py-3 text-sm text-slate-700">{product.category || "—"}</td>
-                        <td className="px-4 py-3 text-sm text-slate-700">{product.purity || "—"}</td>
-                        <td className="px-4 py-3 text-right text-sm text-slate-700">{formatMakingCharge(product)}</td>
-                        <td className="px-4 py-3 text-right text-sm text-slate-700">{product.net_gold_weight == null ? "—" : formatWeight(product.net_gold_weight, "g")}</td>
-                        <td className="px-4 py-3 text-right text-sm text-slate-700">{product.rate_per_gram == null ? "—" : `${currency(product.rate_per_gram)} / ${product.rate_unit || "gram"}`}</td>
-                        <td className="px-4 py-3 text-sm font-semibold text-slate-800">{currency(product.price)}</td>
-                        <td className="px-4 py-3 text-right">
-                          <button type="button" onClick={() => setProducts((rows) => rows.filter((_, rowIndex) => rowIndex !== index))} className="rounded-md p-2 text-rose-500 hover:bg-rose-50" aria-label={`Remove product ${index + 1}`}><FiTrash2 /></button>
-                        </td>
-                      </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+          <div className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,1.4fr)_minmax(340px,1fr)]">
+            <section className="min-w-0 space-y-4 rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
+              <div>
+                <h2 className="font-bold text-slate-900">Products in Bill</h2>
+                <p className="text-xs text-slate-500">Products you add will appear in this table.</p>
               </div>
-            )}
-          </section>
+              {products.length === 0 ? (
+                <p className="rounded-lg border border-dashed border-slate-300 px-4 py-6 text-center text-sm text-slate-500">No products have been added to this bill.</p>
+              ) : (
+                <div className="w-full overflow-x-auto rounded-lg border border-slate-200">
+                  <table className="w-full min-w-[900px] border-collapse text-left">
+                    <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                      <tr>
+                        <th className="px-4 py-3 font-semibold">Product</th>
+                        <th className="px-4 py-3 font-semibold">Category</th>
+                        <th className="px-4 py-3 font-semibold">Purity</th>
+                        <th className="px-4 py-3 text-right font-semibold">Making Charge</th>
+                        <th className="px-4 py-3 text-right font-semibold">Net Weight</th>
+                        <th className="px-4 py-3 text-right font-semibold">Gram Rate</th>
+                        <th className="px-4 py-3 font-semibold">Unit Price</th>
+                        <th className="px-4 py-3 text-right font-semibold">Action</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {products.map((savedProduct, index) => {
+                        const product = getProductWithCatalogDetails(savedProduct);
+                        return (
+                          <tr key={`${product.product_id}-${index}`}>
+                            <td className="px-4 py-3 text-sm font-medium text-slate-800">{product.product_name}</td>
+                            <td className="px-4 py-3 text-sm text-slate-700">{product.category || "—"}</td>
+                            <td className="px-4 py-3 text-sm text-slate-700">{product.purity || "—"}</td>
+                            <td className="px-4 py-3 text-right text-sm text-slate-700">{formatMakingCharge(product)}</td>
+                            <td className="px-4 py-3 text-right text-sm text-slate-700">{product.net_gold_weight == null ? "—" : formatWeight(product.net_gold_weight, "g")}</td>
+                            <td className="px-4 py-3 text-right text-sm text-slate-700">{product.rate_per_gram == null ? "—" : `${currency(product.rate_per_gram)} / ${product.rate_unit || "gram"}`}</td>
+                            <td className="px-4 py-3 text-sm font-semibold text-slate-800">{currency(product.price)}</td>
+                            <td className="px-4 py-3 text-right">
+                              <button type="button" onClick={() => setProducts((rows) => rows.filter((_, rowIndex) => rowIndex !== index))} className="rounded-md p-2 text-rose-500 hover:bg-rose-50" aria-label={`Remove product ${index + 1}`}><FiTrash2 /></button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </section>
 
-          <section className="space-y-4 rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
+          <section className="min-w-0 space-y-4 rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
             <div><h2 className="font-bold text-slate-900">Payment Details</h2><p className="text-xs text-slate-500">Choose how the customer paid and select the billing type.</p></div>
             <div className="grid gap-3 md:grid-cols-3">
               <label className={labelClass}>
@@ -1262,6 +1263,7 @@ export default function BillingManagement() {
               </div>
             )}
           </section>
+          </div>
 
           <section className="ml-auto max-w-lg space-y-3 rounded-xl border border-slate-100 bg-white p-5 shadow-sm">
             <h2 className="font-bold text-slate-900">Bill Summary</h2>
