@@ -13,7 +13,7 @@ const Header = () => {
     <header className="relative hidden overflow-hidden border-b border-[#d9b568]/40 bg-gradient-to-r from-[#00372d] via-[#005143] to-[#00372d] text-white md:block">
 
       <PageContainer className="relative px-4 sm:px-5 lg:px-[3%]">
-        <div className="flex min-h-10 flex-wrap items-center justify-between gap-3 py-2 text-[10px] font-semibold tracking-[0.12em] sm:text-xs">
+        <div className="flex min-h-8 flex-wrap items-center justify-between gap-2 py-1 text-[9px] font-semibold tracking-[0.1em] sm:text-[10px]">
 
           {/* Premium Jewellery Collections */}
           <div className="hidden items-center gap-2 text-[#f3cc72] lg:flex">

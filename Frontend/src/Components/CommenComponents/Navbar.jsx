@@ -96,44 +96,7 @@ const Navbar = () => {
   return (
     <header className="relative z-50 w-full">
 
-      {/* Promotional strip */}
-      <div className="bg-[#064638] text-[#f3d795]">
-        <PageContainer>
-          <div className="flex min-h-10 flex-wrap items-center justify-between gap-3 py-2 text-[10px] font-semibold tracking-[0.12em] sm:text-xs">
-
-            <div className="hidden items-center gap-2 lg:flex">
-              <Gem size={15} />
-              <span>PREMIUM JEWELLERY COLLECTIONS</span>
-            </div>
-
-            <div className="flex flex-1 items-center justify-center gap-4 sm:gap-6">
-              <span className="flex items-center gap-2">
-                <Truck size={15} />
-                <span>FREE SHIPPING</span>
-              </span>
-
-              <span className="hidden h-4 w-px bg-[#d9b568]/60 sm:block" />
-
-              <span className="hidden items-center gap-2 sm:flex">
-                <ShieldCheck size={15} />
-                <span>CERTIFIED JEWELLERY</span>
-              </span>
-
-              <span className="hidden h-4 w-px bg-[#d9b568]/60 md:block" />
-
-              <span className="hidden items-center gap-2 md:flex">
-                <Headset size={15} />
-                <span>24/7 SUPPORT</span>
-              </span>
-            </div>
-
-            <div className="hidden items-center gap-2 xl:flex">
-              <Gem size={15} />
-              <span>A SYMBOL OF TRUST & TRADITION</span>
-            </div>
-          </div>
-        </PageContainer>
-      </div>
+      
 
       {/* Main navbar */}
       <nav className="relative border-b-2 border-[#d4aa59] bg-gradient-to-r from-[#f8f0df] via-[#fffdf7] to-[#f7efdc] shadow-[0_5px_18px_rgba(75,55,20,0.10)]">
@@ -145,7 +108,7 @@ const Navbar = () => {
         </div>
 
         <PageContainer>
-          <div className="relative flex min-h-[82px] items-center justify-between gap-3 py-3 lg:min-h-[104px] lg:gap-5">
+          <div className="relative flex min-h-[65px] items-center justify-between gap-3 py-1.5 lg:min-h-[74px] lg:gap-4">
 
             {/* Logo */}
             <Link
@@ -157,7 +120,7 @@ const Navbar = () => {
               <img
                 src="/images/logo.png"
                 alt="Sri Golds"
-                className="h-16 w-28 object-contain sm:h-[76px] sm:w-36 lg:h-[88px] lg:w-44"
+                className="h-12 w-24 object-contain sm:h-14 sm:w-28 lg:h-[62px] lg:w-36"
               />
             </Link>
 
@@ -332,23 +295,7 @@ const Navbar = () => {
                 <span className="text-xs font-medium">Wishlist</span>
               </button>
 
-              {/* Cart */}
-              <button
-                type="button"
-                onClick={() => navigate("/cart")}
-                className="group relative flex min-w-[48px] flex-col items-center gap-1 text-[#173f33] transition hover:text-[#b77b19]"
-                aria-label={`Cart, ${cartCount} items`}
-              >
-                <span className={iconCircleClass}>
-                  <ShoppingBag size={21} />
-                </span>
-                {cartCount > 0 && (
-                  <span className="absolute right-0 top-0 flex h-5 min-w-5 items-center justify-center rounded-full bg-[#c78b20] px-1 text-[10px] font-bold text-white">
-                    {cartCount}
-                  </span>
-                )}
-                <span className="text-xs font-medium">Cart</span>
-              </button>
+             
 
               {/* Account */}
               <div className="relative">
