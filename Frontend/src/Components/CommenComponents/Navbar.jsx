@@ -16,7 +16,6 @@ import {
   FaPhoneAlt,
   FaSearch,
   FaShoppingBag,
-  FaStore,
   FaTag,
   FaThLarge,
   FaTimes,
@@ -290,19 +289,17 @@ const Navbar = () => {
     <nav className="sticky top-0 z-50 border-b border-[#eadfce] bg-white/95 shadow-sm backdrop-blur-lg">
 
       <PageContainer className="px-3 sm:px-5 lg:px-[2%]">
-        <div className="flex min-h-[76px] items-center gap-2 xl:gap-4">
+        <div className="flex min-h-[76px] items-center gap-2 lg:gap-3">
           <Link to="/" className="flex shrink-0 items-center" aria-label="Sri Golds home">
             <img src="/images/logo.png" alt="Sri Golds" className="h-12 w-20 object-contain sm:h-14 sm:w-24" />
           </Link>
 
-          <div ref={dropdownRef} className="hidden min-w-0 flex-1 items-center justify-center xl:flex">
-            <div className="flex h-full items-center">
-              <NavLink to="/" end className={({ isActive }) => `flex h-[76px] min-w-[90px] flex-col items-center justify-center gap-1 border-r border-[#efe5d4] px-4 text-sm font-semibold transition hover:bg-[#fff9ed] ${isActive ? "border-b-2 border-b-[#c68c22]" : ""}`}>
-                <FaHome className="text-lg text-[#a77525]" />
+          <div ref={dropdownRef} className="hidden min-w-0 flex-1 items-center justify-center lg:flex">
+            <div className="flex h-full min-w-0 items-center">
+              <NavLink to="/" end className={({ isActive }) => `flex h-[76px] items-center justify-center border-r border-[#efe5d4] px-3 text-sm font-semibold transition hover:bg-[#fff9ed] ${isActive ? "border-b-2 border-b-[#c68c22]" : ""}`}>
                 <span className="text-[#174a38]">Home</span>
               </NavLink>
-              <NavLink to="/shop" className={({ isActive }) => `flex h-[76px] min-w-[95px] flex-col items-center justify-center gap-1 border-r border-[#efe5d4] px-4 text-sm font-semibold transition hover:bg-[#fff9ed] ${isActive ? "border-b-2 border-b-[#c68c22]" : ""}`}>
-                <FaStore className="text-lg text-[#a77525]" />
+              <NavLink to="/shop" className={({ isActive }) => `flex h-[76px] items-center justify-center border-r border-[#efe5d4] px-3 text-sm font-semibold transition hover:bg-[#fff9ed] ${isActive ? "border-b-2 border-b-[#c68c22]" : ""}`}>
                 <span className="text-[#174a38]">Explore</span>
               </NavLink>
 
@@ -314,9 +311,8 @@ const Navbar = () => {
                     setOpenDropdown(openDropdown === "categories" ? "" : "categories");
                     setSelectedCategory(categories[0] || null);
                   }}
-                  className={`flex h-[76px] min-w-[110px] flex-col items-center justify-center gap-1 border-r border-[#efe5d4] px-4 text-sm font-semibold transition hover:bg-[#fff9ed] ${openDropdown === "categories" ? "bg-[#fff9ed]" : ""}`}
+                  className={`flex h-[76px] items-center justify-center border-r border-[#efe5d4] px-3 text-sm font-semibold transition hover:bg-[#fff9ed] ${openDropdown === "categories" ? "bg-[#fff9ed]" : ""}`}
                 >
-                  <FaThLarge className="text-lg text-[#a77525]" />
                   <span className="flex items-center gap-1 text-[#174a38]">Category <FaChevronDown className={`text-[#174a38] transition-transform ${openDropdown === "categories" ? "rotate-180" : ""}`} /></span>
                 </button>
                 {openDropdown === "categories" && (
@@ -379,10 +375,9 @@ const Navbar = () => {
                   type="button"
                   aria-expanded={openDropdown === "metals"}
                   onClick={() => setOpenDropdown(openDropdown === "metals" ? "" : "metals")}
-                  className={`flex h-[76px] min-w-[95px] flex-col items-center justify-center gap-1 border-r border-[#efe5d4] px-4 text-sm font-semibold transition hover:bg-[#fff9ed] ${openDropdown === "metals" ? "bg-[#fff9ed]" : ""}`}
+                  className={`flex h-[76px] items-center justify-center border-r border-[#efe5d4] px-3 text-sm font-semibold transition hover:bg-[#fff9ed] ${openDropdown === "metals" ? "bg-[#fff9ed]" : ""}`}
                 >
-                  <FaGem className="text-lg text-[#a77525]" />
-                  <span className="flex items-center gap-1 text-[#174a38]">Metal <FaChevronDown className={`text-[#174a38] transition-transform ${openDropdown === "metals" ? "rotate-180" : ""}`} /></span>
+                  <span className="text-[#174a38]">Metal</span>
                 </button>
                 {openDropdown === "metals" && (
                   <div className="absolute left-0 top-full z-50 w-[250px] rounded-xl border border-[#efe5d4] bg-white p-2 shadow-xl">
@@ -397,15 +392,13 @@ const Navbar = () => {
                           {metal.image ? <img src={getMetalImageUrl(metal.image)} alt="" className="h-8 w-8 object-contain" loading="lazy" /> : <FaGem className="text-lg text-[#174a38]" />}
                         </span>
                         <span className="flex-1">{metal.name}</span>
-                        <FaChevronRight className="text-[#174a38]" />
                       </Link>
                     ))}
                   </div>
                 )}
               </div>
 
-              <Link to="/contactus" className="flex h-[76px] min-w-[100px] flex-col items-center justify-center gap-1 px-4 text-sm font-semibold transition hover:bg-[#fff9ed]">
-                <FaPhoneAlt className="text-lg text-[#a77525]" />
+              <Link to="/contactus" className="flex h-[76px] items-center justify-center px-3 text-sm font-semibold transition hover:bg-[#fff9ed]">
                 <span className="text-[#174a38]">Contact Us</span>
               </Link>
             </div>
@@ -482,7 +475,7 @@ const Navbar = () => {
               aria-label={mobileMenu ? "Close navigation menu" : "Open navigation menu"}
               aria-expanded={mobileMenu}
               aria-controls="store-mobile-navigation"
-              className="flex h-10 w-10 items-center justify-center rounded-full text-[#174a38] transition hover:bg-[#fff8e9] xl:hidden"
+              className="flex h-10 w-10 items-center justify-center rounded-full text-[#174a38] transition hover:bg-[#fff8e9] lg:hidden"
             >
               {mobileMenu ? <FaTimes size={21} /> : <FaBars size={21} />}
             </button>
