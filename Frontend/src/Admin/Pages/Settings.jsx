@@ -1,4 +1,4 @@
-import { FiArrowRight, FiPrinter, FiSettings } from "react-icons/fi";
+import { FiArrowRight, FiPrinter, FiSettings, FiUsers } from "react-icons/fi";
 import { Link } from "react-router-dom";
 
 const settingsLinks = [
@@ -14,6 +14,13 @@ const settingsLinks = [
         path: "/admin/settings/receipt",
         label: "Configure receipt",
         icon: <FiPrinter />
+    },
+    {
+        title: "User Management",
+        description: "View and manage all registered customer accounts, contact details, and account status.",
+        path: "/admin/users/all",
+        label: "Manage users",
+        icon: <FiUsers />
     }
 ];
 

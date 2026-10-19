@@ -1,11 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { FiArrowLeft, FiImage, FiSave, FiRotateCcw, FiUpload, FiX } from "react-icons/fi";
 import { Link } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import {
   DEFAULT_RECEIPT_SETTINGS,
   getReceiptSettings,
-  RECEIPT_SETTINGS_KEY
+  saveReceiptSettings
 } from "./receiptSettings";
 
 const fields = [
@@ -18,11 +18,29 @@ const fields = [
 ];
 
 const ReceiptSettings = () => {
-  const [settings, setSettings] = useState(getReceiptSettings);
+  const [settings, setSettings] = useState({ ...DEFAULT_RECEIPT_SETTINGS });
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [previewDate] = useState(() => new Date().toLocaleDateString("en-IN"));
   const [previewInvoiceNumber] = useState(() => (
     `BILL-${new Date().toISOString().slice(0, 10).replaceAll("-", "")}-${crypto.randomUUID().slice(0, 8).toUpperCase()}`
   ));
+
+  useEffect(() => {
+    let active = true;
+    getReceiptSettings()
+      .then((savedSettings) => {
+        if (active) setSettings(savedSettings);
+      })
+      .catch((error) => {
+        console.error("Failed to load receipt settings:", error);
+        toast.error(error.response?.data?.message || "Could not load receipt settings.");
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => { active = false; };
+  }, []);
 
   const updateField = (key, value) => {
     setSettings((current) => ({ ...current, [key]: value }));
@@ -59,14 +77,16 @@ const ReceiptSettings = () => {
 
   const removeLogo = () => updateField("logoUrl", "");
 
-  const saveSettings = (event) => {
+  const saveSettings = async (event) => {
     event.preventDefault();
+    if (saving) return;
     if (!settings.shopName.trim()) {
       toast.error("Shop name is required.");
       return;
     }
+    setSaving(true);
     try {
-      window.localStorage.setItem(RECEIPT_SETTINGS_KEY, JSON.stringify({
+      const savedSettings = await saveReceiptSettings({
         ...settings,
         shopName: settings.shopName.trim(),
         logoUrl: settings.logoUrl.trim(),
@@ -75,22 +95,29 @@ const ReceiptSettings = () => {
         phone: settings.phone.trim(),
         email: settings.email.trim(),
         footerMessage: settings.footerMessage.trim()
-      }));
+      });
+      setSettings(savedSettings);
       toast.success("Receipt settings saved.");
     } catch (error) {
       console.error("Failed to save receipt settings:", error);
-      toast.error("Could not save receipt settings in this browser.");
+      toast.error(error.response?.data?.message || "Could not save receipt settings.");
+    } finally {
+      setSaving(false);
     }
   };
 
-  const resetSettings = () => {
+  const resetSettings = async () => {
+    if (saving) return;
+    setSaving(true);
     try {
-      window.localStorage.removeItem(RECEIPT_SETTINGS_KEY);
-      setSettings({ ...DEFAULT_RECEIPT_SETTINGS });
+      const savedSettings = await saveReceiptSettings({ ...DEFAULT_RECEIPT_SETTINGS });
+      setSettings(savedSettings);
       toast.success("Default receipt settings restored.");
     } catch (error) {
       console.error("Failed to reset receipt settings:", error);
-      toast.error("Could not restore receipt settings.");
+      toast.error(error.response?.data?.message || "Could not restore receipt settings.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -122,9 +149,9 @@ const ReceiptSettings = () => {
                 <label htmlFor="receipt-logo-upload" className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-[#00695C] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#008577]">
                   <FiUpload /> Upload Logo
                 </label>
-                <input id="receipt-logo-upload" type="file" accept="image/png,image/jpeg,image/webp" onChange={uploadLogo} className="sr-only" />
+                <input id="receipt-logo-upload" type="file" accept="image/png,image/jpeg,image/webp" onChange={uploadLogo} disabled={loading || saving} className="sr-only" />
                 {settings.logoUrl && (
-                  <button type="button" onClick={removeLogo} className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-3 py-2.5 text-sm font-semibold text-rose-700 hover:bg-rose-50">
+                  <button type="button" onClick={removeLogo} disabled={loading || saving} className="inline-flex items-center gap-1.5 rounded-lg border border-rose-200 px-3 py-2.5 text-sm font-semibold text-rose-700 hover:bg-rose-50 disabled:opacity-50">
                     <FiX /> Remove
                   </button>
                 )}
@@ -141,6 +168,7 @@ const ReceiptSettings = () => {
                   onChange={(event) => updateField(field.key, event.target.value)}
                   placeholder={field.placeholder}
                   rows={3}
+                  disabled={loading || saving}
                   className="mt-2 block w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-normal text-slate-800 outline-none transition focus:border-[#008577] focus:bg-white focus:ring-2 focus:ring-emerald-100"
                 />
               ) : (
@@ -151,6 +179,7 @@ const ReceiptSettings = () => {
                   placeholder={field.placeholder}
                   required={field.required}
                   maxLength={field.key === "shopName" ? 120 : 500}
+                  disabled={loading || saving}
                   className="mt-2 block w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-normal text-slate-800 outline-none transition focus:border-[#008577] focus:bg-white focus:ring-2 focus:ring-emerald-100"
                 />
               )}
@@ -159,11 +188,11 @@ const ReceiptSettings = () => {
         </section>
 
         <div className="flex flex-wrap justify-end gap-3 border-t border-slate-100 pt-5">
-          <button type="button" onClick={resetSettings} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50">
+          <button type="button" onClick={resetSettings} disabled={saving || loading} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50">
             <FiRotateCcw /> Restore Defaults
           </button>
-          <button type="submit" className="inline-flex items-center gap-2 rounded-xl bg-[#00695C] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#008577]">
-            <FiSave /> Save Receipt Settings
+          <button type="submit" disabled={saving || loading} className="inline-flex items-center gap-2 rounded-xl bg-[#00695C] px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#008577] disabled:opacity-50">
+            <FiSave /> {loading ? "Loading..." : saving ? "Saving..." : "Save Receipt Settings"}
           </button>
         </div>
         </form>

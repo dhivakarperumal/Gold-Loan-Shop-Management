@@ -512,7 +512,7 @@ export default function BillingManagement() {
     });
   }, [bills, billSearch, paymentFilter]);
 
-  const printBill = (bill) => {
+  const printBill = async (bill) => {
     const printWindow = window.open("", "_blank", "width=900,height=700");
     if (!printWindow) {
       toast.error("Allow pop-ups to print this bill.");
@@ -574,7 +574,15 @@ export default function BillingManagement() {
     `).join("");
     const exchangeTotal = billExchanges.reduce((sum, item) => sum + (Number(item.credit_amount) || 0), 0);
     const date = bill.created_at ? new Date(bill.created_at).toLocaleDateString("en-IN") : "—";
-    const receiptSettings = getReceiptSettings();
+    let receiptSettings;
+    try {
+      receiptSettings = await getReceiptSettings();
+    } catch (error) {
+      printWindow.close();
+      console.error("Failed to load receipt settings for printing:", error);
+      toast.error(error.response?.data?.message || "Could not load receipt settings.");
+      return;
+    }
     let logoUrl = "";
     if (receiptSettings.logoUrl) {
       try {

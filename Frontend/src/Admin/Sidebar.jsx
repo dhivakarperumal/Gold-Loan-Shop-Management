@@ -37,6 +37,7 @@ import api from "../api";
 const navItems = [
   { path: "/admin", label: "Dashboard", icon: LayoutDashboard, exact: true },
 
+  { path: "/admin/settings", label: "All Settings", icon: SettingsIcon },
 
    { path: "/admin/settings/daily-gold-rate", label: "Daily Gold Rate", icon: Coins },
  
