@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
+  FiCamera,
   FiCheckCircle,
   FiDownload,
   FiEdit2,
@@ -822,10 +823,16 @@ export default function LoanCustomerManagement() {
                       </button>
                     </div>
                   )}
-                  <label className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#008577]/30 px-3 py-2 text-sm font-semibold text-[#00695C] transition hover:bg-emerald-50">
-                    <FiPlus /> {uploadingPhoto ? "Uploading..." : form.photo_url ? "Replace Photo" : "Upload Photo"}
-                    <input type="file" accept="image/png,image/jpeg" onChange={handlePhotoUpload} disabled={uploadingPhoto} className="sr-only" />
-                  </label>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#008577]/30 px-3 py-2 text-sm font-semibold text-[#00695C] transition hover:bg-emerald-50">
+                      <FiPlus /> {uploadingPhoto ? "Uploading..." : form.photo_url ? "Choose Replacement" : "Choose Photo"}
+                      <input type="file" accept="image/png,image/jpeg" onChange={handlePhotoUpload} disabled={uploadingPhoto} className="sr-only" />
+                    </label>
+                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg border border-[#008577]/30 px-3 py-2 text-sm font-semibold text-[#00695C] transition hover:bg-emerald-50">
+                      <FiCamera /> Take Photo
+                      <input type="file" accept="image/png,image/jpeg" capture="environment" onChange={handlePhotoUpload} disabled={uploadingPhoto} className="sr-only" />
+                    </label>
+                  </div>
                   {form.photo_url && <p className="mt-2 break-all text-[11px] text-slate-400">Secure reference saved</p>}
                 </div>
                         <section className="space-y-3 rounded-xl border border-slate-200 p-4">
@@ -875,10 +882,16 @@ export default function LoanCustomerManagement() {
                                   </button>
                                 )}
                                 {!staged && !saved && <p className="mt-2 text-xs text-slate-400">No file selected</p>}
-                                <label className={`mt-3 inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#008577] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#00695C] ${!documentType || isAtCapacity ? "pointer-events-none opacity-50" : ""}`}>
-                                  <FiPlus /> {staged || saved ? "Replace File" : "Choose File"}
-                                  <input type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" onChange={(event) => handleDocumentUpload(event, side)} disabled={!documentType || isAtCapacity} className="sr-only" />
-                                </label>
+                                <div className="mt-3 flex flex-col gap-2">
+                                  <label className={`inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg bg-[#008577] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#00695C] ${!documentType || isAtCapacity ? "pointer-events-none opacity-50" : ""}`}>
+                                    <FiPlus /> {staged || saved ? "Replace File" : "Choose File"}
+                                    <input type="file" accept=".pdf,.png,.jpg,.jpeg,application/pdf,image/png,image/jpeg" onChange={(event) => handleDocumentUpload(event, side)} disabled={!documentType || isAtCapacity} className="sr-only" />
+                                  </label>
+                                  <label className={`inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-[#008577]/30 px-3 py-2 text-xs font-semibold text-[#00695C] transition hover:bg-emerald-50 ${!documentType || isAtCapacity ? "pointer-events-none opacity-50" : ""}`}>
+                                    <FiCamera /> Take Photo
+                                    <input type="file" accept="image/png,image/jpeg" capture="environment" onChange={(event) => handleDocumentUpload(event, side)} disabled={!documentType || isAtCapacity} className="sr-only" />
+                                  </label>
+                                </div>
                               </div>
                             );
                           })}
