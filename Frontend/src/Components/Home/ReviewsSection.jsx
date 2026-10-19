@@ -36,40 +36,8 @@ const initials = (name = "") =>
 const ReviewCard = ({ review }) => (
   <div className="flex h-full w-full flex-col rounded-2xl bg-white p-5 shadow-sm"
     style={{ border: "1px solid rgba(212,160,23,0.18)" }}>
-    {/* Quote icon */}
-    <FaQuoteLeft size={20} className="mb-3 shrink-0" style={{ color: "#D4A017", opacity: 0.6 }} />
 
-    {/* Comment */}
-    <p className="flex-1 text-sm leading-relaxed text-gray-600 line-clamp-4 italic">
-      {review.comment}
-    </p>
-
-    {/* Review image (optional) */}
-    {review.review_image && (
-      <div
-        className="mt-3 overflow-hidden rounded-xl"
-        style={{ aspectRatio: "1 / 1", background: "#f9f5ee" }}
-      >
-        <img
-          src={resolveReviewImage(review.review_image)}
-          alt="Review"
-          className="h-full w-full object-contain"
-        />
-      </div>
-    )}
-
-    {/* Stars */}
-    <div className="mt-3">
-      <StarRow rating={review.rating} />
-    </div>
-
-    {/* Gold divider */}
-    <div
-      className="my-3 h-px w-full"
-      style={{ background: "linear-gradient(90deg, transparent, #D4A017 40%, #D4A017 60%, transparent)" }}
-    />
-
-    {/* Reviewer info */}
+    {/* ── Top: Reviewer info + stars ── */}
     <div className="flex items-center gap-3">
       <div
         className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-bold text-white"
@@ -77,7 +45,7 @@ const ReviewCard = ({ review }) => (
       >
         {initials(review.user_name)}
       </div>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-bold text-gray-800">{review.user_name}</p>
         {review.product_name && (
           <p className="truncate text-[11px] text-gray-400">{review.product_name}</p>
@@ -85,14 +53,53 @@ const ReviewCard = ({ review }) => (
       </div>
     </div>
 
-    {/* Admin reply */}
-    {review.admin_reply && (
-      <div
-        className="mt-3 rounded-xl p-3 text-xs leading-snug text-gray-600 italic"
-        style={{ background: "rgba(0,77,64,0.06)", borderLeft: "3px solid #004D40" }}
-      >
-        <span className="font-bold not-italic" style={{ color: "#004D40" }}>Sri Golds: </span>
-        {review.admin_reply}
+    {/* Stars */}
+    <div className="mt-2">
+      <StarRow rating={review.rating} />
+    </div>
+
+    {/* Gold divider */}
+    <div
+      className="my-3 h-px w-full shrink-0"
+      style={{ background: "linear-gradient(90deg, transparent, #D4A017 40%, #D4A017 60%, transparent)" }}
+    />
+
+    {/* ── Middle: Quote + Comment ── */}
+    <FaQuoteLeft size={16} className="mb-2 shrink-0" style={{ color: "#D4A017", opacity: 0.6 }} />
+    <p className="flex-1 text-sm leading-relaxed text-gray-600 line-clamp-4 italic">
+      {review.comment}
+    </p>
+
+    {/* ── Bottom: thumbnail + admin reply ── */}
+    {(review.review_image || review.admin_reply) && (
+      <div className="mt-4 space-y-2">
+        {review.review_image && (
+          <div className="flex items-center gap-3">
+            <div
+              className="overflow-hidden rounded-lg shrink-0"
+              style={{ width: "56px", height: "56px", background: "#f9f5ee" }}
+            >
+              <img
+                src={resolveReviewImage(review.review_image)}
+                alt="Review"
+                className="h-full w-full object-contain"
+              />
+            </div>
+            <p className="text-[11px] text-gray-400 italic line-clamp-2">
+              {review.product_name || "Product"}
+            </p>
+          </div>
+        )}
+
+        {review.admin_reply && (
+          <div
+            className="rounded-xl p-3 text-xs leading-snug text-gray-600 italic"
+            style={{ background: "rgba(0,77,64,0.06)", borderLeft: "3px solid #004D40" }}
+          >
+            <span className="font-bold not-italic" style={{ color: "#004D40" }}>Sri Golds: </span>
+            {review.admin_reply}
+          </div>
+        )}
       </div>
     )}
   </div>
