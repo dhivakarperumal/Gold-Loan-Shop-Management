@@ -335,7 +335,7 @@ const Navbar = () => {
                               onClick={() => setOpenDropdown("")}
                               className="flex min-w-0 flex-1 items-center gap-3 px-2 py-2.5 text-sm font-medium text-[#30271b]"
                             >
-                              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-[#fbf5e9]">
+                              <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-[#fbf5e9]">
                                 {image ? <img src={getMetalImageUrl(image)} alt="" className="h-8 w-8 object-contain" loading="lazy" /> : <FaTag className="text-[#174a38]" />}
                               </span>
                               <span className="truncate">{category.name}</span>
@@ -381,7 +381,6 @@ const Navbar = () => {
                   className={`flex h-[76px] items-center justify-center border-r border-[#e9dfca]/70 px-3 text-sm font-semibold transition hover:text-[#b77912] 2xl:px-5 ${openDropdown === "metals" ? "text-[#b77912]" : ""}`}
                 >
                   <span className="flex items-center gap-2 text-[#174a38]">
-                    <FaGem className="text-[#a77525]" />
                     Metal
                   </span>
                 </button>
