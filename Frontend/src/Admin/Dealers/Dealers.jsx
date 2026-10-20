@@ -495,7 +495,7 @@ const Dealers = () => {
       </div>
     </div>
 
-    <DateRangeFilter onApply={(range) => { setPage(1); setDateRange(range); }} />
+    {section !== "dealers" && <DateRangeFilter onApply={(range) => { setPage(1); setDateRange(range); }} />}
 
     <div className="grid grid-cols-2 gap-3 xl:grid-cols-6">
       {[
@@ -534,6 +534,7 @@ const Dealers = () => {
             <select aria-label="Filter dealers by category" value={categoryFilter} onChange={(event) => { setPage(1); setCategoryFilter(event.target.value); }} className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-600 outline-none focus:border-[#008577]">
               <option value="All">All categories</option>{categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
             </select>
+            <DateRangeFilter className="shrink-0" onApply={(range) => { setPage(1); setDateRange(range); }} />
             <div role="group" aria-label="Dealer display mode" className="flex items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
               <button type="button" onClick={() => setViewMode("table")} aria-label="List view" aria-pressed={viewMode === "table"} className={`rounded-lg p-2.5 transition ${viewMode === "table" ? "bg-[#003B3B] text-white" : "text-slate-400 hover:text-slate-700"}`}><List size={18} /></button>
               <button type="button" onClick={() => setViewMode("grid")} aria-label="Card view" aria-pressed={viewMode === "grid"} className={`rounded-lg p-2.5 transition ${viewMode === "grid" ? "bg-[#003B3B] text-white" : "text-slate-400 hover:text-slate-700"}`}><LayoutGrid size={18} /></button>
