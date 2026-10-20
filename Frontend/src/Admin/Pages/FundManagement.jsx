@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Banknote, CalendarDays,
-  ChevronDown, Download, FileText, Plus, RefreshCw, Search, Wallet, X
+  ChevronDown, Download, FileText, LayoutGrid, List, Plus, RefreshCw, Search, Wallet, X
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../api";
@@ -68,6 +68,7 @@ function FundManagement() {
   const [refreshing, setRefreshing] = useState(false);
   const [fundAccountActionsOpen, setFundAccountActionsOpen] = useState(false);
   const [accountsVisible, setAccountsVisible] = useState(false);
+  const [transactionView, setTransactionView] = useState("table");
   const [accountSearch, setAccountSearch] = useState("");
   const [accountTypeFilter, setAccountTypeFilter] = useState("");
 
@@ -429,40 +430,98 @@ function FundManagement() {
             <h2 className="text-lg font-black text-slate-900">Transaction History</h2>
             <p className="text-xs text-slate-500">{totalTransactions.toLocaleString()} records</p>
           </div>
-          <div className="flex flex-wrap gap-2 print:hidden">
+          <div className="flex flex-wrap items-center gap-2 print:hidden">
+            <div className="flex rounded-lg border border-slate-200 bg-white p-1" role="group" aria-label="Transaction view">
+              <button
+                type="button"
+                aria-pressed={transactionView === "table"}
+                onClick={() => setTransactionView("table")}
+                className={`rounded-md p-2 transition ${transactionView === "table" ? "bg-[#064A41] text-white" : "text-slate-500 hover:bg-slate-100"}`}
+                aria-label="Table view"
+                title="Table view"
+              >
+                <List size={17} />
+              </button>
+              <button
+                type="button"
+                aria-pressed={transactionView === "cards"}
+                onClick={() => setTransactionView("cards")}
+                className={`rounded-md p-2 transition ${transactionView === "cards" ? "bg-[#064A41] text-white" : "text-slate-500 hover:bg-slate-100"}`}
+                aria-label="Card view"
+                title="Card view"
+              >
+                <LayoutGrid size={17} />
+              </button>
+            </div>
             <button onClick={exportCsv} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"><Download size={14} /> CSV</button>
             <button onClick={exportExcel} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"><Download size={14} /> Excel</button>
             <button onClick={printReport} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"><FileText size={14} /> Print / PDF</button>
           </div>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1100px] text-left text-xs">
-            <thead className="bg-gradient-to-r from-[#07564B] via-[#064A41] to-[#043D37] text-[10px] uppercase tracking-wide text-white">
-              <tr><th className="rounded-tl-xl px-4 py-3">ID / Date</th><th className="px-4 py-3">Type / Category</th><th className="px-4 py-3">Account</th><th className="px-4 py-3">Customer / Supplier</th><th className="px-4 py-3">Reference / Method</th><th className="px-4 py-3 text-right">Debit</th><th className="px-4 py-3 text-right">Credit</th><th className="px-4 py-3 text-right">Running Balance</th><th className="rounded-tr-xl px-4 py-3">Status / Details</th></tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {transactions.map((transaction) => {
-                const isDebit = ["DEBIT", "TRANSFER_OUT"].includes(transaction.transaction_type);
-                const isCredit = ["CREDIT", "FUND_ADDED", "TRANSFER_IN"].includes(transaction.transaction_type);
-                return (
-                  <tr key={transaction.id} className="hover:bg-slate-50/70">
-                    <td className="px-4 py-3"><span className="font-extrabold text-slate-800">#{transaction.id}</span><span className="mt-1 block whitespace-nowrap text-slate-500">{displayDate(transaction.transaction_date)}</span></td>
-                    <td className="px-4 py-3"><span className="font-bold text-slate-800">{TYPE_LABELS[transaction.transaction_type]}</span><span className="mt-1 block max-w-44 text-slate-500">{transaction.category}</span></td>
-                    <td className="px-4 py-3 text-slate-600">{transaction.account_name}</td>
-                    <td className="px-4 py-3 text-slate-600">{transaction.party_name || "—"}</td>
-                    <td className="px-4 py-3 text-slate-600"><span>{transaction.reference_number || transaction.related_reference || "—"}</span><span className="mt-1 block">{transaction.payment_method}</span></td>
-                    <td className="px-4 py-3 text-right font-bold text-rose-700">{isDebit ? money(transaction.amount) : "—"}</td>
-                    <td className="px-4 py-3 text-right font-bold text-emerald-700">{isCredit ? money(transaction.amount) : "—"}</td>
-                    <td className="px-4 py-3 text-right font-extrabold text-slate-800">{money(transaction.running_balance)}</td>
-                    <td className="px-4 py-3"><span className="rounded-full bg-emerald-50 px-2 py-1 font-bold text-emerald-700">{transaction.status}</span><div className="mt-2 flex gap-2"><button onClick={() => setSelectedTransaction(transaction)} className="font-bold text-[#00695C] hover:underline">Details</button>{transaction.receipt_url && <button onClick={() => openReceipt(transaction.receipt_url)} className="font-bold text-sky-700 hover:underline">Receipt</button>}</div></td>
-                  </tr>
-                );
-              })}
-              {!loading && transactions.length === 0 && <tr><td colSpan="9" className="px-4 py-12 text-center text-sm text-slate-500">No transactions match these filters.</td></tr>}
-              {loading && <tr><td colSpan="9" className="px-4 py-12 text-center text-sm text-slate-500">Loading transactions…</td></tr>}
-            </tbody>
-          </table>
-        </div>
+        {transactionView === "table" ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1100px] text-left text-xs">
+              <thead className="bg-gradient-to-r from-[#07564B] via-[#064A41] to-[#043D37] text-[10px] uppercase tracking-wide text-white">
+                <tr><th className="rounded-tl-xl px-4 py-3">ID / Date</th><th className="px-4 py-3">Type / Category</th><th className="px-4 py-3">Account</th><th className="px-4 py-3">Customer / Supplier</th><th className="px-4 py-3">Reference / Method</th><th className="px-4 py-3 text-right">Debit</th><th className="px-4 py-3 text-right">Credit</th><th className="px-4 py-3 text-right">Running Balance</th><th className="rounded-tr-xl px-4 py-3">Status / Details</th></tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {transactions.map((transaction) => {
+                  const isDebit = ["DEBIT", "TRANSFER_OUT"].includes(transaction.transaction_type);
+                  const isCredit = ["CREDIT", "FUND_ADDED", "TRANSFER_IN"].includes(transaction.transaction_type);
+                  return (
+                    <tr key={transaction.id} className="hover:bg-slate-50/70">
+                      <td className="px-4 py-3"><span className="font-extrabold text-slate-800">#{transaction.id}</span><span className="mt-1 block whitespace-nowrap text-slate-500">{displayDate(transaction.transaction_date)}</span></td>
+                      <td className="px-4 py-3"><span className="font-bold text-slate-800">{TYPE_LABELS[transaction.transaction_type]}</span><span className="mt-1 block max-w-44 text-slate-500">{transaction.category}</span></td>
+                      <td className="px-4 py-3 text-slate-600">{transaction.account_name}</td>
+                      <td className="px-4 py-3 text-slate-600">{transaction.party_name || "—"}</td>
+                      <td className="px-4 py-3 text-slate-600"><span>{transaction.reference_number || transaction.related_reference || "—"}</span><span className="mt-1 block">{transaction.payment_method}</span></td>
+                      <td className="px-4 py-3 text-right font-bold text-rose-700">{isDebit ? money(transaction.amount) : "—"}</td>
+                      <td className="px-4 py-3 text-right font-bold text-emerald-700">{isCredit ? money(transaction.amount) : "—"}</td>
+                      <td className="px-4 py-3 text-right font-extrabold text-slate-800">{money(transaction.running_balance)}</td>
+                      <td className="px-4 py-3"><span className="rounded-full bg-emerald-50 px-2 py-1 font-bold text-emerald-700">{transaction.status}</span><div className="mt-2 flex gap-2"><button onClick={() => setSelectedTransaction(transaction)} className="font-bold text-[#00695C] hover:underline">Details</button>{transaction.receipt_url && <button onClick={() => openReceipt(transaction.receipt_url)} className="font-bold text-sky-700 hover:underline">Receipt</button>}</div></td>
+                    </tr>
+                  );
+                })}
+                {!loading && transactions.length === 0 && <tr><td colSpan="9" className="px-4 py-12 text-center text-sm text-slate-500">No transactions match these filters.</td></tr>}
+                {loading && <tr><td colSpan="9" className="px-4 py-12 text-center text-sm text-slate-500">Loading transactions…</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3">
+            {transactions.map((transaction) => {
+              const isDebit = ["DEBIT", "TRANSFER_OUT"].includes(transaction.transaction_type);
+              const isCredit = ["CREDIT", "FUND_ADDED", "TRANSFER_IN"].includes(transaction.transaction_type);
+              return (
+                <article key={transaction.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Transaction #{transaction.id}</p>
+                      <h3 className="mt-1 truncate text-sm font-extrabold text-slate-900">{transaction.category}</h3>
+                      <p className="mt-1 text-xs text-slate-500">{displayDate(transaction.transaction_date)}</p>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700">{transaction.status}</span>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-3 text-xs">
+                    <div><p className="text-slate-500">Type</p><p className="mt-1 font-bold text-slate-800">{TYPE_LABELS[transaction.transaction_type]}</p></div>
+                    <div><p className="text-slate-500">Account</p><p className="mt-1 truncate font-bold text-slate-800">{transaction.account_name}</p></div>
+                    <div><p className="text-slate-500">Customer / Supplier</p><p className="mt-1 truncate font-bold text-slate-800">{transaction.party_name || "—"}</p></div>
+                    <div><p className="text-slate-500">Reference / Method</p><p className="mt-1 truncate font-bold text-slate-800">{transaction.reference_number || transaction.related_reference || "—"} · {transaction.payment_method}</p></div>
+                    <div><p className="text-slate-500">Debit</p><p className="mt-1 font-bold text-rose-700">{isDebit ? money(transaction.amount) : "—"}</p></div>
+                    <div><p className="text-slate-500">Credit</p><p className="mt-1 font-bold text-emerald-700">{isCredit ? money(transaction.amount) : "—"}</p></div>
+                    <div className="col-span-2 rounded-lg bg-slate-50 px-3 py-2"><p className="text-slate-500">Running Balance</p><p className="mt-1 font-extrabold text-slate-900">{money(transaction.running_balance)}</p></div>
+                  </div>
+                  <div className="mt-3 flex gap-4 border-t border-slate-100 pt-3">
+                    <button type="button" onClick={() => setSelectedTransaction(transaction)} className="text-xs font-bold text-[#00695C] hover:underline">Details</button>
+                    {transaction.receipt_url && <button type="button" onClick={() => openReceipt(transaction.receipt_url)} className="text-xs font-bold text-sky-700 hover:underline">Receipt</button>}
+                  </div>
+                </article>
+              );
+            })}
+            {loading && <p className="py-10 text-center text-sm text-slate-500 sm:col-span-2 xl:col-span-3">Loading transactions…</p>}
+            {!loading && transactions.length === 0 && <p className="py-10 text-center text-sm text-slate-500 sm:col-span-2 xl:col-span-3">No transactions match these filters.</p>}
+          </div>
+        )}
         <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-xs text-slate-500 print:hidden">
           <span>Page {page} of {pageCount}</span>
           <div className="flex gap-2"><button disabled={page <= 1} onClick={() => setPage((current) => current - 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 font-bold disabled:opacity-40">Previous</button><button disabled={page >= pageCount} onClick={() => setPage((current) => current + 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 font-bold disabled:opacity-40">Next</button></div>
