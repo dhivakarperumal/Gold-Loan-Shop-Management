@@ -601,18 +601,16 @@ const Dealers = () => {
             <span className="sr-only">Search purchase documents</span>
             <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search document, dealer, invoice..." className="w-full rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 pl-12 text-sm font-medium text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#008577] focus:bg-white" />
           </label>
-          <div className="flex flex-wrap items-center gap-2 md:ml-auto">
+          <div className="flex flex-wrap items-center justify-between gap-2 md:ml-auto md:justify-end">
             <DateRangeFilter className="shrink-0" onApply={(range) => { setPage(1); setDateRange(range); }} />
             <div role="group" aria-label="Purchase display mode" className="flex items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
               <button type="button" onClick={() => setViewMode("table")} aria-label="List view" aria-pressed={viewMode === "table"} className={`rounded-lg p-2.5 transition ${viewMode === "table" ? "bg-[#003B3B] text-white" : "text-slate-400 hover:text-slate-700"}`}><List size={18} /></button>
               <button type="button" onClick={() => setViewMode("grid")} aria-label="Card view" aria-pressed={viewMode === "grid"} className={`rounded-lg p-2.5 transition ${viewMode === "grid" ? "bg-[#003B3B] text-white" : "text-slate-400 hover:text-slate-700"}`}><LayoutGrid size={18} /></button>
             </div>
+            <button type="button" onClick={() => exportCsv([["Document","Dealer","Type","Date","Due date","Total","Paid","Outstanding"], ...visiblePurchases.map((row) => [row.document_number,row.dealer_name,row.document_type,row.document_date,row.due_date,row.total,row.paid_amount,row.outstanding])], "dealer-purchases.csv")} className="inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold"><Download size={15} /> Export CSV</button>
           </div>
         </section>
         <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
-          <div className="flex justify-end border-b border-slate-100 p-4">
-            <button type="button" onClick={() => exportCsv([["Document","Dealer","Type","Date","Due date","Total","Paid","Outstanding"], ...visiblePurchases.map((row) => [row.document_number,row.dealer_name,row.document_type,row.document_date,row.due_date,row.total,row.paid_amount,row.outstanding])], "dealer-purchases.csv")} className="inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold"><Download size={15} /> Export CSV</button>
-          </div>
           {viewMode === "table" ? <div className="overflow-x-auto"><table className="w-full min-w-[950px] text-left">
             <thead><tr className="bg-[#003B3B] text-xs uppercase text-white">
               <th className="rounded-tl-xl px-4 py-4">S No</th><th className="px-4 py-4">Document</th><th className="px-4 py-4">Dealer</th><th className="px-4 py-4">Invoice ref</th><th className="px-4 py-4">Date / Due</th><th className="px-4 py-4 text-right">Amount</th><th className="px-4 py-4 text-right">Paid</th><th className="rounded-tr-xl px-4 py-4 text-right">Outstanding</th>
