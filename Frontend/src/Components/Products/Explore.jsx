@@ -18,6 +18,7 @@ import { getProductImageUrl } from "../Home/productDisplay";
 
 const PAGE_SIZE = 100;
 const ROWS_PER_PAGE = 3;
+const MOBILE_PRODUCTS_PER_PAGE = 8;
 const SORT_OPTIONS = [
   { value: "newest", label: "Newest First" },
   { value: "oldest", label: "Oldest First" },
@@ -240,7 +241,9 @@ const Explore = () => {
     subcategoryFilter,
   ]);
 
-  const productsPerPage = gridColumns * ROWS_PER_PAGE;
+  const productsPerPage = gridColumns === 1
+    ? MOBILE_PRODUCTS_PER_PAGE
+    : gridColumns * ROWS_PER_PAGE;
   const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
   const activePage = Math.min(currentPage, Math.max(totalPages, 1));
   const pageStart = (activePage - 1) * productsPerPage;
