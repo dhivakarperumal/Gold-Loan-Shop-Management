@@ -95,10 +95,6 @@ export default function MetalsShowcase() {
                   className="group relative flex min-h-[170px] flex-col justify-center overflow-hidden rounded-xl border border-[#d8b66c] bg-[#f7e8c8] bg-cover bg-center px-5 py-5 shadow-[0_3px_12px_rgba(113,79,24,0.12)] transition-shadow hover:shadow-[0_8px_24px_rgba(31,53,39,0.2)] sm:min-h-[190px] sm:px-8 sm:py-6 lg:min-h-[205px]"
                   style={background ? { backgroundImage: `url('${background}')` } : undefined}
                 >
-                  <div
-                    aria-hidden="true"
-                    className="absolute inset-0 bg-gradient-to-r from-[#fff7e7]/95 via-[#fff7e7]/85 to-transparent"
-                  />
                   <div className="relative z-[1] max-w-[62%]">
                     <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#9a681c] sm:text-[10px]">
                       Today&apos;s {metal.name} Rate
