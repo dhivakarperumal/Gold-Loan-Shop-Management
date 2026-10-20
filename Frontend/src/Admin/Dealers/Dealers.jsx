@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import {
-  AlertTriangle, ArrowLeft, ArrowRightLeft, Building2, Check,
+  AlertTriangle, ArrowLeft, ArrowRightLeft, Building2, Check, ChevronRight,
   ClipboardList, Coins, Download, FileText, LoaderCircle, Plus, Printer,
   LayoutGrid, List, Search, ShieldCheck, Truck, Wallet, X
 } from "lucide-react";
@@ -491,26 +491,34 @@ const Dealers = () => {
   return <div className="space-y-6">
     {!["dealers", "purchases"].includes(section) && <DateRangeFilter onApply={(range) => { setPage(1); setDateRange(range); }} />}
 
-    <div className="grid grid-cols-2 gap-3 xl:grid-cols-6">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
       {[
-        ["Active dealers", summary?.dealers?.active ?? "—", Truck],
-        ["Supplier payables", summary ? currency(summary.payables) : "—", Wallet],
-        ["Dealer receivables", summary ? currency(summary.receivables) : "—", ArrowRightLeft],
-        ["Purchases this month", summary ? currency(summary.purchases_this_month) : "—", Coins],
-        ["Overdue invoices", summary ? `${summary.overdue.count} · ${currency(summary.overdue.amount)}` : "—", AlertTriangle],
-        ["Open job orders", summary?.pending_jobs ?? "—", ClipboardList]
-      ].map(([label, value, Icon]) => <div key={label} className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-        <div className="flex items-center justify-between gap-2"><span className="text-xs font-semibold text-slate-500">{label}</span><Icon size={17} className="text-[#008577]" /></div>
-        <p className="mt-2 truncate text-xl font-black text-slate-900">{value}</p>
-      </div>)}
+        { label: "Active dealers", value: summary?.dealers?.active ?? "—", note: "Currently active", Icon: Truck, theme: "border-emerald-700 bg-[#103d34]", accent: "text-emerald-300" },
+        { label: "Supplier payables", value: summary ? currency(summary.payables) : "—", note: "Outstanding balance", Icon: Wallet, theme: "border-amber-700 bg-[#40331b]", accent: "text-amber-300" },
+        { label: "Dealer receivables", value: summary ? currency(summary.receivables) : "—", note: "Amount to receive", Icon: ArrowRightLeft, theme: "border-sky-700 bg-[#15354b]", accent: "text-sky-300" },
+        { label: "Purchases this month", value: summary ? currency(summary.purchases_this_month) : "—", note: "Monthly total", Icon: Coins, theme: "border-orange-700 bg-[#4a2a22]", accent: "text-orange-300" },
+        { label: "Overdue invoices", value: summary ? `${summary.overdue.count} · ${currency(summary.overdue.amount)}` : "—", note: "Invoices past due", Icon: AlertTriangle, theme: "border-rose-700 bg-[#422333]", accent: "text-rose-300" },
+        { label: "Open job orders", value: summary?.pending_jobs ?? "—", note: "Awaiting completion", Icon: ClipboardList, theme: "border-teal-700 bg-[#173c46]", accent: "text-teal-300" }
+      ].map(({ label, value, note, Icon, theme, accent }) => <article key={label} className={`relative flex min-h-32 items-center gap-4 overflow-hidden rounded-2xl border-l-4 p-4 text-white shadow-md transition duration-200 hover:-translate-y-0.5 hover:shadow-lg ${theme}`}>
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-black/20 text-white shadow-inner">
+          <Icon size={24} aria-hidden="true" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs font-bold text-white/80">{label}</p>
+          <p className="mt-1 truncate text-xl font-black text-white">{value}</p>
+          <p className={`mt-1 truncate text-[11px] font-bold ${accent}`}>{note}</p>
+        </div>
+        <span aria-hidden="true" className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-white/60 text-slate-700">
+          <ChevronRight size={15} />
+        </span>
+        <span aria-hidden="true" className={`absolute bottom-3 right-4 flex h-7 items-end gap-1 opacity-70 ${accent}`}>
+          <i className="h-2 w-1.5 rounded-t-sm bg-current" />
+          <i className="h-4 w-1.5 rounded-t-sm bg-current" />
+          <i className="h-3 w-1.5 rounded-t-sm bg-current" />
+          <i className="h-6 w-1.5 rounded-t-sm bg-current" />
+        </span>
+      </article>)}
     </div>
-
-    {summary?.metal_outstanding?.length > 0 && <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-      <div className="mb-3 flex items-center gap-2 text-sm font-black text-amber-900"><Coins size={17} /> Metal outstanding by purity</div>
-      <div className="flex flex-wrap gap-2">{summary.metal_outstanding.map((metal) => <span key={`${metal.metal_type}-${metal.purity}`} className="rounded-full border border-amber-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700">
-        {metal.metal_type} {metal.purity}: {Number(metal.weight).toFixed(3)} g <span className="text-slate-400">({Number(metal.fine_gold_weight).toFixed(3)} fine g)</span>
-      </span>)}</div>
-    </div>}
 
     <ErrorBox message={error} retry={() => void fetchAll()} />
     {loading ? <div className="flex min-h-64 items-center justify-center gap-3 rounded-xl border border-slate-100 bg-white text-sm font-bold text-slate-500"><LoaderCircle className="animate-spin" /> Loading dealer records...</div> : <>
