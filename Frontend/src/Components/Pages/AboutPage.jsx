@@ -80,56 +80,56 @@ export default function AboutPage() {
         </PageContainer>
       </section>
 
-{/* Our Heritage */}
-<section className="relative isolate overflow-hidden bg-[#00382a] text-white">
-  {/* Clear image on the right */}
-  <img
-    src="/images/goldproduct.png"
-    alt="Sri Golds jewellery collection"
-    loading="lazy"
-    className="absolute inset-0 -z-20 h-full w-full object-cover object-[75%_45%]"
-  />
+      {/* Our Heritage */}
+      <section className="relative isolate overflow-hidden bg-[#00382a] text-white">
+        {/* Clear image on the right */}
+        <img
+          src="/images/goldproduct.png"
+          alt="Sri Golds jewellery collection"
+          loading="lazy"
+          className="absolute inset-0 -z-20 h-full w-full object-cover object-[75%_45%]"
+        />
 
-  {/* Darken only the left side; keep the right image clear */}
-  <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#00291f] via-[#00382a]/40 to-[#00382a]/10" />
+        {/* Darken only the left side; keep the right image clear */}
+        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#00291f] via-[#00382a]/40 to-[#00382a]/10" />
 
-  <PageContainer className="relative">
-    <div className="flex min-h-[260px] items-center py-8 sm:min-h-[290px] sm:py-10 lg:min-h-[310px]">
-      <div className="max-w-xl">
-        <div className="mb-3 flex items-center gap-3">
-          <span className="h-px w-8 bg-[#e9c66d]" />
-          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#f2d58a] sm:text-xs">
-            Our Heritage
-          </p>
-        </div>
+        <PageContainer className="relative">
+          <div className="flex min-h-[260px] items-center py-8 sm:min-h-[290px] sm:py-10 lg:min-h-[310px]">
+            <div className="max-w-xl">
+              <div className="mb-3 flex items-center gap-3">
+                <span className="h-px w-8 bg-[#e9c66d]" />
+                <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#f2d58a] sm:text-xs">
+                  Our Heritage
+                </p>
+              </div>
 
-        <h2 className="font-serif text-2xl font-bold leading-tight sm:text-3xl lg:text-4xl">
-          Tradition Meets
-          <span className="block text-[#f2d58a]">
-            Modern Elegance
-          </span>
-        </h2>
+              <h2 className="font-serif text-2xl font-bold leading-tight sm:text-3xl lg:text-4xl">
+                Tradition Meets
+                <span className="block text-[#f2d58a]">
+                  Modern Elegance
+                </span>
+              </h2>
 
-        <p className="mt-3 max-w-md text-xs leading-6 text-white/85 sm:text-sm sm:leading-7">
-          From classic inspiration to contemporary design, we celebrate
-          the artistry and meaning behind every piece.
-        </p>
+              <p className="mt-3 max-w-md text-xs leading-6 text-white/85 sm:text-sm sm:leading-7">
+                From classic inspiration to contemporary design, we celebrate
+                the artistry and meaning behind every piece.
+              </p>
 
-        <Link
-          to="/explore"
-          className="group mt-5 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#f2cf76] to-[#d9a441] px-5 py-2.5 text-xs font-bold text-[#153729] transition hover:brightness-110 sm:text-sm"
-        >
-          Discover Our Collections
-          <ArrowRight
-            size={16}
-            className="transition-transform group-hover:translate-x-1"
-            aria-hidden="true"
-          />
-        </Link>
-      </div>
-    </div>
-  </PageContainer>
-</section>
+              <Link
+                to="/explore"
+                className="group mt-5 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#f2cf76] to-[#d9a441] px-5 py-2.5 text-xs font-bold text-[#153729] transition hover:brightness-110 sm:text-sm"
+              >
+                Discover Our Collections
+                <ArrowRight
+                  size={16}
+                  className="transition-transform group-hover:translate-x-1"
+                  aria-hidden="true"
+                />
+              </Link>
+            </div>
+          </div>
+        </PageContainer>
+      </section>
 
       {/* Our History Section */}
       <section className="overflow-hidden bg-[#fffaf0] py-12 sm:py-16 lg:py-20">
