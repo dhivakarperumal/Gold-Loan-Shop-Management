@@ -373,9 +373,20 @@ const Explore = () => {
         </section>
 
         <section className={`mt-4 lg:row-start-2 lg:mt-3 ${filtersOpen ? "lg:col-start-2" : "lg:col-start-1"}`} aria-labelledby="top-searches-title">
-          <h2 id="top-searches-title" className="flex items-center gap-2 font-serif text-base font-bold text-[#29231c]">
-            <FaSearch className="text-xs text-[#a77525]" /> Top Searches
-          </h2>
+          <div className="flex items-center justify-between gap-3">
+            <h2 id="top-searches-title" className="flex items-center gap-2 font-serif text-base font-bold text-[#29231c]">
+              <FaSearch className="text-xs text-[#a77525]" /> Top Searches
+            </h2>
+            <button
+              type="button"
+              onClick={() => setFiltersOpen((open) => !open)}
+              aria-expanded={filtersOpen}
+              aria-controls="explore-filters"
+              className="flex cursor-pointer shrink-0 items-center gap-2 rounded-lg border border-[#e8dfd1] bg-white px-3 py-2 text-xs font-semibold text-[#174a38] transition hover:border-[#d8b46c] hover:bg-[#fffaf0]"
+            >
+              <FaSlidersH /> {filtersOpen ? "Hide Filters" : "Show Filters"}
+            </button>
+          </div>
           {topSearchProducts.length ? (
             <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
               {topSearchProducts.map((product) => {
@@ -565,15 +576,6 @@ const Explore = () => {
             <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setFiltersOpen((open) => !open)}
-                    aria-expanded={filtersOpen}
-                    aria-controls="explore-filters"
-                    className="flex items-center gap-2 rounded-lg border border-[#e8dfd1] bg-white px-3 py-2 text-xs font-semibold text-[#174a38]"
-                  >
-                    <FaSlidersH /> {filtersOpen ? "Hide Filters" : "Show Filters"}
-                  </button>
                   <h2 className="font-serif text-xl font-bold text-[#29231c] sm:text-2xl">
                     {searchQuery ? `Results for “${searchQuery}”` : "All Products"}
                   </h2>
