@@ -12,10 +12,31 @@ const METAL_BACKGROUNDS = {
   diamond: "/images/metal/diamondmetal.png",
   platinum: "/images/metal/platinummetal.png",
 };
+const METAL_TEXT_COLORS = {
+  gold: {
+    eyebrow: "text-[#b58a32]",
+    title: "text-[#f7e9c6]",
+    details: "text-[#f1ead8]",
+  },
+  silver: {
+    eyebrow: "text-[#71847a]",
+    title: "text-[#315b4d]",
+    details: "text-[#3f554b]",
+  },
+  diamond: {
+    eyebrow: "text-[#b77932]",
+    title: "text-[#955b27]",
+    details: "text-[#43594d]",
+  },
+  platinum: {
+    eyebrow: "text-[#d1a42d]",
+    title: "text-[#e7b629]",
+    details: "text-[#e5e5dc]",
+  },
+};
 
-function getMetalBackground(name = "") {
-  const key = METAL_ORDER.find((metal) => name.toLowerCase().includes(metal));
-  return key ? METAL_BACKGROUNDS[key] : "";
+function getMetalKey(name = "") {
+  return METAL_ORDER.find((metal) => name.toLowerCase().includes(metal));
 }
 
 export default function MetalsShowcase() {
@@ -87,7 +108,9 @@ export default function MetalsShowcase() {
               const exploreUrl = `/explore?metal=${encodeURIComponent(
                 metal.name
               )}`;
-              const background = getMetalBackground(metal.name);
+              const metalKey = getMetalKey(metal.name);
+              const background = METAL_BACKGROUNDS[metalKey];
+              const textColors = METAL_TEXT_COLORS[metalKey] || METAL_TEXT_COLORS.gold;
 
               return (
                 <article
@@ -96,19 +119,19 @@ export default function MetalsShowcase() {
                   style={background ? { backgroundImage: `url('${background}')` } : undefined}
                 >
                   <div className="relative z-[1] max-w-[62%]">
-                    <p className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#9a681c] sm:text-[10px]">
+                    <p className={`text-[9px] font-bold uppercase tracking-[0.2em] ${textColors.eyebrow} sm:text-[10px]`}>
                       Today&apos;s {metal.name} Rate
                     </p>
-                    <h3 className="mt-1 font-serif text-2xl font-bold leading-tight text-[#174a38] sm:text-3xl">
+                    <h3 className={`mt-1 font-serif text-2xl font-bold leading-tight ${textColors.title} sm:text-3xl`}>
                       {metal.name} Rate
                     </h3>
                     {metal.purity && (
-                      <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-[#8b631e] sm:text-xs">
+                      <p className={`mt-1 text-[10px] font-semibold uppercase tracking-wide ${textColors.details} sm:text-xs`}>
                         {metal.purity}
                       </p>
                     )}
                     {metal.description && (
-                      <p className="mt-1.5 line-clamp-2 text-[11px] leading-snug text-[#45574d] sm:text-xs">
+                      <p className={`mt-1.5 line-clamp-2 text-[11px] leading-snug ${textColors.details} sm:text-xs`}>
                         {metal.description}
                       </p>
                     )}
