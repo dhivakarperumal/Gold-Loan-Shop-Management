@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import {
   AlertTriangle, ArrowDownToLine, ArrowLeft, ArrowRightLeft, Building2, Check,
-  ClipboardList, Coins, Download, FileText, LoaderCircle, Plus, Printer, RefreshCw,
+  ClipboardList, Coins, Download, FileText, LoaderCircle, Plus, Printer,
   LayoutGrid, List, Search, ShieldCheck, Truck, Wallet, X
 } from "lucide-react";
 import { toast } from "react-hot-toast";
@@ -489,19 +489,6 @@ const Dealers = () => {
   const openJobs = jobs.filter((job) => !["Reconciled", "Cancelled"].includes(job.status));
 
   return <div className="space-y-6">
-    {section !== "purchases" && <div className="flex flex-wrap items-center justify-between gap-4">
-      <div>
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#008577]">Sri Vengateswara Gold Shop</p>
-        <h1 className="mt-1 text-2xl font-black text-slate-900">Dealer Management</h1>
-        <p className="mt-1 text-sm text-slate-500">Supplier accounts, metal custody, job work and settlements</p>
-      </div>
-      <div className="flex gap-2">
-        <button type="button" onClick={() => void refresh()} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"><RefreshCw size={16} /> Refresh</button>
-        {section === "jobs" && <button type="button" onClick={() => setDialog("job")} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#008577]"><Plus size={17} /> Create Job Order</button>}
-        {section === "refining" && <><button type="button" onClick={() => setDialog("oldGold")} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#008577]"><Plus size={17} /> Receive Old Gold</button><button type="button" onClick={() => setDialog("refining")} className="inline-flex items-center gap-2 rounded-lg border border-[#003B3B] px-4 py-2.5 text-sm font-bold text-[#003B3B]"><ArrowDownToLine size={16} /> Refining Receipt</button></>}
-      </div>
-    </div>}
-
     {!["dealers", "purchases"].includes(section) && <DateRangeFilter onApply={(range) => { setPage(1); setDateRange(range); }} />}
 
     <div className="grid grid-cols-2 gap-3 xl:grid-cols-6">
@@ -629,7 +616,7 @@ const Dealers = () => {
       </>}
 
       {section === "jobs" && <section className="overflow-hidden rounded-xl border border-slate-100 bg-white">
-        <div className="border-b border-slate-100 p-4"><h2 className="font-black text-slate-800">Goldsmith issue, receipt & reconciliation</h2><p className="text-xs text-slate-500">Weights are tracked by purity and fine-gold equivalent. Unexplained variance requires approval reason.</p>{jobs.filter((job) => job.reconciliation_status === "Pending").map((job) => <div key={job.id} className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm"><span>{job.job_number} has a pending fine-gold variance of {Number(job.reconciliation_variance).toFixed(3)} g.</span><button type="button" onClick={() => void approveReconciliation(job)} className="rounded bg-amber-700 px-3 py-1.5 text-xs font-bold text-white">Approve with reason</button></div>)}</div>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-4"><div><h2 className="font-black text-slate-800">Goldsmith issue, receipt & reconciliation</h2><p className="text-xs text-slate-500">Weights are tracked by purity and fine-gold equivalent. Unexplained variance requires approval reason.</p></div><button type="button" onClick={() => setDialog("job")} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#008577]"><Plus size={17} /> Create Job Order</button>{jobs.filter((job) => job.reconciliation_status === "Pending").map((job) => <div key={job.id} className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm"><span>{job.job_number} has a pending fine-gold variance of {Number(job.reconciliation_variance).toFixed(3)} g.</span><button type="button" onClick={() => void approveReconciliation(job)} className="rounded bg-amber-700 px-3 py-1.5 text-xs font-bold text-white">Approve with reason</button></div>)}</div>
         <div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left"><thead><tr className="bg-[#003B3B] text-xs uppercase text-white"><th className="p-3">Job / Dealer</th><th className="p-3">Due</th><th className="p-3 text-right">Issued fine g</th><th className="p-3 text-right">Returned fine g</th><th className="p-3">Status / Variance</th><th className="p-3 text-right">Post movement</th></tr></thead><tbody>{jobs.length ? jobs.map((job) => <tr key={job.id} className="border-b text-sm"><td className="p-3 font-bold">{job.job_number}<p className="text-xs font-normal text-slate-500">{job.dealer_name}</p></td><td className="p-3">{job.due_date || "—"}</td><td className="p-3 text-right">{Number(job.issued_fine_weight).toFixed(3)}</td><td className="p-3 text-right">{Number(job.returned_fine_weight).toFixed(3)}</td><td className="p-3">{job.status}{job.reconciliation_variance != null && <p className="text-xs font-bold text-amber-700">Variance {Number(job.reconciliation_variance).toFixed(3)} fine g</p>}</td><td className="p-3"><div className="flex justify-end gap-1"><button type="button" disabled={!["Open","Issued"].includes(job.status)} onClick={() => { setMetalForm({ ...metalForm, job_id: String(job.id), weight: "" }); setDialog("issue"); }} className="rounded border px-2 py-1 text-[10px] font-bold disabled:opacity-40">Issue</button><button type="button" disabled={!["Issued","Partially Received"].includes(job.status)} onClick={() => { setMetalForm({ ...metalForm, job_id: String(job.id), weight: "" }); setDialog("receipt"); }} className="rounded border px-2 py-1 text-[10px] font-bold disabled:opacity-40">Receive</button><button type="button" disabled={["Reconciled","Cancelled"].includes(job.status)} onClick={() => { setReconcileForm({ job_id: job.id, approved_loss: "0", reason: "" }); setDialog("reconcile"); }} className="rounded bg-[#003B3B] px-2 py-1 text-[10px] font-bold text-white disabled:opacity-40">Reconcile</button></div></td></tr>) : <tr><td colSpan="6" className="p-10 text-center text-slate-400">No job orders recorded.</td></tr>}</tbody></table></div>
       </section>}
 
