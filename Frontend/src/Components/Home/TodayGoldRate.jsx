@@ -166,7 +166,7 @@ export default function TodayGoldRate() {
             <div className="min-w-0">
               <p className="text-[9px] font-bold uppercase tracking-[0.28em] text-[#f2d58a] sm:text-[10px]">Today&apos;s Market Rates</p>
               <h2 id="today-gold-rate-title" className="mt-1 font-serif text-2xl font-bold leading-tight text-[#fff9e9] sm:text-3xl">
-                Know Your <span className="text-[#f2d58a]">Gold Rate</span>
+                Know Today&apos;s <span className="text-[#f2d58a]">Rates</span>
               </h2>
               <p className="mt-1.5 max-w-sm text-xs leading-relaxed text-white/75 sm:text-sm">
                 Gold, silver, diamond and platinum rates at a glance.
@@ -214,7 +214,7 @@ export default function TodayGoldRate() {
                 }}
                 className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#f2cf76] to-[#d9a441] px-4 py-2.5 text-xs font-bold text-[#153729] shadow-md transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#064734] sm:px-5"
               >
-                View Gold Rates <ChevronRight size={15} aria-hidden="true" />
+                View Today&apos;s Rates <ChevronRight size={15} aria-hidden="true" />
               </button>
             </div>
           </div>
