@@ -9,6 +9,7 @@ import {
   FaTimes,
 } from "react-icons/fa";
 import api from "../../api";
+import { formatCurrency } from "../../utils/currency";
 import ProductCard from "../Home/ProductCard";
 import { getProductImageUrl } from "../Home/productDisplay";
 import PageHeader from "../CommenComponents/PageHeader";
