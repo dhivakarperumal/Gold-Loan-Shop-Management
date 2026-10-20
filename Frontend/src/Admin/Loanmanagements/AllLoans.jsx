@@ -177,7 +177,7 @@ export default function AllLoans() {
         
         <div className="flex flex-wrap items-center justify-between gap-2 sm:ml-auto sm:justify-start sm:gap-3">
           <div> <DateRangeFilter onApply={(range) => { setCurrentPage(1); setDateRange(range); }} /></div>
-          <select aria-label="Filter loans by status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}
+          <select aria-label="Filter loans by status" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setCurrentPage(1); }}
             className="min-w-[142px] rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm font-semibold text-slate-600 outline-none transition hover:border-slate-300 focus:border-[#008577] focus:ring-4 focus:ring-emerald-700/10">
             <option value="All">Select Status</option>
             {["Active", "Suspended", "Awaiting Gold Release", "Inactive", "Completed", "Pending"].map((status) => <option key={status} value={status}>{status}</option>)}
@@ -205,9 +205,9 @@ export default function AllLoans() {
               <tbody className="divide-y divide-slate-100/80">
                 {loading ? <tr><td colSpan="8" className="px-4 py-16 text-center text-sm font-medium text-slate-400">Loading loans...</td></tr>
                   : filteredLoans.length === 0 ? <tr><td colSpan="8" className="px-4 py-16 text-center text-sm font-medium text-slate-400">{loans.length === 0 ? "No loans created yet." : "No loans match your search or status filter."}</td></tr>
-                    : filteredLoans.map((loan, index) => (
+                    : paginatedLoans.map((loan, index) => (
                       <tr key={loan.id} className="text-sm transition-colors hover:bg-emerald-50/55">
-                        <td className="whitespace-nowrap px-4 py-4 pl-5 text-xs font-medium tabular-nums text-slate-400">{index + 1}</td>
+                        <td className="whitespace-nowrap px-4 py-4 pl-5 text-xs font-medium tabular-nums text-slate-400">{(activePage - 1) * pageSize + index + 1}</td>
                         <td className="whitespace-nowrap px-4 py-4 font-bold text-[#064A41]">{loan.loan_number}</td>
                         <td className="px-4 py-4"><div className="flex min-w-[145px] items-center gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-xs font-bold uppercase text-[#087263] ring-1 ring-inset ring-emerald-800/5">{String(loan.customer_name || "?").trim().charAt(0)}</span><span className="min-w-0"><span className="block truncate font-semibold text-slate-800">{loan.customer_name || "—"}</span><span className="mt-0.5 block text-xs text-slate-400">{loan.customer_code || "—"}</span></span></div></td>
                         <td className="whitespace-nowrap px-4 py-4 font-bold tabular-nums text-slate-800" title={`Original loan amount: ${formatCurrency(loan.principal_amount)}`}>{formatCurrency(loan.outstanding_principal ?? loan.principal_amount)}</td>
@@ -237,7 +237,7 @@ export default function AllLoans() {
         loading ? <section className="rounded-2xl border border-slate-200 bg-white px-4 py-16 text-center text-sm font-medium text-slate-400">Loading loans...</section>
           : filteredLoans.length === 0 ? <section className="rounded-2xl border border-slate-200 bg-white px-4 py-16 text-center text-sm font-medium text-slate-400">{loans.length === 0 ? "No loans created yet." : "No loans match your search or status filter."}</section>
             : <section aria-label="Loans in card view" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {filteredLoans.map((loan) => (
+              {paginatedLoans.map((loan) => (
                 <article key={loan.id} className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_2px_10px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-900/[0.06]">
                   <div className="flex items-start justify-between gap-3">
                     <div><p className="text-xs font-semibold uppercase tracking-wide text-slate-400">Loan Number</p><h2 className="mt-1 font-extrabold text-[#064A41]">{loan.loan_number}</h2></div>
@@ -264,6 +264,33 @@ export default function AllLoans() {
                 </article>
               ))}
             </section>
+      )}
+      {filteredLoans.length > pageSize && (
+        <nav aria-label="Loan list pagination" className="flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white p-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+          <p className="text-sm text-slate-500">
+            Showing <span className="font-semibold text-slate-800">{(activePage - 1) * pageSize + 1}–{Math.min(activePage * pageSize, filteredLoans.length)}</span>
+            {" "}of <span className="font-semibold text-slate-800">{filteredLoans.length}</span> loans
+          </p>
+          <div className="flex items-center justify-between gap-2 sm:justify-end">
+            <button
+              type="button"
+              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+              disabled={activePage === 1}
+              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <FiChevronLeft size={16} /> Previous
+            </button>
+            <span className="px-2 text-sm font-semibold text-slate-600">Page {activePage} of {totalPages}</span>
+            <button
+              type="button"
+              onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+              disabled={activePage === totalPages}
+              className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Next <FiChevronRight size={16} />
+            </button>
+          </div>
+        </nav>
       )}
     </main>
   );
