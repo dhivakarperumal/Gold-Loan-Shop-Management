@@ -131,6 +131,94 @@ export default function AboutPage() {
         </PageContainer>
       </section>
 
+      {/* Why Choose Sri Golds */}
+      <section className="relative overflow-hidden border-y border-[#eadcc0] bg-white py-12 sm:py-16">
+        <PageContainer>
+          {/* Section heading */}
+          <div className="mx-auto mb-9 max-w-2xl text-center sm:mb-12">
+            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#ae7617] sm:text-xs">
+              The Sri Golds Difference
+            </p>
+
+            <h2 className="mt-2 font-serif text-3xl font-bold text-[#153b2e] sm:text-4xl">
+              Why Choose Sri Golds?
+            </h2>
+
+            <p className="mt-3 text-sm leading-7 text-[#68645c] sm:text-base">
+              More than jewellery, we offer thoughtful designs and a personal
+              experience for life's special moments.
+            </p>
+
+            <div className="mt-4 flex items-center justify-center gap-2">
+              <span className="h-px w-10 bg-[#d6a63c]" />
+              <Gem size={17} className="text-[#b47a19]" aria-hidden="true" />
+              <span className="h-px w-10 bg-[#d6a63c]" />
+            </div>
+          </div>
+
+          {/* Benefit cards */}
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              {
+                icon: ShieldCheck,
+                number: "01",
+                title: "Quality You Can Trust",
+                description:
+                  "We focus on quality and clear product details to help you shop with confidence.",
+              },
+              {
+                icon: Gem,
+                number: "02",
+                title: "Beautiful Craftsmanship",
+                description:
+                  "Explore timeless designs that bring traditional inspiration and modern elegance together.",
+              },
+              {
+                icon: Heart,
+                number: "03",
+                title: "Personal Attention",
+                description:
+                  "Find jewellery suited to your style, preferences, and meaningful occasions.",
+              },
+              {
+                icon: Sparkles,
+                number: "04",
+                title: "For Every Occasion",
+                description:
+                  "Discover pieces for everyday elegance, celebrations, gifting, and special milestones.",
+              },
+            ].map(({ icon: Icon, number, title, description }) => (
+              <div
+                key={title}
+                className="group relative overflow-hidden rounded-2xl border border-[#eadcc0] bg-[#fffdf8] p-5 transition-all duration-300 hover:-translate-y-1 hover:border-[#cba653] hover:bg-white hover:shadow-lg sm:p-6"
+              >
+                {/* Number */}
+                <span className="absolute right-4 top-3 font-serif text-4xl font-bold text-[#f0e6d1] transition-colors group-hover:text-[#ead8b0]">
+                  {number}
+                </span>
+
+                {/* Icon */}
+                <div className="relative flex h-12 w-12 items-center justify-center rounded-xl border border-[#e8d5a7] bg-[#f9f0dc] text-[#a87418] transition-colors group-hover:bg-[#064734] group-hover:text-[#f3d278]">
+                  <Icon size={23} strokeWidth={1.7} aria-hidden="true" />
+                </div>
+
+                <h3 className="mt-5 font-serif text-lg font-bold leading-snug text-[#153b2e]">
+                  {title}
+                </h3>
+
+                <p className="mt-2 text-sm leading-6 text-[#716a5e]">
+                  {description}
+                </p>
+
+                <div className="mt-5 h-0.5 w-10 rounded-full bg-[#d6a63c] transition-all duration-300 group-hover:w-16" />
+              </div>
+            ))}
+          </div>
+
+
+        </PageContainer>
+      </section>
+
       {/* Our History Section */}
       <section className="overflow-hidden bg-[#fffaf0] py-12 sm:py-16 lg:py-20">
         <PageContainer>
@@ -312,26 +400,6 @@ export default function AboutPage() {
         </PageContainer>
       </section>
 
-
-
-
-
-      <section className="py-10 sm:py-12">
-        <PageContainer>
-          <div className="flex flex-col gap-5 rounded-2xl border border-[#ead8b6] bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-7">
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#ae7617]">Our Vision</p>
-              <h2 className="mt-1 font-serif text-2xl font-bold text-[#153b2e]">Your Most Trusted Jewellery Partner</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-[#68645c]">
-                We strive to make choosing jewellery a warm, personal experience—with thoughtful service and collections for every generation.
-              </p>
-            </div>
-            <Link to="/contactus" className="inline-flex shrink-0 items-center gap-2 rounded-full border border-[#c4953e] px-5 py-3 text-sm font-bold text-[#153b2e] transition hover:bg-[#fff5dc]">
-              Visit or Contact Us <ArrowRight size={16} aria-hidden="true" />
-            </Link>
-          </div>
-        </PageContainer>
-      </section>
     </main>
   );
 }
