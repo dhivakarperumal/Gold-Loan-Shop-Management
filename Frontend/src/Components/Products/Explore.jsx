@@ -88,6 +88,15 @@ const Explore = () => {
     return () => window.removeEventListener("resize", updateGridColumns);
   }, []);
 
+  useEffect(() => {
+    const desktopBreakpoint = window.matchMedia("(min-width: 1024px)");
+    const syncFiltersToViewport = () => setFiltersOpen(desktopBreakpoint.matches);
+
+    syncFiltersToViewport();
+    desktopBreakpoint.addEventListener("change", syncFiltersToViewport);
+    return () => desktopBreakpoint.removeEventListener("change", syncFiltersToViewport);
+  }, []);
+
   const searchQuery = searchParams.get("search")?.trim() || "";
   const selectedCategories = searchParams.getAll("category");
   const selectedMetals = searchParams.getAll("metal");
