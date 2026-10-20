@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import {
   ArrowRight,
   Clock3,
@@ -9,21 +8,12 @@ import {
   Store
 } from "lucide-react";
 import PageContainer from "../CommenComponents/PageContainer";
+import PageHeader from "../CommenComponents/PageHeader";
 
 const SHOP_PHONE = "9659133504";
 const SHOP_PHONE_LABEL = "+91 96591 33504";
 const SHOP_ADDRESS = "No.58 Vaitheeshwaran Nagar, Tirupattur - 635653";
 const MAP_URL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(SHOP_ADDRESS)}`;
-
-function Breadcrumb() {
-  return (
-    <nav className="text-xs text-white/70" aria-label="Breadcrumb">
-      <Link to="/" className="transition hover:text-[#d9b568]">Home</Link>
-      <span className="mx-2" aria-hidden="true">›</span>
-      <span className="font-semibold text-white">Contact Us</span>
-    </nav>
-  );
-}
 
 export default function ContactPage() {
   const [form, setForm] = useState({ name: "", email: "", phone: "", subject: "", message: "" });
@@ -50,25 +40,7 @@ export default function ContactPage() {
 
   return (
     <main className="bg-[#fffaf0]">
-      <section className="relative isolate min-h-[300px] overflow-hidden bg-[#003629] text-white sm:min-h-[340px]">
-        <img src="/images/Hero/hero.png" alt="" className="absolute inset-0 -z-20 h-full w-full object-cover object-[70%_center]" />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#00281f]/95 via-[#003629]/75 to-[#003629]/10" />
-        <div className="absolute inset-3 border border-[#d9b568]/50 sm:inset-5" aria-hidden="true" />
-        <PageContainer className="relative flex min-h-[300px] items-center py-8 sm:min-h-[340px]">
-          <div className="max-w-xl">
-            <Breadcrumb />
-            <p className="mt-7 text-[10px] font-bold uppercase tracking-[0.28em] text-[#e9c66d]">Get in Touch</p>
-            <h1 className="mt-3 font-serif text-4xl font-bold leading-[1.05] sm:text-5xl">
-              We Are Here
-              <br />
-              <span className="text-[#e9bd56]">For You</span>
-            </h1>
-            <p className="mt-4 max-w-lg text-sm leading-6 text-[#fff7e8]/90">
-              Have a question or need assistance? Our team is ready to help you with a warm and friendly service.
-            </p>
-          </div>
-        </PageContainer>
-      </section>
+      <PageHeader title="Contact Us" />
 
       <PageContainer>
         <section className="grid grid-cols-1 divide-y divide-[#eadfc8] rounded-b-2xl border border-t-0 border-[#eadfc8] bg-white shadow-sm sm:grid-cols-3 sm:divide-x sm:divide-y-0" aria-label="Contact options">

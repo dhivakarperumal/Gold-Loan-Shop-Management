@@ -9,6 +9,7 @@ import { FaRegGem } from "react-icons/fa";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 import PageContainer from "../CommenComponents/PageContainer";
+import PageHeader from "../CommenComponents/PageHeader";
 import api from "../../api";
 
 /* ── helpers ─────────────────────────────────── */
@@ -202,52 +203,38 @@ const UserProfile = () => {
 
   return (
     <div className="min-h-screen pb-16" style={{ background: "#f8f7f2" }}>
+      <PageHeader title="My Profile" />
 
-      {/* ── Hero banner ── */}
-      <div className="relative w-full py-10 sm:py-12"
-        style={{ background: "linear-gradient(135deg,#003D2E 0%,#004D40 60%,#1a5c42 100%)" }}>
-        <div className="absolute bottom-0 left-0 right-0 h-[3px]"
-          style={{ background: "linear-gradient(90deg,transparent,#D4A017 30%,#F5C45E 50%,#D4A017 70%,transparent)" }} />
-
-        <PageContainer>
-          <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:items-end sm:text-left">
-            {/* Avatar */}
-            <div className="relative shrink-0">
-              <div className="flex h-24 w-24 items-center justify-center rounded-full text-3xl font-black text-white shadow-xl ring-4 ring-white/20"
-                style={{ background: "linear-gradient(135deg,#D4A017,#F5C45E)" }}>
-                <span style={{ color: "#004D40" }}>{initials(name) || <FiUser />}</span>
-              </div>
-              <span className="absolute bottom-1 right-1 h-4 w-4 rounded-full border-2 border-white bg-green-400" />
+      <PageContainer className="pt-5">
+        <section className="flex flex-col items-center gap-4 rounded-2xl border border-[#e9e3d7] bg-white p-5 shadow-sm sm:flex-row sm:text-left">
+          <div className="relative shrink-0">
+            <div className="flex h-16 w-16 items-center justify-center rounded-full text-2xl font-black shadow-sm"
+              style={{ background: "linear-gradient(135deg,#D4A017,#F5C45E)", color: "#004D40" }}>
+              {initials(name) || <FiUser />}
             </div>
-
-            {/* Name & role */}
-            <div className="flex-1">
-              <p className="text-xs font-bold uppercase tracking-[0.25em]" style={{ color: "#F5C45E" }}>
-                {isAdmin ? "Administrator" : "Member Account"}
-              </p>
-              <h1 className="mt-1 font-serif text-3xl font-bold text-white sm:text-4xl">{name}</h1>
-              <p className="mt-1 text-sm text-white/60">{email}</p>
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-3">
-              {isAdmin && (
-                <button type="button" onClick={() => navigate("/admin")}
-                  className="flex items-center gap-2 rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-white transition hover:opacity-90"
-                  style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)" }}>
-                  <FiShield size={14} /> Admin Panel
-                </button>
-              )}
-              <button type="button" onClick={handleLogout}
-                className="flex items-center gap-2 rounded-full bg-red-500/90 px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-white transition hover:bg-red-600">
-                <FiLogOut size={14} /> Logout
-              </button>
-            </div>
+            <span className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-green-400" />
           </div>
-        </PageContainer>
-      </div>
+          <div className="min-w-0 flex-1 text-center sm:text-left">
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#a67b2e]">
+              {isAdmin ? "Administrator" : "Member Account"}
+            </p>
+            <h2 className="mt-1 truncate font-serif text-xl font-bold text-[#201a13]">{name}</h2>
+            <p className="mt-0.5 truncate text-sm text-slate-500">{email}</p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-2">
+            {isAdmin && (
+              <button type="button" onClick={() => navigate("/admin")}
+                className="flex items-center gap-2 rounded-full border border-[#174a3f]/20 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-[#174a3f] transition hover:bg-[#f4f8f5]">
+                <FiShield size={14} /> Admin Panel
+              </button>
+            )}
+            <button type="button" onClick={handleLogout}
+              className="flex items-center gap-2 rounded-full bg-red-500/90 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-red-600">
+              <FiLogOut size={14} /> Logout
+            </button>
+          </div>
+        </section>
 
-      <PageContainer className="relative z-10 -mt-4">
         <nav aria-label="Profile sections" className="hide-scrollbar flex overflow-x-auto rounded-xl border border-[#e9e3d7] bg-white p-1.5 shadow-sm">
           {[
             { id: "profile", label: "Profile Details", icon: FiUser },

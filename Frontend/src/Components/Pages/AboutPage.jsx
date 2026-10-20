@@ -9,42 +9,12 @@ import {
   Store
 } from "lucide-react";
 import PageContainer from "../CommenComponents/PageContainer";
-
-function Breadcrumb() {
-  return (
-    <nav className="text-xs text-white/70" aria-label="Breadcrumb">
-      <Link to="/" className="transition hover:text-[#d9b568]">Home</Link>
-      <span className="mx-2" aria-hidden="true">›</span>
-      <span className="font-semibold text-white">About Us</span>
-    </nav>
-  );
-}
+import PageHeader from "../CommenComponents/PageHeader";
 
 export default function AboutPage() {
   return (
     <main className="bg-[#fffaf0]">
-      <section className="relative isolate min-h-[340px] overflow-hidden bg-[#003629] text-white sm:min-h-[390px]">
-        <img src="/images/Hero/hero4.png" alt="" className="absolute inset-0 -z-20 h-full w-full object-cover object-[65%_center]" />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#00281f]/95 via-[#003629]/80 to-[#003629]/10" />
-        <div className="absolute inset-3 border border-[#d9b568]/50 sm:inset-5" aria-hidden="true" />
-        <PageContainer className="relative flex min-h-[340px] items-center py-9 sm:min-h-[390px]">
-          <div className="max-w-xl">
-            <Breadcrumb />
-            <p className="mt-8 text-[10px] font-bold uppercase tracking-[0.28em] text-[#e9c66d]">Our Story</p>
-            <h1 className="mt-3 font-serif text-4xl font-bold leading-[1.05] sm:text-5xl lg:text-6xl">
-              A Legacy of Trust
-              <br />
-              in <span className="text-[#e9bd56]">Every Jewel</span>
-            </h1>
-            <p className="mt-4 max-w-lg text-sm leading-6 text-[#fff7e8]/90 sm:text-base">
-              At Sri Golds, we believe jewellery is more than gold, silver or diamonds. It is a celebration of your most precious moments, crafted with care, trust and timeless elegance.
-            </p>
-            <Link to="/explore" className="mt-6 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#f2cf76] to-[#d9a441] px-5 py-3 text-sm font-bold text-[#153729] shadow-lg transition hover:-translate-y-0.5 hover:brightness-105">
-              Our Jewellery <ArrowRight size={17} aria-hidden="true" />
-            </Link>
-          </div>
-        </PageContainer>
-      </section>
+      <PageHeader title="About Us" />
 
       <section className="border-b border-[#eee1c7] bg-white">
         <PageContainer>

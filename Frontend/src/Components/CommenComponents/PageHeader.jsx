@@ -1,10 +1,9 @@
 import React from "react";
 import { Link } from "react-router-dom";
-import defaultBg from "/assets/purpleph.jpg";
 
 const PageHeader = ({ title, background }) => {
 
-  const bgImage = background || defaultBg;
+  const bgImage = background || "/images/baneer/pageheader.png";
 
   return (
     <div
@@ -16,8 +15,7 @@ const PageHeader = ({ title, background }) => {
         // backgroundRepeat: "no-repeat"
       }}
     >
-      {/* Overlay */}
-      <div className="absolute inset-0"></div>
+      <div className="absolute inset-0 bg-black/35" aria-hidden="true"></div>
 
       {/* Content */}
       <div className="relative text-center px-4">
