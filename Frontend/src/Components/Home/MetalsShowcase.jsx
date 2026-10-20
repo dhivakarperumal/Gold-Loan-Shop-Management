@@ -19,9 +19,9 @@ const METAL_TEXT_COLORS = {
     details: "text-[#fffdf7]",
   },
   silver: {
-    eyebrow: "text-[#294438]",
-    title: "text-[#12372d]",
-    details: "text-[#26382f]",
+    eyebrow: "text-[#183c30]",
+    title: "text-[#10382d]",
+    details: "text-[#172f26]",
   },
   diamond: {
     eyebrow: "text-[#70420f]",
@@ -123,24 +123,33 @@ export default function MetalsShowcase() {
                   className="group relative flex min-h-[170px] flex-col justify-center overflow-hidden rounded-xl border border-[#d8b66c] bg-[#f7e8c8] bg-cover bg-center px-5 py-5 shadow-[0_3px_12px_rgba(113,79,24,0.12)] transition-shadow hover:shadow-[0_8px_24px_rgba(31,53,39,0.2)] sm:min-h-[190px] sm:px-8 sm:py-6 lg:min-h-[205px]"
                   style={background ? { backgroundImage: `url('${background}')` } : undefined}
                 >
-                  <div className="relative z-[1] max-w-[62%]">
-                   
-                    <h3 className={`mt-1 font-serif text-2xl font-bold leading-tight ${textColors.title} sm:text-3xl`}>
-                      {metal.name} 
+
+                  <div className="relative z-[1] w-full max-w-[68%] sm:max-w-[62%]">
+                    <h3
+                      className={`mt-1 font-serif text-2xl font-bold leading-tight drop-shadow-sm sm:text-3xl ${textColors.title}`}
+                    >
+                      {metal.name}
                     </h3>
+
                     {metal.purity && (
-                      <p className={`mt-1 text-[10px] font-semibold uppercase tracking-wide ${textColors.details} sm:text-xs`}>
+                      <p
+                        className={`mt-1 text-xs font-bold uppercase tracking-wide ${textColors.details}`}
+                      >
                         {metal.purity}
                       </p>
                     )}
+
                     {metal.description && (
-                      <p className={`mt-1.5 line-clamp-2 text-[11px] leading-snug ${textColors.details} sm:text-xs`}>
+                      <p
+                        className={`mt-1.5 line-clamp-2 text-xs font-medium leading-relaxed ${textColors.details}`}
+                      >
                         {metal.description}
                       </p>
                     )}
+
                     <Link
                       to={exploreUrl}
-                      className="mt-3 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#f6d274] to-[#dcae44] px-3.5 py-2 text-[10px] font-bold text-[#382a10] shadow-sm transition hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174a38] sm:mt-4 sm:px-4 sm:text-xs"
+                      className="mt-3 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#f6d274] to-[#dcae44] px-4 py-2 text-xs font-bold text-[#382a10] shadow-sm transition hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174a38] sm:mt-4"
                     >
                       Explore {metal.name}
                       <ArrowRight
@@ -150,6 +159,7 @@ export default function MetalsShowcase() {
                       />
                     </Link>
                   </div>
+
                 </article>
               );
             })}

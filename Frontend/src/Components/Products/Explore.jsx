@@ -379,7 +379,7 @@ const Explore = () => {
                   type="button"
                   onClick={() => setSearchFilter(searchQuery === product.name ? "" : product.name)}
                   title={product.name}
-                  className={`flex w-[220px] shrink-0 snap-start items-center gap-2 rounded-lg border px-2 py-2 text-left text-[10px] font-medium transition sm:w-auto sm:min-w-0 sm:text-[11px] ${searchQuery === product.name ? "border-[#174a38] bg-[#edf5ef] text-[#174a38]" : "border-[#eee5d6] bg-white text-[#514638] hover:border-[#d8b46c] hover:bg-[#fffaf0]"}`}
+                  className={`flex w-[calc(50%-4px)] shrink-0 snap-start items-center gap-2 rounded-lg border px-2 py-2 text-left text-[10px] font-medium transition sm:w-auto sm:min-w-0 sm:text-[11px] ${searchQuery === product.name ? "border-[#174a38] bg-[#edf5ef] text-[#174a38]" : "border-[#eee5d6] bg-white text-[#514638] hover:border-[#d8b46c] hover:bg-[#fffaf0]"}`}
                 >
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-[#f8f2e8]">
                     {image
