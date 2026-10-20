@@ -177,6 +177,12 @@ const ProductDetail = () => {
       y: Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height))
     });
   };
+  const lensSize = 0.34;
+  const lensPosition = (point) => `${Math.max(0, Math.min(1 - lensSize, point - lensSize / 2)) * 100}%`;
+  const lensBackgroundPosition = (point) => {
+    const cropStart = Math.max(0, Math.min(1 - lensSize / zoom, point - lensSize / (2 * zoom)));
+    return `${(cropStart * zoom / (zoom - lensSize)) * 100}%`;
+  };
   const loading = loadedProductId !== id;
 
   if (loading) {
@@ -307,17 +313,13 @@ const ProductDetail = () => {
               }}
               onPointerMove={updateImagePointer}
               onPointerLeave={() => setIsImageHovered(false)}
-              className={`relative flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-[#f8f6ef] ${isImageHovered && zoom > 1 ? "cursor-zoom-in" : ""}`}
+              className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-[#f8f6ef]"
             >
               {images.length ? (
                 <img
                   src={assetUrl(selectedImage)}
                   alt={product.name}
-                  className="h-full w-full object-cover transition-none"
-                  style={{
-                    transform: `scale(${isImageHovered ? zoom : 1})`,
-                    transformOrigin: `${imagePointer.x * 100}% ${imagePointer.y * 100}%`
-                  }}
+                  className="h-full w-full object-cover"
                 />
               ) : (
                 <div className="text-center text-sm text-[#887c69]">
@@ -348,6 +350,20 @@ const ProductDetail = () => {
                       <span aria-hidden="true">+</span>
                     </button>
                   </div>
+                  {isImageHovered && zoom > 1 && (
+                    <div
+                      aria-hidden="true"
+                      className="pointer-events-none absolute z-10 hidden aspect-square w-[34%] overflow-hidden rounded-xl border-2 border-white shadow-lg md:block"
+                      style={{
+                        left: lensPosition(imagePointer.x),
+                        top: lensPosition(imagePointer.y),
+                        backgroundImage: `url("${assetUrl(selectedImage)}")`,
+                        backgroundRepeat: "no-repeat",
+                        backgroundSize: `${(zoom / lensSize) * 100}% ${(zoom / lensSize) * 100}%`,
+                        backgroundPosition: `${lensBackgroundPosition(imagePointer.x)} ${lensBackgroundPosition(imagePointer.y)}`
+                      }}
+                    />
+                  )}
                 </>
               )}
               {(product.best_seller || product.featured) && (
