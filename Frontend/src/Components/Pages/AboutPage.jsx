@@ -6,7 +6,10 @@ import {
   Heart,
   ShieldCheck,
   Sparkles,
-  Store
+  Store,
+  Clock3,
+  Handshake,
+  TrendingUp,
 } from "lucide-react";
 import PageContainer from "../CommenComponents/PageContainer";
 import PageHeader from "../CommenComponents/PageHeader";
@@ -93,6 +96,110 @@ export default function AboutPage() {
           </div>
         </PageContainer>
       </section>
+
+      {/* Our History */}
+      <section className="relative overflow-hidden bg-[#fffaf0] py-12 sm:py-16">
+        <PageContainer>
+          <div className="mx-auto mb-10 max-w-2xl text-center">
+            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#ae7617]">
+              The Sri Golds Journey
+            </p>
+
+            <h2 className="mt-2 font-serif text-3xl font-bold text-[#153b2e] sm:text-4xl">
+              Our History
+            </h2>
+
+            <p className="mt-3 text-sm leading-6 text-[#68645c]">
+              Every jewel tells a story. Ours is a journey built on tradition,
+              thoughtful craftsmanship, and lasting customer relationships.
+            </p>
+
+            <div className="mx-auto mt-4 h-[2px] w-16 bg-[#c4953e]" />
+          </div>
+
+          <div className="relative mx-auto max-w-4xl">
+            {/* Timeline line */}
+            <div
+              className="absolute bottom-8 left-5 top-8 w-px bg-[#dfc58e] sm:left-1/2 sm:-translate-x-1/2"
+              aria-hidden="true"
+            />
+
+            {[
+              {
+                year: "1984",
+                title: "The Beginning",
+                description:
+                  "Sri Golds began its journey with a commitment to jewellery, personal service, and customer trust.",
+                icon: Clock3,
+                side: "left",
+              },
+              {
+                year: "Growing Together",
+                title: "Expanding Our Collections",
+                description:
+                  "Traditional inspiration and contemporary designs come together to offer jewellery for everyday wear and special occasions.",
+                icon: Gem,
+                side: "right",
+              },
+              {
+                year: "A Lasting Promise",
+                title: "Building Customer Trust",
+                description:
+                  "We continue to focus on quality, thoughtful service, and helping customers choose jewellery for their most meaningful moments.",
+                icon: Handshake,
+                side: "left",
+              },
+              {
+                year: "Looking Ahead",
+                title: "Our Future Journey",
+                description:
+                  "We look forward to serving future generations while preserving the values and personal touch at the heart of Sri Golds.",
+                icon: TrendingUp,
+                side: "right",
+              },
+            ].map(({ year, title, description, icon: Icon, side }, index) => (
+              <div
+                key={title}
+                className={`relative mb-8 flex last:mb-0 sm:mb-10 ${side === "right" ? "sm:justify-end" : "sm:justify-start"
+                  }`}
+              >
+                {/* Timeline marker */}
+                <div className="absolute left-5 top-5 z-10 flex h-10 w-10 -translate-x-1/2 items-center justify-center rounded-full border-2 border-[#d3a64b] bg-[#064734] text-[#f3d278] shadow-sm sm:left-1/2">
+                  <Icon size={18} strokeWidth={1.6} aria-hidden="true" />
+                </div>
+
+                <div
+                  className={`ml-12 w-full rounded-xl border border-[#ead8b6] bg-white p-4 shadow-sm transition hover:shadow-md sm:ml-0 sm:w-[44%] sm:p-5 ${side === "right" ? "sm:mr-2" : "sm:ml-2"
+                    }`}
+                >
+                  <span className="inline-flex rounded-full bg-[#f8efd9] px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-[#986817]">
+                    {year}
+                  </span>
+
+                  <h3 className="mt-2 font-serif text-xl font-bold text-[#153b2e]">
+                    {title}
+                  </h3>
+
+                  <p className="mt-2 text-xs leading-6 text-[#68645c] sm:text-sm">
+                    {description}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-10 flex justify-center">
+            <Link
+              to="/explore"
+              className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#f2cf76] to-[#d9a441] px-6 py-3 text-sm font-bold text-[#153729] transition hover:brightness-105"
+            >
+              Explore Our Collections
+              <ArrowRight size={16} aria-hidden="true" />
+            </Link>
+          </div>
+        </PageContainer>
+      </section>
+      
 
       <section className="py-10 sm:py-12">
         <PageContainer>
