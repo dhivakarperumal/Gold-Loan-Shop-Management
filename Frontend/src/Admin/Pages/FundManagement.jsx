@@ -408,6 +408,21 @@ function FundManagement() {
         )}
       </section>
 
+      <div className="grid gap-2 sm:grid-cols-3 print:hidden">
+        <label className="relative">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input value={filters.search} onChange={(event) => updateFilter("search", event.target.value)} placeholder="Search customer, reference..." className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm" />
+        </label>
+        <select value={filters.account_id} onChange={(event) => updateFilter("account_id", event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700">
+          <option value="">All accounts</option>
+          {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+        </select>
+        <select value={filters.transaction_type} onChange={(event) => updateFilter("transaction_type", event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700">
+          <option value="ALL">All transaction types</option>
+          <option value="FUND_ADDED">Fund Added</option><option value="DEBIT">Debit</option><option value="CREDIT">Credit</option><option value="TRANSFER_IN">Transfer In</option><option value="TRANSFER_OUT">Transfer Out</option>
+        </select>
+      </div>
+
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-col justify-between gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:p-5">
           <div>
@@ -419,20 +434,6 @@ function FundManagement() {
             <button onClick={exportExcel} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"><Download size={14} /> Excel</button>
             <button onClick={printReport} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"><FileText size={14} /> Print / PDF</button>
           </div>
-        </div>
-        <div className="grid gap-2 border-b border-slate-100 p-4 sm:grid-cols-3 print:hidden">
-          <label className="relative">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input value={filters.search} onChange={(event) => updateFilter("search", event.target.value)} placeholder="Search customer, reference..." className="w-full rounded-lg border border-slate-200 py-2 pl-9 pr-3 text-sm" />
-          </label>
-          <select value={filters.account_id} onChange={(event) => updateFilter("account_id", event.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700">
-            <option value="">All accounts</option>
-            {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
-          </select>
-          <select value={filters.transaction_type} onChange={(event) => updateFilter("transaction_type", event.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700">
-            <option value="ALL">All transaction types</option>
-            <option value="FUND_ADDED">Fund Added</option><option value="DEBIT">Debit</option><option value="CREDIT">Credit</option><option value="TRANSFER_IN">Transfer In</option><option value="TRANSFER_OUT">Transfer Out</option>
-          </select>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1100px] text-left text-xs">
