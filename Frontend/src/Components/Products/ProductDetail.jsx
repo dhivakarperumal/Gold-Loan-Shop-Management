@@ -177,10 +177,6 @@ const ProductDetail = () => {
       y: Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height))
     });
   };
-  const previewPosition = (point) => {
-    const position = (point - 0.5 / zoom) / (1 - 1 / zoom);
-    return `${Math.max(0, Math.min(1, position)) * 100}%`;
-  };
   const loading = loadedProductId !== id;
 
   if (loading) {
@@ -311,13 +307,17 @@ const ProductDetail = () => {
               }}
               onPointerMove={updateImagePointer}
               onPointerLeave={() => setIsImageHovered(false)}
-              className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-[#f8f6ef]"
+              className={`relative flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-[#f8f6ef] ${isImageHovered && zoom > 1 ? "cursor-zoom-in" : ""}`}
             >
               {images.length ? (
                 <img
                   src={assetUrl(selectedImage)}
                   alt={product.name}
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-cover transition-none"
+                  style={{
+                    transform: `scale(${isImageHovered ? zoom : 1})`,
+                    transformOrigin: `${imagePointer.x * 100}% ${imagePointer.y * 100}%`
+                  }}
                 />
               ) : (
                 <div className="text-center text-sm text-[#887c69]">
@@ -348,18 +348,6 @@ const ProductDetail = () => {
                       <span aria-hidden="true">+</span>
                     </button>
                   </div>
-                  {isImageHovered && zoom > 1 && (
-                    <div
-                      aria-hidden="true"
-                      className="pointer-events-none absolute right-3 top-1/2 z-10 hidden h-[38%] w-[34%] -translate-y-1/2 overflow-hidden rounded-xl border-2 border-white shadow-lg md:block"
-                      style={{
-                        backgroundImage: `url("${assetUrl(selectedImage)}")`,
-                        backgroundRepeat: "no-repeat",
-                        backgroundSize: `${zoom * 100}% ${zoom * 100}%`,
-                        backgroundPosition: `${previewPosition(imagePointer.x)} ${previewPosition(imagePointer.y)}`
-                      }}
-                    />
-                  )}
                 </>
               )}
               {(product.best_seller || product.featured) && (
