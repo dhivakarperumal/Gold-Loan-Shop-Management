@@ -207,8 +207,8 @@ const UserProfile = () => {
 
       <PageContainer className="pt-5">
         <div className="mt-5 grid items-start gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
-        <aside className="flex min-w-0 flex-col gap-4">
-          <section className="flex flex-col items-center gap-3 rounded-2xl border border-[#e9e3d7] bg-white p-5 text-center shadow-sm">
+        <aside className="min-w-0 overflow-hidden rounded-2xl border border-[#e9e3d7] bg-white p-2.5 shadow-sm">
+          <section className="flex flex-col items-center gap-3 px-3 py-4 text-center">
             <div className="relative shrink-0">
               <div className="flex h-16 w-16 items-center justify-center rounded-full text-2xl font-black shadow-sm"
                 style={{ background: "linear-gradient(135deg,#D4A017,#F5C45E)", color: "#004D40" }}>
@@ -223,21 +223,9 @@ const UserProfile = () => {
               <h2 className="mt-1 truncate font-serif text-lg font-bold text-[#201a13]">{name}</h2>
               <p className="mt-0.5 truncate text-xs text-slate-500">{email}</p>
             </div>
-            <div className="flex w-full flex-col gap-2">
-              {isAdmin && (
-                <button type="button" onClick={() => navigate("/admin")}
-                  className="flex items-center justify-center gap-2 rounded-full border border-[#174a3f]/20 px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider text-[#174a3f] transition hover:bg-[#f4f8f5]">
-                  <FiShield size={14} /> Admin Panel
-                </button>
-              )}
-              <button type="button" onClick={handleLogout}
-                className="flex items-center justify-center gap-2 rounded-full bg-red-500/90 px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider text-white transition hover:bg-red-600">
-                <FiLogOut size={14} /> Logout
-              </button>
-            </div>
           </section>
 
-        <nav aria-label="Profile sections" className="hide-scrollbar flex min-w-0 overflow-x-auto rounded-xl border border-[#e9e3d7] bg-white p-1.5 shadow-sm lg:flex-col lg:overflow-visible">
+        <nav aria-label="Profile sections" className="flex min-w-0 flex-col border-y border-[#eee8dc] py-2">
           {[
             { id: "profile", label: "Profile Details", icon: FiUser },
             { id: "wishlist", label: "Wishlist Products", icon: FiHeart, count: wishlist.length },
@@ -251,7 +239,7 @@ const UserProfile = () => {
               aria-selected={activeTab === id}
               aria-controls={`profile-panel-${id}`}
               onClick={() => setActiveTab(id)}
-              className={`inline-flex w-full min-w-max flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 text-xs font-bold transition sm:text-sm lg:min-w-0 lg:flex-none lg:justify-start lg:px-4 ${
+              className={`inline-flex w-full min-w-0 items-center justify-start gap-2 rounded-lg px-3 py-3 text-left text-xs font-bold transition sm:text-sm ${
                 activeTab === id
                   ? "bg-[#174a3f] text-white shadow-sm"
                   : "text-[#66726c] hover:bg-[#f5f7f3] hover:text-[#174a3f]"
@@ -267,6 +255,18 @@ const UserProfile = () => {
             </button>
           ))}
         </nav>
+          <div className="flex flex-col gap-2 px-2 py-3">
+            {isAdmin && (
+              <button type="button" onClick={() => navigate("/admin")}
+                className="flex items-center justify-center gap-2 rounded-full border border-[#174a3f]/20 px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider text-[#174a3f] transition hover:bg-[#f4f8f5]">
+                <FiShield size={14} /> Admin Panel
+              </button>
+            )}
+            <button type="button" onClick={handleLogout}
+              className="flex items-center justify-center gap-2 rounded-full bg-red-500/90 px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider text-white transition hover:bg-red-600">
+              <FiLogOut size={14} /> Logout
+            </button>
+          </div>
         </aside>
 
         <section
