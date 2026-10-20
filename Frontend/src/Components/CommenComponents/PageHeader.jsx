@@ -12,7 +12,7 @@ const PageHeader = ({ title, background }) => {
 
   return (
     <div
-      className="relative flex h-[210px] w-full items-center overflow-hidden sm:h-[250px] lg:h-[290px]"
+      className="relative flex h-[180px] w-full items-center overflow-hidden sm:h-[190px] lg:h-[220px]"
       style={{
         backgroundImage: `url(${bgImage})`,
         backgroundSize: "cover",
@@ -26,9 +26,9 @@ const PageHeader = ({ title, background }) => {
             <span className="h-2.5 w-2.5 rotate-45 border border-[#c58a22]" aria-hidden="true" />
             <span className="h-px flex-1 bg-[#c58a22]/70" />
           </div>
-          <h1 className="font-serif text-4xl font-bold uppercase leading-none tracking-[0.04em] text-[#073b2e] sm:text-5xl md:text-6xl lg:text-7xl">
+          <h1 className="font-serif text-3xl font-bold uppercase leading-none tracking-[0.04em] text-[#073b2e] sm:text-3xl md:text-4xl lg:text-5xl">
             {words.length > 0 && <>{words.join(" ")} </>}
-            <span className="text-[#bd801c]">{accentWord}</span>
+            <span>{accentWord}</span>
           </h1>
           <p className="mt-3 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#35483f] sm:mt-4 sm:text-xs md:text-sm md:tracking-[0.28em]">
             {subtitles[title] || "SRI GOLDS  •  TIMELESS ELEGANCE"}
