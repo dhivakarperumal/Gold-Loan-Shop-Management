@@ -151,37 +151,33 @@ export default function OverdueLoans() {
           <p className="mt-0.5 text-xs text-slate-500">Overdue is calculated after the maturity date plus any configured grace-period days.</p>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1400px] table-fixed border-separate border-spacing-0 text-left">
+          <table className="w-full min-w-[1100px] table-fixed border-separate border-spacing-0 text-left">
             <colgroup>
-              <col className="[width:12%]" />
+              <col className="[width:18%]" />
+              <col className="[width:24%]" />
+              <col className="[width:14%]" />
+              <col className="[width:14%]" />
               <col className="[width:13%]" />
-              <col className="[width:20%]" />
-              <col className="[width:15%]" />
               <col className="[width:9%]" />
-              <col className="[width:10%]" />
-              <col className="[width:10%]" />
-              <col className="[width:6%]" />
-              <col className="[width:5%]" />
+              <col className="[width:8%]" />
             </colgroup>
             <thead><tr className="bg-[#064A41] text-[11px] font-bold uppercase tracking-wide text-emerald-50/90">
-              {["Loan / Pledge", "Customer", "Contact & Address", "Guarantor", "Loan Amount", "Outstanding", "Maturity", "Overdue", "View"].map((heading) => <th key={heading} className="whitespace-nowrap px-3 py-3.5 first:rounded-tl-xl first:pl-4 last:rounded-tr-xl last:pr-4">{heading}</th>)}
+              {["Loan / Pledge", "Customer", "Loan Amount", "Outstanding", "Maturity", "Overdue", "View"].map((heading) => <th key={heading} className="whitespace-nowrap px-2 py-3.5 first:rounded-tl-xl first:pl-3 last:rounded-tr-xl last:pr-3">{heading}</th>)}
             </tr></thead>
             <tbody className="divide-y divide-slate-100">
               {loading
-                ? <tr><td colSpan="9" className="px-4 py-14 text-center text-sm text-slate-400">Loading overdue loans...</td></tr>
+                ? <tr><td colSpan="7" className="px-4 py-14 text-center text-sm text-slate-400">Loading overdue loans...</td></tr>
                 : !filteredLoans.length
-                  ? <tr><td colSpan="9" className="px-4 py-14 text-center text-sm text-slate-400">{overdueLoans.length ? "No overdue loans match your search." : "There are no overdue active loans."}</td></tr>
+                  ? <tr><td colSpan="7" className="px-4 py-14 text-center text-sm text-slate-400">{overdueLoans.length ? "No overdue loans match your search." : "There are no overdue active loans."}</td></tr>
                   : filteredLoans.map((loan) => (
                     <tr key={loan.id} className="align-top text-sm transition-colors hover:bg-rose-50/30">
-                      <td className="break-words px-3 py-4 pl-4"><span className="block font-bold text-[#064A41]">{loan.loan_number}</span><span className="mt-1 block text-xs text-slate-500">Pledge: {loan.gold_pledge_number || "—"}</span>{isLoanReviewDue(loan, today) && <span className="mt-2 inline-flex rounded-full bg-amber-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-800">15-month review</span>}</td>
-                      <td className="break-words px-3 py-4 font-semibold text-slate-800">{loan.customer_name || "—"}</td>
-                      <td className="break-words px-3 py-4"><dl className="space-y-2"><Detail label="Mobile" value={loan.customer_mobile} /><Detail label="Alternate mobile" value={loan.customer_alternate_mobile} /><Detail label="Email" value={loan.customer_email} /><Detail label="Address" value={[loan.customer_address, loan.customer_city, loan.customer_district, loan.customer_state, loan.customer_pincode].filter(Boolean).join(", ")} /></dl></td>
-                      <td className="break-words px-3 py-4"><dl className="space-y-2"><Detail label="Name" value={loan.guarantor_name} /><Detail label="Mobile" value={loan.guarantor_mobile} /><Detail label="Email" value={loan.guarantor_email} /><Detail label="Relationship" value={loan.guarantor_relationship} /><Detail label="Address" value={loan.guarantor_address} /></dl></td>
-                      <td className="break-words px-3 py-4 font-medium text-slate-700">{money(loan.principal_amount)}<span className="mt-1 block text-xs text-slate-500">{Number(loan.interest_rate || 0).toFixed(2)}% interest</span></td>
-                      <td className="break-words px-3 py-4 font-bold text-rose-700">{money(loan.outstanding_principal ?? loan.principal_amount)}</td>
-                      <td className="break-words px-3 py-4 text-slate-600"><span className="inline-flex items-center gap-1.5"><FiCalendar />{dateText(loan.maturity_date)}</span><span className="mt-1 block text-xs text-slate-400">Grace: {Number(loan.grace_period_days) || 0} days</span></td>
-                      <td className="break-words px-3 py-4"><span className="inline-flex whitespace-nowrap rounded-full bg-rose-50 px-2.5 py-1.5 text-xs font-bold text-rose-700">{loan.overdue_days} {loan.overdue_days === 1 ? "day" : "days"}</span></td>
-                      <td className="px-3 py-4 pr-4"><Link to={`/admin/loans/details/${loan.id}`} aria-label={`View loan ${loan.loan_number}`} className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100"><FiEye /> View</Link></td>
+                      <td className="break-words px-2 py-4 pl-3"><span className="block font-bold text-[#064A41]">{loan.loan_number}</span>{isLoanReviewDue(loan, today) && <span className="mt-2 inline-flex rounded-full bg-amber-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-800">15-month review</span>}</td>
+                      <td className="break-words px-2 py-4"><span className="block font-semibold text-slate-800">{loan.customer_name || "—"}</span><span className="mt-1 block text-xs text-slate-500">{loan.customer_mobile || "Mobile number unavailable"}</span></td>
+                      <td className="break-words px-2 py-4 font-medium text-slate-700">{money(loan.principal_amount)}<span className="mt-1 block text-xs text-slate-500">{Number(loan.interest_rate || 0).toFixed(2)}% interest</span></td>
+                      <td className="break-words px-2 py-4 font-bold text-rose-700">{money(loan.outstanding_principal ?? loan.principal_amount)}</td>
+                      <td className="break-words px-2 py-4 text-slate-600"><span className="inline-flex items-center gap-1.5"><FiCalendar />{dateText(loan.maturity_date)}</span><span className="mt-1 block text-xs text-slate-400">Grace: {Number(loan.grace_period_days) || 0} days</span></td>
+                      <td className="break-words px-2 py-4"><span className="inline-flex whitespace-nowrap rounded-full bg-rose-50 px-2.5 py-1.5 text-xs font-bold text-rose-700">{loan.overdue_days} {loan.overdue_days === 1 ? "day" : "days"}</span></td>
+                      <td className="px-2 py-4 pr-3"><Link to={`/admin/loans/details/${loan.id}`} aria-label={`View loan ${loan.loan_number}`} className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100"><FiEye /> View</Link></td>
                     </tr>
                   ))}
             </tbody>
@@ -198,34 +194,17 @@ export default function OverdueLoans() {
                   <div className="min-w-0">
                     <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Loan / Pledge</p>
                     <h2 className="mt-1 break-words font-bold text-[#064A41]">{loan.loan_number}</h2>
-                    <p className="mt-1 break-words text-xs text-slate-500">Pledge: {loan.gold_pledge_number || "—"}</p>
                   </div>
                   <span className="inline-flex shrink-0 rounded-full bg-rose-50 px-2.5 py-1.5 text-xs font-bold text-rose-700">{loan.overdue_days} {loan.overdue_days === 1 ? "day" : "days"} overdue</span>
                 </div>
                 {isLoanReviewDue(loan, today) && <span className="mt-3 inline-flex rounded-full bg-amber-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-800">15-month review</span>}
                 <div className="mt-4 grid gap-4 border-t border-slate-100 pt-4 sm:grid-cols-2">
                   <dl className="space-y-2">
-                    <Detail label="Customer" value={loan.customer_name} />
+                    <Detail label="Customer" value={<>{loan.customer_name || "—"}<span className="mt-1 block text-[10px] text-slate-500">{loan.customer_mobile || "Mobile number unavailable"}</span></>} />
                     <Detail label="Customer ID" value={loan.customer_code} />
                     <Detail label="Date of birth" value={dateText(loan.customer_date_of_birth)} />
                     <Detail label="Gender / occupation" value={[loan.customer_gender, loan.customer_occupation].filter(Boolean).join(" · ")} />
                     <Detail label="KYC" value={loan.customer_kyc_status} />
-                  </dl>
-                  <dl className="space-y-2">
-                    <Detail label="Mobile" value={loan.customer_mobile} />
-                    <Detail label="Alternate mobile" value={loan.customer_alternate_mobile} />
-                    <Detail label="Email" value={loan.customer_email} />
-                    <Detail label="Address" value={[loan.customer_address, loan.customer_city, loan.customer_district, loan.customer_state, loan.customer_pincode].filter(Boolean).join(", ")} />
-                  </dl>
-                </div>
-                <div className="mt-4 border-t border-slate-100 pt-4">
-                  <p className="mb-2 text-[10px] font-semibold uppercase tracking-wide text-slate-400">Guarantor</p>
-                  <dl className="grid gap-2 sm:grid-cols-2">
-                    <Detail label="Name" value={loan.guarantor_name} />
-                    <Detail label="Mobile" value={loan.guarantor_mobile} />
-                    <Detail label="Email" value={loan.guarantor_email} />
-                    <Detail label="Relationship" value={loan.guarantor_relationship} />
-                    <div className="sm:col-span-2"><Detail label="Address" value={loan.guarantor_address} /></div>
                   </dl>
                 </div>
                 <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-4">
