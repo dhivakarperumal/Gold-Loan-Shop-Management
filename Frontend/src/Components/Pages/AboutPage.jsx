@@ -80,113 +80,56 @@ export default function AboutPage() {
         </PageContainer>
       </section>
 
-      {/* Our Heritage */}
-      <section className="relative isolate overflow-hidden bg-[#00382a] text-white">
-        {/* Background image */}
-        <img
-          src="/images/goldproduct.png"
-          alt=""
-          aria-hidden="true"
-          loading="lazy"
-          className="absolute inset-0 -z-20 h-full w-full object-cover object-[70%_55%]"
-        />
+{/* Our Heritage */}
+<section className="relative isolate overflow-hidden bg-[#00382a] text-white">
+  {/* Clear image on the right */}
+  <img
+    src="/images/goldproduct.png"
+    alt="Sri Golds jewellery collection"
+    loading="lazy"
+    className="absolute inset-0 -z-20 h-full w-full object-cover object-[75%_45%]"
+  />
 
-        {/* Rich emerald overlays */}
-        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#00271e]/95 via-[#00382a]/85 to-[#00382a]/45" />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-t from-[#00271e]/55 via-transparent to-transparent" />
+  {/* Darken only the left side; keep the right image clear */}
+  <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#00291f] via-[#00382a]/40 to-[#00382a]/10" />
 
-        {/* Decorative gold accents */}
-        <div className="pointer-events-none absolute -right-16 -top-24 -z-10 h-72 w-72 rounded-full border border-[#e9c66d]/20 sm:h-96 sm:w-96" />
-        <div className="pointer-events-none absolute -right-8 -top-16 -z-10 h-56 w-56 rounded-full border border-[#e9c66d]/15 sm:h-80 sm:w-80" />
+  <PageContainer className="relative">
+    <div className="flex min-h-[260px] items-center py-8 sm:min-h-[290px] sm:py-10 lg:min-h-[310px]">
+      <div className="max-w-xl">
+        <div className="mb-3 flex items-center gap-3">
+          <span className="h-px w-8 bg-[#e9c66d]" />
+          <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#f2d58a] sm:text-xs">
+            Our Heritage
+          </p>
+        </div>
 
-        <PageContainer className="relative">
-          <div className="grid items-center gap-8 py-12 sm:py-16 lg:grid-cols-[1fr_auto] lg:gap-12 lg:py-20">
-            {/* Content */}
-            <div className="max-w-3xl">
-              <div className="mb-5 inline-flex items-center gap-3">
-                <span className="h-px w-9 bg-[#e9c66d]" />
-                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#f2d58a] sm:text-xs">
-                  Our Heritage
-                </p>
-              </div>
+        <h2 className="font-serif text-2xl font-bold leading-tight sm:text-3xl lg:text-4xl">
+          Tradition Meets
+          <span className="block text-[#f2d58a]">
+            Modern Elegance
+          </span>
+        </h2>
 
-              <h2 className="max-w-2xl font-serif text-3xl font-semibold leading-tight sm:text-4xl lg:text-5xl xl:text-[3.5rem]">
-                Tradition Meets
-                <span className="mt-1 block text-[#f2d58a]">
-                  Modern Elegance
-                </span>
-              </h2>
+        <p className="mt-3 max-w-md text-xs leading-6 text-white/85 sm:text-sm sm:leading-7">
+          From classic inspiration to contemporary design, we celebrate
+          the artistry and meaning behind every piece.
+        </p>
 
-              <p className="mt-5 max-w-xl text-sm leading-7 text-white/80 sm:text-base sm:leading-8">
-                From timeless traditional designs to contemporary elegance, every
-                piece celebrates beauty, meaningful moments, and the art of
-                jewellery.
-              </p>
-
-              {/* Brand highlights */}
-              <div className="mt-7 flex flex-wrap gap-x-6 gap-y-3 border-t border-white/15 pt-5 sm:gap-x-8">
-                {[
-                  "Timeless Designs",
-                  "Quality Focused",
-                  "Made for Every Moment",
-                ].map((item) => (
-                  <div key={item} className="flex items-center gap-2">
-                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[#e9c66d]/60 text-[#f2d58a]">
-                      <span className="text-[10px]">✓</span>
-                    </span>
-                    <span className="text-xs font-medium text-white/90 sm:text-sm">
-                      {item}
-                    </span>
-                  </div>
-                ))}
-              </div>
-
-              {/* CTA */}
-              <div className="mt-8 flex flex-wrap items-center gap-5">
-                <Link
-                  to="/explore"
-                  className="group inline-flex items-center gap-3 rounded-full bg-gradient-to-r from-[#f4d68a] to-[#d8a43c] px-6 py-3.5 text-sm font-bold text-[#153729] shadow-lg shadow-black/10 transition duration-300 hover:-translate-y-0.5 hover:shadow-xl"
-                >
-                  Discover Our Collections
-                  <ArrowRight
-                    size={17}
-                    className="transition-transform duration-300 group-hover:translate-x-1"
-                    aria-hidden="true"
-                  />
-                </Link>
-
-                <span className="text-xs tracking-wide text-white/65">
-                  Elegance that lasts
-                </span>
-              </div>
-            </div>
-
-            {/* Decorative emblem */}
-            <div className="hidden lg:flex lg:justify-center">
-              <div className="flex h-36 w-36 items-center justify-center rounded-full border border-[#e9c66d]/50 p-3 xl:h-44 xl:w-44">
-                <div className="flex h-full w-full flex-col items-center justify-center rounded-full border border-[#e9c66d]/25">
-                  <Gem
-                    size={34}
-                    strokeWidth={1.2}
-                    className="text-[#f2d58a]"
-                    aria-hidden="true"
-                  />
-                  <span className="mt-3 font-serif text-sm tracking-[0.18em] text-[#f2d58a]">
-                    SRI GOLDS
-                  </span>
-                  <span className="mt-1 text-[8px] uppercase tracking-[0.22em] text-white/65">
-                    Timeless Elegance
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </PageContainer>
-      </section>
-
-
-
-
+        <Link
+          to="/explore"
+          className="group mt-5 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#f2cf76] to-[#d9a441] px-5 py-2.5 text-xs font-bold text-[#153729] transition hover:brightness-110 sm:text-sm"
+        >
+          Discover Our Collections
+          <ArrowRight
+            size={16}
+            className="transition-transform group-hover:translate-x-1"
+            aria-hidden="true"
+          />
+        </Link>
+      </div>
+    </div>
+  </PageContainer>
+</section>
 
       {/* Our History Section */}
       <section className="overflow-hidden bg-[#fffaf0] py-12 sm:py-16 lg:py-20">
@@ -282,8 +225,8 @@ export default function AboutPage() {
                     {/* Image side */}
                     <div
                       className={`min-w-0 ${side === "right"
-                          ? "sm:col-start-3 sm:row-start-1"
-                          : "sm:col-start-1 sm:row-start-1"
+                        ? "sm:col-start-3 sm:row-start-1"
+                        : "sm:col-start-1 sm:row-start-1"
                         }`}
                     >
                       <div className="group relative overflow-hidden rounded-2xl border border-[#e5cf9d] bg-white p-2 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
@@ -320,8 +263,8 @@ export default function AboutPage() {
                     {/* History content */}
                     <div
                       className={`min-w-0 ${side === "right"
-                          ? "sm:col-start-1 sm:row-start-1"
-                          : "sm:col-start-3 sm:row-start-1"
+                        ? "sm:col-start-1 sm:row-start-1"
+                        : "sm:col-start-3 sm:row-start-1"
                         }`}
                     >
                       <div className="relative h-full rounded-2xl border border-[#ead8b6] bg-white p-5 shadow-sm transition duration-300 hover:border-[#d3b56d] hover:shadow-md sm:p-6 lg:p-8">
