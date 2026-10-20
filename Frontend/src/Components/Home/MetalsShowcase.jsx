@@ -110,7 +110,7 @@ export default function MetalsShowcase() {
 
   return (
     <section
-      className="bg-[#fbf7ed] py-4 sm:py-6"
+      className="bg-[#fbf7ed] py-3 sm:py-4"
       aria-label="Explore our metal collections"
     >
       <PageContainer>
@@ -142,7 +142,7 @@ export default function MetalsShowcase() {
               return (
                 <article
                   key={metal.id}
-                  className="group relative grid min-h-[265px] grid-cols-[46%_54%] overflow-hidden rounded-xl border border-[#e6cf9c] bg-[#fffaf0] shadow-[0_3px_12px_rgba(113,79,24,0.06)] sm:min-h-[285px] lg:min-h-[320px] xl:min-h-[350px]"
+                  className="group relative grid min-h-[225px] grid-cols-[46%_54%] overflow-hidden rounded-xl border border-[#e6cf9c] bg-gradient-to-br from-[#fffaf0] via-[#fffdf8] to-[#f3e6ca] shadow-[0_3px_12px_rgba(113,79,24,0.06)] sm:min-h-[245px] lg:min-h-[270px] xl:min-h-[290px]"
                 >
                   <Link
                     to={exploreUrl}
@@ -174,7 +174,7 @@ export default function MetalsShowcase() {
                     </span>
                   </Link>
 
-                  <div className="relative flex min-w-0 flex-col justify-center overflow-hidden px-3 py-5 pl-5 sm:px-5 sm:pl-7 lg:px-7 lg:pl-9">
+                  <div className="relative flex min-w-0 flex-col justify-center overflow-hidden bg-gradient-to-br from-[#fffdf8]/90 via-[#fffaf0]/85 to-[#f6ead2]/90 px-3 py-4 pl-5 sm:px-5 sm:py-4 sm:pl-7 lg:px-7 lg:pl-9">
                     <Flower2
                       size={104}
                       strokeWidth={0.7}
@@ -187,7 +187,7 @@ export default function MetalsShowcase() {
                       className="pointer-events-none absolute -bottom-6 right-10 hidden text-[#d7b568]/15 sm:block"
                       aria-hidden="true"
                     />
-                    <span className="relative mb-3 h-[2px] w-10 bg-[#c48a22] sm:w-12" />
+                    <span className="relative mb-2 h-[2px] w-10 bg-[#c48a22] sm:w-12" />
 
                     <h3 className="relative font-serif text-2xl font-bold leading-tight text-[#073b2b] sm:text-3xl lg:text-4xl">
                       {metal.name}
@@ -199,14 +199,14 @@ export default function MetalsShowcase() {
                       </p>
                     )}
 
-                    <p className="relative mt-3 text-xs leading-relaxed text-[#68645c] sm:text-sm lg:text-base">
+                    <p className="relative mt-2 line-clamp-3 text-xs leading-relaxed text-[#68645c] sm:text-sm">
                       {description ||
                         `Discover our beautiful ${metal.name.toLowerCase()} collection, selected for quality and timeless style.`}
                     </p>
 
                     <Link
                       to={exploreUrl}
-                      className="relative mt-4 inline-flex w-fit items-center gap-2 border-b border-[#d9a441] pb-1 text-xs font-bold text-[#073b2b] transition hover:text-[#a66b00] sm:mt-5 sm:text-sm"
+                      className="relative mt-3 inline-flex w-fit items-center gap-2 border-b border-[#d9a441] pb-1 text-xs font-bold text-[#073b2b] transition hover:text-[#a66b00] sm:mt-4 sm:text-sm"
                     >
                       Explore {metal.name}
                       <ArrowRight
