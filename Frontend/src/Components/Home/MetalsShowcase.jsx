@@ -19,9 +19,9 @@ const METAL_TEXT_COLORS = {
     details: "text-[#f1ead8]",
   },
   silver: {
-    eyebrow: "text-[#71847a]",
-    title: "text-[#315b4d]",
-    details: "text-[#3f554b]",
+    eyebrow: "text-[#42594f]",
+    title: "text-[#183d32]",
+    details: "text-[#2f453a]",
   },
   diamond: {
     eyebrow: "text-[#b77932]",
