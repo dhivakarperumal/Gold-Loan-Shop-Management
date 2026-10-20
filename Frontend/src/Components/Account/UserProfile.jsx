@@ -235,7 +235,8 @@ const UserProfile = () => {
           </div>
         </section>
 
-        <nav aria-label="Profile sections" className="hide-scrollbar flex overflow-x-auto rounded-xl border border-[#e9e3d7] bg-white p-1.5 shadow-sm">
+        <div className="mt-5 grid items-start gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
+        <nav aria-label="Profile sections" className="hide-scrollbar flex min-w-0 overflow-x-auto rounded-xl border border-[#e9e3d7] bg-white p-1.5 shadow-sm lg:flex-col lg:overflow-visible">
           {[
             { id: "profile", label: "Profile Details", icon: FiUser },
             { id: "wishlist", label: "Wishlist Products", icon: FiHeart, count: wishlist.length },
@@ -249,7 +250,7 @@ const UserProfile = () => {
               aria-selected={activeTab === id}
               aria-controls={`profile-panel-${id}`}
               onClick={() => setActiveTab(id)}
-              className={`inline-flex min-w-max flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 text-xs font-bold transition sm:text-sm ${
+              className={`inline-flex w-full min-w-max flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 text-xs font-bold transition sm:text-sm lg:min-w-0 lg:flex-none lg:justify-start lg:px-4 ${
                 activeTab === id
                   ? "bg-[#174a3f] text-white shadow-sm"
                   : "text-[#66726c] hover:bg-[#f5f7f3] hover:text-[#174a3f]"
@@ -270,7 +271,7 @@ const UserProfile = () => {
           role="tabpanel"
           id={`profile-panel-${activeTab}`}
           aria-labelledby={`profile-tab-${activeTab}`}
-          className="mt-5"
+          className="mt-0 min-w-0"
         >
           {activeTab === "profile" && (
             <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.7fr)_minmax(260px,0.8fr)]">
@@ -427,6 +428,7 @@ const UserProfile = () => {
             </section>
           )}
         </section>
+        </div>
       </PageContainer>
     </div>
   );
