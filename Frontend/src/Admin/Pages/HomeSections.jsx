@@ -100,12 +100,13 @@ const HomeSections = () => {
                 </p>
               </div>
               <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-600">View</span>
                 <button
                   type="button"
                   onClick={() => toggleSection(section.key)}
                   role="switch"
                   aria-checked={section.visible}
-                  aria-label={`Display ${section.label} on home page`}
+                  aria-label={`View ${section.label} on home page`}
                   className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#087568] focus-visible:ring-offset-2 ${
                     section.visible ? "bg-[#087568]" : "bg-slate-300"
                   }`}
