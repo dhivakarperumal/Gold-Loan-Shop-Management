@@ -146,31 +146,29 @@ export default function OverdueLoans() {
       </section>
 
       {viewMode === "table" ? <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
-        <div className="border-b border-slate-100 px-5 py-4">
-          <h2 className="font-bold text-slate-800">Overdue customer register</h2>
-          <p className="mt-0.5 text-xs text-slate-500">Overdue is calculated after the maturity date plus any configured grace-period days.</p>
-        </div>
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1100px] table-fixed border-separate border-spacing-0 text-left">
+          <table className="mx-auto w-[1100px] min-w-[1100px] table-fixed border-separate border-spacing-0 text-left">
             <colgroup>
-              <col className="[width:18%]" />
-              <col className="[width:24%]" />
+              <col className="[width:5%]" />
+              <col className="[width:17%]" />
+              <col className="[width:23%]" />
               <col className="[width:14%]" />
               <col className="[width:14%]" />
               <col className="[width:13%]" />
-              <col className="[width:9%]" />
               <col className="[width:8%]" />
+              <col className="[width:6%]" />
             </colgroup>
             <thead><tr className="bg-[#064A41] text-[11px] font-bold uppercase tracking-wide text-emerald-50/90">
-              {["Loan / Pledge", "Customer", "Loan Amount", "Outstanding", "Maturity", "Overdue", "View"].map((heading) => <th key={heading} className="whitespace-nowrap px-2 py-3.5 first:rounded-tl-xl first:pl-3 last:rounded-tr-xl last:pr-3">{heading}</th>)}
+              {["S No", "Loan / Pledge", "Customer", "Loan Amount", "Outstanding", "Maturity", "Overdue", "View"].map((heading) => <th key={heading} className="whitespace-nowrap px-2 py-3.5 first:rounded-tl-xl first:pl-3 last:rounded-tr-xl last:pr-3">{heading}</th>)}
             </tr></thead>
             <tbody className="divide-y divide-slate-100">
               {loading
-                ? <tr><td colSpan="7" className="px-4 py-14 text-center text-sm text-slate-400">Loading overdue loans...</td></tr>
+                ? <tr><td colSpan="8" className="px-4 py-14 text-center text-sm text-slate-400">Loading overdue loans...</td></tr>
                 : !filteredLoans.length
-                  ? <tr><td colSpan="7" className="px-4 py-14 text-center text-sm text-slate-400">{overdueLoans.length ? "No overdue loans match your search." : "There are no overdue active loans."}</td></tr>
-                  : filteredLoans.map((loan) => (
+                  ? <tr><td colSpan="8" className="px-4 py-14 text-center text-sm text-slate-400">{overdueLoans.length ? "No overdue loans match your search." : "There are no overdue active loans."}</td></tr>
+                  : filteredLoans.map((loan, index) => (
                     <tr key={loan.id} className="align-top text-sm transition-colors hover:bg-rose-50/30">
+                      <td className="px-2 py-4 pl-3 text-slate-500">{index + 1}</td>
                       <td className="break-words px-2 py-4 pl-3"><span className="block font-bold text-[#064A41]">{loan.loan_number}</span>{isLoanReviewDue(loan, today) && <span className="mt-2 inline-flex rounded-full bg-amber-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-800">15-month review</span>}</td>
                       <td className="break-words px-2 py-4"><span className="block font-semibold text-slate-800">{loan.customer_name || "—"}</span><span className="mt-1 block text-xs text-slate-500">{loan.customer_mobile || "Mobile number unavailable"}</span></td>
                       <td className="break-words px-2 py-4 font-medium text-slate-700">{money(loan.principal_amount)}<span className="mt-1 block text-xs text-slate-500">{Number(loan.interest_rate || 0).toFixed(2)}% interest</span></td>
