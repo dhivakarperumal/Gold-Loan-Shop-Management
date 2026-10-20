@@ -48,12 +48,9 @@ const Reviews = () => {
 
   // Add Review State
   const [showAddModal, setShowAddModal] = useState(false);
-  const [products, setProducts] = useState([]);
   const [submitting, setSubmitting] = useState(false);
   const [newReview, setNewReview] = useState({
-    product_id: "",
     user_name: "",
-    user_email: "",
     rating: 5,
     comment: "",
     review_image: null
@@ -81,24 +78,10 @@ const Reviews = () => {
     }
   }, [filter, selectedRating, searchQuery, currentCacheKey, setReviewsCache]);
 
-  const fetchProducts = useCallback(async () => {
-    try {
-      const res = await api.get("/products", { params: { limit: 100 } });
-      setProducts(Array.isArray(res.data?.products) ? res.data.products : []);
-    } catch (err) {
-      console.error("Failed to fetch products:", err);
-      toast.error(err.response?.data?.message || "Failed to load products");
-    }
-  }, []);
-
   useEffect(() => {
     const timeout = setTimeout(() => { void fetchReviews(); }, searchQuery ? 500 : 0);
     return () => clearTimeout(timeout);
   }, [fetchReviews, searchQuery]);
-
-  useEffect(() => {
-    if (showAddModal) void Promise.resolve().then(fetchProducts);
-  }, [fetchProducts, showAddModal]);
 
   const handleStatusUpdate = async (id, status) => {
     try {
@@ -136,7 +119,7 @@ const Reviews = () => {
 
   const handleSubmitNewReview = async (e) => {
     e.preventDefault();
-    if (!newReview.product_id || !newReview.user_name || !newReview.comment) {
+    if (!newReview.user_name || !newReview.comment) {
       toast.error("Please fill in all required fields");
       return;
     }
@@ -147,9 +130,7 @@ const Reviews = () => {
       toast.success("Review created successfully");
       setShowAddModal(false);
       setNewReview({
-        product_id: "",
         user_name: "",
-        user_email: "",
         rating: 5,
         comment: "",
         review_image: null
@@ -500,22 +481,7 @@ const Reviews = () => {
             {/* Form */}
             <form onSubmit={handleSubmitNewReview} className="flex-1 overflow-y-auto p-8 space-y-6 custom-scrollbar">
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Target Product *</label>
-                  <select
-                    required
-                    value={newReview.product_id}
-                    onChange={(e) => setNewReview({ ...newReview, product_id: e.target.value })}
-                    className="w-full p-4 rounded-2xl border border-slate-100 bg-slate-50 focus:outline-none focus:ring-4 focus:ring-[#008577]/10 focus:border-[#008577] text-sm font-semibold transition-all"
-                  >
-                    <option value="">Select a Product</option>
-                    {products.map(p => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
-                </div>
-
+              <div className="grid grid-cols-1 gap-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Customer Name *</label>
                   <input
@@ -530,17 +496,6 @@ const Reviews = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Customer Email (Optional)</label>
-                  <input
-                    type="email"
-                    placeholder="email@example.com"
-                    value={newReview.user_email}
-                    onChange={(e) => setNewReview({ ...newReview, user_email: e.target.value })}
-                    className="w-full p-4 rounded-2xl border border-slate-100 bg-slate-50 focus:outline-none focus:ring-4 focus:ring-[#008577]/10 focus:border-[#008577] text-sm font-semibold transition-all"
-                  />
-                </div>
-
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Customer Rating</label>
                   <div className="flex items-center gap-2 p-4 bg-slate-50 rounded-2xl border border-slate-100">
