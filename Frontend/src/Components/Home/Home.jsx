@@ -8,6 +8,7 @@ import Diamond from './Diamond'
 import Gold from './Gold'
 import Platinum from './Platinum'
 import ReviewsSection from './ReviewsSection'
+import TodayGoldRate from './TodayGoldRate'
 
 const HOME_SECTION_COMPONENTS = {
   gold: Gold,
@@ -47,6 +48,7 @@ const Home = () => {
   return (
     <div>
       <Hero />
+      <TodayGoldRate />
       <Category />
       <Banner />
       {sectionsLoading ? (
