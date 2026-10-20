@@ -1,5 +1,6 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
+const { postLoanRenewal } = require('../src/controllers/loanController');
 const {
   allocateRenewalPayment,
   isLoanReviewDue,
@@ -123,4 +124,28 @@ test('does not charge minimum interest for a period with no elapsed time', () =>
   };
 
   assert.equal(makeRenewalPreview(loan, '2026-09-19').accrued_interest, 0);
+});
+
+test('returns a validation response when renewal payment account details are missing', async () => {
+  const response = {
+    statusCode: 200,
+    body: null,
+    status(code) {
+      this.statusCode = code;
+      return this;
+    },
+    json(body) {
+      this.body = body;
+      return this;
+    }
+  };
+
+  await postLoanRenewal({
+    params: { id: '5' },
+    body: { payment_amount: '100' },
+    adminUser: { user_id: 1 }
+  }, response, () => assert.fail('Unexpected error handler call'));
+
+  assert.equal(response.statusCode, 400);
+  assert.equal(response.body.message, 'Select a valid fund account and payment method');
 });

@@ -49,6 +49,7 @@ const INTEREST_TYPES = new Set([
   'simple', 'compound', 'flat', 'reducing_balance', 'daily', 'monthly',
   'annual', 'fixed', 'slab_based', 'custom'
 ]);
+const PAYMENT_METHODS = new Set(['Cash', 'UPI', 'Card', 'Bank Transfer', 'Cheque', 'Other']);
 const REQUIRED_TEXT = ['jewellery_type', 'gold_purity'];
 const MAXIMUM = 999999999999;
 
@@ -311,12 +312,16 @@ async function postLoanRenewal(req, res, next) {
     ].includes(error.code)) {
       return res.status(409).json({ message: error.message });
     }
+    if (error.code === 'FUND_ACCOUNT_NOT_FOUND') return res.status(400).json({ message: error.message });
     if ([
       'INVALID_RENEWAL_PAYMENT',
       'RENEWAL_PAYMENT_BELOW_INTEREST',
       'RENEWAL_PAYMENT_EXCEEDS_DUE'
     ].includes(error.code)) {
       return res.status(400).json({ message: error.message });
+    }
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ message: 'This renewal payment has already been recorded' });
     }
     return next(error);
   }
