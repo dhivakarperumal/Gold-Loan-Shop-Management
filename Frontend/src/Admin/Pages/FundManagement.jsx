@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Banknote, CalendarDays,
-  ChevronDown, Download, FileText, Plus, RefreshCw, Search, Wallet, X
+  ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Banknote,
+  ChevronDown, Download, FileText, LayoutGrid, List, Plus, RefreshCw, Search, Wallet, X
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../api";
+import DateRangeFilter from "../Components/DateRangeFilter";
 
 const CATEGORIES = {
   FUND_ADDED: ["Cash", "Bank Account", "UPI", "Owner Investment", "Business Capital", "Other"],
@@ -22,7 +23,6 @@ const PAYMENT_METHODS = ["Cash", "UPI", "Card", "Bank Transfer", "Cheque", "Othe
 const TYPE_LABELS = { FUND_ADDED: "Fund Added", DEBIT: "Debit", CREDIT: "Credit", TRANSFER_IN: "Transfer", TRANSFER_OUT: "Transfer" };
 const INR = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 });
 const today = () => new Date().toLocaleDateString("en-CA");
-const monthStart = () => `${today().slice(0, 8)}01`;
 
 const emptyEntry = () => ({
   account_id: "", category: "", amount: "", transaction_date: today(),
@@ -48,7 +48,7 @@ function FundManagement() {
   const [summary, setSummary] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [totalTransactions, setTotalTransactions] = useState(0);
-  const [period, setPeriod] = useState({ from: monthStart(), to: today() });
+  const [dateRange, setDateRange] = useState({ preset: "all", startDate: "", endDate: "" });
   const [filters, setFilters] = useState({ account_id: "", transaction_type: "ALL", search: "" });
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -68,18 +68,22 @@ function FundManagement() {
   const [refreshing, setRefreshing] = useState(false);
   const [fundAccountActionsOpen, setFundAccountActionsOpen] = useState(false);
   const [accountsVisible, setAccountsVisible] = useState(false);
+  const [transactionView, setTransactionView] = useState("table");
+  const [accountSearch, setAccountSearch] = useState("");
+  const [accountTypeFilter, setAccountTypeFilter] = useState("");
 
   const fetchData = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
     setLoadError("");
     try {
       const params = {
-        ...period, page, page_size: 20, account_id: filters.account_id,
+        startDate: dateRange.startDate, endDate: dateRange.endDate,
+        page, page_size: 20, account_id: filters.account_id,
         transaction_type: filters.transaction_type, search: filters.search
       };
       const [accountsResponse, summaryResponse, transactionResponse] = await Promise.all([
         api.get("/funds/accounts"),
-        api.get("/funds/summary", { params: period }),
+        api.get("/funds/summary", { params: dateRange }),
         api.get("/funds/transactions", { params })
       ]);
       setAccounts(accountsResponse.data);
@@ -93,11 +97,25 @@ function FundManagement() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [filters.account_id, filters.search, filters.transaction_type, page, period]);
+  }, [dateRange, filters.account_id, filters.search, filters.transaction_type, page]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const activeAccounts = useMemo(() => accounts.filter((account) => account.is_active), [accounts]);
+  const accountTypes = useMemo(
+    () => [...new Set(accounts.map((account) => account.account_type).filter(Boolean))].sort(),
+    [accounts]
+  );
+  const filteredAccounts = useMemo(() => {
+    const query = accountSearch.trim().toLowerCase();
+    return accounts.filter((account) => {
+      const matchesSearch = !query
+        || account.name.toLowerCase().includes(query)
+        || String(account.account_number || "").toLowerCase().includes(query);
+      const matchesType = !accountTypeFilter || account.account_type === accountTypeFilter;
+      return matchesSearch && matchesType;
+    });
+  }, [accountSearch, accountTypeFilter, accounts]);
   const pageCount = Math.max(1, Math.ceil(totalTransactions / 20));
   const selectedAccount = accounts.find((account) => String(account.id) === String(entry.account_id));
 
@@ -173,7 +191,7 @@ function FundManagement() {
   const exportRows = async () => {
     try {
       const response = await api.get("/funds/transactions", {
-        params: { ...period, ...filters, page: 1, page_size: 5000 }
+        params: { startDate: dateRange.startDate, endDate: dateRange.endDate, ...filters, page: 1, page_size: 5000 }
       });
       return response.data.transactions;
     } catch (error) {
@@ -260,8 +278,9 @@ function FundManagement() {
           <h1 className="mt-1 text-2xl font-black sm:text-3xl">Fund Management</h1>
           <p className="mt-2 text-sm text-white/75 print:text-slate-600">Review cash flow, account balances, collections, and business expenses.</p>
         </div>
-        <div className="flex flex-wrap gap-2 print:hidden">
-          <button onClick={() => { setRefreshing(true); fetchData(true); }} className="inline-flex items-center gap-2 rounded-xl border border-white/25 px-3 py-2 text-sm font-bold hover:bg-white/10" aria-label="Refresh funds">
+        <div className="flex flex-wrap items-start justify-end gap-2 print:hidden">
+        <DateRangeFilter onApply={(range) => { setDateRange(range); setPage(1); }} />
+        <button onClick={() => { setRefreshing(true); fetchData(true); }} className="inline-flex items-center gap-2 rounded-xl border border-white/25 px-3 py-2 text-sm font-bold hover:bg-white/10" aria-label="Refresh funds">
             <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} /> Refresh
           </button>
           <button onClick={() => setTransferOpen(true)} className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 text-sm font-bold hover:bg-white/20">
@@ -272,18 +291,6 @@ function FundManagement() {
           </button>
         </div>
       </header>
-
-      <section className="flex flex-wrap items-end justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm print:hidden">
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="text-xs font-bold text-slate-600">Period from
-            <input type="date" value={period.from} max={period.to} onChange={(event) => setPeriod((current) => ({ ...current, from: event.target.value }))} className="mt-1 block rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800" />
-          </label>
-          <label className="text-xs font-bold text-slate-600">To
-            <input type="date" value={period.to} min={period.from} onChange={(event) => setPeriod((current) => ({ ...current, to: event.target.value }))} className="mt-1 block rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800" />
-          </label>
-        </div>
-        <p className="inline-flex items-center gap-2 text-xs font-medium text-slate-500"><CalendarDays size={15} /> Summary is calculated for the selected period.</p>
-      </section>
 
       {loadError && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">{loadError} <button onClick={() => fetchData()} className="ml-2 underline">Retry</button></div>}
 
@@ -344,20 +351,68 @@ function FundManagement() {
           </div>
         </div>
         {accountsVisible && (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            {accounts.map((account) => (
-              <article key={account.id} className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{account.account_type}</p>
-                <h3 className="mt-1 truncate text-sm font-extrabold text-slate-900">{account.name}</h3>
-                {account.account_number && <p className="mt-1 text-xs text-slate-400">•••• {account.account_number.slice(-4)}</p>}
-                <p className="mt-3 text-lg font-black text-[#00695C]">{money(account.current_balance)}</p>
-                <div className="mt-2 flex justify-between gap-2 text-[11px] text-slate-500"><span>In {money(account.total_credit)}</span><span>Out {money(account.total_debit)}</span></div>
-              </article>
-            ))}
-            {!loading && accounts.length === 0 && <p className="text-sm text-slate-500">No fund accounts are available.</p>}
+          <div className="space-y-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <label className="relative w-full sm:max-w-sm">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="search"
+                  value={accountSearch}
+                  onChange={(event) => setAccountSearch(event.target.value)}
+                  placeholder="Search fund accounts..."
+                  aria-label="Search fund accounts"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-sm text-slate-700 outline-none transition focus:border-[#00695C] focus:bg-white focus:ring-2 focus:ring-emerald-700/10"
+                />
+              </label>
+              <div className="flex items-center gap-2">
+                <select
+                  value={accountTypeFilter}
+                  onChange={(event) => setAccountTypeFilter(event.target.value)}
+                  aria-label="Filter fund accounts by type"
+                  className="min-h-10 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 outline-none focus:border-[#00695C] focus:ring-2 focus:ring-emerald-700/10"
+                >
+                  <option value="">All account types</option>
+                  {accountTypes.map((type) => <option key={type} value={type}>{type}</option>)}
+                </select>
+                <span className="whitespace-nowrap text-xs font-medium text-slate-500">
+                  {filteredAccounts.length} {filteredAccounts.length === 1 ? "account" : "accounts"}
+                </span>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+              {filteredAccounts.map((account) => (
+                <article key={account.id} className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{account.account_type}</p>
+                  <h3 className="mt-1 truncate text-sm font-extrabold text-slate-900">{account.name}</h3>
+                  {account.account_number && <p className="mt-1 text-xs text-slate-400">•••• {account.account_number.slice(-4)}</p>}
+                  <p className="mt-3 text-lg font-black text-[#00695C]">{money(account.current_balance)}</p>
+                  <div className="mt-2 flex justify-between gap-2 text-[11px] text-slate-500"><span>In {money(account.total_credit)}</span><span>Out {money(account.total_debit)}</span></div>
+                </article>
+              ))}
+              {!loading && filteredAccounts.length === 0 && (
+                <p className="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500 sm:col-span-2 xl:col-span-5">
+                  {accounts.length === 0 ? "No fund accounts are available." : "No accounts match the selected filters."}
+                </p>
+              )}
+            </div>
           </div>
         )}
       </section>
+
+      <div className="grid gap-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-3 print:hidden">
+        <label className="relative">
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+          <input value={filters.search} onChange={(event) => updateFilter("search", event.target.value)} placeholder="Search customer, reference..." className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm" />
+        </label>
+        <select value={filters.account_id} onChange={(event) => updateFilter("account_id", event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700">
+          <option value="">All accounts</option>
+          {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+        </select>
+        <select value={filters.transaction_type} onChange={(event) => updateFilter("transaction_type", event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700">
+          <option value="ALL">All transaction types</option>
+          <option value="FUND_ADDED">Fund Added</option><option value="DEBIT">Debit</option><option value="CREDIT">Credit</option><option value="TRANSFER_IN">Transfer In</option><option value="TRANSFER_OUT">Transfer Out</option>
+        </select>
+      </div>
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-col justify-between gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:p-5">
@@ -365,54 +420,98 @@ function FundManagement() {
             <h2 className="text-lg font-black text-slate-900">Transaction History</h2>
             <p className="text-xs text-slate-500">{totalTransactions.toLocaleString()} records</p>
           </div>
-          <div className="flex flex-wrap gap-2 print:hidden">
-            <button onClick={exportCsv} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"><Download size={14} /> CSV</button>
-            <button onClick={exportExcel} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"><Download size={14} /> Excel</button>
-            <button onClick={printReport} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"><FileText size={14} /> Print / PDF</button>
+          <div className="flex flex-wrap items-center gap-2 print:hidden">
+            <div className="flex rounded-lg border border-slate-200 bg-white p-1" role="group" aria-label="Transaction view">
+              <button
+                type="button"
+                aria-pressed={transactionView === "table"}
+                onClick={() => setTransactionView("table")}
+                className={`rounded-md p-2 transition ${transactionView === "table" ? "bg-[#064A41] text-white" : "text-slate-500 hover:bg-slate-100"}`}
+                aria-label="Table view"
+                title="Table view"
+              >
+                <List size={17} />
+              </button>
+              <button
+                type="button"
+                aria-pressed={transactionView === "cards"}
+                onClick={() => setTransactionView("cards")}
+                className={`rounded-md p-2 transition ${transactionView === "cards" ? "bg-[#064A41] text-white" : "text-slate-500 hover:bg-slate-100"}`}
+                aria-label="Card view"
+                title="Card view"
+              >
+                <LayoutGrid size={17} />
+              </button>
+            </div>
+            <button onClick={exportCsv} className="inline-flex items-center gap-1.5 rounded-lg border border-[#07564B] bg-gradient-to-r from-[#07564B] to-[#064A41] px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:from-[#064A41] hover:to-[#043D37] hover:shadow-md"><Download size={14} /> CSV</button>
+            <button onClick={exportExcel} className="inline-flex items-center gap-1.5 rounded-lg border border-[#07564B] bg-gradient-to-r from-[#07564B] to-[#064A41] px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:from-[#064A41] hover:to-[#043D37] hover:shadow-md"><Download size={14} /> Excel</button>
+            <button onClick={printReport} className="inline-flex items-center gap-1.5 rounded-lg border border-[#07564B] bg-gradient-to-r from-[#07564B] to-[#064A41] px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:from-[#064A41] hover:to-[#043D37] hover:shadow-md"><FileText size={14} /> Print / PDF</button>
           </div>
         </div>
-        <div className="grid gap-2 border-b border-slate-100 p-4 sm:grid-cols-3 print:hidden">
-          <label className="relative">
-            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input value={filters.search} onChange={(event) => updateFilter("search", event.target.value)} placeholder="Search customer, reference..." className="w-full rounded-lg border border-slate-200 py-2 pl-9 pr-3 text-sm" />
-          </label>
-          <select value={filters.account_id} onChange={(event) => updateFilter("account_id", event.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700">
-            <option value="">All accounts</option>
-            {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
-          </select>
-          <select value={filters.transaction_type} onChange={(event) => updateFilter("transaction_type", event.target.value)} className="rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700">
-            <option value="ALL">All transaction types</option>
-            <option value="FUND_ADDED">Fund Added</option><option value="DEBIT">Debit</option><option value="CREDIT">Credit</option><option value="TRANSFER_IN">Transfer In</option><option value="TRANSFER_OUT">Transfer Out</option>
-          </select>
-        </div>
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1100px] text-left text-xs">
-            <thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
-              <tr><th className="px-4 py-3">ID / Date</th><th className="px-4 py-3">Type / Category</th><th className="px-4 py-3">Account</th><th className="px-4 py-3">Customer / Supplier</th><th className="px-4 py-3">Reference / Method</th><th className="px-4 py-3 text-right">Debit</th><th className="px-4 py-3 text-right">Credit</th><th className="px-4 py-3 text-right">Running Balance</th><th className="px-4 py-3">Status / Details</th></tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {transactions.map((transaction) => {
-                const isDebit = ["DEBIT", "TRANSFER_OUT"].includes(transaction.transaction_type);
-                const isCredit = ["CREDIT", "FUND_ADDED", "TRANSFER_IN"].includes(transaction.transaction_type);
-                return (
-                  <tr key={transaction.id} className="hover:bg-slate-50/70">
-                    <td className="px-4 py-3"><span className="font-extrabold text-slate-800">#{transaction.id}</span><span className="mt-1 block whitespace-nowrap text-slate-500">{displayDate(transaction.transaction_date)}</span></td>
-                    <td className="px-4 py-3"><span className="font-bold text-slate-800">{TYPE_LABELS[transaction.transaction_type]}</span><span className="mt-1 block max-w-44 text-slate-500">{transaction.category}</span></td>
-                    <td className="px-4 py-3 text-slate-600">{transaction.account_name}</td>
-                    <td className="px-4 py-3 text-slate-600">{transaction.party_name || "—"}</td>
-                    <td className="px-4 py-3 text-slate-600"><span>{transaction.reference_number || transaction.related_reference || "—"}</span><span className="mt-1 block">{transaction.payment_method}</span></td>
-                    <td className="px-4 py-3 text-right font-bold text-rose-700">{isDebit ? money(transaction.amount) : "—"}</td>
-                    <td className="px-4 py-3 text-right font-bold text-emerald-700">{isCredit ? money(transaction.amount) : "—"}</td>
-                    <td className="px-4 py-3 text-right font-extrabold text-slate-800">{money(transaction.running_balance)}</td>
-                    <td className="px-4 py-3"><span className="rounded-full bg-emerald-50 px-2 py-1 font-bold text-emerald-700">{transaction.status}</span><div className="mt-2 flex gap-2"><button onClick={() => setSelectedTransaction(transaction)} className="font-bold text-[#00695C] hover:underline">Details</button>{transaction.receipt_url && <button onClick={() => openReceipt(transaction.receipt_url)} className="font-bold text-sky-700 hover:underline">Receipt</button>}</div></td>
-                  </tr>
-                );
-              })}
-              {!loading && transactions.length === 0 && <tr><td colSpan="9" className="px-4 py-12 text-center text-sm text-slate-500">No transactions match these filters.</td></tr>}
-              {loading && <tr><td colSpan="9" className="px-4 py-12 text-center text-sm text-slate-500">Loading transactions…</td></tr>}
-            </tbody>
-          </table>
-        </div>
+        {transactionView === "table" ? (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1100px] text-left text-xs">
+              <thead className="bg-gradient-to-r from-[#07564B] via-[#064A41] to-[#043D37] text-[10px] uppercase tracking-wide text-white">
+                <tr><th className="rounded-tl-xl px-4 py-3">ID / Date</th><th className="px-4 py-3">Type / Category</th><th className="px-4 py-3">Account</th><th className="px-4 py-3">Customer / Supplier</th><th className="px-4 py-3">Reference / Method</th><th className="px-4 py-3 text-right">Debit</th><th className="px-4 py-3 text-right">Credit</th><th className="px-4 py-3 text-right">Running Balance</th><th className="rounded-tr-xl px-4 py-3">Status / Details</th></tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {transactions.map((transaction) => {
+                  const isDebit = ["DEBIT", "TRANSFER_OUT"].includes(transaction.transaction_type);
+                  const isCredit = ["CREDIT", "FUND_ADDED", "TRANSFER_IN"].includes(transaction.transaction_type);
+                  return (
+                    <tr key={transaction.id} className="hover:bg-slate-50/70">
+                      <td className="px-4 py-3"><span className="font-extrabold text-slate-800">#{transaction.id}</span><span className="mt-1 block whitespace-nowrap text-slate-500">{displayDate(transaction.transaction_date)}</span></td>
+                      <td className="px-4 py-3"><span className="font-bold text-slate-800">{TYPE_LABELS[transaction.transaction_type]}</span><span className="mt-1 block max-w-44 text-slate-500">{transaction.category}</span></td>
+                      <td className="px-4 py-3 text-slate-600">{transaction.account_name}</td>
+                      <td className="px-4 py-3 text-slate-600">{transaction.party_name || "—"}</td>
+                      <td className="px-4 py-3 text-slate-600"><span>{transaction.reference_number || transaction.related_reference || "—"}</span><span className="mt-1 block">{transaction.payment_method}</span></td>
+                      <td className="px-4 py-3 text-right font-bold text-rose-700">{isDebit ? money(transaction.amount) : "—"}</td>
+                      <td className="px-4 py-3 text-right font-bold text-emerald-700">{isCredit ? money(transaction.amount) : "—"}</td>
+                      <td className="px-4 py-3 text-right font-extrabold text-slate-800">{money(transaction.running_balance)}</td>
+                      <td className="px-4 py-3"><span className="rounded-full bg-emerald-50 px-2 py-1 font-bold text-emerald-700">{transaction.status}</span><div className="mt-2 flex gap-2"><button onClick={() => setSelectedTransaction(transaction)} className="font-bold text-[#00695C] hover:underline">Details</button>{transaction.receipt_url && <button onClick={() => openReceipt(transaction.receipt_url)} className="font-bold text-sky-700 hover:underline">Receipt</button>}</div></td>
+                    </tr>
+                  );
+                })}
+                {!loading && transactions.length === 0 && <tr><td colSpan="9" className="px-4 py-12 text-center text-sm text-slate-500">No transactions match these filters.</td></tr>}
+                {loading && <tr><td colSpan="9" className="px-4 py-12 text-center text-sm text-slate-500">Loading transactions…</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="grid gap-3 p-4 sm:grid-cols-2 xl:grid-cols-3">
+            {transactions.map((transaction) => {
+              const isDebit = ["DEBIT", "TRANSFER_OUT"].includes(transaction.transaction_type);
+              const isCredit = ["CREDIT", "FUND_ADDED", "TRANSFER_IN"].includes(transaction.transaction_type);
+              return (
+                <article key={transaction.id} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[11px] font-bold uppercase tracking-wide text-slate-500">Transaction #{transaction.id}</p>
+                      <h3 className="mt-1 truncate text-sm font-extrabold text-slate-900">{transaction.category}</h3>
+                      <p className="mt-1 text-xs text-slate-500">{displayDate(transaction.transaction_date)}</p>
+                    </div>
+                    <span className="shrink-0 rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700">{transaction.status}</span>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-x-3 gap-y-3 text-xs">
+                    <div><p className="text-slate-500">Type</p><p className="mt-1 font-bold text-slate-800">{TYPE_LABELS[transaction.transaction_type]}</p></div>
+                    <div><p className="text-slate-500">Account</p><p className="mt-1 truncate font-bold text-slate-800">{transaction.account_name}</p></div>
+                    <div><p className="text-slate-500">Customer / Supplier</p><p className="mt-1 truncate font-bold text-slate-800">{transaction.party_name || "—"}</p></div>
+                    <div><p className="text-slate-500">Reference / Method</p><p className="mt-1 truncate font-bold text-slate-800">{transaction.reference_number || transaction.related_reference || "—"} · {transaction.payment_method}</p></div>
+                    <div><p className="text-slate-500">Debit</p><p className="mt-1 font-bold text-rose-700">{isDebit ? money(transaction.amount) : "—"}</p></div>
+                    <div><p className="text-slate-500">Credit</p><p className="mt-1 font-bold text-emerald-700">{isCredit ? money(transaction.amount) : "—"}</p></div>
+                    <div className="col-span-2 rounded-lg bg-slate-50 px-3 py-2"><p className="text-slate-500">Running Balance</p><p className="mt-1 font-extrabold text-slate-900">{money(transaction.running_balance)}</p></div>
+                  </div>
+                  <div className="mt-3 flex gap-4 border-t border-slate-100 pt-3">
+                    <button type="button" onClick={() => setSelectedTransaction(transaction)} className="text-xs font-bold text-[#00695C] hover:underline">Details</button>
+                    {transaction.receipt_url && <button type="button" onClick={() => openReceipt(transaction.receipt_url)} className="text-xs font-bold text-sky-700 hover:underline">Receipt</button>}
+                  </div>
+                </article>
+              );
+            })}
+            {loading && <p className="py-10 text-center text-sm text-slate-500 sm:col-span-2 xl:col-span-3">Loading transactions…</p>}
+            {!loading && transactions.length === 0 && <p className="py-10 text-center text-sm text-slate-500 sm:col-span-2 xl:col-span-3">No transactions match these filters.</p>}
+          </div>
+        )}
         <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-xs text-slate-500 print:hidden">
           <span>Page {page} of {pageCount}</span>
           <div className="flex gap-2"><button disabled={page <= 1} onClick={() => setPage((current) => current - 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 font-bold disabled:opacity-40">Previous</button><button disabled={page >= pageCount} onClick={() => setPage((current) => current + 1)} className="rounded-lg border border-slate-200 px-3 py-1.5 font-bold disabled:opacity-40">Next</button></div>

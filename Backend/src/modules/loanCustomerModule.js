@@ -1,5 +1,6 @@
 const { pool } = require('../config/db');
 const { insertUser } = require('./authModule');
+const { addDateRangeCondition } = require('../utils/dateRange');
 
 const CUSTOMER_COLUMNS = `
   id, customer_code, user_id, customer_type, full_name, mobile, alternate_mobile,
@@ -148,15 +149,18 @@ async function initializeLoanCustomerModule() {
   }
 }
 
-async function listLoanCustomers(search = '') {
+async function listLoanCustomers(search = '', dateRange = {}) {
   const term = `%${search}%`;
+  const conditions = [`(? = '' OR CAST(id AS CHAR) LIKE ? OR customer_code LIKE ? OR full_name LIKE ? OR mobile LIKE ?
+       OR alternate_mobile LIKE ? OR email LIKE ? OR city LIKE ? OR district LIKE ?)`];
+  const values = [search, term, term, term, term, term, term, term, term];
+  addDateRangeCondition(conditions, values, 'created_at', dateRange);
   const [rows] = await pool.execute(
     `SELECT ${CUSTOMER_COLUMNS}
      FROM loan_customers
-     WHERE ? = '' OR CAST(id AS CHAR) LIKE ? OR customer_code LIKE ? OR full_name LIKE ? OR mobile LIKE ?
-       OR alternate_mobile LIKE ? OR email LIKE ? OR city LIKE ? OR district LIKE ?
+     WHERE ${conditions.join(' AND ')}
      ORDER BY created_at DESC, id DESC`,
-    [search, term, term, term, term, term, term, term, term]
+    values
   );
   return rows;
 }

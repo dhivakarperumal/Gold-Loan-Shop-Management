@@ -1,15 +1,14 @@
-import React, { useContext, useEffect, useState, useCallback } from "react";
-import { AuthContext } from "../PrivateRouter/AuthContext";
+import React, { useEffect, useState, useCallback } from "react";
 import { useAdmin } from "../PrivateRouter/AdminContext";
 import { formatRateDate } from "../PrivateRouter/goldRateUtils";
 import useGoldRates from "../PrivateRouter/useGoldRates";
 import api from "../api";
-import { toast, Toaster } from "react-hot-toast";
+import DateRangeFilter from "./Components/DateRangeFilter";
+import { Toaster } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import {
   FiUsers,
   FiBox,
-  FiChevronDown,
   FiArrowRight,
   FiMoreHorizontal,
   FiChevronRight,
@@ -142,16 +141,21 @@ const DEFAULT_DASHBOARD_DATA = {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
   const { dashboardData, setDashboardCached } = useAdmin();
   const { current: currentGoldRates, loading: goldRatesLoading } = useGoldRates();
-  const [salesRange, setSalesRange] = useState("month");
+  const [dateRange, setDateRange] = useState({ preset: "all", startDate: "", endDate: "" });
   const [metricsError, setMetricsError] = useState(false);
   const metricsLoading = !dashboardData?.stats && !metricsError;
 
-  const fetchDashboardData = useCallback(async (range = salesRange) => {
+  const fetchDashboardData = useCallback(async () => {
     try {
-      const response = await api.get('/dashboard', { params: { range } });
+      const response = await api.get('/dashboard', {
+        params: {
+          datePreset: dateRange.preset,
+          startDate: dateRange.startDate,
+          endDate: dateRange.endDate
+        }
+      });
       if (!response.data?.stats) throw new Error("Dashboard API returned no metrics");
       setDashboardCached(response.data);
       setMetricsError(false);
@@ -159,7 +163,7 @@ const Dashboard = () => {
       setMetricsError(true);
       console.error("Failed to refresh dashboard metrics:", error);
     }
-  }, [salesRange, setDashboardCached]);
+  }, [dateRange, setDashboardCached]);
 
   useEffect(() => {
     const initialRefresh = window.setTimeout(() => fetchDashboardData(), 0);
@@ -592,21 +596,7 @@ const Dashboard = () => {
               <h3 className="text-base sm:text-lg font-bold text-slate-800">Sales Overview</h3>
               <p className="mt-0.5 text-[11px] text-slate-400">Live billing data · refreshes every 30 seconds</p>
             </div>
-            <div className="relative">
-              <select
-                value={salesRange}
-                onChange={(e) => {
-                  setSalesRange(e.target.value);
-                  fetchDashboardData(e.target.value);
-                }}
-                className="appearance-none bg-white border border-slate-200 rounded-lg px-3 py-1.5 pr-7 text-xs font-semibold text-slate-600 focus:outline-none focus:border-[#008577] cursor-pointer shadow-2xs"
-              >
-                <option value="month">This Month</option>
-                <option value="week">This Week</option>
-                <option value="year">This Year</option>
-              </select>
-              <FiChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs" />
-            </div>
+            <DateRangeFilter onApply={setDateRange} className="max-w-full sm:max-w-[360px]" />
           </div>
           <div className="relative h-[260px] sm:h-[280px] w-full pt-2">
             {metricsLoading

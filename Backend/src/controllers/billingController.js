@@ -9,6 +9,7 @@ const {
   updateBilling
 } = require('../modules/billingModule');
 const { findGoldRateForPurity, getCurrentGoldRates } = require('../modules/goldRateModule');
+const { parseDateRange } = require('../utils/dateRange');
 
 const PAYMENT_TYPES = new Set(['FULL_PAYMENT', 'EXCHANGE_GOLD']);
 const MAX_ITEMS = 100;
@@ -292,8 +293,10 @@ async function resolveSelectedProducts(rawProducts) {
 }
 
 async function getBillings(req, res, next) {
+  const range = parseDateRange(req.query);
+  if (range.error) return res.status(400).json({ message: range.error });
   try {
-    return res.json(await listBillings());
+    return res.json(await listBillings(range));
   } catch (error) {
     return next(error);
   }

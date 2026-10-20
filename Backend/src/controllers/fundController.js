@@ -9,6 +9,7 @@ const {
   listFundTransactions,
   transferFunds
 } = require('../modules/fundModule');
+const { parseDateRange } = require('../utils/dateRange');
 
 const CATEGORIES = {
   FUND_ADDED: new Set(['Cash', 'Bank Account', 'UPI', 'Owner Investment', 'Business Capital', 'Other']),
@@ -131,14 +132,10 @@ async function postAccount(req, res, next) {
 }
 
 async function getSummary(req, res, next) {
-  const today = new Date().toISOString().slice(0, 10);
-  const from = req.query.from || `${today.slice(0, 8)}01`;
-  const to = req.query.to || today;
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) {
-    return res.status(400).json({ message: 'Select a valid date range' });
-  }
+  const range = parseDateRange(req.query);
+  if (range.error) return res.status(400).json({ message: range.error });
   try {
-    return res.json(await getFundSummary(from, to));
+    return res.json(await getFundSummary(range));
   } catch (error) {
     return next(error);
   }
@@ -148,12 +145,10 @@ async function getTransactions(req, res, next) {
   const page = Number(req.query.page || 1);
   const pageSize = Number(req.query.page_size || 20);
   const accountId = req.query.account_id;
-  const from = req.query.from;
-  const to = req.query.to;
+  const range = parseDateRange(req.query);
   if (!Number.isInteger(page) || page < 1 || !Number.isInteger(pageSize) || pageSize < 1 || pageSize > 5000
     || (accountId && !validId(accountId))
-    || (from && !/^\d{4}-\d{2}-\d{2}$/.test(from))
-    || (to && !/^\d{4}-\d{2}-\d{2}$/.test(to))) {
+    || range.error) {
     return res.status(400).json({ message: 'Transaction filters are invalid' });
   }
   try {
@@ -161,7 +156,7 @@ async function getTransactions(req, res, next) {
       page, page_size: pageSize, account_id: accountId || '',
       transaction_type: req.query.transaction_type || 'ALL',
       category: text(req.query.category, 80), search: text(req.query.search, 150),
-      from: from || '', to: to || ''
+      dateRange: range
     }));
   } catch (error) {
     return next(error);

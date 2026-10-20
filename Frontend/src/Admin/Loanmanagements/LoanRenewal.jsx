@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { FiArrowLeft, FiCalendar, FiCheckCircle, FiChevronRight, FiRefreshCw, FiSearch } from "react-icons/fi";
+import { FiArrowLeft, FiCalendar, FiCheckCircle, FiChevronRight, FiRefreshCw, FiSearch, FiShield } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api, { getPrivateFile } from "../../api";
+import { isLoanReviewDue, loanReviewDate } from "./loanPolicy";
 
 const money = (value) => new Intl.NumberFormat("en-IN", {
   style: "currency", currency: "INR", maximumFractionDigits: 2
@@ -40,7 +41,12 @@ export default function LoanRenewal() {
   const [paymentAmount, setPaymentAmount] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [savingReview, setSavingReview] = useState(false);
   const [goldImage, setGoldImage] = useState("");
+  const [noticeMethod, setNoticeMethod] = useState("sms");
+  const [customerMessage, setCustomerMessage] = useState("");
+  const [reviewNotes, setReviewNotes] = useState("");
+  const [reviewActionNotes, setReviewActionNotes] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -53,7 +59,7 @@ export default function LoanRenewal() {
         if (!Array.isArray(data)) throw new Error("The server returned an invalid loan list.");
         if (active) {
           setLoans(data.filter((loan) =>
-            loan.loan_status === "Active"
+            ["Active", "Suspended"].includes(loan.loan_status)
             && loan.release_status !== "Released"
             && Number(loan.outstanding_principal ?? loan.principal_amount) > 0
           ));
@@ -69,6 +75,12 @@ export default function LoanRenewal() {
   }, [id]);
 
   const loan = renewalData?.loan;
+  useEffect(() => {
+    if (!loan) return;
+    setCustomerMessage(
+      `Your loan ${loan.loan_number} has reached its 15-month review date. Please contact Sri Golds to discuss payment or renewal options. Any further action will follow your loan agreement and applicable process.`
+    );
+  }, [loan?.id, loan?.loan_number]);
   useEffect(() => {
     if (!loan?.gold_image_url) {
       setGoldImage("");
@@ -137,6 +149,30 @@ export default function LoanRenewal() {
     }
   };
 
+  const handleReviewAction = async (action) => {
+    if (!manualReviewDue || savingReview) return;
+    if (action === "suspend" && !window.confirm("Suspend renewal for this loan? A customer notice must already be recorded. This does not transfer ownership of or authorize taking the pledged gold.")) return;
+    if (action === "reinstate" && !window.confirm("Reinstate renewal access for this loan?")) return;
+    setSavingReview(true);
+    try {
+      const payload = action === "notice_sent"
+        ? { action, notice_method: noticeMethod, customer_message: customerMessage, notes: reviewNotes }
+        : { action, notes: reviewActionNotes };
+      const { data } = await api.post(`/loans/${id}/review-action`, payload);
+      setRenewalData((current) => ({ ...current, loan: data.loan, reviewActions: data.reviewActions }));
+      setReviewNotes("");
+      setReviewActionNotes("");
+      toast.success(action === "notice_sent"
+        ? "Customer notice recorded. The app does not send SMS or WhatsApp automatically."
+        : action === "suspend" ? "Renewal suspended. No collateral action was taken." : "Renewal access reinstated.");
+    } catch (error) {
+      console.error("Failed to update loan review:", error);
+      toast.error(error.response?.data?.message || "Could not update the loan review.");
+    } finally {
+      setSavingReview(false);
+    }
+  };
+
   if (!id) {
     return (
       <main className="space-y-6 p-4 sm:p-6">
@@ -156,8 +192,8 @@ export default function LoanRenewal() {
         </label>
         <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
           <div className="border-b border-slate-100 px-5 py-4">
-            <h2 className="font-bold text-slate-800">Choose an active loan</h2>
-            <p className="mt-0.5 text-xs text-slate-500">Select a row to open its renewal and payment details.</p>
+            <h2 className="font-bold text-slate-800">Choose a loan</h2>
+            <p className="mt-0.5 text-xs text-slate-500">Open an active loan to renew or a suspended loan to review its status.</p>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[780px] border-separate border-spacing-0 text-left">
@@ -171,8 +207,8 @@ export default function LoanRenewal() {
                   : filteredLoans.length === 0
                     ? <tr><td colSpan="8" className="px-4 py-14 text-center text-sm text-slate-400">{loans.length ? "No loans match your search." : "No active loans are available for renewal."}</td></tr>
                     : filteredLoans.map((item) => (
-                      <tr key={item.id} className={`text-sm transition-colors ${item.loan_status === "Active" ? "cursor-pointer hover:bg-emerald-50/60" : "opacity-60"}`}
-                        onClick={() => item.loan_status === "Active" && navigate(Number(item.outstanding_principal ?? item.principal_amount) === 0 ? `/admin/loans/completeloan/${item.id}` : `/admin/loans/loanreniwel/${item.id}`)}>
+                      <tr key={item.id} className={`text-sm transition-colors ${["Active", "Suspended"].includes(item.loan_status) ? "cursor-pointer hover:bg-emerald-50/60" : "opacity-60"}`}
+                        onClick={() => ["Active", "Suspended"].includes(item.loan_status) && navigate(Number(item.outstanding_principal ?? item.principal_amount) === 0 ? `/admin/loans/completeloan/${item.id}` : `/admin/loans/loanreniwel/${item.id}`)}>
                         <td className="whitespace-nowrap px-4 py-4 pl-5 font-bold text-[#064A41]">{item.loan_number}</td>
                         <td className="px-4 py-4"><span className="block font-semibold text-slate-800">{item.customer_name || "—"}</span><span className="text-xs text-slate-400">{item.customer_code || "—"}</span></td>
                         <td className="whitespace-nowrap px-4 py-4 text-slate-600">{item.customer_mobile || "—"}</td>
@@ -185,6 +221,8 @@ export default function LoanRenewal() {
                             ? <Link to={`/admin/loans/completeloan/${item.id}`} onClick={(event) => event.stopPropagation()} className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">Complete loan <FiChevronRight /></Link>
                             : item.loan_status === "Active"
                               ? <Link to={`/admin/loans/loanreniwel/${item.id}`} onClick={(event) => event.stopPropagation()} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">Renew <FiChevronRight /></Link>
+                            : item.loan_status === "Suspended"
+                              ? <Link to={`/admin/loans/loanreniwel/${item.id}`} onClick={(event) => event.stopPropagation()} className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">Review <FiChevronRight /></Link>
                             : <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-500">{item.loan_status}</span>}
                         </td>
                       </tr>
@@ -205,6 +243,7 @@ export default function LoanRenewal() {
   const address = [loan.customer_address, loan.customer_city, loan.customer_district, loan.customer_state, loan.customer_pincode].filter(Boolean).join(", ");
   const unit = loan.rate_unit === "carat" ? "ct" : "g";
   const active = loan.loan_status === "Active";
+  const manualReviewDue = isLoanReviewDue(loan);
 
   return (
     <main className="mx-auto max-w-[1500px] space-y-5 p-4 sm:p-6">
@@ -213,6 +252,77 @@ export default function LoanRenewal() {
         <div><p className="text-xs font-bold uppercase tracking-[0.18em] text-emerald-200">Loan Renewal</p><h1 className="mt-1 text-2xl font-extrabold">{loan.loan_number}</h1><p className="mt-1 text-sm text-white/75">{loan.customer_name} · {loan.customer_mobile || "No mobile"}</p></div>
         <span className={`w-fit rounded-full px-3 py-1.5 text-xs font-bold ${active ? "bg-emerald-300/20 text-emerald-50" : "bg-white/15 text-white"}`}>{loan.loan_status}</span>
       </header>
+      {manualReviewDue && <section role="alert" className="flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-amber-900"><FiCalendar className="mt-0.5 shrink-0" /><div><p className="font-bold">15-month account review required</p><p className="mt-1 text-sm">This unpaid loan has passed its maturity and reached {dateText(loanReviewDate(loan))}. Refer it for authorized manual review. This flag does not authorize automatic collateral seizure or forfeiture.</p></div></section>}
+      {manualReviewDue && (
+        <section className="space-y-4 rounded-2xl border border-amber-200 bg-white p-5 shadow-sm">
+          <div className="flex items-start gap-3">
+            <span className="rounded-xl bg-amber-50 p-2.5 text-amber-800"><FiShield size={20} /></span>
+            <div>
+              <h2 className="font-bold text-slate-900">Customer notice and renewal suspension</h2>
+              <p className="mt-1 text-sm text-slate-600">Send the notice using the selected channel, then record that it was sent. Renewal suspension requires a saved notice and staff confirmation. This system does not send messages automatically or decide ownership/return of pledged gold.</p>
+            </div>
+          </div>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <form onSubmit={(event) => { event.preventDefault(); handleReviewAction("notice_sent"); }} className="space-y-3 rounded-xl border border-slate-200 p-4">
+              <h3 className="text-sm font-bold text-slate-800">Record customer notice</h3>
+              <label className="block text-xs font-semibold text-slate-600">Notice channel
+                <select value={noticeMethod} onChange={(event) => setNoticeMethod(event.target.value)} disabled={savingReview} className="mt-1 block min-h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm">
+                  <option value="sms">SMS (send outside this app)</option>
+                  <option value="whatsapp">WhatsApp (send outside this app)</option>
+                  <option value="call">Phone call</option>
+                  <option value="letter">Letter</option>
+                  <option value="in_person">In person</option>
+                  <option value="other">Other</option>
+                </select>
+              </label>
+              <label className="block text-xs font-semibold text-slate-600">Customer message
+                <textarea required maxLength={4000} rows={3} value={customerMessage} onChange={(event) => setCustomerMessage(event.target.value)} disabled={savingReview} className="mt-1 block w-full rounded-lg border border-slate-200 p-3 text-sm font-normal text-slate-800" />
+              </label>
+              <label className="block text-xs font-semibold text-slate-600">Internal contact notes
+                <textarea required maxLength={2000} rows={2} value={reviewNotes} onChange={(event) => setReviewNotes(event.target.value)} disabled={savingReview} placeholder="Record who was contacted and any response" className="mt-1 block w-full rounded-lg border border-slate-200 p-3 text-sm font-normal text-slate-800" />
+              </label>
+              <button type="submit" disabled={savingReview || !customerMessage.trim() || !reviewNotes.trim()} className="min-h-10 rounded-lg bg-[#064A41] px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{savingReview ? "Saving..." : "Confirm notice sent & save record"}</button>
+            </form>
+
+            <div className="space-y-3 rounded-xl border border-slate-200 p-4">
+              <h3 className="text-sm font-bold text-slate-800">Renewal status</h3>
+              {loan.loan_status === "Suspended" ? (
+                <>
+                  <p className="rounded-lg bg-amber-50 p-3 text-sm font-semibold text-amber-900">Renewal is suspended. No collateral action has been taken.</p>
+                  <label className="block text-xs font-semibold text-slate-600">Reinstatement notes
+                    <textarea maxLength={2000} rows={2} value={reviewActionNotes} onChange={(event) => setReviewActionNotes(event.target.value)} disabled={savingReview} placeholder="Reason for reinstating renewal access" className="mt-1 block w-full rounded-lg border border-slate-200 p-3 text-sm font-normal text-slate-800" />
+                  </label>
+                  <button type="button" onClick={() => handleReviewAction("reinstate")} disabled={savingReview || !reviewActionNotes.trim()} className="min-h-10 rounded-lg border border-emerald-700 px-4 py-2 text-sm font-bold text-emerald-800 disabled:opacity-50">{savingReview ? "Saving..." : "Reinstate renewal"}</button>
+                </>
+              ) : (
+                <>
+                  <p className="text-sm text-slate-600">{renewalData.reviewActions?.some((item) => item.action_type === "notice_sent") ? "A customer notice is recorded. An administrator may now suspend renewal if required by the approved policy." : "Record a customer notice before suspending renewal."}</p>
+                  <label className="block text-xs font-semibold text-slate-600">Suspension notes
+                    <textarea maxLength={2000} rows={2} value={reviewActionNotes} onChange={(event) => setReviewActionNotes(event.target.value)} disabled={savingReview} placeholder="Reason for suspending renewal access" className="mt-1 block w-full rounded-lg border border-slate-200 p-3 text-sm font-normal text-slate-800" />
+                  </label>
+                  <button type="button" onClick={() => handleReviewAction("suspend")} disabled={savingReview || !renewalData.reviewActions?.some((item) => item.action_type === "notice_sent") || !reviewActionNotes.trim()} className="min-h-10 rounded-lg bg-amber-700 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{savingReview ? "Saving..." : "Suspend renewal"}</button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {renewalData.reviewActions?.length > 0 && (
+            <div className="border-t border-slate-100 pt-3">
+              <h3 className="mb-2 text-xs font-bold uppercase tracking-wide text-slate-500">Review action history</h3>
+              <ul className="space-y-2">
+                {renewalData.reviewActions.map((item) => (
+                  <li key={item.id} className="rounded-lg bg-slate-50 p-3 text-xs text-slate-700">
+                    <p className="font-bold">{item.action_type.replaceAll("_", " ")} · {dateText(item.created_at)}{item.notice_method ? ` · ${item.notice_method}` : ""}</p>
+                    {item.customer_message && <p className="mt-1 whitespace-pre-wrap">{item.customer_message}</p>}
+                    <p className="mt-1 whitespace-pre-wrap text-slate-500">{item.notes}</p>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      )}
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="space-y-5">
@@ -254,6 +364,7 @@ export default function LoanRenewal() {
               <Info label="Interest rate" value={`${rateText(loan.interest_rate)} per ${String(loan.interest_frequency || "").replaceAll("_", " ")}`} />
               <Info label="Interest period starts" value={dateText(preview.period_start_date)} />
               <Info label="Loan date" value={dateText(loan.loan_date)} />
+              <Info label="15-month manual review date" value={dateText(loanReviewDate(loan))} />
               <Info label="Current maturity" value={dateText(loan.maturity_date)} />
               <Info label="Renewal date" value={dateText(preview.renewal_date)} />
               <Info label="Compounding frequency" value={loan.compounding_frequency} />
@@ -261,7 +372,7 @@ export default function LoanRenewal() {
               <Info label="Custom interest period" value={loan.custom_period_days == null ? "—" : `${loan.custom_period_days} days`} />
               <Info label="Grace period" value={`${loan.grace_period_days || 0} days`} />
               <Info label="Interest-free period" value={`${loan.interest_free_days || 0} days`} />
-              <Info label="Late payment rate" value={loan.late_payment_interest_rate == null ? "Not set" : rateText(loan.late_payment_interest_rate)} />
+              <Info label={`Late payment rate (${String(loan.interest_frequency || "monthly").replaceAll("_", " ")} period)`} value={loan.late_payment_interest_rate == null ? "Not set" : rateText(loan.late_payment_interest_rate)} />
               <Info label="Fixed interest amount" value={loan.fixed_interest_amount == null ? "—" : money(loan.fixed_interest_amount)} />
               <Info label="Minimum interest" value={loan.minimum_interest_amount == null ? "—" : money(loan.minimum_interest_amount)} />
               <Info label="Maximum interest" value={loan.maximum_interest_amount == null ? "—" : money(loan.maximum_interest_amount)} />
@@ -278,7 +389,9 @@ export default function LoanRenewal() {
             <div className="mb-4 flex items-center gap-2"><span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-50 text-[#008577]"><FiCalendar /></span><div><h2 className="font-bold text-slate-800">Payment and renewal</h2><p className="text-xs text-slate-500">Renewal date: {dateText(preview.renewal_date)}</p></div></div>
             <div className="space-y-2 rounded-xl bg-slate-50 p-4 text-sm">
               <div className="flex justify-between gap-3 text-slate-600"><span>Current principal</span><strong className="text-slate-800">{money(preview.current_principal)}</strong></div>
-              <div className="flex justify-between gap-3 text-slate-600"><span>Interest accrued</span><strong className="text-slate-800">{money(preview.accrued_interest)}</strong></div>
+              <div className="flex justify-between gap-3 text-slate-600"><span>Regular interest accrued</span><strong className="text-slate-800">{money(preview.regular_interest)}</strong></div>
+              <div className="flex justify-between gap-3 text-slate-600"><span>Late payment fee</span><strong className="text-rose-700">{money(preview.late_payment_fee)}</strong></div>
+              <div className="flex justify-between gap-3 border-t border-slate-200 pt-2 text-slate-600"><span>Total interest and late fee</span><strong className="text-slate-800">{money(preview.accrued_interest)}</strong></div>
               <div className="flex justify-between gap-3 border-t border-slate-200 pt-2 font-bold text-slate-800"><span>Total due</span><span>{money(preview.total_due)}</span></div>
               <p className="pt-1 text-[11px] leading-relaxed text-slate-500">Total due is current principal plus accrued interest. Processing and other charges are not included.</p>
             </div>
@@ -326,7 +439,7 @@ export default function LoanRenewal() {
                 {renewalData.history.map((item) => (
                   <article key={item.id} className="space-y-1 border-b border-slate-100 p-4 last:border-0">
                     <div className="flex justify-between gap-3 text-xs"><strong className="text-slate-800">{dateText(item.renewal_date)}</strong><span className="font-bold text-[#064A41]">{money(item.payment_amount)}</span></div>
-                    <p className="text-[11px] text-slate-500">Interest {money(item.interest_paid)} · Principal {money(item.principal_paid)}</p>
+                    <p className="text-[11px] text-slate-500">Interest {money(Number(item.interest_paid) - Number(item.late_payment_fee || 0))} · Late fee {money(item.late_payment_fee)} · Principal {money(item.principal_paid)}</p>
                     <p className="text-[11px] text-slate-500">Balance {money(item.principal_after)} · New maturity {dateText(item.new_maturity_date)}</p>
                   </article>
                 ))}

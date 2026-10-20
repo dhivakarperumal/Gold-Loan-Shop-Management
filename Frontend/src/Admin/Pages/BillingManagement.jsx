@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { FiArrowLeft, FiCalendar, FiChevronRight, FiCreditCard, FiDollarSign, FiEdit2, FiEye, FiGrid, FiImage, FiList, FiPlus, FiPrinter, FiRepeat, FiSave, FiSearch, FiTrash2, FiX } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api from "../../api";
+import DateRangeFilter from "../Components/DateRangeFilter";
 import useGoldRates from "../../PrivateRouter/useGoldRates";
 import { getReceiptSettings } from "./receiptSettings";
 
@@ -354,6 +355,7 @@ function CatalogProductFields({ product, catalogProducts, loading, onSelect, sel
 
 export default function BillingManagement() {
   const [bills, setBills] = useState([]);
+  const [dateRange, setDateRange] = useState({ preset: "all", startDate: "", endDate: "" });
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState([]);
   const { current: currentGoldRates } = useGoldRates();
@@ -412,7 +414,9 @@ export default function BillingManagement() {
   const loadBills = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await api.get("/billings");
+      const response = await api.get("/billings", {
+        params: { startDate: dateRange.startDate, endDate: dateRange.endDate }
+      });
       if (!Array.isArray(response.data)) throw new Error("The server returned an invalid bills list.");
       setBills(response.data);
     } catch (error) {
@@ -421,7 +425,7 @@ export default function BillingManagement() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [dateRange.startDate, dateRange.endDate]);
 
   const loadCatalogProducts = useCallback(async () => {
     setCatalogLoading(true);
@@ -1011,6 +1015,7 @@ export default function BillingManagement() {
               />
             </label>
             <div className="ml-auto flex flex-wrap items-center justify-end gap-3">
+              <DateRangeFilter onApply={setDateRange} />
               <select
                 value={paymentFilter}
                 onChange={(event) => setPaymentFilter(event.target.value)}

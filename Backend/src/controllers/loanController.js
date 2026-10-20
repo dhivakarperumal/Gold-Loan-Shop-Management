@@ -12,11 +12,13 @@ const {
   listLoans,
   listLoansForCustomer,
   listLoansForUser,
+  recordLoanReviewAction,
   renewLoan,
   releaseGold,
   setInterestType,
   updateLoan
 } = require('../modules/loanModule');
+const { parseDateRange } = require('../utils/dateRange');
 
 const { findGoldRateForPurity, getCurrentGoldRates } = require('../modules/goldRateModule');
 const fs = require('node:fs');
@@ -256,8 +258,10 @@ async function updateInterestType(req, res, next) {
 }
 
 async function getLoans(req, res, next) {
+  const range = parseDateRange(req.query);
+  if (range.error) return res.status(400).json({ message: range.error });
   try {
-    return res.json(await listLoans());
+    return res.json(await listLoans(range));
   } catch (error) {
     return next(error);
   }
@@ -302,6 +306,36 @@ async function postLoanRenewal(req, res, next) {
       'RENEWAL_PAYMENT_EXCEEDS_DUE'
     ].includes(error.code)) {
       return res.status(400).json({ message: error.message });
+    }
+    return next(error);
+  }
+}
+
+async function postLoanReviewAction(req, res, next) {
+  if (!validId(req.params.id)) return res.status(400).json({ message: 'Loan ID is invalid' });
+  const action = String(req.body?.action || '').trim();
+  if (!['notice_sent', 'suspend', 'reinstate'].includes(action)) {
+    return res.status(400).json({ message: 'Choose a valid loan review action' });
+  }
+  try {
+    return res.json(await recordLoanReviewAction(
+      req.params.id,
+      action,
+      req.body,
+      req.adminUser.user_id
+    ));
+  } catch (error) {
+    if (error.code === 'LOAN_NOT_FOUND') return res.status(404).json({ message: error.message });
+    if (['INVALID_REVIEW_NOTES', 'INVALID_REVIEW_NOTICE', 'INVALID_REVIEW_ACTION'].includes(error.code)) {
+      return res.status(400).json({ message: error.message });
+    }
+    if ([
+      'LOAN_REVIEW_NOT_DUE',
+      'LOAN_NOT_ACTIVE',
+      'REVIEW_NOTICE_REQUIRED',
+      'LOAN_NOT_SUSPENDED'
+    ].includes(error.code)) {
+      return res.status(409).json({ message: error.message });
     }
     return next(error);
   }
@@ -636,6 +670,7 @@ module.exports = {
   postLoan,
   postGoldRelease,
   postLoanRenewal,
+  postLoanReviewAction,
   removeLoan,
   updateInterestType
 };

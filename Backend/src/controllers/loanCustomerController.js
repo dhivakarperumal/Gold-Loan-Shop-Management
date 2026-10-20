@@ -10,6 +10,7 @@ const {
   listLoanCustomers,
   updateLoanCustomer
 } = require('../modules/loanCustomerModule');
+const { parseDateRange } = require('../utils/dateRange');
 const {
   getLoanCustomerDocumentPath,
   getLoanCustomerPhotoPath,
@@ -115,8 +116,10 @@ function validId(value) {
 }
 
 async function getCustomers(req, res, next) {
+  const range = parseDateRange(req.query);
+  if (range.error) return res.status(400).json({ message: range.error });
   try {
-    return res.json(await listLoanCustomers(String(req.query.search || '').trim()));
+    return res.json(await listLoanCustomers(String(req.query.search || '').trim(), range));
   } catch (error) {
     return next(error);
   }
