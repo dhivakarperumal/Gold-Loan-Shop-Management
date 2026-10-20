@@ -130,17 +130,7 @@ export default function AllLoans() {
   };
 
   return (
-    <main className="space-y-6 p-4 sm:p-6">
-      <header className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#008577]">Loan Management</p>
-          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">All Loans</h1>
-          <p className="mt-1 text-sm text-slate-500">Monitor loan accounts, review status, and manage customer lending.</p>
-        </div>
-        <p className="text-xs font-semibold text-slate-400">
-          {loading ? "Updating loan register..." : `${loans.length} ${loans.length === 1 ? "account" : "accounts"} in total`}
-        </p>
-      </header>
+    <main className="space-y-6 p-2 sm:p-2">
 
       <section aria-label="Loan summary" className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {summaryCards.map(({ label, value, icon: Icon, color, accent }) => (
@@ -171,14 +161,17 @@ export default function AllLoans() {
       )}
 
       <section aria-label="Loan list controls" className="flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white p-3 shadow-[0_2px_10px_rgba(15,23,42,0.04)] sm:flex-row sm:items-center sm:justify-between sm:p-4">
-        <DateRangeFilter onApply={setDateRange} />
+       
         <label className="relative min-w-0 sm:w-1/3 sm:min-w-[280px] sm:flex-none">
           <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true" />
           <span className="sr-only">Search loans</span>
           <input type="search" placeholder="Search loans by number, customer..." value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)}
             className="w-full rounded-xl border border-slate-200 bg-slate-50/80 py-3 pl-10 pr-4 text-sm font-medium text-slate-700 outline-none transition placeholder:font-normal placeholder:text-slate-400 hover:border-slate-300 focus:border-[#008577] focus:bg-white focus:ring-4 focus:ring-emerald-700/10" />
         </label>
+
+        
         <div className="flex flex-wrap items-center justify-between gap-2 sm:ml-auto sm:justify-start sm:gap-3">
+          <div> <DateRangeFilter onApply={setDateRange} /></div>
           <select aria-label="Filter loans by status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}
             className="min-w-[142px] rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm font-semibold text-slate-600 outline-none transition hover:border-slate-300 focus:border-[#008577] focus:ring-4 focus:ring-emerald-700/10">
             <option value="All">Select Status</option>
@@ -190,8 +183,11 @@ export default function AllLoans() {
           </div>
           <Link to="/admin/loans/createloan" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#064A41] px-4 py-3 text-sm font-bold text-white shadow-md shadow-emerald-950/15 transition hover:-translate-y-0.5 hover:bg-[#087263] focus:outline-none focus:ring-4 focus:ring-emerald-700/20"><FiPlus size={16} /> Create Loan</Link>
         </div>
+         
+
       </section>
 
+     
       {viewMode === "table" ? (
         <section aria-label="Loans in table view" className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_2px_12px_rgba(15,23,42,0.05)]">
           <div className="flex flex-col gap-1 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
