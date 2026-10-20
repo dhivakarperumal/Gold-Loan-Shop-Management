@@ -65,6 +65,8 @@ const METAL_DETAILS = {
   },
 };
 
+const METAL_ORDER = ["gold", "silver", "diamond", "platinum"];
+
 function getMetalDetails(name = "") {
   const key = name.trim().toLowerCase();
 
@@ -91,11 +93,20 @@ export default function MetalsShowcase() {
           throw new TypeError("The metals response must be an array");
         }
 
+        const activeMetals = data.filter(
+          (metal) => String(metal.status || "").toLowerCase() === "active"
+        );
         setMetals(
-          data.filter(
-            (metal) =>
-              String(metal.status || "").toLowerCase() === "active"
-          )
+          activeMetals.sort((first, second) => {
+            const firstOrder = METAL_ORDER.findIndex((name) =>
+              String(first.name || "").toLowerCase().includes(name)
+            );
+            const secondOrder = METAL_ORDER.findIndex((name) =>
+              String(second.name || "").toLowerCase().includes(name)
+            );
+            return (firstOrder === -1 ? METAL_ORDER.length : firstOrder)
+              - (secondOrder === -1 ? METAL_ORDER.length : secondOrder);
+          })
         );
       })
       .catch((requestError) => {
