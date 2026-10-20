@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Banknote, CalendarDays,
-  Download, FileText, Plus, RefreshCw, Search, Wallet, X
-  , ChevronDown
+  ChevronDown, Download, FileText, Plus, RefreshCw, Search, Wallet, X
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../api";
@@ -68,6 +67,7 @@ function FundManagement() {
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const [fundAccountActionsOpen, setFundAccountActionsOpen] = useState(false);
+  const [accountsVisible, setAccountsVisible] = useState(false);
 
   const fetchData = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
@@ -312,37 +312,51 @@ function FundManagement() {
             <h2 className="text-lg font-black text-slate-900">Fund Accounts</h2>
             <p className="text-xs text-slate-500">Each account balance is calculated from its opening amount and posted ledger entries.</p>
           </div>
-          <div className="relative print:hidden">
+          <div className="flex flex-wrap items-center gap-2 print:hidden">
             <button
               type="button"
-              aria-haspopup="true"
-              aria-expanded={fundAccountActionsOpen}
-              onClick={() => setFundAccountActionsOpen((open) => !open)}
-              className="inline-flex items-center gap-2 rounded-xl bg-[#00695C] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#00574D] focus:outline-none focus:ring-4 focus:ring-emerald-700/20"
+              aria-expanded={accountsVisible}
+              onClick={() => setAccountsVisible((visible) => !visible)}
+              className="inline-flex items-center gap-2 rounded-xl border border-[#00695C] px-4 py-2.5 text-sm font-bold text-[#00695C] transition hover:bg-emerald-50 focus:outline-none focus:ring-4 focus:ring-emerald-700/20"
             >
-              <Plus size={16} /> Account Actions <ChevronDown size={15} className={`transition-transform ${fundAccountActionsOpen ? "rotate-180" : ""}`} />
+              {accountsVisible ? <X size={16} /> : <Plus size={16} />}
+              {accountsVisible ? "Hide Accounts" : "Add Accounts"}
+              <ChevronDown size={15} className={`transition-transform ${accountsVisible ? "rotate-180" : ""}`} />
             </button>
-            {fundAccountActionsOpen && (
-              <div className="absolute right-0 top-full z-30 mt-2 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
-                <button type="button" onClick={() => openEntry("DEBIT")} className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-rose-700 transition hover:bg-rose-50">Record Debit</button>
-                <button type="button" onClick={() => openEntry("CREDIT")} className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50">Record Credit</button>
-                <button type="button" onClick={openAddAccount} className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Add Account</button>
-              </div>
-            )}
+            <div className="relative">
+              <button
+                type="button"
+                aria-haspopup="true"
+                aria-expanded={fundAccountActionsOpen}
+                onClick={() => setFundAccountActionsOpen((open) => !open)}
+                className="inline-flex items-center gap-2 rounded-xl bg-[#00695C] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#00574D] focus:outline-none focus:ring-4 focus:ring-emerald-700/20"
+              >
+                Account Actions <ChevronDown size={15} className={`transition-transform ${fundAccountActionsOpen ? "rotate-180" : ""}`} />
+              </button>
+              {fundAccountActionsOpen && (
+                <div className="absolute right-0 top-full z-30 mt-2 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                  <button type="button" onClick={() => openEntry("DEBIT")} className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-rose-700 transition hover:bg-rose-50">Record Debit</button>
+                  <button type="button" onClick={() => openEntry("CREDIT")} className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50">Record Credit</button>
+                  <button type="button" onClick={openAddAccount} className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Add Account</button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-          {accounts.map((account) => (
-            <article key={account.id} className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-              <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{account.account_type}</p>
-              <h3 className="mt-1 truncate text-sm font-extrabold text-slate-900">{account.name}</h3>
-              {account.account_number && <p className="mt-1 text-xs text-slate-400">•••• {account.account_number.slice(-4)}</p>}
-              <p className="mt-3 text-lg font-black text-[#00695C]">{money(account.current_balance)}</p>
-              <div className="mt-2 flex justify-between gap-2 text-[11px] text-slate-500"><span>In {money(account.total_credit)}</span><span>Out {money(account.total_debit)}</span></div>
-            </article>
-          ))}
-          {!loading && accounts.length === 0 && <p className="text-sm text-slate-500">No fund accounts are available.</p>}
-        </div>
+        {accountsVisible && (
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            {accounts.map((account) => (
+              <article key={account.id} className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{account.account_type}</p>
+                <h3 className="mt-1 truncate text-sm font-extrabold text-slate-900">{account.name}</h3>
+                {account.account_number && <p className="mt-1 text-xs text-slate-400">•••• {account.account_number.slice(-4)}</p>}
+                <p className="mt-3 text-lg font-black text-[#00695C]">{money(account.current_balance)}</p>
+                <div className="mt-2 flex justify-between gap-2 text-[11px] text-slate-500"><span>In {money(account.total_credit)}</span><span>Out {money(account.total_debit)}</span></div>
+              </article>
+            ))}
+            {!loading && accounts.length === 0 && <p className="text-sm text-slate-500">No fund accounts are available.</p>}
+          </div>
+        )}
       </section>
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
