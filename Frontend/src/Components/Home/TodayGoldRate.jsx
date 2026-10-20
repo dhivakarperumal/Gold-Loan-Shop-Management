@@ -35,16 +35,6 @@ const RATE_GROUPS = [
     rates: [{ purity: "999", label: "Silver 999", detail: "Pure Silver" }]
   },
   {
-    metal: "Platinum",
-    tagline: "Rare & enduring",
-    icon: CircleDot,
-    theme: "platinum",
-    rates: [
-      { purity: "950", label: "Platinum 950", detail: "95% Pure" },
-      { purity: "900", label: "Platinum 900", detail: "90% Pure" }
-    ]
-  },
-  {
     metal: "Diamond",
     tagline: "Exceptional sparkle",
     icon: Gem,
@@ -53,6 +43,16 @@ const RATE_GROUPS = [
       { purity: "D-F / VVS", label: "D – F / VVS", detail: "Top Quality" },
       { purity: "G-H / VS", label: "G – H / VS", detail: "High Quality" },
       { purity: "I-J / SI", label: "I – J / SI", detail: "Good Quality" }
+    ]
+  },
+  {
+    metal: "Platinum",
+    tagline: "Rare & enduring",
+    icon: CircleDot,
+    theme: "platinum",
+    rates: [
+      { purity: "950", label: "Platinum 950", detail: "95% Pure" },
+      { purity: "900", label: "Platinum 900", detail: "90% Pure" }
     ]
   }
 ];
