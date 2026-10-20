@@ -206,35 +206,6 @@ const UserProfile = () => {
       <PageHeader title="My Profile" />
 
       <PageContainer className="pt-5">
-        <section className="flex flex-col items-center gap-4 rounded-2xl border border-[#e9e3d7] bg-white p-5 shadow-sm sm:flex-row sm:text-left">
-          <div className="relative shrink-0">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full text-2xl font-black shadow-sm"
-              style={{ background: "linear-gradient(135deg,#D4A017,#F5C45E)", color: "#004D40" }}>
-              {initials(name) || <FiUser />}
-            </div>
-            <span className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-green-400" />
-          </div>
-          <div className="min-w-0 flex-1 text-center sm:text-left">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#a67b2e]">
-              {isAdmin ? "Administrator" : "Member Account"}
-            </p>
-            <h2 className="mt-1 truncate font-serif text-xl font-bold text-[#201a13]">{name}</h2>
-            <p className="mt-0.5 truncate text-sm text-slate-500">{email}</p>
-          </div>
-          <div className="flex flex-wrap justify-center gap-2">
-            {isAdmin && (
-              <button type="button" onClick={() => navigate("/admin")}
-                className="flex items-center gap-2 rounded-full border border-[#174a3f]/20 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-[#174a3f] transition hover:bg-[#f4f8f5]">
-                <FiShield size={14} /> Admin Panel
-              </button>
-            )}
-            <button type="button" onClick={handleLogout}
-              className="flex items-center gap-2 rounded-full bg-red-500/90 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-red-600">
-              <FiLogOut size={14} /> Logout
-            </button>
-          </div>
-        </section>
-
         <div className="mt-5 grid items-start gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
         <nav aria-label="Profile sections" className="hide-scrollbar flex min-w-0 overflow-x-auto rounded-xl border border-[#e9e3d7] bg-white p-1.5 shadow-sm lg:flex-col lg:overflow-visible">
           {[
@@ -273,6 +244,35 @@ const UserProfile = () => {
           aria-labelledby={`profile-tab-${activeTab}`}
           className="mt-0 min-w-0"
         >
+          <section className="mb-5 flex flex-col items-center gap-4 rounded-2xl border border-[#e9e3d7] bg-white p-5 shadow-sm sm:flex-row sm:text-left">
+            <div className="relative shrink-0">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full text-2xl font-black shadow-sm"
+                style={{ background: "linear-gradient(135deg,#D4A017,#F5C45E)", color: "#004D40" }}>
+                {initials(name) || <FiUser />}
+              </div>
+              <span className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-green-400" />
+            </div>
+            <div className="min-w-0 flex-1 text-center sm:text-left">
+              <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#a67b2e]">
+                {isAdmin ? "Administrator" : "Member Account"}
+              </p>
+              <h2 className="mt-1 truncate font-serif text-xl font-bold text-[#201a13]">{name}</h2>
+              <p className="mt-0.5 truncate text-sm text-slate-500">{email}</p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-2">
+              {isAdmin && (
+                <button type="button" onClick={() => navigate("/admin")}
+                  className="flex items-center gap-2 rounded-full border border-[#174a3f]/20 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-[#174a3f] transition hover:bg-[#f4f8f5]">
+                  <FiShield size={14} /> Admin Panel
+                </button>
+              )}
+              <button type="button" onClick={handleLogout}
+                className="flex items-center gap-2 rounded-full bg-red-500/90 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-red-600">
+                <FiLogOut size={14} /> Logout
+              </button>
+            </div>
+          </section>
+
           {activeTab === "profile" && (
             <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.7fr)_minmax(260px,0.8fr)]">
               <div className="space-y-5">
