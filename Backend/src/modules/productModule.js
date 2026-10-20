@@ -1,4 +1,5 @@
 const { pool } = require('../config/db');
+const { addDateRangeCondition } = require('../utils/dateRange');
 
 const PRODUCT_COLUMNS = `
   id, product_code, name, brand, category, subcategory, metal_type, product_type,
@@ -150,10 +151,11 @@ async function initializeProductModule() {
 
 async function listProducts({
   page, limit, search, status, category, purity, offerStatus, stockStatus,
-  lastPriceUpdate, sortBy, sortOrder
+  lastPriceUpdate, sortBy, sortOrder, dateRange = {}
 }) {
   const where = [];
   const params = [];
+  addDateRangeCondition(where, params, 'created_at', dateRange);
   if (search) {
     where.push('(name LIKE ? OR product_code LIKE ? OR category LIKE ? OR purity LIKE ?)');
     const term = `%${search}%`;
@@ -199,10 +201,14 @@ async function listProducts({
   const direction = sortOrder === 'asc' ? 'ASC' : 'DESC';
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const [[{ total }]] = await pool.execute(`SELECT COUNT(*) AS total FROM products ${whereSql}`, params);
-  const [[{ total: allTotal }]] = await pool.query('SELECT COUNT(*) AS total FROM products');
-  const [[{ active }]] = await pool.query("SELECT COUNT(*) AS active FROM products WHERE status = 'Active'");
-  const [[{ lowStock }]] = await pool.query('SELECT COUNT(*) AS lowStock FROM products WHERE total_stock > 0 AND total_stock < 10');
-  const [[{ outOfStock }]] = await pool.query('SELECT COUNT(*) AS outOfStock FROM products WHERE total_stock <= 0');
+  const dateConditions = [];
+  const dateValues = [];
+  addDateRangeCondition(dateConditions, dateValues, 'created_at', dateRange);
+  const dateWhere = dateConditions.length ? `WHERE ${dateConditions.join(' AND ')}` : '';
+  const [[{ total: allTotal }]] = await pool.execute(`SELECT COUNT(*) AS total FROM products ${dateWhere}`, dateValues);
+  const [[{ active }]] = await pool.execute(`SELECT COUNT(*) AS active FROM products ${dateWhere ? `${dateWhere} AND` : 'WHERE'} status = 'Active'`, dateValues);
+  const [[{ lowStock }]] = await pool.execute(`SELECT COUNT(*) AS lowStock FROM products ${dateWhere ? `${dateWhere} AND` : 'WHERE'} total_stock > 0 AND total_stock < 10`, dateValues);
+  const [[{ outOfStock }]] = await pool.execute(`SELECT COUNT(*) AS outOfStock FROM products ${dateWhere ? `${dateWhere} AND` : 'WHERE'} total_stock <= 0`, dateValues);
   const [categoryRows] = await pool.query('SELECT DISTINCT category FROM products WHERE category IS NOT NULL ORDER BY category');
   const [purityRows] = await pool.query('SELECT DISTINCT purity FROM products WHERE purity IS NOT NULL ORDER BY purity');
   const offset = (page - 1) * limit;

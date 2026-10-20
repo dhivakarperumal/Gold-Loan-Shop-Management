@@ -134,7 +134,8 @@ const DEFAULT_DASHBOARD_DATA = {
     Active: 0,
     Processing: 0,
     Pending: 0,
-    Overdue: 0
+    Overdue: 0,
+    Completed: 0,
   },
   revenueTrends: [],
   topProducts: []
@@ -265,6 +266,8 @@ const Dashboard = () => {
       case "Active":
       case "Delivered":
         return "bg-emerald-50 text-emerald-600 font-semibold";
+      case "Completed":
+        return "bg-teal-50 text-teal-700 font-semibold";
       case "Processing":
         return "bg-amber-50 text-amber-600 font-semibold";
       case "Pending":
@@ -341,13 +344,14 @@ const Dashboard = () => {
   };
 
   // ── Doughnut Chart: Loan Status ──────────────────────────────────
-  const loanStatusLabels = ['Active', 'Processing', 'Pending', 'Overdue'];
-  const loanStatusColors = ['#10B981', '#F59E0B', '#38BDF8', '#EF4444'];
+  const loanStatusLabels = ['Active', 'Processing', 'Pending', 'Overdue', 'Completed'];
+  const loanStatusColors = ['#10B981', '#F59E0B', '#38BDF8', '#EF4444', '#0F766E'];
   const loanStatusValues = [
     loanStatusCounts.Active ?? 0,
     loanStatusCounts.Processing ?? 0,
     loanStatusCounts.Pending ?? 0,
     loanStatusCounts.Overdue ?? 0,
+    loanStatusCounts.Completed ?? 0,
   ];
   const totalLoanStatusSum = loanStatusValues.reduce((a, b) => a + b, 0) || 1;
 

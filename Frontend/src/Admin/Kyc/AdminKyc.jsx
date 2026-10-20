@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Search, ShieldCheck, Users, Clock3, CheckCircle2, XCircle, ChevronLeft, ChevronRight, FileText, X } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../api";
+import DateRangeFilter from "../Components/DateRangeFilter";
 
 const statusLabels = {
   pending: "Pending",
@@ -31,8 +32,7 @@ const AdminKyc = () => {
   const [selected, setSelected] = useState(null);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
-  const [dateFrom, setDateFrom] = useState("");
-  const [dateTo, setDateTo] = useState("");
+  const [dateRange, setDateRange] = useState({ preset: "all", startDate: "", endDate: "" });
   const [page, setPage] = useState(1);
   const [pages, setPages] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -44,7 +44,9 @@ const AdminKyc = () => {
 
   const loadStats = useCallback(async () => {
     try {
-      const response = await api.get("/kyc/admin/stats");
+      const response = await api.get("/kyc/admin/stats", {
+        params: { dateFrom: dateRange.startDate, dateTo: dateRange.endDate }
+      });
       setStats(response.data.stats || {});
       setAllowedDocumentTypes(response.data.allowedDocumentTypes || []);
       setStatsError(false);
@@ -52,12 +54,19 @@ const AdminKyc = () => {
       setStatsError(true);
       throw error;
     }
-  }, []);
+  }, [dateRange.startDate, dateRange.endDate]);
 
   const loadApplications = useCallback(async () => {
     try {
       const response = await api.get("/kyc/admin/applications", {
-        params: { search, status, dateFrom, dateTo, page, pageSize: 15 }
+        params: {
+          search,
+          status,
+          dateFrom: dateRange.startDate,
+          dateTo: dateRange.endDate,
+          page,
+          pageSize: 15
+        }
       });
       setApplications(response.data.applications || []);
       setPages(Math.max(1, response.data.pages || 1));
@@ -70,7 +79,7 @@ const AdminKyc = () => {
     } finally {
       setLoading(false);
     }
-  }, [dateFrom, dateTo, page, search, status]);
+  }, [dateRange.startDate, dateRange.endDate, page, search, status]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -171,7 +180,12 @@ const AdminKyc = () => {
       )}
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="grid gap-3 border-b border-slate-200 p-4 sm:grid-cols-2 xl:grid-cols-[minmax(220px,1fr)_190px_170px_170px]">
+        <div className="flex flex-wrap items-center gap-3 border-b border-slate-200 p-4">
+          <DateRangeFilter onApply={(range) => {
+            setLoading(true);
+            setDateRange(range);
+            setPage(1);
+          }} />
           <label className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input value={search} onChange={(event) => { setLoading(true); setSearch(event.target.value); setPage(1); }} placeholder="Search name, email, phone or ID" className="w-full rounded-xl border border-slate-300 py-2.5 pl-10 pr-3 text-sm outline-none focus:border-[#087568]" />
@@ -180,8 +194,6 @@ const AdminKyc = () => {
             <option value="all">All statuses</option>
             {Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>
-          <label className="flex items-center gap-2 text-xs text-slate-500">From <input type="date" value={dateFrom} onChange={(event) => { setLoading(true); setDateFrom(event.target.value); setPage(1); }} className="min-w-0 flex-1 rounded-lg border border-slate-300 px-2 py-2 text-sm text-slate-700" /></label>
-          <label className="flex items-center gap-2 text-xs text-slate-500">To <input type="date" value={dateTo} onChange={(event) => { setLoading(true); setDateTo(event.target.value); setPage(1); }} className="min-w-0 flex-1 rounded-lg border border-slate-300 px-2 py-2 text-sm text-slate-700" /></label>
         </div>
 
         <div className="overflow-x-auto">
@@ -198,11 +210,11 @@ const AdminKyc = () => {
                 <tr>
                   <td colSpan="5" className="px-5 py-10 text-center">
                     <p className="font-medium text-slate-700">
-                      {search || status !== "all" || dateFrom || dateTo
+                      {search || status !== "all" || dateRange.startDate || dateRange.endDate
                         ? "No KYC applications match these filters."
                         : "No KYC applications have been submitted yet."}
                     </p>
-                    {!search && status === "all" && !dateFrom && !dateTo && (
+                    {!search && status === "all" && !dateRange.startDate && !dateRange.endDate && (
                       <p className="mt-2 text-sm text-slate-500">
                         {allowedDocumentTypes?.length === 0
                           ? "Configure approved document types before asking customers to submit."

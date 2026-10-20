@@ -7,6 +7,7 @@ const {
   updateUser,
   verifyPassword
 } = require('../modules/authModule');
+const { parseDateRange } = require('../utils/dateRange');
 
 const VALID_STATUSES = new Set(['Active', 'Inactive']);
 
@@ -69,8 +70,10 @@ async function login(req, res, next) {
 }
 
 async function getUsers(req, res, next) {
+  const dateRange = parseDateRange(req.query);
+  if (dateRange.error) return res.status(400).json({ message: dateRange.error });
   try {
-    return res.json(await listUsers());
+    return res.json(await listUsers(dateRange));
   } catch (error) {
     return next(error);
   }

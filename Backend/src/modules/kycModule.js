@@ -246,9 +246,21 @@ async function listKycApplications({ page, pageSize, status, search, dateFrom, d
   return { applications, total: Number(countRows[0].total) };
 }
 
-async function getKycStats() {
-  const [rows] = await pool.query(
-    `SELECT status, COUNT(*) AS total FROM kyc_applications GROUP BY status`
+async function getKycStats({ dateFrom = '', dateTo = '' } = {}) {
+  const conditions = [];
+  const values = [];
+  if (dateFrom) {
+    conditions.push('created_at >= ?');
+    values.push(`${dateFrom} 00:00:00`);
+  }
+  if (dateTo) {
+    conditions.push('created_at < DATE_ADD(?, INTERVAL 1 DAY)');
+    values.push(`${dateTo} 00:00:00`);
+  }
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const [rows] = await pool.execute(
+    `SELECT status, COUNT(*) AS total FROM kyc_applications ${where} GROUP BY status`,
+    values
   );
   return Object.fromEntries(REVIEW_STATUSES.map((status) => [
     status,

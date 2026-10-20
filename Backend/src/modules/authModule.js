@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { pool } = require('../config/db');
+const { addDateRangeCondition } = require('../utils/dateRange');
 
 const USER_COLUMNS = `
   user_id,
@@ -67,9 +68,14 @@ async function getUserById(userId) {
   return users[0] || null;
 }
 
-async function listUsers() {
-  const [users] = await pool.query(
-    `SELECT ${USER_COLUMNS} FROM users ORDER BY created_at DESC, user_id DESC`
+async function listUsers(dateRange = {}) {
+  const conditions = [];
+  const values = [];
+  addDateRangeCondition(conditions, values, 'created_at', dateRange);
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const [users] = await pool.execute(
+    `SELECT ${USER_COLUMNS} FROM users ${where} ORDER BY created_at DESC, user_id DESC`,
+    values
   );
   return users;
 }
