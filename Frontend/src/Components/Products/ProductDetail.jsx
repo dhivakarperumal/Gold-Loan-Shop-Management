@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useMemo, useState } from "react";
+import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   FaArrowLeft,
@@ -107,6 +107,10 @@ const ProductDetail = () => {
   const [activeImage, setActiveImage] = useState(0);
   const [activeVariantIndex, setActiveVariantIndex] = useState(0);
   const [activeTab, setActiveTab] = useState("information");
+  const [zoom, setZoom] = useState(2.5);
+  const [imagePointer, setImagePointer] = useState({ x: 0.5, y: 0.5 });
+  const [isImageHovered, setIsImageHovered] = useState(false);
+  const imageViewportRef = useRef(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -165,6 +169,18 @@ const ProductDetail = () => {
   }, [product, variants]);
 
   const selectedImage = images[activeImage] || images[0];
+  const updateImagePointer = (event) => {
+    if (event.pointerType === "touch" || !imageViewportRef.current) return;
+    const bounds = imageViewportRef.current.getBoundingClientRect();
+    setImagePointer({
+      x: Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width)),
+      y: Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height))
+    });
+  };
+  const previewPosition = (point) => {
+    const position = (point - 0.5 / zoom) / (1 - 1 / zoom);
+    return `${Math.max(0, Math.min(1, position)) * 100}%`;
+  };
   const loading = loadedProductId !== id;
 
   if (loading) {
@@ -288,14 +304,63 @@ const ProductDetail = () => {
 
         <div className="grid gap-4 lg:grid-cols-[1fr_1.15fr] mt-4">
           <section className="min-w-0 rounded-2xl border border-[#eee8dc] bg-white p-3 shadow-sm">
-            <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-[#f8f6ef]">
+            <div
+              ref={imageViewportRef}
+              onPointerEnter={(event) => {
+                if (event.pointerType !== "touch") setIsImageHovered(true);
+              }}
+              onPointerMove={updateImagePointer}
+              onPointerLeave={() => setIsImageHovered(false)}
+              className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-[#f8f6ef]"
+            >
               {images.length ? (
-                <img src={assetUrl(selectedImage)} alt={product.name} className="h-full w-full object-cover" />
+                <img
+                  src={assetUrl(selectedImage)}
+                  alt={product.name}
+                  className="h-full w-full object-cover"
+                />
               ) : (
                 <div className="text-center text-sm text-[#887c69]">
                   <FaGem className="mx-auto mb-3 text-4xl text-[#bd913e]" />
                   Product image unavailable
                 </div>
+              )}
+              {selectedImage && (
+                <>
+                  <div className="absolute right-3 top-3 z-20 flex items-center gap-1 rounded-full border border-white/80 bg-white/95 p-1 text-sm font-semibold text-[#34443e] shadow-md">
+                    <button
+                      type="button"
+                      onClick={() => setZoom((current) => Math.max(1, current - 0.5))}
+                      disabled={zoom <= 1}
+                      aria-label="Decrease image zoom"
+                      className="grid h-8 w-8 place-items-center rounded-full transition hover:bg-[#f4f0e7] disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <span aria-hidden="true">−</span>
+                    </button>
+                    <span className="min-w-10 text-center text-xs">{zoom}x</span>
+                    <button
+                      type="button"
+                      onClick={() => setZoom((current) => Math.min(4, current + 0.5))}
+                      disabled={zoom >= 4}
+                      aria-label="Increase image zoom"
+                      className="grid h-8 w-8 place-items-center rounded-full transition hover:bg-[#f4f0e7] disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <span aria-hidden="true">+</span>
+                    </button>
+                  </div>
+                  {isImageHovered && zoom > 1 && (
+                    <div
+                      aria-hidden="true"
+                      className="pointer-events-none absolute right-3 top-1/2 z-10 hidden h-[38%] w-[34%] -translate-y-1/2 overflow-hidden rounded-xl border-2 border-white shadow-lg md:block"
+                      style={{
+                        backgroundImage: `url("${assetUrl(selectedImage)}")`,
+                        backgroundRepeat: "no-repeat",
+                        backgroundSize: `${zoom * 100}% ${zoom * 100}%`,
+                        backgroundPosition: `${previewPosition(imagePointer.x)} ${previewPosition(imagePointer.y)}`
+                      }}
+                    />
+                  )}
+                </>
               )}
               {(product.best_seller || product.featured) && (
                 <span className="absolute left-3 top-3 rounded-full bg-[#f4c84a] px-3 py-1.5 text-xs font-bold text-[#4e390f]">
