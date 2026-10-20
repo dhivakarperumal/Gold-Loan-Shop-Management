@@ -725,16 +725,12 @@ async function renewLoan(id, paymentAmount, adminUserId, paymentDetails) {
         principal_after, accrued_interest, fund_account_id, payment_method, reference_number,
         idempotency_key, created_by
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        payment_amount, interest_paid, late_payment_fee, principal_paid, principal_before,
-        principal_after, accrued_interest, fund_account_id, payment_method, reference_number,
-        idempotency_key, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id, preview.renewal_date, preview.period_start_date, previousMaturityDate, newMaturityDate,
         amount.toFixed(2), interestPaid.toFixed(2), latePaymentFee.toFixed(2), principalPaid.toFixed(2),
         preview.current_principal.toFixed(2), principalAfter.toFixed(2),
-        preview.accrued_interest.toFixed(2), paymentDetails.account_id, paymentDetails.payment_method,
-        paymentDetails.reference_number || null, paymentDetails.idempotency_key, adminUserId || null
+        preview.accrued_interest.toFixed(2), renewalDetails.account_id, renewalDetails.payment_method,
+        renewalDetails.reference_number, renewalDetails.idempotency_key, adminUserId || null
       ]
     );
     if (principalPaid > 0) {

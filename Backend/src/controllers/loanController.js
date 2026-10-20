@@ -294,12 +294,24 @@ async function postLoanRenewal(req, res, next) {
   if (!validId(req.params.id)) return res.status(400).json({ message: 'Loan ID is invalid' });
   const amount = parseAmount(req.body?.payment_amount, 'Payment amount', { min: 0.01 });
   if (amount.error) return res.status(400).json({ message: amount.error });
+  if (!validId(req.body?.account_id) || !PAYMENT_METHODS.has(req.body?.payment_method)) {
+    return res.status(400).json({ message: 'Select a valid fund account and payment method' });
+  }
+  const referenceNumber = req.body?.reference_number == null
+    ? ''
+    : String(req.body.reference_number).trim();
+  if (referenceNumber.length > 100) {
+    return res.status(400).json({ message: 'Reference number is invalid' });
+  }
   const idempotencyKey = req.body?.idempotency_key == null
     ? ''
     : String(req.body.idempotency_key).trim();
   if (idempotencyKey.length > 150) return res.status(400).json({ message: 'Payment retry key is invalid' });
   try {
     return res.json(await renewLoan(req.params.id, amount.value, req.adminUser.user_id, {
+      account_id: req.body.account_id,
+      payment_method: req.body.payment_method,
+      reference_number: referenceNumber,
       idempotency_key: idempotencyKey
     }));
   } catch (error) {
