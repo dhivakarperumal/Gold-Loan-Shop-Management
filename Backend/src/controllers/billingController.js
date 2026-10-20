@@ -5,6 +5,7 @@ const {
   getBillingById,
   getBillingProductsByIds,
   listBillings,
+  recordBillingPayment,
   updateBilling
 } = require('../modules/billingModule');
 const { findGoldRateForPurity, getCurrentGoldRates } = require('../modules/goldRateModule');
@@ -322,6 +323,9 @@ async function putBilling(req, res, next) {
   try {
     const existing = await getBillingById(id);
     if (!existing) return res.status(404).json({ message: 'Bill not found' });
+    if (Number(existing.paid_amount) > 0) {
+      return res.status(409).json({ message: 'A bill with recorded payments cannot be edited.' });
+    }
     const { products, error: productsError } = await resolveSelectedProducts(req.body?.products);
     if (productsError) return res.status(400).json({ message: productsError });
     const currentRateSet = req.body?.payment_type === 'EXCHANGE_GOLD' ? await getCurrentGoldRates() : null;
@@ -344,6 +348,53 @@ async function removeBilling(req, res, next) {
     if (!deleted) return res.status(404).json({ message: 'Bill not found' });
     return res.status(204).end();
   } catch (error) {
+    if (error.code === 'ER_ROW_IS_REFERENCED_2') {
+      return res.status(409).json({ message: 'A bill with recorded payments cannot be deleted.' });
+    }
+    return next(error);
+  }
+}
+
+async function postBillingPayment(req, res, next) {
+  const id = validBillingId(req.params.id);
+  if (!id) return res.status(400).json({ message: 'Invalid bill ID' });
+  const body = req.body || {};
+  const paymentKind = body.payment_kind;
+  const accountId = validBillingId(body.account_id);
+  const amount = Number(body.amount);
+  const paymentMethod = body.payment_method;
+  const idempotencyKey = body.idempotency_key;
+  const paymentDate = typeof body.payment_date === 'string'
+    && /^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}(?::\d{2})?)?$/.test(body.payment_date)
+    ? body.payment_date.replace('T', ' ')
+    : null;
+  const referenceNumber = body.reference_number == null ? '' : body.reference_number;
+  if (!['PAYMENT', 'REFUND'].includes(paymentKind) || !accountId
+    || !Number.isFinite(amount) || amount <= 0 || amount > 9999999999.99
+    || !['Cash', 'UPI', 'Card', 'Bank Transfer', 'Cheque', 'Other'].includes(paymentMethod)
+    || !paymentDate || typeof idempotencyKey !== 'string' || idempotencyKey.length < 1 || idempotencyKey.length > 150
+    || typeof referenceNumber !== 'string' || referenceNumber.length > 100) {
+    return res.status(400).json({ message: 'Enter a valid payment date, account, amount, and payment method' });
+  }
+  try {
+    const bill = await recordBillingPayment(id, {
+      payment_kind: paymentKind,
+      account_id: accountId,
+      amount: amount.toFixed(2),
+      payment_method: paymentMethod,
+      payment_date: paymentDate,
+      reference_number: referenceNumber.trim(),
+      idempotency_key: idempotencyKey,
+      created_by: req.adminUser.user_id
+    });
+    return res.status(201).json(bill);
+  } catch (error) {
+    if (error.code === 'BILL_NOT_FOUND') return res.status(404).json({ message: error.message });
+    if (error.code === 'FUND_ACCOUNT_NOT_FOUND') return res.status(400).json({ message: error.message });
+    if (['REFUND_EXCEEDS_PAID', 'INSUFFICIENT_FUNDS'].includes(error.code)) {
+      return res.status(409).json({ message: error.message });
+    }
+    if (error.code === 'ER_DUP_ENTRY') return res.status(409).json({ message: 'This billing payment has already been recorded' });
     return next(error);
   }
 }
@@ -353,6 +404,7 @@ module.exports = {
   mapSelectedProducts,
   normalizeExchangeItems,
   normalizeBilling,
+  postBillingPayment,
   putBilling,
   postBilling,
   removeBilling,

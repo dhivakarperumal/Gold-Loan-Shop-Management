@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiArrowLeft, FiCalendar, FiChevronRight, FiCreditCard, FiDollarSign, FiEdit2, FiEye, FiGrid, FiList, FiPlus, FiPrinter, FiRepeat, FiSave, FiSearch, FiTrash2, FiX } from "react-icons/fi";
+import { FiArrowLeft, FiCalendar, FiChevronRight, FiCreditCard, FiDollarSign, FiEdit2, FiEye, FiGrid, FiImage, FiList, FiPlus, FiPrinter, FiRepeat, FiSave, FiSearch, FiTrash2, FiX } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api from "../../api";
 import useGoldRates from "../../PrivateRouter/useGoldRates";
 import { getReceiptSettings } from "./receiptSettings";
 
+const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
 const EMPTY_CUSTOMER = { name: "", phone: "", email: "", address: "" };
 const EMPTY_PRODUCT = {
   product_id: "",
@@ -38,6 +39,16 @@ function decodeArray(value) {
   } catch {
     return [];
   }
+}
+
+function getProductImage(product) {
+  const rawImages = product.images;
+  const images = Array.isArray(rawImages) ? rawImages : decodeArray(rawImages);
+  const image = images.find((value) => typeof value === "string" && value.trim())
+    || (typeof rawImages === "string" && !rawImages.trim().startsWith("[") ? rawImages : "");
+  if (!image) return "";
+  if (/^(https?:|data:|blob:)/i.test(image)) return image;
+  return `${BACKEND_URL}${image.startsWith("/") ? image : `/${image}`}`;
 }
 
 function escapeHtml(value) {
@@ -353,6 +364,8 @@ export default function BillingManagement() {
   const [showForm, setShowForm] = useState(() => new URLSearchParams(window.location.search).get("new") === "1");
   const [editingBillId, setEditingBillId] = useState(null);
   const [viewingBill, setViewingBill] = useState(null);
+  const [fundAccounts, setFundAccounts] = useState([]);
+  const [billPayment, setBillPayment] = useState(null);
   const [billSearch, setBillSearch] = useState("");
   const [paymentFilter, setPaymentFilter] = useState("ALL");
   const [billView, setBillView] = useState("list");
@@ -377,6 +390,7 @@ export default function BillingManagement() {
     const catalogRate = Number(catalogProduct?.gold_rate_per_gram);
     return resolveProductDetails({
       ...product,
+      images: product.images ?? catalogProduct?.images,
       metal_type: product.metal_type || catalogProduct?.metal_type,
       gross_weight: product.gross_weight ?? catalogProduct?.gross_weight,
       net_gold_weight: product.net_gold_weight ?? catalogProduct?.net_gold_weight,
@@ -440,6 +454,16 @@ export default function BillingManagement() {
   useEffect(() => { loadCatalogProducts(); }, [loadCatalogProducts]);
   useEffect(() => {
     let active = true;
+    api.get("/funds/accounts")
+      .then(({ data }) => { if (active) setFundAccounts(data.filter((account) => account.is_active)); })
+      .catch((error) => {
+        console.error("Failed to load fund accounts for billing:", error);
+        toast.error(error.response?.data?.message || "Could not load fund accounts.");
+      });
+    return () => { active = false; };
+  }, []);
+  useEffect(() => {
+    let active = true;
     api.get("/categories")
       .then((response) => {
         if (!Array.isArray(response.data)) throw new Error("The server returned an invalid category list.");
@@ -495,7 +519,7 @@ export default function BillingManagement() {
     ), 0);
   }, 0);
   const fullPaymentAmount = bills.reduce((sum, bill) => (
-    bill.payment_type === "FULL_PAYMENT" ? sum + (Number(bill.total_amount) || 0) : sum
+    bill.payment_type === "FULL_PAYMENT" ? sum + (Number(bill.paid_amount) || 0) : sum
   ), 0);
   const visibleBills = useMemo(() => {
     const query = billSearch.trim().toLowerCase();
@@ -760,6 +784,42 @@ export default function BillingManagement() {
     }
   };
 
+  const openBillPayment = (bill, paymentKind = "PAYMENT") => {
+    setBillPayment({
+      bill,
+      payment_kind: paymentKind,
+      amount: paymentKind === "PAYMENT" ? String(Number(bill.balance_due || 0)) : String(Number(bill.paid_amount || 0)),
+      account_id: fundAccounts[0] ? String(fundAccounts[0].id) : "",
+      payment_method: "Cash",
+      payment_date: new Date().toLocaleString("sv-SE").replace(" ", "T").slice(0, 16),
+      reference_number: ""
+    });
+  };
+
+  const saveBillPayment = async (event) => {
+    event.preventDefault();
+    if (!billPayment) return;
+    setSaving(true);
+    try {
+      const { bill, ...payment } = billPayment;
+      const { data } = await api.post(`/billings/${bill.id}/payments`, {
+        ...payment,
+        amount: Number(payment.amount),
+        account_id: Number(payment.account_id),
+        idempotency_key: crypto.randomUUID()
+      });
+      setBills((current) => current.map((item) => item.id === data.id ? data : item));
+      if (viewingBill?.id === data.id) setViewingBill(data);
+      setBillPayment(null);
+      toast.success(payment.payment_kind === "PAYMENT" ? "Payment recorded and added to the fund ledger." : "Refund recorded and deducted from the fund ledger.");
+    } catch (error) {
+      console.error("Failed to record bill payment:", error);
+      toast.error(error.response?.data?.message || "Could not record this bill payment.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const updateRow = (setter, rows, index, field, value) => {
     setter(rows.map((row, rowIndex) => rowIndex === index ? { ...row, [field]: value } : row));
   };
@@ -989,7 +1049,7 @@ export default function BillingManagement() {
           <section className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
             {billView === "list" ? (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[900px] text-left">
+              <table className="w-full min-w-[1100px] text-left">
                 <thead className="bg-[#00695C] text-xs uppercase tracking-wide text-white">
                   <tr>
                     <th className="px-4 py-4">S.No.</th>
@@ -999,14 +1059,15 @@ export default function BillingManagement() {
                     <th className="px-4 py-4">Payment</th>
                     <th className="px-4 py-4">Date</th>
                     <th className="px-4 py-4 text-right">Total</th>
+                    <th className="px-4 py-4 text-right">Paid / Due</th>
                     <th className="px-4 py-4 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {loading ? (
-                    <tr><td colSpan="8" className="px-4 py-12 text-center text-sm text-slate-500">Loading bills...</td></tr>
+                    <tr><td colSpan="9" className="px-4 py-12 text-center text-sm text-slate-500">Loading bills...</td></tr>
                   ) : visibleBills.length === 0 ? (
-                    <tr><td colSpan="8" className="px-4 py-12 text-center text-sm text-slate-500">{bills.length === 0 ? "No bills yet. Create your first bill." : "No bills match your search or payment filter."}</td></tr>
+                    <tr><td colSpan="9" className="px-4 py-12 text-center text-sm text-slate-500">{bills.length === 0 ? "No bills yet. Create your first bill." : "No bills match your search or payment filter."}</td></tr>
                   ) : visibleBills.map((bill, index) => {
                     const billCustomers = decodeArray(bill.customers);
                     const billProducts = decodeArray(bill.products);
@@ -1019,11 +1080,14 @@ export default function BillingManagement() {
                         <td className="px-4 py-4 text-slate-600">{bill.payment_type === "EXCHANGE_GOLD" ? "Exchange Gold" : "Full Payment"}</td>
                         <td className="px-4 py-4 text-slate-500">{bill.created_at ? new Date(bill.created_at).toLocaleDateString("en-IN") : "—"}</td>
                         <td className="px-4 py-4 text-right font-bold text-slate-900">{currency(bill.total_amount)}</td>
+                        <td className="px-4 py-4 text-right"><span className="block font-semibold text-emerald-700">{currency(bill.paid_amount)}</span><span className="mt-1 block text-xs text-slate-500">Due {currency(bill.balance_due)}</span></td>
                         <td className="px-4 py-4">
                           <div className="flex justify-end gap-1">
+                            {Number(bill.balance_due) > 0 && <button type="button" onClick={() => openBillPayment(bill)} className="rounded-md px-2 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50" aria-label={`Collect payment for ${bill.invoice_no}`} title="Collect payment">Collect</button>}
+                            {Number(bill.paid_amount) > 0 && <button type="button" onClick={() => openBillPayment(bill, "REFUND")} className="rounded-md px-2 py-2 text-xs font-bold text-rose-700 hover:bg-rose-50" aria-label={`Refund bill ${bill.invoice_no}`} title="Refund">Refund</button>}
                             <button type="button" onClick={() => setViewingBill(bill)} className="rounded-md p-2 text-sky-700 hover:bg-sky-50" aria-label={`View bill ${bill.invoice_no}`} title="View"><FiEye /></button>
                             <button type="button" onClick={() => printBill(bill)} className="rounded-md p-2 text-[#00695C] hover:bg-emerald-50" aria-label={`Print bill ${bill.invoice_no}`} title="Print"><FiPrinter /></button>
-                            <button type="button" onClick={() => editBill(bill)} className="rounded-md p-2 text-amber-700 hover:bg-amber-50" aria-label={`Edit bill ${bill.invoice_no}`} title="Edit"><FiEdit2 /></button>
+                            {Number(bill.paid_amount) === 0 && <button type="button" onClick={() => editBill(bill)} className="rounded-md p-2 text-amber-700 hover:bg-amber-50" aria-label={`Edit bill ${bill.invoice_no}`} title="Edit"><FiEdit2 /></button>}
                             <button type="button" onClick={() => deleteBill(bill)} className="rounded-md p-2 text-rose-600 hover:bg-rose-50" aria-label={`Delete bill ${bill.invoice_no}`} title="Delete"><FiTrash2 /></button>
                           </div>
                         </td>
@@ -1057,11 +1121,14 @@ export default function BillingManagement() {
                         <p className="truncate text-slate-700">{billCustomers.map((customer) => customer.name).join(", ") || "No customer name"}</p>
                         <p className="text-slate-500">{billProducts.length} item{billProducts.length === 1 ? "" : "s"} · {bill.created_at ? new Date(bill.created_at).toLocaleDateString("en-IN") : "—"}</p>
                         <p className="text-lg font-extrabold text-slate-900">{currency(bill.total_amount)}</p>
+                        <p className="text-xs text-slate-600">Paid {currency(bill.paid_amount)} · Due {currency(bill.balance_due)}</p>
                       </div>
                       <div className="mt-3 flex justify-end gap-1 border-t border-slate-100 pt-2">
+                        {Number(bill.balance_due) > 0 && <button type="button" onClick={() => openBillPayment(bill)} className="rounded-md px-2 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50">Collect</button>}
+                        {Number(bill.paid_amount) > 0 && <button type="button" onClick={() => openBillPayment(bill, "REFUND")} className="rounded-md px-2 py-2 text-xs font-bold text-rose-700 hover:bg-rose-50">Refund</button>}
                         <button type="button" onClick={() => setViewingBill(bill)} className="rounded-md p-2 text-sky-700 hover:bg-sky-50" aria-label={`View bill ${bill.invoice_no}`} title="View"><FiEye /></button>
                         <button type="button" onClick={() => printBill(bill)} className="rounded-md p-2 text-[#00695C] hover:bg-emerald-50" aria-label={`Print bill ${bill.invoice_no}`} title="Print"><FiPrinter /></button>
-                        <button type="button" onClick={() => editBill(bill)} className="rounded-md p-2 text-amber-700 hover:bg-amber-50" aria-label={`Edit bill ${bill.invoice_no}`} title="Edit"><FiEdit2 /></button>
+                        {Number(bill.paid_amount) === 0 && <button type="button" onClick={() => editBill(bill)} className="rounded-md p-2 text-amber-700 hover:bg-amber-50" aria-label={`Edit bill ${bill.invoice_no}`} title="Edit"><FiEdit2 /></button>}
                         <button type="button" onClick={() => deleteBill(bill)} className="rounded-md p-2 text-rose-600 hover:bg-rose-50" aria-label={`Delete bill ${bill.invoice_no}`} title="Delete"><FiTrash2 /></button>
                       </div>
                     </article>
@@ -1142,7 +1209,7 @@ export default function BillingManagement() {
             ) : (
               <div className="w-full overflow-x-auto rounded-lg border border-slate-200">
                 <table className="w-full min-w-[900px] border-collapse text-left">
-                  <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                  <thead className="bg-gradient-to-r from-[#07564B] via-[#064A41] to-[#043D37] text-xs uppercase tracking-wide text-white">
                     <tr>
                       <th className="px-4 py-3 font-semibold">Product</th>
                       <th className="px-4 py-3 font-semibold">Category</th>
@@ -1157,9 +1224,25 @@ export default function BillingManagement() {
                   <tbody className="divide-y divide-slate-100">
                     {products.map((savedProduct, index) => {
                       const product = getProductWithCatalogDetails(savedProduct);
+                      const productImage = getProductImage(product);
                       return (
                       <tr key={`${product.product_id}-${index}`}>
-                        <td className="px-4 py-3 text-sm font-medium text-slate-800">{product.product_name}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50 text-slate-300">
+                              <FiImage size={18} aria-hidden="true" />
+                              {productImage && (
+                                <img
+                                  src={productImage}
+                                  alt={product.product_name || "Product"}
+                                  className="absolute inset-0 h-full w-full object-cover"
+                                  onError={(event) => { event.currentTarget.style.display = "none"; }}
+                                />
+                              )}
+                            </div>
+                            <span className="text-sm font-medium text-slate-800">{product.product_name}</span>
+                          </div>
+                        </td>
                         <td className="px-4 py-3 text-sm text-slate-700">{product.category || "—"}</td>
                         <td className="px-4 py-3 text-sm text-slate-700">{product.purity || "—"}</td>
                         <td className="px-4 py-3 text-right text-sm text-slate-700">{formatMakingCharge(product)}</td>
@@ -1314,10 +1397,26 @@ export default function BillingManagement() {
                 <tbody className="divide-y divide-slate-100">
                   {decodeArray(viewingBill.products).map((savedProduct, index) => {
                     const product = getProductWithCatalogDetails(savedProduct);
+                    const productImage = getProductImage(product);
                     return (
                       <tr key={`view-product-${index}`}>
                         <td className="px-3 py-2 text-slate-500">{index + 1}</td>
-                        <td className="px-3 py-2">{product.product_name}</td>
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <div className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-slate-50 text-slate-300">
+                              <FiImage size={16} aria-hidden="true" />
+                              {productImage && (
+                                <img
+                                  src={productImage}
+                                  alt={product.product_name || "Product"}
+                                  className="absolute inset-0 h-full w-full object-cover"
+                                  onError={(event) => { event.currentTarget.style.display = "none"; }}
+                                />
+                              )}
+                            </div>
+                            <span>{product.product_name}</span>
+                          </div>
+                        </td>
                         <td className="px-3 py-2">{product.category || "—"}</td>
                         <td className="px-3 py-2">{product.purity || "—"}</td>
                         <td className="px-3 py-2 text-right">{formatMakingCharge(product)}</td>
@@ -1352,8 +1451,57 @@ export default function BillingManagement() {
               {decodeArray(viewingBill.exchanges).length > 0 && <div className="flex justify-between text-amber-700"><span>Exchange Amount</span><span>−{currency(decodeArray(viewingBill.exchanges).reduce((sum, item) => sum + (Number(item.credit_amount) || 0), 0))}</span></div>}
               <div className="flex justify-between text-slate-600"><span>GST</span><span>{currency(viewingBill.gst_amount)}</span></div>
               <div className="flex justify-between border-t border-slate-200 pt-2 text-lg font-extrabold text-slate-900"><span>Total</span><span>{currency(viewingBill.total_amount)}</span></div>
+              <div className="flex justify-between text-emerald-700"><span>Paid</span><span>{currency(viewingBill.paid_amount)}</span></div>
+              <div className="flex justify-between font-bold text-rose-700"><span>Balance due</span><span>{currency(viewingBill.balance_due)}</span></div>
             </div>
           </section>
+        </div>
+      )}
+      {billPayment && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/50 p-4" onMouseDown={(event) => {
+          if (event.target === event.currentTarget) setBillPayment(null);
+        }}>
+          <form onSubmit={saveBillPayment} className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+            <header className="flex items-center justify-between border-b border-slate-100 p-5">
+              <div>
+                <p className={`text-xs font-bold uppercase tracking-widest ${billPayment.payment_kind === "PAYMENT" ? "text-emerald-700" : "text-rose-700"}`}>
+                  {billPayment.payment_kind === "PAYMENT" ? "Billing collection" : "Bill refund"}
+                </p>
+                <h2 className="mt-1 text-xl font-black">{billPayment.bill.invoice_no}</h2>
+                <p className="mt-1 text-xs text-slate-500">Paid {currency(billPayment.bill.paid_amount)} · Due {currency(billPayment.bill.balance_due)}</p>
+              </div>
+              <button type="button" onClick={() => setBillPayment(null)} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label="Close payment dialog"><FiX /></button>
+            </header>
+            <div className="grid gap-4 p-5 sm:grid-cols-2">
+              <label className={labelClass}>Amount received (₹)
+                <input className={inputClass} type="number" required min="0.01" max={billPayment.payment_kind === "REFUND" ? Number(billPayment.bill.paid_amount) : undefined} step="0.01" value={billPayment.amount} onChange={(event) => setBillPayment({ ...billPayment, amount: event.target.value })} />
+              </label>
+              <label className={labelClass}>Fund account
+                <select className={inputClass} required value={billPayment.account_id} onChange={(event) => setBillPayment({ ...billPayment, account_id: event.target.value })}>
+                  <option value="">Select account</option>{fundAccounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+                </select>
+              </label>
+              <label className={labelClass}>Payment method
+                <select className={inputClass} value={billPayment.payment_method} onChange={(event) => setBillPayment({ ...billPayment, payment_method: event.target.value })}>
+                  {["Cash", "UPI", "Card", "Bank Transfer", "Cheque", "Other"].map((method) => <option key={method}>{method}</option>)}
+                </select>
+              </label>
+              <label className={labelClass}>Date and time
+                <input className={inputClass} type="datetime-local" required value={billPayment.payment_date} onChange={(event) => setBillPayment({ ...billPayment, payment_date: event.target.value })} />
+              </label>
+              <label className={`${labelClass} sm:col-span-2`}>Reference number / transaction ID
+                <input className={inputClass} maxLength={100} value={billPayment.reference_number} onChange={(event) => setBillPayment({ ...billPayment, reference_number: event.target.value })} />
+              </label>
+              {billPayment.payment_kind === "PAYMENT" && Number(billPayment.amount) > Number(billPayment.bill.balance_due) && <p className="text-xs text-amber-700 sm:col-span-2">Amount exceeds the invoice balance; the extra amount will be recorded as customer advance.</p>}
+              <p className="text-xs text-slate-500 sm:col-span-2">The invoice and fund ledger are updated together after confirmation. Unpaid invoice amounts are not counted as received funds.</p>
+            </div>
+            <footer className="flex justify-end gap-2 border-t border-slate-100 p-5">
+              <button type="button" onClick={() => setBillPayment(null)} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-bold">Cancel</button>
+              <button disabled={saving || fundAccounts.length === 0} className={`rounded-lg px-4 py-2.5 text-sm font-extrabold text-white disabled:opacity-50 ${billPayment.payment_kind === "PAYMENT" ? "bg-[#00695C]" : "bg-rose-700"}`}>
+                {saving ? "Saving…" : billPayment.payment_kind === "PAYMENT" ? "Confirm Collection" : "Confirm Refund"}
+              </button>
+            </footer>
+          </form>
         </div>
       )}
     </main>

@@ -27,7 +27,6 @@ const AllProducts = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [categoryFilter, setCategoryFilter] = useState("");
     const [purityFilter, setPurityFilter] = useState("");
-    const [offerFilter, setOfferFilter] = useState("");
     const [stockFilter, setStockFilter] = useState("");
     const [lastPriceUpdateFilter, setLastPriceUpdateFilter] = useState("");
     const [sortBy, setSortBy] = useState("created_at");
@@ -42,7 +41,6 @@ const AllProducts = () => {
         status: "All",
         category: categoryFilter,
         purity: purityFilter,
-        offerStatus: offerFilter,
         stockStatus: stockFilter,
         lastPriceUpdate: lastPriceUpdateFilter,
         sortBy,
@@ -113,7 +111,6 @@ const AllProducts = () => {
             status: "All",
             category: categoryFilter,
             purity: purityFilter,
-            offerStatus: offerFilter,
             stockStatus: stockFilter,
             lastPriceUpdate: lastPriceUpdateFilter,
             sortBy,
@@ -148,7 +145,7 @@ const AllProducts = () => {
         } finally {
             setLoading(false);
         }
-    }, [currentPage, itemsPerPage, searchTerm, categoryFilter, purityFilter, offerFilter, stockFilter, lastPriceUpdateFilter, sortBy, sortOrder, setProductsCached]);
+    }, [currentPage, itemsPerPage, searchTerm, categoryFilter, purityFilter, stockFilter, lastPriceUpdateFilter, sortBy, sortOrder, setProductsCached]);
 
     useEffect(() => {
         const timeout = setTimeout(() => {
@@ -232,7 +229,7 @@ const AllProducts = () => {
     // Reset to page 1 when search/filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, categoryFilter, purityFilter, offerFilter, stockFilter, lastPriceUpdateFilter, sortBy, sortOrder]);
+    }, [searchTerm, categoryFilter, purityFilter, stockFilter, lastPriceUpdateFilter, sortBy, sortOrder]);
 
     const refreshPrices = async () => {
         if (!window.confirm("Recalculate product prices using the currently active daily gold rates?")) return;
@@ -349,11 +346,6 @@ const AllProducts = () => {
                             <option value="">All purities</option>
                             {filterOptions.purities.map((purity) => <option key={purity} value={purity}>{purity}</option>)}
                         </select>
-                        <select value={offerFilter} onChange={(event) => setOfferFilter(event.target.value)} className="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-slate-600 outline-none cursor-pointer">
-                            <option value="">All offers</option>
-                            <option value="offered">Offer configured</option>
-                            <option value="no-offer">No offer</option>
-                        </select>
                         <select value={stockFilter} onChange={(event) => setStockFilter(event.target.value)} className="px-3 py-2.5 bg-gray-50 border border-gray-200 rounded-xl text-sm font-medium text-slate-600 outline-none cursor-pointer">
                             <option value="">All stock</option>
                             <option value="in-stock">In stock</option>
@@ -413,15 +405,16 @@ const AllProducts = () => {
                             <div className="overflow-x-auto">
                                 <table className="w-full min-w-[1900px] text-left">
                                     <thead>
-                                        <tr className="border-b border-[#7b2cbf] bg-[#240046]">
-                                            {["Image", "Product Name", "SKU / Product Code", "Category", "Metal Type", "Purity", "Gross Weight (g)", "Net Gold Weight (g)", "Making Charge", "Daily Gold Rate", "Gold Value", "MRP", "Offer Type", "Offer Price / Discount", "Final Price", "Stock Status", "Last Price Updated", "Actions"].map((heading) => (
+                                        <tr className="border-b border-white/10 bg-gradient-to-r from-[#07564B] via-[#064A41] to-[#043D37]">
+                                            {["S No", "Image", "Product Name", "SKU / Product Code", "Category", "Metal Type", "Purity", "Gross Weight (g)", "Net Gold Weight (g)", "Making Charge", "Daily Gold Rate", "Gold Value", "MRP", "Offer Type", "Offer Price / Discount", "Final Price", "Stock Status", "Last Price Updated", "Actions"].map((heading) => (
                                                 <th key={heading} className="whitespace-nowrap px-4 py-4 text-[11px] font-bold uppercase tracking-wider text-white">{heading}</th>
                                             ))}
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-200">
-                                        {currentItems.map((product) => (
+                                        {currentItems.map((product, index) => (
                                             <tr key={product.id} className="hover:bg-[#240046]/5 transition-colors group">
+                                                <td className="px-4 py-3 text-xs font-semibold text-slate-500">{(currentPage - 1) * itemsPerPage + index + 1}</td>
                                                 <td className="px-4 py-3"><img src={getProductImage(product)} alt={product.name} loading="lazy" className="h-11 w-11 rounded-lg border border-gray-100 object-cover" /></td>
                                                 <td className="max-w-[180px] px-4 py-3 text-sm font-bold text-slate-800">{product.name}</td>
                                                 <td className="px-4 py-3 text-xs font-semibold text-slate-600">{product.product_code || "—"}</td>

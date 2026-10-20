@@ -1,5 +1,6 @@
 const crypto = require('node:crypto');
 const { pool } = require('../config/db');
+const { getAccountBalance, insertTransaction } = require('./fundModule');
 
 const INTEREST_TYPES = [
   ['simple', 'Simple Interest'],
@@ -102,6 +103,10 @@ async function initializeLoanModule() {
       principal_before DECIMAL(14,2) NOT NULL,
       principal_after DECIMAL(14,2) NOT NULL,
       accrued_interest DECIMAL(14,2) NOT NULL,
+      fund_account_id BIGINT UNSIGNED NULL,
+      payment_method VARCHAR(40) NULL,
+      reference_number VARCHAR(100) NULL,
+      idempotency_key VARCHAR(150) NULL,
       created_by BIGINT UNSIGNED NULL,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       CONSTRAINT fk_loan_renewals_loan FOREIGN KEY (loan_id)
@@ -109,6 +114,23 @@ async function initializeLoanModule() {
       INDEX idx_loan_renewals_loan_date (loan_id, renewal_date, id)
     )
   `);
+  const [renewalColumns] = await pool.query('SHOW COLUMNS FROM loan_renewals');
+  const existingRenewalColumns = new Set(renewalColumns.map((column) => column.Field));
+  const renewalMigrations = {
+    fund_account_id: 'BIGINT UNSIGNED NULL AFTER accrued_interest',
+    payment_method: 'VARCHAR(40) NULL AFTER fund_account_id',
+    reference_number: 'VARCHAR(100) NULL AFTER payment_method',
+    idempotency_key: 'VARCHAR(150) NULL AFTER reference_number'
+  };
+  for (const [column, definition] of Object.entries(renewalMigrations)) {
+    if (!existingRenewalColumns.has(column)) {
+      await pool.query(`ALTER TABLE loan_renewals ADD COLUMN \`${column}\` ${definition}`);
+    }
+  }
+  const [renewalIdempotencyIndex] = await pool.query("SHOW INDEX FROM loan_renewals WHERE Key_name = 'uq_loan_renewals_idempotency'");
+  if (renewalIdempotencyIndex.length === 0) {
+    await pool.query('ALTER TABLE loan_renewals ADD UNIQUE KEY uq_loan_renewals_idempotency (idempotency_key)');
+  }
   await pool.query(`
     CREATE TABLE IF NOT EXISTS loan_gold_releases (
       id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -445,7 +467,7 @@ async function getLoanRenewal(id) {
   }
 }
 
-async function renewLoan(id, paymentAmount, adminUserId) {
+async function renewLoan(id, paymentAmount, adminUserId, paymentDetails) {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
@@ -459,6 +481,15 @@ async function renewLoan(id, paymentAmount, adminUserId) {
       throw error;
     }
     const loan = loans[0];
+    const [fundAccounts] = await connection.execute(
+      'SELECT id, is_active FROM fund_accounts WHERE id = ? FOR UPDATE',
+      [paymentDetails.account_id]
+    );
+    if (!fundAccounts.length || !fundAccounts[0].is_active) {
+      const error = new Error('Select an active fund account');
+      error.code = 'FUND_ACCOUNT_NOT_FOUND';
+      throw error;
+    }
     const [[dateRow]] = await connection.query(
       "SELECT DATE_FORMAT(CURRENT_DATE(), '%Y-%m-%d') AS renewal_date"
     );
@@ -502,15 +533,48 @@ async function renewLoan(id, paymentAmount, adminUserId) {
       `INSERT INTO loan_renewals (
         loan_id, renewal_date, period_start_date, previous_maturity_date, new_maturity_date,
         payment_amount, interest_paid, principal_paid, principal_before, principal_after,
-        accrued_interest, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        accrued_interest, fund_account_id, payment_method, reference_number, idempotency_key, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id, preview.renewal_date, preview.period_start_date, previousMaturityDate, newMaturityDate,
         amount.toFixed(2), interestPaid.toFixed(2), principalPaid.toFixed(2),
         preview.current_principal.toFixed(2), principalAfter.toFixed(2),
-        preview.accrued_interest.toFixed(2), adminUserId || null
+        preview.accrued_interest.toFixed(2), paymentDetails.account_id, paymentDetails.payment_method,
+        paymentDetails.reference_number || null, paymentDetails.idempotency_key, adminUserId || null
       ]
     );
+    if (principalPaid > 0) {
+      await insertTransaction(connection, {
+        account_id: paymentDetails.account_id,
+        transaction_type: 'CREDIT',
+        category: 'Customer Loan Repayment',
+        transaction_date: preview.renewal_date,
+        amount: principalPaid.toFixed(2),
+        party_name: loan.customer_name,
+        related_reference: loan.loan_number,
+        payment_method: paymentDetails.payment_method,
+        reference_number: paymentDetails.reference_number,
+        description: 'Principal portion of loan repayment',
+        idempotency_key: `${paymentDetails.idempotency_key}:principal`,
+        created_by: adminUserId
+      });
+    }
+    if (interestPaid > 0) {
+      await insertTransaction(connection, {
+        account_id: paymentDetails.account_id,
+        transaction_type: 'CREDIT',
+        category: 'Interest Collection',
+        transaction_date: preview.renewal_date,
+        amount: interestPaid.toFixed(2),
+        party_name: loan.customer_name,
+        related_reference: loan.loan_number,
+        payment_method: paymentDetails.payment_method,
+        reference_number: paymentDetails.reference_number,
+        description: 'Interest portion of loan repayment',
+        idempotency_key: `${paymentDetails.idempotency_key}:interest`,
+        created_by: adminUserId
+      });
+    }
     await connection.execute(
       `UPDATE loans SET outstanding_principal = ?, interest_calculation_start_date = ?,
         maturity_date = ?, loan_status = ?, release_status = ? WHERE id = ?`,
@@ -612,13 +676,46 @@ async function listLoansForUser(userId) {
 }
 
 
-async function createLoan(loan) {
+function allocateLoanDisbursement(amount, accounts) {
+  const amountNumber = Number(amount);
+  if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
+    const error = new Error('Enter a valid loan amount greater than zero');
+    error.code = 'INVALID_LOAN_AMOUNT';
+    throw error;
+  }
+  const amountCents = Math.round((amountNumber + Number.EPSILON) * 100);
+  let remainingCents = amountCents;
+  const allocations = [];
+  let availableCents = 0;
+  for (const account of accounts) {
+    const balance = Number(account.balance);
+    const balanceCents = Number.isFinite(balance) ? Math.max(0, Math.round((balance + Number.EPSILON) * 100)) : 0;
+    availableCents += balanceCents;
+    const debitCents = Math.min(remainingCents, balanceCents);
+    if (debitCents > 0) {
+      allocations.push({
+        account_id: account.id,
+        amount: (debitCents / 100).toFixed(2)
+      });
+      remainingCents -= debitCents;
+    }
+  }
+  if (remainingCents > 0) {
+    const error = new Error(`Insufficient available funds. Available balance: ${(availableCents / 100).toFixed(2)}.`);
+    error.code = 'INSUFFICIENT_FUNDS';
+    error.available_balance = (availableCents / 100).toFixed(2);
+    throw error;
+  }
+  return allocations;
+}
+
+async function createLoan(loan, { idempotencyKey = crypto.randomUUID() } = {}) {
   const connection = await pool.getConnection();
   let loanId;
   try {
     await connection.beginTransaction();
     const [customers] = await connection.execute(
-      'SELECT id FROM loan_customers WHERE id = ? FOR UPDATE',
+      'SELECT id, full_name FROM loan_customers WHERE id = ? FOR UPDATE',
       [loan.customer_id]
     );
     if (!customers.length) {
@@ -635,6 +732,30 @@ async function createLoan(loan) {
       error.code = 'INTEREST_TYPE_UNAVAILABLE';
       throw error;
     }
+    const [fundAccounts] = await connection.execute(
+      'SELECT id FROM fund_accounts ORDER BY id FOR UPDATE'
+    );
+    const [existingDisbursements] = await connection.execute(
+      `SELECT related_reference FROM fund_transactions
+       WHERE idempotency_key LIKE ? AND status = 'POSTED'
+       ORDER BY id LIMIT 1`,
+      [`loan-disbursement:${idempotencyKey}:%`]
+    );
+    if (existingDisbursements.length) {
+      const existingLoan = await getLoanByIdFrom(connection, existingDisbursements[0].related_reference);
+      if (existingLoan) {
+        await connection.commit();
+        return existingLoan;
+      }
+    }
+    const fundBalances = [];
+    for (const account of fundAccounts) {
+      fundBalances.push({
+        id: account.id,
+        balance: await getAccountBalance(connection, account.id)
+      });
+    }
+    const allocations = allocateLoanDisbursement(loan.principal_amount, fundBalances);
     const loanToInsert = { ...loan, outstanding_principal: loan.principal_amount };
     const fields = Object.keys(loanToInsert).filter((field) => field !== 'customer_id');
     const columns = ['loan_number', 'gold_pledge_number', 'customer_id', ...fields];
@@ -652,14 +773,32 @@ async function createLoan(loan) {
       'UPDATE loans SET loan_number = ?, gold_pledge_number = ? WHERE id = ?',
       [loanNumber, pledgeNumber, loanId]
     );
+    const [[timestamp]] = await connection.query('SELECT CURRENT_TIMESTAMP() AS transaction_date');
+    for (const [index, allocation] of allocations.entries()) {
+      await insertTransaction(connection, {
+        account_id: allocation.account_id,
+        transaction_type: 'DEBIT',
+        category: 'Customer Gold Loan Disbursement',
+        transaction_date: timestamp.transaction_date,
+        amount: allocation.amount,
+        party_name: customers[0].full_name,
+        related_reference: String(loanId),
+        payment_method: 'Other',
+        reference_number: loanNumber,
+        description: 'Loan amount disbursed to customer',
+        idempotency_key: `loan-disbursement:${idempotencyKey}:${index}`,
+        created_by: loan.created_by
+      });
+    }
+    const createdLoan = await getLoanByIdFrom(connection, loanId);
     await connection.commit();
+    return createdLoan;
   } catch (error) {
     await connection.rollback();
     throw error;
   } finally {
     connection.release();
   }
-  return getLoanById(loanId);
 }
 
 async function updateLoan(id, loan) {
@@ -692,6 +831,7 @@ async function setInterestType(typeKey, enabled) {
 
 module.exports = {
   createLoan,
+  allocateLoanDisbursement,
   allocateRenewalPayment,
   calculateRenewalInterest,
   deleteLoan,

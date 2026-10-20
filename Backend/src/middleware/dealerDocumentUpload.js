@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const multer = require('multer');
 
-const dealerDocumentDirectory = path.resolve(__dirname, '../../private_uploads/dealer-documents');
+const dealerDocumentDirectory = path.resolve(__dirname, '../../uploads/.private/dealer-documents');
 fs.mkdirSync(dealerDocumentDirectory, { recursive: true });
 
 const mimeTypes = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/webp']);

@@ -17,6 +17,7 @@ const kycRouter = require('./kycRouter');
 const billingRouter = require('./billingRouter');
 const receiptSettingsRouter = require('./receiptSettingsRouter');
 const homeSectionRouter = require('./homeSectionRouter');
+const fundRouter = require('./fundRouter');
 
 const router = express.Router();
 
@@ -25,6 +26,7 @@ router.use('/kyc', kycRouter);
 router.use('/billings', billingRouter);
 router.use('/receipt-settings', receiptSettingsRouter);
 router.use('/home-sections', homeSectionRouter);
+router.use('/funds', fundRouter);
 router.use('/auth', authRouter);
 router.use('/categories', categoryRouter);
 router.use('/metals', metalRouter);

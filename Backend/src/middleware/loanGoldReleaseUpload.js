@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const multer = require('multer');
 
-const documentDirectory = path.resolve(__dirname, '../../private_uploads/loan-gold-release');
+const documentDirectory = path.resolve(__dirname, '../../uploads/.private/loan-gold-release');
 fs.mkdirSync(documentDirectory, { recursive: true });
 
 const formats = {

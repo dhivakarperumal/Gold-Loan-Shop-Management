@@ -40,6 +40,24 @@
   --color-muted: #64748B;
 }
 
+:root {
+  --dropdown-background: #064A41;
+  --dropdown-interaction: #7B2CBF;
+}
+
+option,
+optgroup {
+  color: #FFFFFF;
+  background-color: var(--dropdown-background);
+}
+
+select option:hover,
+select option:focus,
+select option:checked {
+  color: #240046 !important;
+  background: #FFFFFF !important;
+}
+
 
 @layer utilities {
   .animate-in {
