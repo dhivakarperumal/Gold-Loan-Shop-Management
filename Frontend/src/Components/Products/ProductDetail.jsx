@@ -438,14 +438,14 @@ const ProductDetail = () => {
             {variants.length > 0 && (
               <div className="mt-4 space-y-3">
                 <div>
-                  <p className="mb-2 text-xs font-semibold text-[#59645e]">Choose option</p>
+                  {/* <p className="mb-2 text-xs font-semibold text-[#59645e]">Choose option</p>
                   <div className="flex flex-wrap gap-2">
                     {variants.map((variant, index) => (
                       <button key={`${variant.colorName || variant.color || index}`} type="button" onClick={() => { setActiveVariantIndex(index); setActiveImage(0); }} aria-pressed={activeVariantIndex === index} className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${activeVariantIndex === index ? "border-[#174a38] bg-[#edf5ef] text-[#174a38]" : "border-[#e8e1d5] text-[#5d675f] hover:border-[#bd913e]"}`}>
                         {variant.colorName || variant.color || `Option ${index + 1}`}
                       </button>
                     ))}
-                  </div>
+                  </div> */}
                 </div>
                 {availableVariantSizes.length > 0 && (
                   <label className="block max-w-xs text-xs font-semibold text-[#59645e]">
