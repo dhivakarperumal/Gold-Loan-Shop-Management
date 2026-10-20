@@ -60,6 +60,8 @@ const Navbar = () => {
     selectedMetals.some((metal) => metal.toLowerCase() === name.toLowerCase());
   const hasCategoryFilter = selectedCategories.length > 0;
   const hasMetalFilter = selectedMetals.length > 0;
+  const hasCollectionFilter = hasCategoryFilter || hasMetalFilter;
+  const isInfoPageActive = INFO_PAGES.some((page) => page.to === location.pathname);
 
   useEffect(() => {
     const query = search.trim();
@@ -312,7 +314,13 @@ const Navbar = () => {
                 Home
               </NavLink>
 
-              <NavLink to="/explore" className={navLinkClass}>
+              <NavLink
+                to="/explore"
+                className={(navState) => navLinkClass({
+                  ...navState,
+                  isActive: navState.isActive && !hasCollectionFilter,
+                })}
+              >
                 Explore
               </NavLink>
 
@@ -330,10 +338,10 @@ const Navbar = () => {
                     if (next) setSelectedCategory(categories[0] || null);
                   }}
                   aria-expanded={openDropdown === "categories"}
-                  className={`flex h-[76px] items-center gap-2 px-3 text-[15px] font-semibold transition duration-300 xl:px-4 ${
+                  className={`relative flex h-[76px] items-center gap-2 px-3 text-[15px] font-semibold transition duration-300 after:absolute after:bottom-3 after:left-1/2 after:h-[2px] after:-translate-x-1/2 after:bg-[#d2a348] after:transition-all xl:px-4 ${
                     openDropdown === "categories" || hasCategoryFilter
-                      ? "text-[#b77b19]"
-                      : "text-[#173f33] hover:text-[#b77b19]"
+                      ? "text-[#b77b19] after:w-8"
+                      : "text-[#173f33] after:w-0 hover:text-[#b77b19] hover:after:w-7"
                   }`}
                 >
                   Category
@@ -433,10 +441,10 @@ const Navbar = () => {
                     )
                   }
                   aria-expanded={openDropdown === "metals"}
-                  className={`flex h-[76px] items-center gap-2 px-3 text-[15px] font-semibold transition duration-300 xl:px-4 ${
+                  className={`relative flex h-[76px] items-center gap-2 px-3 text-[15px] font-semibold transition duration-300 after:absolute after:bottom-3 after:left-1/2 after:h-[2px] after:-translate-x-1/2 after:bg-[#d2a348] after:transition-all xl:px-4 ${
                     openDropdown === "metals" || hasMetalFilter
-                      ? "text-[#b77b19]"
-                      : "text-[#173f33] hover:text-[#b77b19]"
+                      ? "text-[#b77b19] after:w-8"
+                      : "text-[#173f33] after:w-0 hover:text-[#b77b19] hover:after:w-7"
                   }`}
                 >
                   Metal
@@ -490,10 +498,10 @@ const Navbar = () => {
                   onClick={() => setOpenDropdown(openDropdown === "pages" ? null : "pages")}
                   aria-expanded={openDropdown === "pages"}
                   aria-haspopup="true"
-                  className={`flex h-[76px] items-center gap-2 px-3 text-[15px] font-semibold transition duration-300 xl:px-4 ${
-                    openDropdown === "pages"
-                      ? "text-[#b77b19]"
-                      : "text-[#173f33] hover:text-[#b77b19]"
+                  className={`relative flex h-[76px] items-center gap-2 px-3 text-[15px] font-semibold transition duration-300 after:absolute after:bottom-3 after:left-1/2 after:h-[2px] after:-translate-x-1/2 after:bg-[#d2a348] after:transition-all xl:px-4 ${
+                    openDropdown === "pages" || isInfoPageActive
+                      ? "text-[#b77b19] after:w-8"
+                      : "text-[#173f33] after:w-0 hover:text-[#b77b19] hover:after:w-7"
                   }`}
                 >
                   Pages
@@ -751,7 +759,9 @@ const Navbar = () => {
                 onClick={closeMenus}
                 className={({ isActive }) =>
                   `block rounded-lg px-4 py-3 text-sm font-semibold ${
-                    isActive ? "bg-[#064638] text-[#f3d795]" : "text-[#173f33] hover:bg-[#f1e5cb]"
+                    isActive && !hasCollectionFilter
+                      ? "bg-[#064638] text-[#f3d795]"
+                      : "text-[#173f33] hover:bg-[#f1e5cb]"
                   }`
                 }
               >
@@ -838,7 +848,9 @@ const Navbar = () => {
                 type="button"
                 onClick={() => setOpenDropdown(openDropdown === "pages" ? null : "pages")}
                 aria-expanded={openDropdown === "pages"}
-                className="flex w-full items-center justify-between rounded-lg px-4 py-3 text-sm font-semibold text-[#173f33] hover:bg-[#f1e5cb]"
+                className={`flex w-full items-center justify-between rounded-lg px-4 py-3 text-sm font-semibold hover:bg-[#f1e5cb] ${
+                  isInfoPageActive ? "bg-[#fff0cf] text-[#8c5e13]" : "text-[#173f33]"
+                }`}
               >
                 Pages
                 <ChevronDown
