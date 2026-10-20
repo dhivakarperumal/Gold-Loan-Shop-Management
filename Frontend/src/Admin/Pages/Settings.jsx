@@ -1,7 +1,14 @@
-import { FiArrowRight, FiPrinter, FiSettings, FiUsers, FiLayout } from "react-icons/fi";
+import { FiArrowRight, FiPrinter, FiSettings, FiUsers, FiLayout, FiDollarSign } from "react-icons/fi";
 import { Link } from "react-router-dom";
 
 const settingsLinks = [
+    {
+        title: "Fund Management",
+        description: "Track business funds, balances across accounts, incoming collections, expenses, and account transfers.",
+        path: "/admin/funds",
+        label: "Open fund management",
+        icon: <FiDollarSign />
+    },
     {
         title: "Home Product Sections",
         description: "Choose which metal collections appear on the storefront home page and arrange their order.",

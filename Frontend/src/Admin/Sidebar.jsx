@@ -25,7 +25,8 @@ import {
   RefreshCw,
   Clock3,
   Coins,
-  CheckCircle2
+  CheckCircle2,
+  Wallet
 } from "lucide-react";
 
 /* ================= NAV ITEMS ================= */
@@ -35,6 +36,7 @@ const navItems = [
  
 
    { path: "/admin/settings/daily-gold-rate", label: "Daily Gold Rate", icon: Coins },
+   { path: "/admin/funds", label: "Fund Management", icon: Wallet },
  
 
   { path: "/admin/billings", label: "Billing", icon: Files },

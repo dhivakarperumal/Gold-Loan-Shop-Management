@@ -1,5 +1,6 @@
 const crypto = require('node:crypto');
 const { pool } = require('../config/db');
+const { insertTransaction } = require('./fundModule');
 
 const INTEREST_TYPES = [
   ['simple', 'Simple Interest'],
@@ -102,6 +103,10 @@ async function initializeLoanModule() {
       principal_before DECIMAL(14,2) NOT NULL,
       principal_after DECIMAL(14,2) NOT NULL,
       accrued_interest DECIMAL(14,2) NOT NULL,
+      fund_account_id BIGINT UNSIGNED NULL,
+      payment_method VARCHAR(40) NULL,
+      reference_number VARCHAR(100) NULL,
+      idempotency_key VARCHAR(150) NULL,
       created_by BIGINT UNSIGNED NULL,
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
       CONSTRAINT fk_loan_renewals_loan FOREIGN KEY (loan_id)
@@ -109,6 +114,23 @@ async function initializeLoanModule() {
       INDEX idx_loan_renewals_loan_date (loan_id, renewal_date, id)
     )
   `);
+  const [renewalColumns] = await pool.query('SHOW COLUMNS FROM loan_renewals');
+  const existingRenewalColumns = new Set(renewalColumns.map((column) => column.Field));
+  const renewalMigrations = {
+    fund_account_id: 'BIGINT UNSIGNED NULL AFTER accrued_interest',
+    payment_method: 'VARCHAR(40) NULL AFTER fund_account_id',
+    reference_number: 'VARCHAR(100) NULL AFTER payment_method',
+    idempotency_key: 'VARCHAR(150) NULL AFTER reference_number'
+  };
+  for (const [column, definition] of Object.entries(renewalMigrations)) {
+    if (!existingRenewalColumns.has(column)) {
+      await pool.query(`ALTER TABLE loan_renewals ADD COLUMN \`${column}\` ${definition}`);
+    }
+  }
+  const [renewalIdempotencyIndex] = await pool.query("SHOW INDEX FROM loan_renewals WHERE Key_name = 'uq_loan_renewals_idempotency'");
+  if (renewalIdempotencyIndex.length === 0) {
+    await pool.query('ALTER TABLE loan_renewals ADD UNIQUE KEY uq_loan_renewals_idempotency (idempotency_key)');
+  }
   await pool.query(`
     CREATE TABLE IF NOT EXISTS loan_gold_releases (
       id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
@@ -439,7 +461,7 @@ async function getLoanRenewal(id) {
   }
 }
 
-async function renewLoan(id, paymentAmount, adminUserId) {
+async function renewLoan(id, paymentAmount, adminUserId, paymentDetails) {
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
@@ -453,6 +475,15 @@ async function renewLoan(id, paymentAmount, adminUserId) {
       throw error;
     }
     const loan = loans[0];
+    const [fundAccounts] = await connection.execute(
+      'SELECT id, is_active FROM fund_accounts WHERE id = ? FOR UPDATE',
+      [paymentDetails.account_id]
+    );
+    if (!fundAccounts.length || !fundAccounts[0].is_active) {
+      const error = new Error('Select an active fund account');
+      error.code = 'FUND_ACCOUNT_NOT_FOUND';
+      throw error;
+    }
     const [[dateRow]] = await connection.query(
       "SELECT DATE_FORMAT(CURRENT_DATE(), '%Y-%m-%d') AS renewal_date"
     );
@@ -496,15 +527,48 @@ async function renewLoan(id, paymentAmount, adminUserId) {
       `INSERT INTO loan_renewals (
         loan_id, renewal_date, period_start_date, previous_maturity_date, new_maturity_date,
         payment_amount, interest_paid, principal_paid, principal_before, principal_after,
-        accrued_interest, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        accrued_interest, fund_account_id, payment_method, reference_number, idempotency_key, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id, preview.renewal_date, preview.period_start_date, previousMaturityDate, newMaturityDate,
         amount.toFixed(2), interestPaid.toFixed(2), principalPaid.toFixed(2),
         preview.current_principal.toFixed(2), principalAfter.toFixed(2),
-        preview.accrued_interest.toFixed(2), adminUserId || null
+        preview.accrued_interest.toFixed(2), paymentDetails.account_id, paymentDetails.payment_method,
+        paymentDetails.reference_number || null, paymentDetails.idempotency_key, adminUserId || null
       ]
     );
+    if (principalPaid > 0) {
+      await insertTransaction(connection, {
+        account_id: paymentDetails.account_id,
+        transaction_type: 'CREDIT',
+        category: 'Customer Loan Repayment',
+        transaction_date: preview.renewal_date,
+        amount: principalPaid.toFixed(2),
+        party_name: loan.customer_name,
+        related_reference: loan.loan_number,
+        payment_method: paymentDetails.payment_method,
+        reference_number: paymentDetails.reference_number,
+        description: 'Principal portion of loan repayment',
+        idempotency_key: `${paymentDetails.idempotency_key}:principal`,
+        created_by: adminUserId
+      });
+    }
+    if (interestPaid > 0) {
+      await insertTransaction(connection, {
+        account_id: paymentDetails.account_id,
+        transaction_type: 'CREDIT',
+        category: 'Interest Collection',
+        transaction_date: preview.renewal_date,
+        amount: interestPaid.toFixed(2),
+        party_name: loan.customer_name,
+        related_reference: loan.loan_number,
+        payment_method: paymentDetails.payment_method,
+        reference_number: paymentDetails.reference_number,
+        description: 'Interest portion of loan repayment',
+        idempotency_key: `${paymentDetails.idempotency_key}:interest`,
+        created_by: adminUserId
+      });
+    }
     await connection.execute(
       `UPDATE loans SET outstanding_principal = ?, interest_calculation_start_date = ?,
         maturity_date = ?, loan_status = ?, release_status = ? WHERE id = ?`,
