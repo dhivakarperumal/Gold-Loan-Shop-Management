@@ -70,11 +70,11 @@ const DetailGroup = ({ title, entries }) => {
   if (!visibleEntries.length) return null;
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-[#eadfce] bg-white shadow-sm">
+    <section className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-[#eadfce] bg-white shadow-sm">
       <h2 className="border-b border-[#efe5d4] bg-[#fffaf0] px-5 py-4 font-serif text-lg font-bold text-[#174a38]">
         {title}
       </h2>
-      <dl className="divide-y divide-[#f3eee5] px-5">
+      <dl className="flex-1 divide-y divide-[#f3eee5] px-5">
         {visibleEntries.map(([label, value]) => (
           <div key={label} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-4 py-3">
             <dt className="text-xs text-[#887c69]">{label}</dt>
@@ -292,6 +292,14 @@ const ProductDetail = () => {
   const specsEntries = specs.map((item, index) => (
     Array.isArray(item) ? item : [`Specification ${index + 1}`, item]
   ));
+  const quickFacts = [
+    ["Metal", product.metal_type],
+    ["Purity", product.purity],
+    ["Weight", product.gross_weight != null ? `${product.gross_weight} g` : ""],
+    ["Collection", product.category],
+    ["Product type", product.product_type],
+    ["Selected size", activeSize]
+  ].filter(([, value]) => displayValue(value));
 
   return (
     <main className="min-h-screen bg-[#fffdf8]">
@@ -375,7 +383,7 @@ const ProductDetail = () => {
                 onClick={() => toggleWishlist(product, currentVariant, activeSize)}
                 aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
                 aria-pressed={isFavorite}
-                className={`absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-full bg-white/95 shadow transition hover:text-rose-600 ${isFavorite ? "text-rose-600" : "text-[#40514a]"}`}
+                className={`absolute right-3 top-14 z-20 grid h-10 w-10 place-items-center rounded-full bg-white/95 shadow transition hover:text-rose-600 ${isFavorite ? "text-rose-600" : "text-[#40514a]"}`}
               >
                 <FaHeart className={isFavorite ? "text-lg" : "text-lg"} />
               </button>
@@ -436,33 +444,62 @@ const ProductDetail = () => {
             <p className="mt-1 text-xs text-[#887c69]">Inclusive of applicable taxes</p>
 
             {variants.length > 0 && (
-              <div className="mt-4 space-y-3">
-                <div>
-                  {/* <p className="mb-2 text-xs font-semibold text-[#59645e]">Choose option</p>
-                  <div className="flex flex-wrap gap-2">
-                    {variants.map((variant, index) => (
-                      <button key={`${variant.colorName || variant.color || index}`} type="button" onClick={() => { setActiveVariantIndex(index); setActiveImage(0); }} aria-pressed={activeVariantIndex === index} className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${activeVariantIndex === index ? "border-[#174a38] bg-[#edf5ef] text-[#174a38]" : "border-[#e8e1d5] text-[#5d675f] hover:border-[#bd913e]"}`}>
-                        {variant.colorName || variant.color || `Option ${index + 1}`}
-                      </button>
-                    ))}
-                  </div> */}
-                </div>
-                {availableVariantSizes.length > 0 && (
-                  <label className="block max-w-xs text-xs font-semibold text-[#59645e]">
-                    Size
-                    <select value={activeSize} onChange={(event) => setSelectedSize(event.target.value)} className="mt-1.5 block w-full rounded-lg border border-[#e8e1d5] bg-white px-3 py-2.5 text-sm font-medium text-[#34443e] outline-none focus:border-[#174a38]">
-                      {availableVariantSizes.map((size) => <option key={size} value={size}>{size}</option>)}
-                    </select>
-                  </label>
+              <div className="mt-4 space-y-4">
+                {variants.some((variant) => variant.colorName || variant.color) && (
+                  <fieldset>
+                    <legend className="mb-2 text-xs font-semibold text-[#59645e]">Choose option</legend>
+                    <div className="flex flex-wrap gap-2">
+                      {variants.map((variant, index) => (
+                        <button
+                          key={`${variant.colorName || variant.color || index}`}
+                          type="button"
+                          onClick={() => {
+                            setActiveVariantIndex(index);
+                            setActiveImage(0);
+                            setSelectedSize("");
+                          }}
+                          aria-pressed={activeVariantIndex === index}
+                          className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${activeVariantIndex === index ? "border-[#174a38] bg-[#edf5ef] text-[#174a38]" : "border-[#e8e1d5] text-[#5d675f] hover:border-[#bd913e]"}`}
+                        >
+                          {variant.colorName || variant.color || `Option ${index + 1}`}
+                        </button>
+                      ))}
+                    </div>
+                  </fieldset>
                 )}
               </div>
             )}
 
-            <div className="mt-5 grid gap-2 sm:grid-cols-2">
+            {availableVariantSizes.length > 0 && (
+              <fieldset className="mt-4">
+                <legend className="mb-2 text-xs font-semibold text-[#59645e]">Select size</legend>
+                <div className="flex flex-wrap gap-2">
+                  {availableVariantSizes.map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      onClick={() => setSelectedSize(size)}
+                      aria-pressed={activeSize === size}
+                      className={`min-w-11 rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174a38] ${activeSize === size ? "border-[#174a38] bg-[#174a38] text-white" : "border-[#e8e1d5] bg-white text-[#5d675f] hover:border-[#bd913e] hover:bg-[#fffaf0]"}`}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </fieldset>
+            )}
+
+            <div className="mt-5">
               {/* <button type="button" disabled={!inStock} onClick={() => addToCart(product, currentVariant, activeSize)} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#174a3f] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#10382f] disabled:cursor-not-allowed disabled:bg-slate-300">
                 <FaShoppingBag /> {inStock ? "Add to Cart" : "Out of Stock"}
               </button> */}
-              <button type="button" onClick={() => toggleWishlist(product, currentVariant, activeSize)} className={`inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-semibold transition ${isFavorite ? "border-rose-200 bg-rose-50 text-rose-700" : "border-[#e8e1d5] text-[#40514a] hover:bg-[#fbfaf7]"}`}>
+              <button
+                type="button"
+                onClick={() => toggleWishlist(product, currentVariant, activeSize)}
+                aria-label={isFavorite ? "Remove from wishlist" : "Add to wishlist"}
+                aria-pressed={isFavorite}
+                className={`inline-flex w-full items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174a38] ${isFavorite ? "border-rose-200 bg-rose-50 text-rose-700" : "border-[#e8e1d5] text-[#40514a] hover:bg-[#fbfaf7]"}`}
+              >
                 <FaHeart /> {isFavorite ? "Saved to Wishlist" : "Add to Wishlist"}
               </button>
             </div>
@@ -476,6 +513,20 @@ const ProductDetail = () => {
                   </li>
                 ))}
               </ul>
+            )}
+
+            {quickFacts.length > 0 && (
+              <section className="mt-5 rounded-xl border border-[#eee8dc] bg-[#fffdf8] p-3.5 sm:p-4" aria-label="Product at a glance">
+                <h2 className="font-serif text-base font-bold text-[#173f38]">Product at a glance</h2>
+                <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
+                  {quickFacts.map(([label, value]) => (
+                    <div key={label} className="min-w-0">
+                      <dt className="text-[10px] font-medium uppercase tracking-wide text-[#887c69]">{label}</dt>
+                      <dd className="mt-0.5 break-words text-xs font-semibold text-[#34443e]">{displayValue(value)}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
             )}
           </section>
         </div>
@@ -492,7 +543,7 @@ const ProductDetail = () => {
 
         <div className="mt-3">
           {activeTab === "information" && (
-            <div className="grid items-start gap-3 lg:grid-cols-[1.35fr_0.9fr_0.9fr]">
+            <div className="grid auto-rows-fr items-stretch gap-3 lg:grid-cols-[1.35fr_0.9fr_0.9fr]">
               <DetailGroup title="Basic Information" entries={productDetails} />
               <DetailGroup title="Pricing Information" entries={[
                 ["Gold Rate", product.gold_rate_per_gram != null ? `${money(product.gold_rate_per_gram)} / g` : ""],
@@ -518,7 +569,7 @@ const ProductDetail = () => {
           )}
 
           {activeTab === "pricing" && (
-            <div className="grid items-start gap-3 lg:grid-cols-2">
+            <div className="grid auto-rows-fr items-stretch gap-3 lg:grid-cols-2">
               <DetailGroup title="Pricing & Charges" entries={pricingDetails} />
               <DetailGroup title="Stock Information" entries={[
                 ["Stock Status", inStock ? "In Stock" : "Out of Stock"],
@@ -531,7 +582,7 @@ const ProductDetail = () => {
           )}
 
           {activeTab === "images" && (
-            <section className="rounded-xl border border-[#eee8dc] bg-white p-4 shadow-sm">
+            <section className="flex h-full flex-col rounded-xl border border-[#eee8dc] bg-white p-4 shadow-sm">
               <h2 className="mb-4 font-serif text-lg font-bold text-[#174a38]">Product Images</h2>
               {images.length > 0 ? (
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -546,7 +597,7 @@ const ProductDetail = () => {
           )}
 
           {activeTab === "variants" && (
-            <div className="grid items-start gap-3 lg:grid-cols-2">
+            <div className="grid auto-rows-fr items-stretch gap-3 lg:grid-cols-2">
               <DetailGroup title="Material & Measurements" entries={materialDetails} />
               <DetailGroup title="Available Options" entries={[
                 ["Available colors", [...new Set(variants.map((variant) => variant.colorName || variant.color).filter(Boolean))]],
@@ -561,14 +612,14 @@ const ProductDetail = () => {
           )}
 
           {activeTab === "specifications" && (
-            <div className="grid items-start gap-3 lg:grid-cols-2">
+            <div className="grid auto-rows-fr items-stretch gap-3 lg:grid-cols-2">
               <DetailGroup title="Sizes & Measurements" entries={sizeDetails} />
               <DetailGroup title="Specifications" entries={specsEntries} />
             </div>
           )}
 
           {activeTab === "additional" && (
-            <div className="grid items-start gap-3 lg:grid-cols-2">
+            <div className="grid auto-rows-fr items-stretch gap-3 lg:grid-cols-2">
               <DetailGroup title="Additional Details" entries={additionalDetails} />
               <DetailGroup title="Description" entries={[
                 ["Description", product.description],
@@ -576,7 +627,7 @@ const ProductDetail = () => {
                 ["Highlights", highlights]
               ]} />
               {(sizeGuide || certificate) && (
-                <section className="rounded-xl border border-[#eee8dc] bg-white p-4 shadow-sm">
+                <section className="flex h-full flex-col rounded-xl border border-[#eee8dc] bg-white p-4 shadow-sm">
                   <h2 className="mb-3 font-serif text-lg font-bold text-[#174a38]">Product Documents</h2>
                   <div className="flex flex-wrap gap-3">
                     {sizeGuide && <a href={sizeGuide} target="_blank" rel="noreferrer" className="text-sm font-semibold text-[#174a38] hover:underline">View size guide</a>}
