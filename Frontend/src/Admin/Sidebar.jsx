@@ -120,7 +120,7 @@ const navItems = [
     children: [
       { path: "/admin/dealers", label: "Dealer Master", icon: List },
       { path: "/admin/dealers/purchases", label: "Purchases & Payables", icon: Files },
-      { path: "/admin/dealers/jobs", label: "Goldsmith Job Work", icon: HandCoins },
+      // { path: "/admin/dealers/jobs", label: "Goldsmith Job Work", icon: HandCoins },
       { path: "/admin/dealers/refining", label: "Old Gold & Refining", icon: Gem },
     ],
   },
