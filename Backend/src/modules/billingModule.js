@@ -1,5 +1,6 @@
 const { pool } = require('../config/db');
 const { insertTransaction } = require('./fundModule');
+const { addDateRangeCondition } = require('../utils/dateRange');
 
 async function initializeBillingModule() {
   await pool.query(`
@@ -53,13 +54,17 @@ async function initializeBillingModule() {
   `);
 }
 
-async function listBillings() {
-  const [rows] = await pool.query(`
+async function listBillings(dateRange = {}) {
+  const conditions = [];
+  const values = [];
+  addDateRangeCondition(conditions, values, 'created_at', dateRange);
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const [rows] = await pool.execute(`
     SELECT id, invoice_no, customers, products, exchanges, payment_type,
       sub_total, discount_amount, gst_amount, total_amount, paid_amount, balance_due, created_at
-    FROM billings
+    FROM billings ${where}
     ORDER BY created_at DESC, id DESC
-  `);
+  `, values);
   return rows;
 }
 

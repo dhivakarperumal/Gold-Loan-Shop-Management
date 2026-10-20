@@ -1,9 +1,10 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { FiCheck, FiCheckCircle, FiEdit2, FiEye, FiGrid, FiLayers, FiList, FiPauseCircle, FiPlus, FiPrinter, FiSearch, FiTrash2 } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api from "../../api";
 import { printLoanAgreement } from "./loanPrint";
+import DateRangeFilter from "../Components/DateRangeFilter";
 
 const money = (value) => new Intl.NumberFormat("en-IN", {
   style: "currency", currency: "INR", maximumFractionDigits: 2
@@ -28,10 +29,13 @@ export default function AllLoans() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [viewMode, setViewMode] = useState("table");
-  const loadLoans = async ({ showLoading = true } = {}) => {
+  const [dateRange, setDateRange] = useState({ preset: "all", startDate: "", endDate: "" });
+  const loadLoans = useCallback(async ({ showLoading = true } = {}) => {
     if (showLoading) setLoading(true);
     try {
-      const { data } = await api.get("/loans");
+      const { data } = await api.get("/loans", {
+        params: { startDate: dateRange.startDate, endDate: dateRange.endDate }
+      });
       if (!Array.isArray(data)) throw new Error("The server returned an invalid loan list.");
       setLoans(data);
     } catch (error) {
@@ -40,7 +44,7 @@ export default function AllLoans() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateRange.startDate, dateRange.endDate]);
   const handleDeleteLoan = async (loan) => {
     if (!window.confirm(`Permanently delete loan ${loan.loan_number}? This action cannot be undone.`)) return;
     try {
@@ -57,7 +61,7 @@ export default function AllLoans() {
     const refreshLoans = () => loadLoans({ showLoading: false });
     window.addEventListener("focus", refreshLoans);
     return () => window.removeEventListener("focus", refreshLoans);
-  }, []);
+  }, [loadLoans]);
 
   const loanCounts = loans.reduce((counts, loan) => {
     const status = String(loan.loan_status || "").trim().toLowerCase();
@@ -129,6 +133,7 @@ export default function AllLoans() {
         ))}
       </section>
       <section aria-label="Loan list controls" className="flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white p-3 shadow-[0_2px_10px_rgba(15,23,42,0.04)] sm:flex-row sm:items-center sm:justify-between sm:p-4">
+        <DateRangeFilter onApply={setDateRange} />
         <label className="relative min-w-0 sm:w-1/3 sm:min-w-[280px] sm:flex-none">
           <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true" />
           <span className="sr-only">Search loans</span>

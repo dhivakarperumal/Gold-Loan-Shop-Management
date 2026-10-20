@@ -17,6 +17,7 @@ const {
   setInterestType,
   updateLoan
 } = require('../modules/loanModule');
+const { parseDateRange } = require('../utils/dateRange');
 
 const { findGoldRateForPurity, getCurrentGoldRates } = require('../modules/goldRateModule');
 const fs = require('node:fs');
@@ -256,8 +257,10 @@ async function updateInterestType(req, res, next) {
 }
 
 async function getLoans(req, res, next) {
+  const range = parseDateRange(req.query);
+  if (range.error) return res.status(400).json({ message: range.error });
   try {
-    return res.json(await listLoans());
+    return res.json(await listLoans(range));
   } catch (error) {
     return next(error);
   }

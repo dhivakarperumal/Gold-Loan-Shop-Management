@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Banknote, CalendarDays,
+  ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Banknote,
   ChevronDown, Download, FileText, LayoutGrid, List, Plus, RefreshCw, Search, Wallet, X
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../api";
+import DateRangeFilter from "../Components/DateRangeFilter";
 
 const CATEGORIES = {
   FUND_ADDED: ["Cash", "Bank Account", "UPI", "Owner Investment", "Business Capital", "Other"],
@@ -22,7 +23,6 @@ const PAYMENT_METHODS = ["Cash", "UPI", "Card", "Bank Transfer", "Cheque", "Othe
 const TYPE_LABELS = { FUND_ADDED: "Fund Added", DEBIT: "Debit", CREDIT: "Credit", TRANSFER_IN: "Transfer", TRANSFER_OUT: "Transfer" };
 const INR = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 });
 const today = () => new Date().toLocaleDateString("en-CA");
-const monthStart = () => `${today().slice(0, 8)}01`;
 
 const emptyEntry = () => ({
   account_id: "", category: "", amount: "", transaction_date: today(),
@@ -48,7 +48,7 @@ function FundManagement() {
   const [summary, setSummary] = useState(null);
   const [transactions, setTransactions] = useState([]);
   const [totalTransactions, setTotalTransactions] = useState(0);
-  const [period, setPeriod] = useState({ from: monthStart(), to: today() });
+  const [dateRange, setDateRange] = useState({ preset: "all", startDate: "", endDate: "" });
   const [filters, setFilters] = useState({ account_id: "", transaction_type: "ALL", search: "" });
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
@@ -77,12 +77,13 @@ function FundManagement() {
     setLoadError("");
     try {
       const params = {
-        ...period, page, page_size: 20, account_id: filters.account_id,
+        startDate: dateRange.startDate, endDate: dateRange.endDate,
+        page, page_size: 20, account_id: filters.account_id,
         transaction_type: filters.transaction_type, search: filters.search
       };
       const [accountsResponse, summaryResponse, transactionResponse] = await Promise.all([
         api.get("/funds/accounts"),
-        api.get("/funds/summary", { params: period }),
+        api.get("/funds/summary", { params: dateRange }),
         api.get("/funds/transactions", { params })
       ]);
       setAccounts(accountsResponse.data);
@@ -96,7 +97,7 @@ function FundManagement() {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [filters.account_id, filters.search, filters.transaction_type, page, period]);
+  }, [dateRange, filters.account_id, filters.search, filters.transaction_type, page]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -190,7 +191,7 @@ function FundManagement() {
   const exportRows = async () => {
     try {
       const response = await api.get("/funds/transactions", {
-        params: { ...period, ...filters, page: 1, page_size: 5000 }
+        params: { startDate: dateRange.startDate, endDate: dateRange.endDate, ...filters, page: 1, page_size: 5000 }
       });
       return response.data.transactions;
     } catch (error) {
@@ -277,8 +278,9 @@ function FundManagement() {
           <h1 className="mt-1 text-2xl font-black sm:text-3xl">Fund Management</h1>
           <p className="mt-2 text-sm text-white/75 print:text-slate-600">Review cash flow, account balances, collections, and business expenses.</p>
         </div>
-        <div className="flex flex-wrap gap-2 print:hidden">
-          <button onClick={() => { setRefreshing(true); fetchData(true); }} className="inline-flex items-center gap-2 rounded-xl border border-white/25 px-3 py-2 text-sm font-bold hover:bg-white/10" aria-label="Refresh funds">
+        <div className="flex flex-wrap items-start justify-end gap-2 print:hidden">
+        <DateRangeFilter onApply={(range) => { setDateRange(range); setPage(1); }} />
+        <button onClick={() => { setRefreshing(true); fetchData(true); }} className="inline-flex items-center gap-2 rounded-xl border border-white/25 px-3 py-2 text-sm font-bold hover:bg-white/10" aria-label="Refresh funds">
             <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} /> Refresh
           </button>
           <button onClick={() => setTransferOpen(true)} className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 text-sm font-bold hover:bg-white/20">
@@ -289,18 +291,6 @@ function FundManagement() {
           </button>
         </div>
       </header>
-
-      <section className="flex flex-wrap items-end justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm print:hidden">
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="text-xs font-bold text-slate-600">Period from
-            <input type="date" value={period.from} max={period.to} onChange={(event) => setPeriod((current) => ({ ...current, from: event.target.value }))} className="mt-1 block rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800" />
-          </label>
-          <label className="text-xs font-bold text-slate-600">To
-            <input type="date" value={period.to} min={period.from} onChange={(event) => setPeriod((current) => ({ ...current, to: event.target.value }))} className="mt-1 block rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800" />
-          </label>
-        </div>
-        <p className="inline-flex items-center gap-2 text-xs font-medium text-slate-500"><CalendarDays size={15} /> Summary is calculated for the selected period.</p>
-      </section>
 
       {loadError && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">{loadError} <button onClick={() => fetchData()} className="ml-2 underline">Retry</button></div>}
 
@@ -409,7 +399,7 @@ function FundManagement() {
         )}
       </section>
 
-      <div className="grid gap-2 sm:grid-cols-3 print:hidden">
+      <div className="grid gap-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-3 print:hidden">
         <label className="relative">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input value={filters.search} onChange={(event) => updateFilter("search", event.target.value)} placeholder="Search customer, reference..." className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm" />
@@ -453,9 +443,9 @@ function FundManagement() {
                 <LayoutGrid size={17} />
               </button>
             </div>
-            <button onClick={exportCsv} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"><Download size={14} /> CSV</button>
-            <button onClick={exportExcel} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"><Download size={14} /> Excel</button>
-            <button onClick={printReport} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"><FileText size={14} /> Print / PDF</button>
+            <button onClick={exportCsv} className="inline-flex items-center gap-1.5 rounded-lg border border-[#07564B] bg-gradient-to-r from-[#07564B] to-[#064A41] px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:from-[#064A41] hover:to-[#043D37] hover:shadow-md"><Download size={14} /> CSV</button>
+            <button onClick={exportExcel} className="inline-flex items-center gap-1.5 rounded-lg border border-[#07564B] bg-gradient-to-r from-[#07564B] to-[#064A41] px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:from-[#064A41] hover:to-[#043D37] hover:shadow-md"><Download size={14} /> Excel</button>
+            <button onClick={printReport} className="inline-flex items-center gap-1.5 rounded-lg border border-[#07564B] bg-gradient-to-r from-[#07564B] to-[#064A41] px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:from-[#064A41] hover:to-[#043D37] hover:shadow-md"><FileText size={14} /> Print / PDF</button>
           </div>
         </div>
         {transactionView === "table" ? (

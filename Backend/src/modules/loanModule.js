@@ -1,6 +1,7 @@
 const crypto = require('node:crypto');
 const { pool } = require('../config/db');
 const { getAccountBalance, insertTransaction } = require('./fundModule');
+const { addDateRangeCondition } = require('../utils/dateRange');
 
 const INTEREST_TYPES = [
   ['simple', 'Simple Interest'],
@@ -300,8 +301,12 @@ async function setInterestTypeEnabled(typeKey, enabled) {
   return result.affectedRows > 0;
 }
 
-async function listLoans() {
-  const [rows] = await pool.query(`
+async function listLoans(dateRange = {}) {
+  const conditions = [];
+  const values = [];
+  addDateRangeCondition(conditions, values, 'l.loan_date', dateRange);
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const [rows] = await pool.execute(`
     SELECT l.*, c.customer_code, c.full_name AS customer_name, c.mobile AS customer_mobile,
       c.address AS customer_address, c.city AS customer_city, c.district AS customer_district,
       c.state AS customer_state, c.pincode AS customer_pincode, c.email AS customer_email,
@@ -310,8 +315,9 @@ async function listLoans() {
       c.kyc_status AS customer_kyc_status, c.guarantor_name, c.guarantor_mobile,
       c.guarantor_email, c.guarantor_relationship, c.guarantor_address
     FROM loans l JOIN loan_customers c ON c.id = l.customer_id
+    ${where}
     ORDER BY l.created_at DESC, l.id DESC
-  `);
+  `, values);
   return rows;
 }
 
