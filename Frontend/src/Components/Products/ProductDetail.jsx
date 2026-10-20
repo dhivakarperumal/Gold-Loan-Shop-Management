@@ -14,6 +14,7 @@ import {
 } from "react-icons/fa";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 import PageContainer from "../CommenComponents/PageContainer";
+import PageHeader from "../CommenComponents/PageHeader";
 import api from "../../api";
 import { Autoplay } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -168,6 +169,7 @@ const ProductDetail = () => {
   if (loading) {
     return (
       <main className="bg-[#fffdf8]" role="status">
+        <PageHeader title="Product Details" />
         <PageContainer className="py-20 text-center text-sm font-semibold text-[#746b5d]">
           Loading product details...
         </PageContainer>
@@ -178,6 +180,7 @@ const ProductDetail = () => {
   if (!product) {
     return (
       <main className="bg-[#fffdf8]">
+        <PageHeader title="Product Details" />
         <PageContainer className="py-20 text-center">
           <div className="mx-auto max-w-2xl rounded-3xl border border-[#eadfce] bg-white p-8 shadow-sm">
             <FaGem className="mx-auto text-3xl text-[#bd913e]" />
@@ -274,6 +277,7 @@ const ProductDetail = () => {
 
   return (
     <main className="min-h-screen bg-[#fffdf8]">
+      <PageHeader title="Product Details" />
       <PageContainer className="py-6">
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2 text-xs font-medium text-[#78817c] sm:text-sm">
