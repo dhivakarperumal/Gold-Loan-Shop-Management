@@ -214,7 +214,6 @@ function FundManagement() {
           <p className="mt-2 text-sm text-white/75 print:text-slate-600">Review cash flow, account balances, collections, and business expenses.</p>
         </div>
         <div className="flex flex-wrap items-start justify-end gap-2 print:hidden">
-        <DateRangeFilter onApply={(range) => { setDateRange(range); setPage(1); }} />
           <button onClick={() => openEntry("FUND_ADDED")} className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-extrabold text-[#00594f] hover:bg-emerald-50">
             <Plus size={16} /> Add Fund
           </button>
@@ -242,49 +241,51 @@ function FundManagement() {
         ))}
       </section>
 
-      <div className="grid gap-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-2 print:hidden">
-        <label className="relative">
-          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <input value={filters.search} onChange={(event) => updateFilter("search", event.target.value)} placeholder="Search customer, reference..." className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm" />
-        </label>
-        <select value={filters.transaction_type} onChange={(event) => updateFilter("transaction_type", event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700">
-          <option value="ALL">All transaction types</option>
-          <option value="FUND_ADDED">Fund Added</option><option value="DEBIT">Debit</option><option value="CREDIT">Credit</option><option value="TRANSFER_IN">Transfer In</option><option value="TRANSFER_OUT">Transfer Out</option>
-        </select>
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm xl:flex-row xl:items-center xl:justify-between print:hidden">
+        <div className="grid min-w-0 flex-1 gap-2 sm:grid-cols-2">
+          <label className="relative">
+            <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input value={filters.search} onChange={(event) => updateFilter("search", event.target.value)} placeholder="Search customer, reference..." className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm" />
+          </label>
+          <select value={filters.transaction_type} onChange={(event) => updateFilter("transaction_type", event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700">
+            <option value="ALL">All transaction types</option>
+            <option value="FUND_ADDED">Fund Added</option><option value="DEBIT">Debit</option><option value="CREDIT">Credit</option><option value="TRANSFER_IN">Transfer In</option><option value="TRANSFER_OUT">Transfer Out</option>
+          </select>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 xl:justify-end">
+          <DateRangeFilter onApply={(range) => { setDateRange(range); setPage(1); }} />
+          <div className="flex rounded-lg border border-slate-200 bg-white p-1" role="group" aria-label="Transaction view">
+            <button
+              type="button"
+              aria-pressed={transactionView === "table"}
+              onClick={() => setTransactionView("table")}
+              className={`rounded-md p-2 transition ${transactionView === "table" ? "bg-[#064A41] text-white" : "text-slate-500 hover:bg-slate-100"}`}
+              aria-label="Table view"
+              title="Table view"
+            >
+              <List size={17} />
+            </button>
+            <button
+              type="button"
+              aria-pressed={transactionView === "cards"}
+              onClick={() => setTransactionView("cards")}
+              className={`rounded-md p-2 transition ${transactionView === "cards" ? "bg-[#064A41] text-white" : "text-slate-500 hover:bg-slate-100"}`}
+              aria-label="Card view"
+              title="Card view"
+            >
+              <LayoutGrid size={17} />
+            </button>
+          </div>
+          <button onClick={exportCsv} className="inline-flex items-center gap-1.5 rounded-lg border border-[#07564B] bg-gradient-to-r from-[#07564B] to-[#064A41] px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:from-[#064A41] hover:to-[#043D37] hover:shadow-md"><Download size={14} /> CSV</button>
+          <button onClick={exportExcel} className="inline-flex items-center gap-1.5 rounded-lg border border-[#07564B] bg-gradient-to-r from-[#07564B] to-[#064A41] px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:from-[#064A41] hover:to-[#043D37] hover:shadow-md"><Download size={14} /> Excel</button>
+          <button onClick={printReport} className="inline-flex items-center gap-1.5 rounded-lg border border-[#07564B] bg-gradient-to-r from-[#07564B] to-[#064A41] px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:from-[#064A41] hover:to-[#043D37] hover:shadow-md"><FileText size={14} /> Print / PDF</button>
+        </div>
       </div>
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-col justify-between gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:p-5">
           <div>
             <h2 className="text-lg font-black text-slate-900">Transaction History</h2>
-            <p className="text-xs text-slate-500">{totalTransactions.toLocaleString()} records</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 print:hidden">
-            <div className="flex rounded-lg border border-slate-200 bg-white p-1" role="group" aria-label="Transaction view">
-              <button
-                type="button"
-                aria-pressed={transactionView === "table"}
-                onClick={() => setTransactionView("table")}
-                className={`rounded-md p-2 transition ${transactionView === "table" ? "bg-[#064A41] text-white" : "text-slate-500 hover:bg-slate-100"}`}
-                aria-label="Table view"
-                title="Table view"
-              >
-                <List size={17} />
-              </button>
-              <button
-                type="button"
-                aria-pressed={transactionView === "cards"}
-                onClick={() => setTransactionView("cards")}
-                className={`rounded-md p-2 transition ${transactionView === "cards" ? "bg-[#064A41] text-white" : "text-slate-500 hover:bg-slate-100"}`}
-                aria-label="Card view"
-                title="Card view"
-              >
-                <LayoutGrid size={17} />
-              </button>
-            </div>
-            <button onClick={exportCsv} className="inline-flex items-center gap-1.5 rounded-lg border border-[#07564B] bg-gradient-to-r from-[#07564B] to-[#064A41] px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:from-[#064A41] hover:to-[#043D37] hover:shadow-md"><Download size={14} /> CSV</button>
-            <button onClick={exportExcel} className="inline-flex items-center gap-1.5 rounded-lg border border-[#07564B] bg-gradient-to-r from-[#07564B] to-[#064A41] px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:from-[#064A41] hover:to-[#043D37] hover:shadow-md"><Download size={14} /> Excel</button>
-            <button onClick={printReport} className="inline-flex items-center gap-1.5 rounded-lg border border-[#07564B] bg-gradient-to-r from-[#07564B] to-[#064A41] px-3 py-2 text-xs font-bold text-white shadow-sm transition hover:from-[#064A41] hover:to-[#043D37] hover:shadow-md"><FileText size={14} /> Print / PDF</button>
           </div>
         </div>
         {transactionView === "table" ? (
