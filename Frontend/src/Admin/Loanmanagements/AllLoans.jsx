@@ -191,13 +191,11 @@ export default function AllLoans() {
       {viewMode === "table" ? (
         <section aria-label="Loans in table view" className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_2px_12px_rgba(15,23,42,0.05)]">
           <div className="flex flex-col gap-1 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-            <div><h2 className="font-bold text-slate-800">Loan register</h2><p className="mt-0.5 text-xs text-slate-500">Account details and current repayment status</p></div>
-            <span className="text-xs font-semibold text-slate-500">Showing <span className="text-slate-800">{loading ? "—" : filteredLoans.length}</span> of {loading ? "—" : loans.length} loans</span>
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[880px] border-separate border-spacing-0 text-left">
               <thead><tr className="bg-[#064A41] text-[11px] font-bold uppercase tracking-[0.08em] text-emerald-50/90">
-                {["S No", "Loan Number", "Customer", "Outstanding Balance", "Interest", "Maturity", "Status", "Actions"].map((title) => <th key={title} scope="col" className="whitespace-nowrap px-4 py-4 first:pl-5 last:pr-5">{title}</th>)}
+                {["S No", "Loan Number", "Customer", "Outstanding Balance", "Interest", "Maturity", "Status", "Actions"].map((title) => <th key={title} scope="col" className="whitespace-nowrap px-4 py-4 first:rounded-tl-xl first:pl-5 last:rounded-tr-xl last:pr-5">{title}</th>)}
               </tr></thead>
               <tbody className="divide-y divide-slate-100/80">
                 {loading ? <tr><td colSpan="8" className="px-4 py-16 text-center text-sm font-medium text-slate-400">Loading loans...</td></tr>
