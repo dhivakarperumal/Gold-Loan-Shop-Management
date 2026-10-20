@@ -685,15 +685,16 @@ async function renewLoan(id, paymentAmount, adminUserId, paymentDetails) {
     await connection.execute(
       `INSERT INTO loan_renewals (
         loan_id, renewal_date, period_start_date, previous_maturity_date, new_maturity_date,
-        payment_amount, interest_paid, principal_paid, principal_before, principal_after,
-        accrued_interest, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        payment_amount, interest_paid, late_payment_fee, principal_paid, principal_before,
+        principal_after, accrued_interest, fund_account_id, payment_method, reference_number,
+        idempotency_key, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id, preview.renewal_date, preview.period_start_date, previousMaturityDate, newMaturityDate,
         amount.toFixed(2), interestPaid.toFixed(2), latePaymentFee.toFixed(2), principalPaid.toFixed(2),
-        preview.current_principal.toFixed(2), principalAfter.toFixed(2),
-        preview.accrued_interest.toFixed(2), paymentDetails.account_id, paymentDetails.payment_method,
-        paymentDetails.reference_number || null, paymentDetails.idempotency_key, adminUserId || null
+        preview.current_principal.toFixed(2), principalAfter.toFixed(2), preview.accrued_interest.toFixed(2),
+        paymentDetails.account_id, paymentDetails.payment_method, paymentDetails.reference_number || null,
+        paymentDetails.idempotency_key, adminUserId || null
       ]
     );
     if (principalPaid > 0) {

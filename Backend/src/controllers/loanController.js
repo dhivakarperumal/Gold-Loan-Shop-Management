@@ -49,6 +49,7 @@ const INTEREST_TYPES = new Set([
   'simple', 'compound', 'flat', 'reducing_balance', 'daily', 'monthly',
   'annual', 'fixed', 'slab_based', 'custom'
 ]);
+const PAYMENT_METHODS = new Set(['Cash', 'UPI', 'Card', 'Bank Transfer', 'Cheque', 'Other']);
 const REQUIRED_TEXT = ['jewellery_type', 'gold_purity'];
 const MAXIMUM = 999999999999;
 
@@ -293,19 +294,40 @@ async function postLoanRenewal(req, res, next) {
   if (!validId(req.params.id)) return res.status(400).json({ message: 'Loan ID is invalid' });
   const amount = parseAmount(req.body?.payment_amount, 'Payment amount', { min: 0.01 });
   if (amount.error) return res.status(400).json({ message: amount.error });
+  const accountId = validId(req.body?.account_id) ? Number(req.body.account_id) : null;
+  const paymentMethod = typeof req.body?.payment_method === 'string' ? req.body.payment_method.trim() : '';
+  const rawReferenceNumber = req.body?.reference_number;
+  const referenceNumber = typeof rawReferenceNumber === 'string' ? rawReferenceNumber.trim() : '';
+  const idempotencyKey = req.body?.idempotency_key ?? randomUUID();
+  if (!accountId || !paymentMethods.has(paymentMethod)
+    || (rawReferenceNumber != null && typeof rawReferenceNumber !== 'string')
+    || referenceNumber.length > 100
+    || typeof idempotencyKey !== 'string'
+    || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(idempotencyKey)) {
+    return res.status(400).json({ message: 'Select a valid fund account and payment method' });
+  }
   try {
-    return res.json(await renewLoan(req.params.id, amount.value, req.adminUser.user_id));
+    return res.json(await renewLoan(req.params.id, amount.value, req.adminUser.user_id, {
+      account_id: accountId,
+      payment_method: paymentMethod,
+      reference_number: referenceNumber,
+      idempotency_key: `loan-renewal:${idempotencyKey}`
+    }));
   } catch (error) {
     if (error.code === 'LOAN_NOT_FOUND') return res.status(404).json({ message: error.message });
     if (['LOAN_NOT_ACTIVE', 'LOAN_READY_FOR_GOLD_RELEASE'].includes(error.code)) {
       return res.status(409).json({ message: error.message });
     }
+    if (error.code === 'FUND_ACCOUNT_NOT_FOUND') return res.status(400).json({ message: error.message });
     if ([
       'INVALID_RENEWAL_PAYMENT',
       'RENEWAL_PAYMENT_BELOW_INTEREST',
       'RENEWAL_PAYMENT_EXCEEDS_DUE'
     ].includes(error.code)) {
       return res.status(400).json({ message: error.message });
+    }
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ message: 'This renewal payment has already been recorded' });
     }
     return next(error);
   }
