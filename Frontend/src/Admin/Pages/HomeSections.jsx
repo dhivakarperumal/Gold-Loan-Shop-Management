@@ -100,13 +100,12 @@ const HomeSections = () => {
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-600">View</span>
                 <button
                   type="button"
                   onClick={() => toggleSection(section.key)}
                   role="switch"
                   aria-checked={section.visible}
-                  aria-label={`View ${section.label} on home page`}
+                  aria-label={`${section.visible ? "Hide" : "Show"} ${section.label} on home page`}
                   className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#087568] focus-visible:ring-offset-2 ${
                     section.visible ? "bg-[#087568]" : "bg-slate-300"
                   }`}
@@ -118,6 +117,7 @@ const HomeSections = () => {
                     }`}
                   />
                 </button>
+                <span className="w-9 text-xs font-bold text-slate-600">{section.visible ? "Hide" : "Show"}</span>
                 <button
                   type="button"
                   onClick={() => moveSection(index, -1)}
