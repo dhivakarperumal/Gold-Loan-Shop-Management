@@ -9,6 +9,7 @@ import {
   RefreshCw,
   Sparkles
 } from "lucide-react";
+import PageContainer from "../CommenComponents/PageContainer";
 import useGoldRates from "../../PrivateRouter/useGoldRates";
 import { formatRateDate } from "../../PrivateRouter/goldRateUtils";
 
@@ -140,8 +141,9 @@ export default function TodayGoldRate() {
   const { current, loading, error, refresh } = useGoldRates();
 
   return (
-    <section className="bg-[#fbf7ed] px-3 py-7 sm:px-6 sm:py-9 lg:px-8" aria-labelledby="today-gold-rate-title">
-      <div className="mx-auto max-w-7xl rounded-[22px] border border-[#f0dfbd] bg-[#fffaf0] p-2.5 shadow-[0_12px_35px_rgba(111,78,24,0.10)] sm:p-4">
+    <section className="bg-[#fbf7ed] py-7 sm:py-9" aria-labelledby="today-gold-rate-title">
+      <PageContainer>
+      <div className="rounded-[22px] border border-[#f0dfbd] bg-[#fffaf0] p-2.5 shadow-[0_12px_35px_rgba(111,78,24,0.10)] sm:p-4">
         <header className="relative overflow-hidden rounded-[18px] bg-gradient-to-r from-[#003a2b] via-[#064d38] to-[#003626] px-5 py-5 text-white sm:px-8 sm:py-6">
           <div aria-hidden="true" className="pointer-events-none absolute -right-8 -top-16 h-48 w-48 rounded-full border-[24px] border-white/[0.04]" />
           <div aria-hidden="true" className="pointer-events-none absolute -bottom-16 right-1/4 h-40 w-40 rounded-full bg-emerald-300/[0.04] blur-2xl" />
@@ -213,15 +215,16 @@ export default function TodayGoldRate() {
             >
               <RefreshCw size={17} className={loading ? "animate-spin" : ""} aria-hidden="true" />
             </button>
-            <Link
+            {/* <Link
               to="/explore"
               className="inline-flex items-center gap-2 rounded-full border border-[#a97817] px-4 py-2.5 text-xs font-bold text-[#302819] transition hover:bg-[#f9edce]"
             >
               View Details <ChevronRight size={16} aria-hidden="true" />
-            </Link>
+            </Link> */}
           </div>
         </footer>
       </div>
+      </PageContainer>
     </section>
   );
 }
