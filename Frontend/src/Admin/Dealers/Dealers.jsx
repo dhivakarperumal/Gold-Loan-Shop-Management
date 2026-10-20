@@ -497,7 +497,6 @@ const Dealers = () => {
       </div>
       <div className="flex gap-2">
         <button type="button" onClick={() => void refresh()} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"><RefreshCw size={16} /> Refresh</button>
-        {section === "purchases" && <><button type="button" onClick={openPayment} className="inline-flex items-center gap-2 rounded-lg border border-[#003B3B] px-4 py-2.5 text-sm font-bold text-[#003B3B]"><Wallet size={16} /> Record Payment</button><button type="button" onClick={() => setDialog("purchase")} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#008577]"><Plus size={17} /> New Purchase</button></>}
         {section === "jobs" && <button type="button" onClick={() => setDialog("job")} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#008577]"><Plus size={17} /> Create Job Order</button>}
         {section === "refining" && <><button type="button" onClick={() => setDialog("oldGold")} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#008577]"><Plus size={17} /> Receive Old Gold</button><button type="button" onClick={() => setDialog("refining")} className="inline-flex items-center gap-2 rounded-lg border border-[#003B3B] px-4 py-2.5 text-sm font-bold text-[#003B3B]"><ArrowDownToLine size={16} /> Refining Receipt</button></>}
       </div>
@@ -607,6 +606,8 @@ const Dealers = () => {
               <button type="button" onClick={() => setViewMode("table")} aria-label="List view" aria-pressed={viewMode === "table"} className={`rounded-lg p-2.5 transition ${viewMode === "table" ? "bg-[#003B3B] text-white" : "text-slate-400 hover:text-slate-700"}`}><List size={18} /></button>
               <button type="button" onClick={() => setViewMode("grid")} aria-label="Card view" aria-pressed={viewMode === "grid"} className={`rounded-lg p-2.5 transition ${viewMode === "grid" ? "bg-[#003B3B] text-white" : "text-slate-400 hover:text-slate-700"}`}><LayoutGrid size={18} /></button>
             </div>
+            <button type="button" onClick={openPayment} className="inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-xl border border-[#003B3B] px-3 py-2.5 text-xs font-bold text-[#003B3B] hover:bg-emerald-50"><Wallet size={16} /> Record Payment</button>
+            <button type="button" onClick={() => setDialog("purchase")} className="inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-xl bg-[#003B3B] px-3 py-2.5 text-xs font-bold text-white hover:bg-[#008577]"><Plus size={17} /> New Purchase</button>
             <button type="button" onClick={() => exportCsv([["Document","Dealer","Type","Date","Due date","Total","Paid","Outstanding"], ...visiblePurchases.map((row) => [row.document_number,row.dealer_name,row.document_type,row.document_date,row.due_date,row.total,row.paid_amount,row.outstanding])], "dealer-purchases.csv")} className="inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold"><Download size={15} /> Export CSV</button>
           </div>
         </section>
