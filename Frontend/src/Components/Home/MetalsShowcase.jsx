@@ -1,42 +1,81 @@
 
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowRight } from "lucide-react";
+import {
+  ArrowRight,
+  Atom,
+  Coins,
+  Flower2,
+  Gem,
+  Sparkles,
+} from "lucide-react";
 import api from "../../api";
 import PageContainer from "../CommenComponents/PageContainer";
 
-const METAL_ORDER = ["gold", "silver", "diamond", "platinum"];
-const METAL_BACKGROUNDS = {
-  gold: "/images/metal/goldmetal.png",
-  silver: "/images/metal/silvermetal.png",
-  diamond: "/images/metal/diamondmetal.png",
-  platinum: "/images/metal/platinummetal.png",
+const backendUrl = (
+  import.meta.env.VITE_BACKEND_URL ||
+  import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") ||
+  "http://localhost:5000"
+).replace(/\/$/, "");
+
+const getMetalImageUrl = (image) => {
+  if (!image || /^(https?:|data:|blob:)/i.test(image)) {
+    return image || "";
+  }
+
+  return `${backendUrl}${image.startsWith("/") ? image : `/${image}`}`;
 };
-const METAL_TEXT_COLORS = {
+
+const METAL_DETAILS = {
   gold: {
-    eyebrow: "text-[#b58a32]",
-    title: "text-[#f7e9c6]",
-    details: "text-[#f1ead8]",
+    symbol: "Au",
+    purity: "24K · 22K · 20K · 18K · 14K",
+    description:
+      "A symbol of purity and prosperity, our gold jewellery celebrates life's special moments.",
+    Icon: Coins,
+    fallback: "from-[#f3d49a] to-[#b47a22]",
+    cardGradient: "from-[#fff7e5] via-[#fffdf8] to-[#f6e4b8]",
   },
   silver: {
-    eyebrow: "text-[#42594f]",
-    title: "text-[#183d32]",
-    details: "text-[#2f453a]",
-  },
-  diamond: {
-    eyebrow: "text-[#b77932]",
-    title: "text-[#955b27]",
-    details: "text-[#43594d]",
+    symbol: "Ag",
+    purity: "999 PURE",
+    description:
+      "Elegant, versatile and timeless, our silver collection blends tradition with modern style.",
+    Icon: Sparkles,
+    fallback: "from-[#e6e5de] to-[#aaa99f]",
+    cardGradient: "from-[#eaf5ff] via-[#f8fbff] to-[#d9eaff]",
   },
   platinum: {
-    eyebrow: "text-[#d1a42d]",
-    title: "text-[#e7b629]",
-    details: "text-[#e5e5dc]",
+    symbol: "Pt",
+    purity: "950 · 900",
+    description:
+      "Rare, refined and enduring, platinum symbolises lasting strength and elegance.",
+    Icon: Atom,
+    fallback: "from-[#c9d9ce] to-[#718f82]",
+    cardGradient: "from-[#e8f7ed] via-[#f8fcf8] to-[#d3eddd]",
+  },
+  diamond: {
+    symbol: "",
+    purity: "D–F / VVS · G–H / VS · I–J / SI",
+    description:
+      "Exceptional sparkle and brilliance, our diamonds are chosen for their unmatched beauty.",
+    Icon: Gem,
+    fallback: "from-[#f6e8d0] to-[#d8c6a7]",
+    cardGradient: "from-[#fff0f8] via-[#fff9fc] to-[#f5dff0]",
   },
 };
 
-function getMetalKey(name = "") {
-  return METAL_ORDER.find((metal) => name.toLowerCase().includes(metal));
+const METAL_ORDER = ["gold", "silver", "diamond", "platinum"];
+
+function getMetalDetails(name = "") {
+  const key = name.trim().toLowerCase();
+
+  if (key.includes("gold")) return METAL_DETAILS.gold;
+  if (key.includes("silver")) return METAL_DETAILS.silver;
+  if (key.includes("platinum")) return METAL_DETAILS.platinum;
+  if (key.includes("diamond")) return METAL_DETAILS.diamond;
+
+  return null;
 }
 
 export default function MetalsShowcase() {
@@ -105,12 +144,15 @@ export default function MetalsShowcase() {
         ) : (
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-2">
             {metals.map((metal) => {
+              const details = getMetalDetails(metal.name);
+              const Icon = details?.Icon || Coins;
+              const purity = metal.purity || details?.purity;
+              const description =
+                metal.description || details?.description;
+
               const exploreUrl = `/explore?metal=${encodeURIComponent(
                 metal.name
               )}`;
-              const metalKey = getMetalKey(metal.name);
-              const background = METAL_BACKGROUNDS[metalKey];
-              const textColors = METAL_TEXT_COLORS[metalKey] || METAL_TEXT_COLORS.gold;
 
               return (
                 <article
@@ -125,24 +167,26 @@ export default function MetalsShowcase() {
                     <h3 className={`mt-1 font-serif text-2xl font-bold leading-tight ${textColors.title} sm:text-3xl`}>
                       {metal.name} 
                     </h3>
-                    {metal.purity && (
-                      <p className={`mt-1 text-[10px] font-semibold uppercase tracking-wide ${textColors.details} sm:text-xs`}>
-                        {metal.purity}
+
+                    {purity && (
+                      <p className="relative mt-1 break-words text-[9px] font-bold uppercase leading-snug tracking-wide text-[#a36c12] sm:text-[10px] lg:text-xs">
+                        {purity}
                       </p>
                     )}
-                    {metal.description && (
-                      <p className={`mt-1.5 line-clamp-2 text-[11px] leading-snug ${textColors.details} sm:text-xs`}>
-                        {metal.description}
-                      </p>
-                    )}
+
+                    <p className="relative mt-1.5 line-clamp-2 text-[11px] leading-snug text-[#68645c] sm:text-xs lg:text-sm">
+                      {description ||
+                        `Discover our beautiful ${metal.name.toLowerCase()} collection, selected for quality and timeless style.`}
+                    </p>
+
                     <Link
                       to={exploreUrl}
-                      className="mt-3 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#f6d274] to-[#dcae44] px-3.5 py-2 text-[10px] font-bold text-[#382a10] shadow-sm transition hover:brightness-105 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174a38] sm:mt-4 sm:px-4 sm:text-xs"
+                      className="relative mt-2.5 inline-flex w-fit items-center gap-1.5 border-b border-[#d9a441] pb-0.5 text-[11px] font-bold text-[#073b2b] transition hover:text-[#a66b00] sm:mt-3 sm:text-xs"
                     >
                       Explore {metal.name}
                       <ArrowRight
-                        size={14}
-                        className="transition-transform group-hover:translate-x-1"
+                        size={16}
+                        className="text-[#a66b00] transition-transform group-hover:translate-x-1"
                         aria-hidden="true"
                       />
                     </Link>
