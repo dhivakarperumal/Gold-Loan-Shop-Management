@@ -299,6 +299,7 @@ module.exports = {
   createFundAccount,
   createFundTransaction,
   getFundSummary,
+  getAccountBalance,
   insertTransaction,
   initializeFundModule,
   listFundAccounts,

@@ -1,6 +1,6 @@
 const crypto = require('node:crypto');
 const { pool } = require('../config/db');
-const { insertTransaction } = require('./fundModule');
+const { getAccountBalance, insertTransaction } = require('./fundModule');
 
 const INTEREST_TYPES = [
   ['simple', 'Simple Interest'],
@@ -676,13 +676,46 @@ async function listLoansForUser(userId) {
 }
 
 
-async function createLoan(loan) {
+function allocateLoanDisbursement(amount, accounts) {
+  const amountNumber = Number(amount);
+  if (!Number.isFinite(amountNumber) || amountNumber <= 0) {
+    const error = new Error('Enter a valid loan amount greater than zero');
+    error.code = 'INVALID_LOAN_AMOUNT';
+    throw error;
+  }
+  const amountCents = Math.round((amountNumber + Number.EPSILON) * 100);
+  let remainingCents = amountCents;
+  const allocations = [];
+  let availableCents = 0;
+  for (const account of accounts) {
+    const balance = Number(account.balance);
+    const balanceCents = Number.isFinite(balance) ? Math.max(0, Math.round((balance + Number.EPSILON) * 100)) : 0;
+    availableCents += balanceCents;
+    const debitCents = Math.min(remainingCents, balanceCents);
+    if (debitCents > 0) {
+      allocations.push({
+        account_id: account.id,
+        amount: (debitCents / 100).toFixed(2)
+      });
+      remainingCents -= debitCents;
+    }
+  }
+  if (remainingCents > 0) {
+    const error = new Error(`Insufficient available funds. Available balance: ${(availableCents / 100).toFixed(2)}.`);
+    error.code = 'INSUFFICIENT_FUNDS';
+    error.available_balance = (availableCents / 100).toFixed(2);
+    throw error;
+  }
+  return allocations;
+}
+
+async function createLoan(loan, { idempotencyKey = crypto.randomUUID() } = {}) {
   const connection = await pool.getConnection();
   let loanId;
   try {
     await connection.beginTransaction();
     const [customers] = await connection.execute(
-      'SELECT id FROM loan_customers WHERE id = ? FOR UPDATE',
+      'SELECT id, full_name FROM loan_customers WHERE id = ? FOR UPDATE',
       [loan.customer_id]
     );
     if (!customers.length) {
@@ -699,6 +732,30 @@ async function createLoan(loan) {
       error.code = 'INTEREST_TYPE_UNAVAILABLE';
       throw error;
     }
+    const [fundAccounts] = await connection.execute(
+      'SELECT id FROM fund_accounts ORDER BY id FOR UPDATE'
+    );
+    const [existingDisbursements] = await connection.execute(
+      `SELECT related_reference FROM fund_transactions
+       WHERE idempotency_key LIKE ? AND status = 'POSTED'
+       ORDER BY id LIMIT 1`,
+      [`loan-disbursement:${idempotencyKey}:%`]
+    );
+    if (existingDisbursements.length) {
+      const existingLoan = await getLoanByIdFrom(connection, existingDisbursements[0].related_reference);
+      if (existingLoan) {
+        await connection.commit();
+        return existingLoan;
+      }
+    }
+    const fundBalances = [];
+    for (const account of fundAccounts) {
+      fundBalances.push({
+        id: account.id,
+        balance: await getAccountBalance(connection, account.id)
+      });
+    }
+    const allocations = allocateLoanDisbursement(loan.principal_amount, fundBalances);
     const loanToInsert = { ...loan, outstanding_principal: loan.principal_amount };
     const fields = Object.keys(loanToInsert).filter((field) => field !== 'customer_id');
     const columns = ['loan_number', 'gold_pledge_number', 'customer_id', ...fields];
@@ -716,14 +773,32 @@ async function createLoan(loan) {
       'UPDATE loans SET loan_number = ?, gold_pledge_number = ? WHERE id = ?',
       [loanNumber, pledgeNumber, loanId]
     );
+    const [[timestamp]] = await connection.query('SELECT CURRENT_TIMESTAMP() AS transaction_date');
+    for (const [index, allocation] of allocations.entries()) {
+      await insertTransaction(connection, {
+        account_id: allocation.account_id,
+        transaction_type: 'DEBIT',
+        category: 'Customer Gold Loan Disbursement',
+        transaction_date: timestamp.transaction_date,
+        amount: allocation.amount,
+        party_name: customers[0].full_name,
+        related_reference: String(loanId),
+        payment_method: 'Other',
+        reference_number: loanNumber,
+        description: 'Loan amount disbursed to customer',
+        idempotency_key: `loan-disbursement:${idempotencyKey}:${index}`,
+        created_by: loan.created_by
+      });
+    }
+    const createdLoan = await getLoanByIdFrom(connection, loanId);
     await connection.commit();
+    return createdLoan;
   } catch (error) {
     await connection.rollback();
     throw error;
   } finally {
     connection.release();
   }
-  return getLoanById(loanId);
 }
 
 async function updateLoan(id, loan) {
@@ -756,6 +831,7 @@ async function setInterestType(typeKey, enabled) {
 
 module.exports = {
   createLoan,
+  allocateLoanDisbursement,
   allocateRenewalPayment,
   calculateRenewalInterest,
   deleteLoan,

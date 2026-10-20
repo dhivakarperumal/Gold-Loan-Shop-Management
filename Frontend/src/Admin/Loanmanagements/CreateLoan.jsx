@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { FiArrowLeft, FiCalendar, FiCamera, FiCheck, FiChevronDown, FiPrinter, FiSearch, FiUploadCloud, FiUserPlus } from "react-icons/fi";
 import { toast } from "react-hot-toast";
@@ -216,6 +216,10 @@ export default function CreateLoan() {
   const [customerQuery, setCustomerQuery] = useState("");
   const [customer, setCustomer] = useState(null);
   const [customerLoans, setCustomerLoans] = useState([]);
+  const [availableFundBalance, setAvailableFundBalance] = useState(null);
+  const [fundBalanceLoading, setFundBalanceLoading] = useState(true);
+  const [fundBalanceError, setFundBalanceError] = useState("");
+  const [loanAmountError, setLoanAmountError] = useState("");
   const [form, setForm] = useState(initialLoan);
   const [otherJewelleryType, setOtherJewelleryType] = useState("");
   const [loanAmountMode, setLoanAmountMode] = useState("auto");
@@ -231,7 +235,45 @@ export default function CreateLoan() {
   const goldImageInput = useRef(null);
   const goldImageCameraInput = useRef(null);
   const selectedGoldImagePreview = useRef("");
+  const loanRequestKey = useRef(null);
   const { current: activeRateSet, loading: ratesLoading, error: ratesError } = useGoldRates();
+
+  const refreshAvailableFundBalance = useCallback(async () => {
+    setFundBalanceLoading(true);
+    try {
+      const { data } = await api.get("/funds/accounts");
+      if (!Array.isArray(data)) throw new Error("The server returned an invalid fund account list.");
+      const balance = data.reduce((sum, account) => {
+        const accountBalance = Number(account.current_balance);
+        if (!Number.isFinite(accountBalance)) throw new Error("A fund account has an invalid balance.");
+        return sum + accountBalance;
+      }, 0);
+      setAvailableFundBalance(balance);
+      setFundBalanceError("");
+      return balance;
+    } catch (error) {
+      const message = error.response?.data?.message || error.message || "Could not load the available fund balance.";
+      setFundBalanceError(message);
+      throw new Error(message);
+    } finally {
+      setFundBalanceLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const refresh = () => {
+      refreshAvailableFundBalance().catch((error) => {
+        console.error("Failed to refresh available fund balance:", error);
+      });
+    };
+    refresh();
+    const interval = window.setInterval(refresh, 30000);
+    window.addEventListener("focus", refresh);
+    return () => {
+      window.clearInterval(interval);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [refreshAvailableFundBalance]);
 
   useEffect(() => {
     let active = true;
@@ -383,6 +425,7 @@ export default function CreateLoan() {
   const calculatedLoanAmount = Number.isFinite(estimatedGoldValuation) && estimatedGoldValuation > 0
     ? (Math.round(estimatedGoldValuation * 50) / 100).toFixed(2)
     : "";
+  const loanAmountInput = loanAmountMode === "auto" ? calculatedLoanAmount : form.principal_amount;
   const estimate = useMemo(
     () => calculateEstimate({
       ...form,
@@ -414,12 +457,14 @@ export default function CreateLoan() {
 
   const handleChange = (event) => {
     const { name, value } = event.target;
+    if (name === "principal_amount") setLoanAmountError("");
     setForm((current) => name === "metal_type"
       ? { ...current, metal_type: value, gold_purity: "" }
       : { ...current, [name]: value });
   };
 
   const handleLoanAmountModeChange = (mode) => {
+    setLoanAmountError("");
     setLoanAmountMode(mode);
     if (mode === "manual") {
       setForm((current) => ({
@@ -431,6 +476,8 @@ export default function CreateLoan() {
 
   const handleReset = () => {
     setForm(initialLoan());
+    setLoanAmountError("");
+    loanRequestKey.current = null;
     setOtherJewelleryType("");
     setLoanAmountMode("auto");
     setCustomer(null);
@@ -467,8 +514,35 @@ export default function CreateLoan() {
       toast.error("An active daily gold rate for the selected purity is required before creating a loan.");
       return;
     }
+    const requestedAmount = Number(loanAmountInput);
+    if (loanAmountInput == null || String(loanAmountInput).trim() === ""
+      || !Number.isFinite(requestedAmount) || requestedAmount <= 0) {
+      const message = "Enter a valid loan amount greater than zero.";
+      setLoanAmountError(message);
+      toast.error(message);
+      return;
+    }
+    setLoanAmountError("");
     setSaving(true);
     try {
+      if (!loanRecord) {
+        let latestAvailableBalance;
+        try {
+          latestAvailableBalance = await refreshAvailableFundBalance();
+        } catch (error) {
+          toast.error(error.message || "Could not verify the available fund balance.");
+          return;
+        }
+        if (requestedAmount > latestAvailableBalance + 0.001) {
+          const message = `Loan amount exceeds available funds (${formatCurrency(latestAvailableBalance)}).`;
+          setLoanAmountError(message);
+          toast.error(message);
+          return;
+        }
+      }
+      if (!loanRecord && !loanRequestKey.current) {
+        loanRequestKey.current = crypto.randomUUID();
+      }
       const loanData = {
         ...form,
         jewellery_type: form.jewellery_type === "Other" ? otherJewelleryType.trim() : form.jewellery_type,
@@ -476,7 +550,8 @@ export default function CreateLoan() {
         net_gold_weight: (gross - stone).toFixed(3),
         gold_valuation: estimatedGoldValuation.toFixed(2),
         principal_amount: loanAmountMode === "auto" ? calculatedLoanAmount : form.principal_amount,
-        loan_amount_mode: loanAmountMode
+        loan_amount_mode: loanAmountMode,
+        ...(!loanRecord ? { idempotency_key: loanRequestKey.current } : {})
       };
       let payload = loanData;
       if (goldImageFile) {
@@ -487,12 +562,24 @@ export default function CreateLoan() {
       const response = loanRecord
         ? await api.put(`/loans/${loanRecord.id}`, payload)
         : await api.post("/loans", payload);
+      if (!loanRecord) {
+        loanRequestKey.current = null;
+        try {
+          await refreshAvailableFundBalance();
+        } catch (error) {
+          console.error("Loan was created, but the fund balance refresh failed:", error);
+          toast.error("Loan created, but the displayed fund balance could not be refreshed.");
+        }
+      }
       toast.success(loanRecord
         ? `Loan ${response.data.loan_number} updated successfully.`
         : `Loan ${response.data.loan_number} created successfully.`);
       navigate(`/admin/loans/details/${response.data.id}`);
     } catch (error) {
       console.error(loanRecord ? "Failed to update loan:" : "Failed to create loan:", error);
+      if (!loanRecord && error.response?.status === 409) {
+        setLoanAmountError(error.response?.data?.message || "Insufficient available funds.");
+      }
       toast.error(error.response?.data?.message || `Could not ${loanRecord ? "update" : "create"} loan. Please try again.`);
     } finally {
       setSaving(false);
@@ -860,6 +947,37 @@ export default function CreateLoan() {
               ) : (
                 <FormField label="Loan Amount (₹)" name="principal_amount" form={form} onChange={handleChange} type="number" min="0.01" step="0.01" required placeholder="Enter loan amount" help="Enter the loan amount to disburse." />
               )}
+              <div className="mt-3 grid gap-2 rounded-lg border border-emerald-100 bg-white p-3 sm:grid-cols-3" aria-live="polite">
+                <div>
+                  <p className="text-[11px] font-semibold text-slate-500">Available Fund Balance</p>
+                  <p className="mt-1 text-sm font-bold text-[#064A41]">
+                    {availableFundBalance == null
+                      ? fundBalanceLoading ? "Loading..." : "Unavailable"
+                      : formatCurrency(availableFundBalance)}
+                    {fundBalanceLoading && availableFundBalance != null && <span className="ml-1 text-[10px] font-normal text-slate-400">Updating</span>}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold text-slate-500">Loan Amount</p>
+                  <p className="mt-1 text-sm font-bold text-slate-800">
+                    {Number.isFinite(Number(loanAmountInput)) && String(loanAmountInput ?? "").trim() !== "" && Number(loanAmountInput) > 0
+                      ? formatCurrency(Number(loanAmountInput))
+                      : "—"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[11px] font-semibold text-slate-500">Remaining Balance</p>
+                  <p className={`mt-1 text-sm font-bold ${availableFundBalance != null && Number(loanAmountInput) > availableFundBalance ? "text-rose-600" : "text-slate-800"}`}>
+                    {availableFundBalance == null ? "—" : formatCurrency(availableFundBalance - (Number(loanAmountInput) || 0))}
+                  </p>
+                </div>
+              </div>
+              {fundBalanceError && (
+                <p role="alert" className="mt-2 text-xs font-medium text-rose-600">
+                  Fund balance unavailable: {fundBalanceError}
+                </p>
+              )}
+              {loanAmountError && <p role="alert" className="mt-2 text-xs font-semibold text-rose-600">{loanAmountError}</p>}
             </div>
             <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/70 p-4">
               <p className={labelClass}>Gold Image <span className="font-normal text-slate-400">(optional, PNG or JPG up to 5 MB)</span></p>
