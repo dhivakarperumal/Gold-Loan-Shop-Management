@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { FiAlertCircle, FiCheck, FiCheckCircle, FiEdit2, FiEye, FiGrid, FiLayers, FiList, FiPauseCircle, FiPlus, FiPrinter, FiSearch, FiTrash2 } from "react-icons/fi";
+import { FiAlertCircle, FiCheck, FiCheckCircle, FiChevronLeft, FiChevronRight, FiEdit2, FiEye, FiGrid, FiLayers, FiList, FiPauseCircle, FiPlus, FiPrinter, FiSearch, FiTrash2 } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api from "../../api";
 import { printLoanAgreement } from "./loanPrint";
@@ -50,6 +50,8 @@ export default function AllLoans() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [viewMode, setViewMode] = useState("table");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 10;
   const now = new Date();
   const todayUtc = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
 
@@ -117,6 +119,9 @@ export default function AllLoans() {
       || String(displayStatus(loan)).trim().toLowerCase() === statusFilter.toLowerCase();
     return matchesSearch && matchesStatus;
   });
+  const totalPages = Math.max(1, Math.ceil(filteredLoans.length / pageSize));
+  const activePage = Math.min(currentPage, totalPages);
+  const paginatedLoans = filteredLoans.slice((activePage - 1) * pageSize, activePage * pageSize);
   const getStatusStyle = (status) => {
     switch (String(status || "").trim().toLowerCase()) {
       case "active": return "bg-emerald-50 text-emerald-700";
@@ -165,13 +170,13 @@ export default function AllLoans() {
         <label className="relative min-w-0 sm:w-1/3 sm:min-w-[280px] sm:flex-none">
           <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true" />
           <span className="sr-only">Search loans</span>
-          <input type="search" placeholder="Search loans by number, customer..." value={searchTerm} onChange={(event) => setSearchTerm(event.target.value)}
+          <input type="search" placeholder="Search loans by number, customer..." value={searchTerm} onChange={(event) => { setSearchTerm(event.target.value); setCurrentPage(1); }}
             className="w-full rounded-xl border border-slate-200 bg-slate-50/80 py-3 pl-10 pr-4 text-sm font-medium text-slate-700 outline-none transition placeholder:font-normal placeholder:text-slate-400 hover:border-slate-300 focus:border-[#008577] focus:bg-white focus:ring-4 focus:ring-emerald-700/10" />
         </label>
 
         
         <div className="flex flex-wrap items-center justify-between gap-2 sm:ml-auto sm:justify-start sm:gap-3">
-          <div> <DateRangeFilter onApply={setDateRange} /></div>
+          <div> <DateRangeFilter onApply={(range) => { setCurrentPage(1); setDateRange(range); }} /></div>
           <select aria-label="Filter loans by status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}
             className="min-w-[142px] rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm font-semibold text-slate-600 outline-none transition hover:border-slate-300 focus:border-[#008577] focus:ring-4 focus:ring-emerald-700/10">
             <option value="All">Select Status</option>
@@ -189,8 +194,8 @@ export default function AllLoans() {
 
      
       {viewMode === "table" ? (
-        <section aria-label="Loans in table view" className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_2px_12px_rgba(15,23,42,0.05)]">
-          <div className="flex flex-col gap-1 border-b border-slate-100 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <section aria-label="Loans in table view" className="overflow-hidden  bg-white">
+          <div className="flex flex-col gap-1 border-b border-slate-100 px-5 py-0 sm:flex-row sm:items-center sm:justify-between">
           </div>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[880px] border-separate border-spacing-0 text-left">
