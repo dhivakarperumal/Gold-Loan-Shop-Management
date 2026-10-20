@@ -343,7 +343,7 @@ const ProductDetail = () => {
                 <img
                   src={assetUrl(selectedImage)}
                   alt={product.name}
-                  className="h-full w-full object-cover"
+                  className="h-full w-full object-contain"
                 />
               ) : (
                 <div className="text-center text-sm text-[#887c69]">
