@@ -195,15 +195,7 @@ export default function LoanRenewal() {
 
   if (!id) {
     return (
-      <main className="space-y-6 p-4 sm:p-6">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#008577]">Loan Management</p>
-            <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">Loan Renewal</h1>
-            <p className="mt-1 text-sm text-slate-500">Select a loan to review its balance, collect payment, and renew its term.</p>
-          </div>
-          <span className="text-xs font-semibold text-slate-400">{loans.length} loans</span>
-        </header>
+      <main className="space-y-6 p-2">
         <section aria-label="Loan renewal summary" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {renewalSummary.map(({ label, value, icon: Icon, color, iconColor }) => (
             <article key={label} className={`flex items-center justify-between rounded-2xl border bg-white p-5 shadow-sm ${color}`}>
