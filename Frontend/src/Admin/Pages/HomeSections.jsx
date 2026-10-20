@@ -100,7 +100,13 @@ const HomeSections = () => {
                 </p>
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-600">Hide</span>
+                <span
+                  className={`rounded-md px-1.5 py-1 text-xs font-extrabold ${
+                    section.visible ? "text-slate-400" : "bg-rose-100 text-rose-800"
+                  }`}
+                >
+                  Hide
+                </span>
                 <button
                   type="button"
                   onClick={() => toggleSection(section.key)}
@@ -118,7 +124,13 @@ const HomeSections = () => {
                     }`}
                   />
                 </button>
-                <span className="text-xs font-bold text-slate-600">Show</span>
+                <span
+                  className={`rounded-md px-1.5 py-1 text-xs font-extrabold ${
+                    section.visible ? "bg-emerald-100 text-emerald-800" : "text-slate-400"
+                  }`}
+                >
+                  Show
+                </span>
                 <button
                   type="button"
                   onClick={() => moveSection(index, -1)}
