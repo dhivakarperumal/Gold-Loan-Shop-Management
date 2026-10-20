@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { FiAlertCircle, FiCalendar, FiClock, FiEye, FiGrid, FiList, FiSearch, FiUsers } from "react-icons/fi";
+import { FiAlertCircle, FiCalendar, FiClock, FiCreditCard, FiEye, FiGrid, FiList, FiSearch, FiUsers } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api from "../../api";
 import { isLoanReviewDue } from "./loanPolicy";
 import { formatCurrency as money } from "../../utils/currency";
 import DateRangeFilter from "../Components/DateRangeFilter";
+import { LoanPaymentModal } from "./LoanRenewal";
 
 function dateText(value) {
   if (!value) return "—";
@@ -38,6 +39,7 @@ export default function OverdueLoans() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [viewMode, setViewMode] = useState("table");
+  const [paymentLoan, setPaymentLoan] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState({ preset: "all", startDate: "", endDate: "" });
 
@@ -143,17 +145,17 @@ export default function OverdueLoans() {
           <table className="w-full min-w-[900px] table-fixed border-collapse text-left">
             <colgroup>
               <col className="[width:4%]" />
-              <col className="[width:17%]" />
-              <col className="[width:13%]" />
+              <col className="[width:16%]" />
+              <col className="[width:12%]" />
+              <col className="[width:12%]" />
+              <col className="[width:14%]" />
+              <col className="[width:15%]" />
               <col className="[width:12%]" />
               <col className="[width:15%]" />
-              <col className="[width:16%]" />
-              <col className="[width:13%]" />
-              <col className="[width:10%]" />
             </colgroup>
             <thead>
               <tr className="bg-[#064A41] text-[11px] font-bold uppercase tracking-wide text-emerald-50/90">
-                {["S No", "Loan / Pledge", "Customer", "Loan Amount", "Outstanding", "Maturity", "Overdue", "View"].map((heading) => (
+                {["S No", "Loan / Pledge", "Customer", "Loan Amount", "Outstanding", "Maturity", "Overdue", "Actions"].map((heading) => (
                   <th key={heading} scope="col" className="whitespace-nowrap px-2 py-3 first:pl-3 last:pr-3">{heading}</th>
                 ))}
               </tr>
@@ -172,7 +174,12 @@ export default function OverdueLoans() {
                       <td className="whitespace-nowrap px-2 py-3 align-top font-bold text-rose-700">{money(loan.outstanding_principal ?? loan.principal_amount)}</td>
                       <td className="whitespace-nowrap px-2 py-3 align-top text-slate-600"><span className="inline-flex items-center gap-1"><FiCalendar size={12} />{dateText(loan.maturity_date)}</span><span className="mt-1 block text-[11px] text-slate-400">Grace: {Number(loan.grace_period_days) || 0} days</span></td>
                       <td className="px-2 py-3 align-top"><span className="inline-flex whitespace-nowrap rounded-full bg-rose-50 px-2 py-1 text-[11px] font-bold text-rose-700">{loan.overdue_days} {loan.overdue_days === 1 ? "day" : "days"}</span></td>
-                      <td className="px-2 py-3 pr-3 align-top"><Link to={`/admin/loans/details/${loan.id}`} aria-label={`View loan ${loan.loan_number}`} className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg bg-emerald-50 px-2 py-1.5 text-[11px] font-bold text-emerald-800 hover:bg-emerald-100"><FiEye size={12} /> View</Link></td>
+                      <td className="px-2 py-3 pr-3 align-top">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <button type="button" onClick={() => setPaymentLoan(loan)} aria-label={`Pay or renew loan ${loan.loan_number}`} className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg bg-[#064A41] px-2 py-1.5 text-[11px] font-bold text-white hover:bg-[#087263]"><FiCreditCard size={12} /> Pay</button>
+                          <Link to={`/admin/loans/details/${loan.id}`} aria-label={`View loan ${loan.loan_number}`} className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg bg-emerald-50 px-2 py-1.5 text-[11px] font-bold text-emerald-800 hover:bg-emerald-100"><FiEye size={12} /> View</Link>
+                        </div>
+                      </td>
                     </tr>
                   ))}
             </tbody>
@@ -207,12 +214,18 @@ export default function OverdueLoans() {
                   <Detail label="Outstanding" value={<span className="font-bold text-rose-700">{money(loan.outstanding_principal ?? loan.principal_amount)}</span>} />
                   <Detail label="Maturity" value={<>{dateText(loan.maturity_date)}<span className="mt-1 block text-[10px] text-slate-500">Grace: {Number(loan.grace_period_days) || 0} days</span></>} />
                 </dl>
-                <div className="mt-4 flex justify-end border-t border-slate-100 pt-4">
+                <div className="mt-4 flex justify-end gap-2 border-t border-slate-100 pt-4">
+                  <button type="button" onClick={() => setPaymentLoan(loan)} aria-label={`Pay or renew loan ${loan.loan_number}`} className="inline-flex items-center gap-1.5 rounded-lg bg-[#064A41] px-3 py-2 text-xs font-bold text-white hover:bg-[#087263]"><FiCreditCard /> Pay</button>
                   <Link to={`/admin/loans/details/${loan.id}`} aria-label={`View loan ${loan.loan_number}`} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100"><FiEye /> View Loan</Link>
                 </div>
               </article>
             ))}
           </section>}
+      {paymentLoan && <LoanPaymentModal
+        loan={paymentLoan}
+        onClose={() => setPaymentLoan(null)}
+        onLoanUpdated={(updatedLoan) => setLoans((current) => current.map((loan) => loan.id === updatedLoan.id ? { ...loan, ...updatedLoan } : loan))}
+      />}
     </main>
   );
 }

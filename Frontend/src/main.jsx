@@ -135,6 +135,7 @@ const router = createBrowserRouter([
       { path: "videos", element: <VideoManagement /> },
       { path: "reviews", element: <Reviews /> },
       { path: "reports", element: <Reports /> },
+      { path: "dealers", element: <Dealers /> },
       { path: "dealers/*", element: <Dealers /> },
       { path: "settings", element: <Settings /> },
       { path: "funds", element: <FundManagement /> },

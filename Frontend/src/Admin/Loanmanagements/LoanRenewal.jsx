@@ -34,7 +34,7 @@ function Info({ label, value }) {
   );
 }
 
-function LoanPaymentModal({ loan: loanRow, onClose, onLoanUpdated }) {
+export function LoanPaymentModal({ loan: loanRow, onClose, onLoanUpdated }) {
   const [data, setData] = useState(null);
   const [fundAccounts, setFundAccounts] = useState([]);
   const [accountId, setAccountId] = useState("");
@@ -139,11 +139,13 @@ function LoanPaymentModal({ loan: loanRow, onClose, onLoanUpdated }) {
                 </div>
                 <div className="space-y-2 rounded-xl bg-slate-50 p-4 text-sm">
                   <div className="flex justify-between gap-3 text-slate-600"><span>Current principal</span><strong className="text-slate-800">{money(preview.current_principal)}</strong></div>
+                  <div className="flex justify-between gap-3 text-slate-600"><span>Maturity date</span><strong className="text-slate-800">{dateText(loan.maturity_date)}</strong></div>
                   <div className="flex justify-between gap-3 text-slate-600"><span>Regular interest accrued</span><strong className="text-slate-800">{money(preview.regular_interest)}</strong></div>
-                  <div className="flex justify-between gap-3 text-slate-600"><span>Late payment fee</span><strong className="text-rose-700">{money(preview.late_payment_fee)}</strong></div>
+                  <div className="flex justify-between gap-3 text-slate-600"><span>Overdue extra interest / late fee</span><strong className="text-rose-700">{money(preview.late_payment_fee)}</strong></div>
+                  <div className="flex justify-between gap-3 text-xs text-slate-500"><span>Saved late-payment interest rate</span><strong>{rateText(loan.late_payment_interest_rate)}</strong></div>
                   <div className="flex justify-between gap-3 border-t border-slate-200 pt-2 text-slate-600"><span>Total interest and late fee</span><strong className="text-slate-800">{money(preview.accrued_interest)}</strong></div>
                   <div className="flex justify-between gap-3 border-t border-slate-200 pt-2 font-bold text-slate-800"><span>Total due</span><span>{money(preview.total_due)}</span></div>
-                  <p className="pt-1 text-[11px] leading-relaxed text-slate-500">Total due is current principal plus accrued interest. Processing and other charges are not included.</p>
+                  <p className="pt-1 text-[11px] leading-relaxed text-slate-500">Overdue extra interest uses the loan&apos;s saved late-payment rate. Total due is principal plus accrued interest and overdue charges; processing and other charges are not included.</p>
                 </div>
                 {preview.current_principal > 0 ? (
                   <form onSubmit={submitPayment} className="space-y-3">
