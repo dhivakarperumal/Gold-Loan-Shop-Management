@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import {
   AlertTriangle, ArrowDownToLine, ArrowLeft, ArrowRightLeft, Building2, Check,
   ClipboardList, Coins, Download, FileText, LoaderCircle, Plus, Printer, RefreshCw,
-  Search, ShieldCheck, Truck, Wallet, X
+  LayoutGrid, List, Search, ShieldCheck, Truck, Wallet, X
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import api from "../../api";
@@ -55,7 +55,6 @@ function SelectField({ label, value, onChange, children, required = false }) {
 
 const Dealers = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const section = location.pathname.endsWith("/purchases") ? "purchases"
     : location.pathname.endsWith("/jobs") ? "jobs"
       : location.pathname.endsWith("/refining") ? "refining" : "dealers";
@@ -71,6 +70,7 @@ const Dealers = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [categoryFilter, setCategoryFilter] = useState("All");
+  const [viewMode, setViewMode] = useState("table");
   const [dateRange, setDateRange] = useState({ preset: "all", startDate: "", endDate: "" });
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
@@ -479,11 +479,6 @@ const Dealers = () => {
 
   const visibleDealers = useMemo(() => dealers, [dealers]);
   const openJobs = jobs.filter((job) => !["Reconciled", "Cancelled"].includes(job.status));
-  const tabs = [
-    ["dealers", "Dealer Master", "/admin/dealers"],
-    ["purchases", "Purchases & Payables", "/admin/dealers/purchases"],
-    ["refining", "Old Gold & Refining", "/admin/dealers/refining"]
-  ];
 
   return <div className="space-y-6">
     <div className="flex flex-wrap items-center justify-between gap-4">
@@ -494,17 +489,11 @@ const Dealers = () => {
       </div>
       <div className="flex gap-2">
         <button type="button" onClick={() => void refresh()} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"><RefreshCw size={16} /> Refresh</button>
-        {section === "dealers" && <button type="button" onClick={() => startDealerEdit()} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#008577]"><Plus size={17} /> Register Dealer</button>}
         {section === "purchases" && <><button type="button" onClick={openPayment} className="inline-flex items-center gap-2 rounded-lg border border-[#003B3B] px-4 py-2.5 text-sm font-bold text-[#003B3B]"><Wallet size={16} /> Record Payment</button><button type="button" onClick={() => setDialog("purchase")} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#008577]"><Plus size={17} /> New Purchase</button></>}
         {section === "jobs" && <button type="button" onClick={() => setDialog("job")} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#008577]"><Plus size={17} /> Create Job Order</button>}
         {section === "refining" && <><button type="button" onClick={() => setDialog("oldGold")} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#008577]"><Plus size={17} /> Receive Old Gold</button><button type="button" onClick={() => setDialog("refining")} className="inline-flex items-center gap-2 rounded-lg border border-[#003B3B] px-4 py-2.5 text-sm font-bold text-[#003B3B]"><ArrowDownToLine size={16} /> Refining Receipt</button></>}
       </div>
     </div>
-
-    <nav className="flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1.5">
-      {tabs.map(([key, label, route]) => <button key={key} type="button" onClick={() => navigate(route)}
-        className={`whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-bold transition ${section === key ? "bg-[#003B3B] text-white" : "text-slate-500 hover:bg-slate-50 hover:text-[#003B3B]"}`}>{label}</button>)}
-    </nav>
 
     <DateRangeFilter onApply={(range) => { setPage(1); setDateRange(range); }} />
 
@@ -531,21 +520,34 @@ const Dealers = () => {
 
     <ErrorBox message={error} retry={() => void fetchAll()} />
     {loading ? <div className="flex min-h-64 items-center justify-center gap-3 rounded-xl border border-slate-100 bg-white text-sm font-bold text-slate-500"><LoaderCircle className="animate-spin" /> Loading dealer records...</div> : <>
-      {section === "dealers" && <section className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-4">
-          <div className="relative w-full max-w-md"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
-            <input value={search} onChange={(event) => { setPage(1); setSearch(event.target.value); }} placeholder="Search dealer, code, contact, GSTIN..." className="w-full rounded-lg border border-slate-200 py-2.5 pl-10 pr-3 text-sm outline-none focus:border-[#008577]" /></div>
-          <div className="flex gap-2">
-            <select value={statusFilter} onChange={(event) => { setPage(1); setStatusFilter(event.target.value); }} className="rounded-lg border border-slate-200 px-3 py-2 text-sm"><option>All</option><option>Active</option><option>Inactive</option><option>On Hold</option></select>
-            <select value={categoryFilter} onChange={(event) => { setPage(1); setCategoryFilter(event.target.value); }} className="rounded-lg border border-slate-200 px-3 py-2 text-sm"><option value="All">All categories</option>{categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
+      {section === "dealers" && <>
+        <section aria-label="Dealer filters and display options" className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:flex-row md:items-center">
+          <label className="relative min-w-0 flex-1">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <span className="sr-only">Search dealers</span>
+            <input value={search} onChange={(event) => { setPage(1); setSearch(event.target.value); }} placeholder="Search dealers by name, ID, contact..." className="w-full rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 pl-12 text-sm font-medium text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#008577] focus:bg-white" />
+          </label>
+          <div className="flex flex-wrap items-center gap-2 md:ml-auto">
+            <select aria-label="Filter dealers by status" value={statusFilter} onChange={(event) => { setPage(1); setStatusFilter(event.target.value); }} className="min-h-11 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-600 outline-none focus:border-[#008577]">
+              <option value="All">Select Status</option><option>Active</option><option>Inactive</option><option>On Hold</option>
+            </select>
+            <select aria-label="Filter dealers by category" value={categoryFilter} onChange={(event) => { setPage(1); setCategoryFilter(event.target.value); }} className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-600 outline-none focus:border-[#008577]">
+              <option value="All">All categories</option>{categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+            </select>
+            <div role="group" aria-label="Dealer display mode" className="flex items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+              <button type="button" onClick={() => setViewMode("table")} aria-label="List view" aria-pressed={viewMode === "table"} className={`rounded-lg p-2.5 transition ${viewMode === "table" ? "bg-[#003B3B] text-white" : "text-slate-400 hover:text-slate-700"}`}><List size={18} /></button>
+              <button type="button" onClick={() => setViewMode("grid")} aria-label="Card view" aria-pressed={viewMode === "grid"} className={`rounded-lg p-2.5 transition ${viewMode === "grid" ? "bg-[#003B3B] text-white" : "text-slate-400 hover:text-slate-700"}`}><LayoutGrid size={18} /></button>
+            </div>
             <button type="button" onClick={async () => {
               const name = window.prompt("New dealer category");
               if (!name?.trim()) return;
               try { await api.post("/dealers/categories", { name: name.trim() }); toast.success("Dealer category added"); await fetchAll(); }
               catch (requestError) { toast.error(requestError.response?.data?.message || "Unable to add category"); }
-            }} className="rounded-lg border border-[#003B3B] px-3 py-2 text-xs font-bold text-[#003B3B]">Add category</button>
+            }} className="min-h-11 rounded-xl border border-[#003B3B] px-3 py-2 text-xs font-bold text-[#003B3B] hover:bg-emerald-50">Add category</button>
+            <button type="button" onClick={() => startDealerEdit()} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#008577]"><Plus size={17} /> Register Dealer</button>
           </div>
-        </div>
+        </section>
+        {viewMode === "table" ? <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
         <div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left">
           <thead><tr className="bg-gradient-to-r from-[#003B3B] to-[#008577] text-xs uppercase tracking-wide text-white">
             <th className="px-4 py-3">Dealer</th><th className="px-4 py-3">Category / GSTIN</th><th className="px-4 py-3">Contact</th><th className="px-4 py-3 text-right">Payable</th><th className="px-4 py-3 text-right">Receivable</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th>
@@ -563,7 +565,33 @@ const Dealers = () => {
         <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-xs text-slate-500">
           <span>{pagination.total} dealer records</span><div className="flex items-center gap-2"><button type="button" disabled={page <= 1} onClick={() => setPage((current) => current - 1)} className="rounded border px-2 py-1 disabled:opacity-40">Previous</button><span>Page {page} of {pagination.totalPages}</span><button type="button" disabled={page >= pagination.totalPages} onClick={() => setPage((current) => current + 1)} className="rounded border px-2 py-1 disabled:opacity-40">Next</button></div>
         </div>
-      </section>}
+        </section> : <section aria-label="Dealers in card view" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {visibleDealers.length === 0
+            ? <div className="rounded-2xl border border-slate-100 bg-white p-10 text-center text-sm text-slate-400 sm:col-span-2 xl:col-span-3">No dealer records match your search.</div>
+            : visibleDealers.map((dealer) => <article key={dealer.id} className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <button type="button" onClick={() => void openDealerDocs(dealer)} className="break-words text-left font-bold text-[#003B3B] hover:underline">{dealer.name}</button>
+                  <p className="mt-1 text-xs text-slate-400">{dealer.dealer_code}</p>
+                </div>
+                <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${dealer.status === "Active" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-500"}`}>{dealer.status}</span>
+              </div>
+              <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-4 text-sm">
+                <div><dt className="text-[10px] font-bold uppercase text-slate-400">Category / GSTIN</dt><dd className="mt-1 text-slate-700">{dealer.category_name || "—"}<span className="block text-xs text-slate-400">{dealer.gstin || "GSTIN not recorded"}</span></dd></div>
+                <div><dt className="text-[10px] font-bold uppercase text-slate-400">Contact</dt><dd className="mt-1 text-slate-700">{dealer.contact_person || "—"}<span className="block text-xs text-slate-400">{dealer.phone || "No phone"}</span></dd></div>
+                <div><dt className="text-[10px] font-bold uppercase text-slate-400">Payable</dt><dd className="mt-1 font-bold text-slate-800">{currency(dealer.payable_balance)}</dd></div>
+                <div><dt className="text-[10px] font-bold uppercase text-slate-400">Receivable</dt><dd className="mt-1 font-bold text-slate-800">{currency(dealer.receivable_balance)}</dd></div>
+              </dl>
+              <div className="mt-4 flex justify-end gap-2 border-t border-slate-100 pt-4">
+                <button type="button" onClick={() => void openStatement(dealer)} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700">Statement</button>
+                <button type="button" onClick={() => startDealerEdit(dealer)} className="rounded-lg bg-[#003B3B] px-3 py-2 text-xs font-bold text-white">Edit</button>
+              </div>
+            </article>)}
+          <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-white px-4 py-3 text-xs text-slate-500 sm:col-span-2 xl:col-span-3">
+            <span>{pagination.total} dealer records</span><div className="flex items-center gap-2"><button type="button" disabled={page <= 1} onClick={() => setPage((current) => current - 1)} className="rounded border px-2 py-1 disabled:opacity-40">Previous</button><span>Page {page} of {pagination.totalPages}</span><button type="button" disabled={page >= pagination.totalPages} onClick={() => setPage((current) => current + 1)} className="rounded border px-2 py-1 disabled:opacity-40">Next</button></div>
+          </div>
+        </section>}
+      </>}
 
       {section === "purchases" && <section className="overflow-hidden rounded-xl border border-slate-100 bg-white">
         <div className="flex items-center justify-between border-b border-slate-100 p-4"><div><h2 className="font-black text-slate-800">Purchase documents & accounts payable</h2><p className="text-xs text-slate-500">Posted documents retain invoice-rate and tax snapshots.</p></div><button type="button" onClick={() => exportCsv([["Document","Dealer","Type","Date","Due date","Total","Paid","Outstanding"], ...purchases.map((row) => [row.document_number,row.dealer_name,row.document_type,row.document_date,row.due_date,row.total,row.paid_amount,row.outstanding])], "dealer-purchases.csv")} className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold"><Download size={15} /> Export CSV</button></div>
