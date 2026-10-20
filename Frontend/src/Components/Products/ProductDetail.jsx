@@ -312,16 +312,33 @@ const ProductDetail = () => {
         </div> */}
 
         <div className="grid gap-4 lg:grid-cols-2 mt-4">
-          <section className="min-w-0 rounded-2xl border border-[#eee8dc] bg-white p-3 shadow-sm">
-            <div
-              ref={imageViewportRef}
-              onPointerEnter={(event) => {
-                if (event.pointerType !== "touch") setIsImageHovered(true);
-              }}
-              onPointerMove={updateImagePointer}
-              onPointerLeave={() => setIsImageHovered(false)}
-              className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-[#f8f6ef]"
-            >
+          <section className="min-w-0 rounded-2xl border border-[#eee8dc] bg-white p-2.5 shadow-sm sm:p-3">
+            <div className="flex min-w-0 items-start gap-2 sm:gap-3">
+              {images.length > 1 && (
+                <div className="flex max-h-[calc(100vw-2rem)] w-12 shrink-0 flex-col gap-2 overflow-y-auto sm:max-h-[min(42vw,560px)] sm:w-16">
+                  {images.slice(0, 5).map((image, index) => (
+                    <button
+                      key={`${image}-${index}`}
+                      type="button"
+                      onClick={() => setActiveImage(index)}
+                      aria-label={`View product image ${index + 1}`}
+                      aria-pressed={activeImage === index}
+                      className={`aspect-square w-full shrink-0 overflow-hidden rounded-lg border-2 bg-white transition ${activeImage === index ? "border-[#1c765d]" : "border-transparent hover:border-[#d8b46c]"}`}
+                    >
+                      <img src={assetUrl(image)} alt="" className="h-full w-full object-cover" loading="lazy" />
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div
+                ref={imageViewportRef}
+                onPointerEnter={(event) => {
+                  if (event.pointerType !== "touch") setIsImageHovered(true);
+                }}
+                onPointerMove={updateImagePointer}
+                onPointerLeave={() => setIsImageHovered(false)}
+                className="relative aspect-square min-w-0 flex-1 overflow-hidden rounded-xl bg-[#f8f6ef]"
+              >
               {images.length ? (
                 <img
                   src={assetUrl(selectedImage)}
@@ -397,16 +414,8 @@ const ProductDetail = () => {
                   </button>
                 </>
               )}
-            </div>
-            {images.length > 1 && (
-              <div className="mt-2 grid grid-cols-5 gap-2">
-                {images.slice(0, 5).map((image, index) => (
-                  <button key={`${image}-${index}`} type="button" onClick={() => setActiveImage(index)} aria-label={`View product image ${index + 1}`} aria-pressed={activeImage === index} className={`aspect-square overflow-hidden rounded-lg border-2 bg-white transition ${activeImage === index ? "border-[#1c765d]" : "border-transparent hover:border-[#d8b46c]"}`}>
-                    <img src={assetUrl(image)} alt="" className="h-full w-full object-cover" loading="lazy" />
-                  </button>
-                ))}
               </div>
-            )}
+              </div>
           </section>
 
           <section className="flex min-w-0 flex-col rounded-2xl border border-[#eee8dc] bg-white p-4 shadow-sm sm:p-5">
