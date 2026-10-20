@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Banknote,
-  ChevronDown, Download, FileText, LayoutGrid, List, Plus, RefreshCw, Search, Wallet, X
+  Download, FileText, LayoutGrid, List, Plus, RefreshCw, Search, Wallet, X
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../api";
@@ -57,8 +57,6 @@ function FundManagement() {
   const [entry, setEntry] = useState(emptyEntry);
   const [receipt, setReceipt] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [accountFormOpen, setAccountFormOpen] = useState(false);
-  const [newAccount, setNewAccount] = useState({ name: "", account_type: "Cash", opening_balance: "0", account_number: "" });
   const [transferOpen, setTransferOpen] = useState(false);
   const [transfer, setTransfer] = useState({
     source_account_id: "", destination_account_id: "", transaction_date: today(), amount: "",
@@ -66,11 +64,7 @@ function FundManagement() {
   });
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
-  const [fundAccountActionsOpen, setFundAccountActionsOpen] = useState(false);
-  const [accountsVisible, setAccountsVisible] = useState(false);
   const [transactionView, setTransactionView] = useState("table");
-  const [accountSearch, setAccountSearch] = useState("");
-  const [accountTypeFilter, setAccountTypeFilter] = useState("");
 
   const fetchData = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
@@ -99,36 +93,15 @@ function FundManagement() {
     }
   }, [dateRange, filters.account_id, filters.search, filters.transaction_type, page]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { fetchData();   }, [fetchData]);
 
   const activeAccounts = useMemo(() => accounts.filter((account) => account.is_active), [accounts]);
-  const accountTypes = useMemo(
-    () => [...new Set(accounts.map((account) => account.account_type).filter(Boolean))].sort(),
-    [accounts]
-  );
-  const filteredAccounts = useMemo(() => {
-    const query = accountSearch.trim().toLowerCase();
-    return accounts.filter((account) => {
-      const matchesSearch = !query
-        || account.name.toLowerCase().includes(query)
-        || String(account.account_number || "").toLowerCase().includes(query);
-      const matchesType = !accountTypeFilter || account.account_type === accountTypeFilter;
-      return matchesSearch && matchesType;
-    });
-  }, [accountSearch, accountTypeFilter, accounts]);
   const pageCount = Math.max(1, Math.ceil(totalTransactions / 20));
-  const selectedAccount = accounts.find((account) => String(account.id) === String(entry.account_id));
 
   const openEntry = (type) => {
-    setFundAccountActionsOpen(false);
     setEntryType(type);
     setEntry({ ...emptyEntry(), account_id: activeAccounts[0] ? String(activeAccounts[0].id) : "", category: CATEGORIES[type][0] });
     setReceipt(null);
-  };
-
-  const openAddAccount = () => {
-    setFundAccountActionsOpen(false);
-    setAccountFormOpen(true);
   };
 
   const saveEntry = async (event) => {
@@ -152,22 +125,6 @@ function FundManagement() {
       await fetchData(true);
     } catch (error) {
       toast.error(error.response?.data?.message || "The transaction could not be saved.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const saveAccount = async (event) => {
-    event.preventDefault();
-    setSaving(true);
-    try {
-      await api.post("/funds/accounts", newAccount);
-      toast.success("Fund account added.");
-      setAccountFormOpen(false);
-      setNewAccount({ name: "", account_type: "Cash", opening_balance: "0", account_number: "" });
-      await fetchData(true);
-    } catch (error) {
-      toast.error(error.response?.data?.message || "The account could not be saved.");
     } finally {
       setSaving(false);
     }
@@ -313,92 +270,6 @@ function FundManagement() {
         ))}
       </section>
 
-      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-        <div className="mb-4 flex flex-col justify-between gap-3 sm:flex-row sm:items-center">
-          <div>
-            <h2 className="text-lg font-black text-slate-900">Fund Accounts</h2>
-            <p className="text-xs text-slate-500">Each account balance is calculated from its opening amount and posted ledger entries.</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 print:hidden">
-            <button
-              type="button"
-              aria-expanded={accountsVisible}
-              onClick={() => setAccountsVisible((visible) => !visible)}
-              className="inline-flex items-center gap-2 rounded-xl border border-[#00695C] px-4 py-2.5 text-sm font-bold text-[#00695C] transition hover:bg-emerald-50 focus:outline-none focus:ring-4 focus:ring-emerald-700/20"
-            >
-              {accountsVisible ? <X size={16} /> : <Plus size={16} />}
-              {accountsVisible ? "Hide Accounts" : "Add Accounts"}
-              <ChevronDown size={15} className={`transition-transform ${accountsVisible ? "rotate-180" : ""}`} />
-            </button>
-            <div className="relative">
-              <button
-                type="button"
-                aria-haspopup="true"
-                aria-expanded={fundAccountActionsOpen}
-                onClick={() => setFundAccountActionsOpen((open) => !open)}
-                className="inline-flex items-center gap-2 rounded-xl bg-[#00695C] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#00574D] focus:outline-none focus:ring-4 focus:ring-emerald-700/20"
-              >
-                Account Actions <ChevronDown size={15} className={`transition-transform ${fundAccountActionsOpen ? "rotate-180" : ""}`} />
-              </button>
-              {fundAccountActionsOpen && (
-                <div className="absolute right-0 top-full z-30 mt-2 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
-                  <button type="button" onClick={() => openEntry("DEBIT")} className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-rose-700 transition hover:bg-rose-50">Record Debit</button>
-                  <button type="button" onClick={() => openEntry("CREDIT")} className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50">Record Credit</button>
-                  <button type="button" onClick={openAddAccount} className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Add Account</button>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-        {accountsVisible && (
-          <div className="space-y-3">
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-              <label className="relative w-full sm:max-w-sm">
-                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input
-                  type="search"
-                  value={accountSearch}
-                  onChange={(event) => setAccountSearch(event.target.value)}
-                  placeholder="Search fund accounts..."
-                  aria-label="Search fund accounts"
-                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-sm text-slate-700 outline-none transition focus:border-[#00695C] focus:bg-white focus:ring-2 focus:ring-emerald-700/10"
-                />
-              </label>
-              <div className="flex items-center gap-2">
-                <select
-                  value={accountTypeFilter}
-                  onChange={(event) => setAccountTypeFilter(event.target.value)}
-                  aria-label="Filter fund accounts by type"
-                  className="min-h-10 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 outline-none focus:border-[#00695C] focus:ring-2 focus:ring-emerald-700/10"
-                >
-                  <option value="">All account types</option>
-                  {accountTypes.map((type) => <option key={type} value={type}>{type}</option>)}
-                </select>
-                <span className="whitespace-nowrap text-xs font-medium text-slate-500">
-                  {filteredAccounts.length} {filteredAccounts.length === 1 ? "account" : "accounts"}
-                </span>
-              </div>
-            </div>
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-              {filteredAccounts.map((account) => (
-                <article key={account.id} className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{account.account_type}</p>
-                  <h3 className="mt-1 truncate text-sm font-extrabold text-slate-900">{account.name}</h3>
-                  {account.account_number && <p className="mt-1 text-xs text-slate-400">•••• {account.account_number.slice(-4)}</p>}
-                  <p className="mt-3 text-lg font-black text-[#00695C]">{money(account.current_balance)}</p>
-                  <div className="mt-2 flex justify-between gap-2 text-[11px] text-slate-500"><span>In {money(account.total_credit)}</span><span>Out {money(account.total_debit)}</span></div>
-                </article>
-              ))}
-              {!loading && filteredAccounts.length === 0 && (
-                <p className="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500 sm:col-span-2 xl:col-span-5">
-                  {accounts.length === 0 ? "No fund accounts are available." : "No accounts match the selected filters."}
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-      </section>
-
       <div className="grid gap-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-3 print:hidden">
         <label className="relative">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -524,33 +395,17 @@ function FundManagement() {
             <div className="flex items-center justify-between border-b border-slate-100 p-5"><div><p className="text-xs font-bold uppercase tracking-widest text-emerald-700">{entryType === "FUND_ADDED" ? "Increase funds" : entryType === "DEBIT" ? "Money paid out" : "Money received"}</p><h2 className="mt-1 text-xl font-black">{entryType === "FUND_ADDED" ? "Add Fund" : entryType === "DEBIT" ? "Record Debit" : "Record Credit"}</h2></div><button type="button" onClick={() => setEntryType("")} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" aria-label="Close"><X size={20} /></button></div>
             <div className="grid gap-4 p-5 sm:grid-cols-2">
               <label className="text-xs font-bold text-slate-600">Transaction Date<input required type="date" value={entry.transaction_date} onChange={(event) => setEntry({ ...entry, transaction_date: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal" /></label>
-              <label className="text-xs font-bold text-slate-600">Fund Account<select required value={entry.account_id} onChange={(event) => setEntry({ ...entry, account_id: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal"><option value="">Select account</option>{activeAccounts.map((account) => <option key={account.id} value={account.id}>{account.name} · {money(account.current_balance)}</option>)}</select></label>
-              <label className="text-xs font-bold text-slate-600">{entryType === "FUND_ADDED" ? "Fund Source" : entryType === "DEBIT" ? "Debit Category" : "Credit Category"}<select required value={entry.category} onChange={(event) => setEntry({ ...entry, category: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal">{CATEGORIES[entryType].map((category) => <option key={category}>{category}</option>)}</select></label>
+              {entryType !== "FUND_ADDED" && <label className="text-xs font-bold text-slate-600">Fund Account<select required value={entry.account_id} onChange={(event) => setEntry({ ...entry, account_id: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal"><option value="">Select account</option>{activeAccounts.map((account) => <option key={account.id} value={account.id}>{account.name} · {money(account.current_balance)}</option>)}</select></label>}
+              {entryType !== "FUND_ADDED" && <label className="text-xs font-bold text-slate-600">{entryType === "DEBIT" ? "Debit Category" : "Credit Category"}<select required value={entry.category} onChange={(event) => setEntry({ ...entry, category: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal">{CATEGORIES[entryType].map((category) => <option key={category}>{category}</option>)}</select></label>}
               <label className="text-xs font-bold text-slate-600">Amount (₹)<input required min="0.01" step="0.01" type="number" value={entry.amount} onChange={(event) => setEntry({ ...entry, amount: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal" /></label>
               <label className="text-xs font-bold text-slate-600">Payment Method<select required value={entry.payment_method} onChange={(event) => setEntry({ ...entry, payment_method: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal">{PAYMENT_METHODS.map((method) => <option key={method}>{method}</option>)}</select></label>
-              <label className="text-xs font-bold text-slate-600">{entryType === "FUND_ADDED" ? "Received From" : entryType === "DEBIT" ? "Customer / Supplier" : "Customer Name"}<input value={entry.party_name} maxLength={150} onChange={(event) => setEntry({ ...entry, party_name: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal" /></label>
-              <label className="text-xs font-bold text-slate-600">Related Loan ID / Bill Number<input value={entry.related_reference} maxLength={100} onChange={(event) => setEntry({ ...entry, related_reference: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal" /></label>
-              <label className="text-xs font-bold text-slate-600">Reference Number / Transaction ID<input value={entry.reference_number} maxLength={100} onChange={(event) => setEntry({ ...entry, reference_number: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal" /></label>
+              {entryType !== "FUND_ADDED" && <label className="text-xs font-bold text-slate-600">{entryType === "DEBIT" ? "Customer / Supplier" : "Customer Name"}<input value={entry.party_name} maxLength={150} onChange={(event) => setEntry({ ...entry, party_name: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal" /></label>}
+              {entryType !== "FUND_ADDED" && <label className="text-xs font-bold text-slate-600">Related Loan ID / Bill Number<input value={entry.related_reference} maxLength={100} onChange={(event) => setEntry({ ...entry, related_reference: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal" /></label>}
+              {entryType !== "FUND_ADDED" && <label className="text-xs font-bold text-slate-600">Reference Number / Transaction ID<input value={entry.reference_number} maxLength={100} onChange={(event) => setEntry({ ...entry, reference_number: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal" /></label>}
               <label className="text-xs font-bold text-slate-600 sm:col-span-2">Description / Notes<textarea rows="2" maxLength={2000} value={entry.description} onChange={(event) => setEntry({ ...entry, description: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal" /></label>
               <label className="text-xs font-bold text-slate-600 sm:col-span-2">Upload Receipt <span className="font-normal text-slate-400">(PDF, JPG, PNG, WEBP; max 10 MB)</span><input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" onChange={(event) => setReceipt(event.target.files?.[0] || null)} className="mt-1 block w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal" /></label>
-              {entryType === "DEBIT" && selectedAccount && <p className="text-xs text-slate-500 sm:col-span-2">Available before transaction: <strong>{money(selectedAccount.current_balance)}</strong></p>}
             </div>
             <div className="flex justify-end gap-2 border-t border-slate-100 p-5"><button type="button" onClick={() => setEntryType("")} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600">Cancel</button><button disabled={saving || !activeAccounts.length} className="rounded-lg bg-[#00695C] px-4 py-2.5 text-sm font-extrabold text-white disabled:opacity-50">{saving ? "Saving…" : "Save Transaction"}</button></div>
-          </form>
-        </div>
-      )}
-
-      {accountFormOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
-          <form onSubmit={saveAccount} className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-100 p-5"><h2 className="text-xl font-black">Add Fund Account</h2><button type="button" onClick={() => setAccountFormOpen(false)} aria-label="Close"><X size={20} /></button></div>
-            <div className="grid gap-4 p-5 sm:grid-cols-2">
-              <label className="text-xs font-bold text-slate-600 sm:col-span-2">Account Name<input required maxLength={100} value={newAccount.name} onChange={(event) => setNewAccount({ ...newAccount, name: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal" /></label>
-              <label className="text-xs font-bold text-slate-600">Account Type<select value={newAccount.account_type} onChange={(event) => setNewAccount({ ...newAccount, account_type: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal"><option>Cash</option><option>Bank Account</option><option>UPI</option><option>Other</option></select></label>
-              <label className="text-xs font-bold text-slate-600">Opening Balance<input required min="0" step="0.01" type="number" value={newAccount.opening_balance} onChange={(event) => setNewAccount({ ...newAccount, opening_balance: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal" /></label>
-              <label className="text-xs font-bold text-slate-600 sm:col-span-2">Account Number (optional)<input maxLength={100} value={newAccount.account_number} onChange={(event) => setNewAccount({ ...newAccount, account_number: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal" /></label>
-            </div>
-            <div className="flex justify-end gap-2 border-t border-slate-100 p-5"><button type="button" onClick={() => setAccountFormOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-bold">Cancel</button><button disabled={saving} className="rounded-lg bg-[#00695C] px-4 py-2.5 text-sm font-extrabold text-white disabled:opacity-50">{saving ? "Saving…" : "Save Account"}</button></div>
           </form>
         </div>
       )}
