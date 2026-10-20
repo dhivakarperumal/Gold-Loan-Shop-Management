@@ -1,12 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 import {
-  FaArrowRight,
-  FaAward,
-  FaCheckCircle,
   FaChevronDown,
   FaGem,
-  FaLock,
   FaSearch,
   FaSlidersH,
   FaStar,
@@ -15,7 +11,7 @@ import {
 import api from "../../api";
 import ProductCard from "../Home/ProductCard";
 import { getProductImageUrl } from "../Home/productDisplay";
-import { formatCurrency } from "../../utils/currency";
+import PageHeader from "../CommenComponents/PageHeader";
 
 const PAGE_SIZE = 100;
 const ROWS_PER_PAGE = 3;
@@ -93,6 +89,10 @@ const Explore = () => {
   const selectedCategories = searchParams.getAll("category");
   const selectedMetals = searchParams.getAll("metal");
   const subcategoryFilter = searchParams.get("subcategory")?.trim().toLowerCase() || "";
+  const headerTitle = searchParams.get("subcategory")?.trim()
+    || selectedCategories[0]
+    || selectedMetals[0]
+    || "Explore";
   const priceSliderMaximum = useMemo(() => {
     const highestProductPrice = products.reduce(
       (highest, product) => Math.max(highest, getProductPrice(product)),
@@ -338,42 +338,10 @@ const Explore = () => {
 
   return (
     <main className="min-h-screen bg-[#fffdf8] pb-12">
-      <div className="border-b border-[#f0e9dd] bg-white">
-        <div className="mx-auto flex max-w-[1700px] items-center gap-2 px-4 py-2 text-xs text-[#81786b] sm:px-6 lg:px-8">
-          <Link to="/" className="hover:text-[#174a38]">Home</Link>
-          <FaArrowRight className="text-[9px]" />
-          <span className="font-semibold text-[#30271b]">Explore</span>
-          {searchQuery && <span className="ml-1 truncate text-[#81786b]">/ “{searchQuery}”</span>}
-        </div>
-      </div>
+      <PageHeader title={headerTitle} breadcrumbTitle="Explore" />
 
       <div className={`mx-auto grid max-w-[1700px] items-start gap-x-4 px-4 pt-4 sm:px-6 lg:px-8 ${filtersOpen ? "lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[235px_minmax(0,1fr)]" : "lg:grid-cols-1"}`}>
-        <section className={`relative isolate min-h-[180px] overflow-hidden rounded-xl border border-[#d8b46c]/60 bg-[#f8e4b4] sm:min-h-[210px] lg:row-start-1 lg:min-h-[155px] ${filtersOpen ? "lg:col-start-2" : "lg:col-start-1"}`}>
-          <img
-            src="/images/Hero/hero.png"
-            alt=""
-            className="absolute inset-0 -z-20 h-full w-full object-cover object-center"
-          />
-          <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#fff5df]/95 via-[#f7e3b9]/80 to-[#143e32]/10 sm:from-[#fff5df]/95 sm:via-[#f7e3b9]/65 sm:to-transparent" />
-          <div className="pointer-events-none absolute inset-2 rounded-lg border border-[#d0a747]/50" />
-          <div className="relative z-10 flex min-h-[180px] flex-col justify-center px-6 py-5 sm:min-h-[210px] sm:px-10 lg:min-h-[155px] lg:w-[62%] lg:px-7 lg:py-3">
-            <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-[#9b6b18]">Sri Golds · Since 1984</p>
-            <h1 className="mt-1 max-w-xl font-serif text-2xl font-bold leading-tight text-[#123c30] sm:text-3xl lg:text-[28px]">
-              Explore Our<br className="hidden sm:block" /> Exclusive Collection
-            </h1>
-            <p className="mt-1 max-w-lg text-xs text-[#514638] sm:text-sm">Traditional designs for every special moment.</p>
-            <a href="#explore-products" className="mt-2 inline-flex w-fit items-center gap-2 rounded-md bg-gradient-to-r from-[#f2b936] to-[#ffda78] px-3.5 py-2 text-[10px] font-bold text-[#3d2910] shadow-sm transition hover:-translate-y-0.5">
-              Shop collection <FaArrowRight />
-            </a>
-          </div>
-          <div className="absolute bottom-4 right-4 hidden flex-col gap-2 rounded-xl border border-white/40 bg-white/80 p-3 text-[10px] font-semibold text-[#273c32] shadow-sm backdrop-blur sm:flex lg:right-5 lg:top-1/2 lg:bottom-auto lg:-translate-y-1/2">
-            <span className="flex items-center gap-2"><FaCheckCircle className="text-[#a77525]" /> Certified jewellery</span>
-            <span className="flex items-center gap-2"><FaAward className="text-[#a77525]" /> Trusted quality</span>
-            <span className="flex items-center gap-2"><FaLock className="text-[#a77525]" /> Secure shopping</span>
-          </div>
-        </section>
-
-        <section className={`mt-4 lg:row-start-2 lg:mt-3 ${filtersOpen ? "lg:col-start-2" : "lg:col-start-1"}`} aria-labelledby="top-searches-title">
+        <section className={`mt-4 lg:row-start-1 lg:mt-3 ${filtersOpen ? "lg:col-start-2" : "lg:col-start-1"}`} aria-labelledby="top-searches-title">
           <div className="flex items-center justify-between gap-3">
             <h2 id="top-searches-title" className="flex items-center gap-2 font-serif text-base font-bold text-[#29231c]">
               <FaSearch className="text-xs text-[#a77525]" /> Top Searches
@@ -417,7 +385,7 @@ const Explore = () => {
         </section>
 
         <div id="explore-products" className="mt-4 grid scroll-mt-24 gap-5 lg:contents">
-          <aside id="explore-filters" className={`${filtersOpen ? "block" : "hidden"} h-fit rounded-xl border border-[#eee7dc] bg-white p-4 shadow-sm lg:sticky lg:top-4 lg:col-start-1 lg:row-start-1 lg:row-span-3 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto`}>
+          <aside id="explore-filters" className={`${filtersOpen ? "block" : "hidden"} h-fit rounded-xl border border-[#eee7dc] bg-white p-4 shadow-sm lg:sticky lg:top-4 lg:col-start-1 lg:row-start-1 lg:row-span-2 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto`}>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="flex items-center gap-2 font-serif text-lg font-bold text-[#29231c]"><FaSlidersH className="text-sm text-[#174a38]" /> Filters</h2>
               <button type="button" onClick={clearFilters} className="text-[11px] font-semibold text-[#a77525] hover:underline">Clear All</button>
@@ -573,7 +541,7 @@ const Explore = () => {
             ))}
           </aside>
 
-          <section className={`min-w-0 lg:row-start-3 ${filtersOpen ? "lg:col-start-2" : "lg:col-start-1"}`}>
+          <section className={`min-w-0 lg:row-start-2 ${filtersOpen ? "lg:col-start-2" : "lg:col-start-1"}`}>
             <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2">
@@ -617,7 +585,12 @@ const Explore = () => {
               <>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5">
                   {paginatedProducts.map((product) => (
-                  <ProductCard key={product.id ?? product.product_id ?? product.product_code} product={product} variant="explore" />
+                  <ProductCard
+                    key={product.id ?? product.product_id ?? product.product_code}
+                    product={product}
+                    variant="explore"
+                    queryString={searchParams.toString()}
+                  />
                   ))}
                 </div>
                 {totalPages > 1 && (

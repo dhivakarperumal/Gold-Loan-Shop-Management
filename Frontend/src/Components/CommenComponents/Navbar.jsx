@@ -1,6 +1,6 @@
 
 import React, { useContext, useEffect, useState } from "react";
-import { Link, NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   Search,
   Heart,
@@ -33,6 +33,7 @@ const INFO_PAGES = [
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout, profileName } = useAuth();
   const { cart, wishlist } = useContext(StoreContext);
 
@@ -51,6 +52,17 @@ const Navbar = () => {
   const wishlistCount = wishlist.length;
   const cartCount = cart.length;
   const isAdmin = String(user?.role || "").toLowerCase() === "admin";
+  const currentParams = new URLSearchParams(location.search);
+  const selectedCategories = currentParams.getAll("category");
+  const selectedMetals = currentParams.getAll("metal");
+  const isCategoryActive = (name) =>
+    selectedCategories.some((category) => category.toLowerCase() === name.toLowerCase());
+  const isMetalActive = (name) =>
+    selectedMetals.some((metal) => metal.toLowerCase() === name.toLowerCase());
+  const hasCategoryFilter = selectedCategories.length > 0;
+  const hasMetalFilter = selectedMetals.length > 0;
+  const hasCollectionFilter = hasCategoryFilter || hasMetalFilter;
+  const isInfoPageActive = INFO_PAGES.some((page) => page.to === location.pathname);
 
   useEffect(() => {
     const query = search.trim();
@@ -303,7 +315,13 @@ const Navbar = () => {
                 Home
               </NavLink>
 
-              <NavLink to="/explore" className={navLinkClass}>
+              <NavLink
+                to="/explore"
+                className={(navState) => navLinkClass({
+                  ...navState,
+                  isActive: navState.isActive && !hasCollectionFilter,
+                })}
+              >
                 Explore
               </NavLink>
 
@@ -321,10 +339,10 @@ const Navbar = () => {
                     if (next) setSelectedCategory(categories[0] || null);
                   }}
                   aria-expanded={openDropdown === "categories"}
-                  className={`flex h-[76px] items-center gap-2 px-3 text-[15px] font-semibold transition duration-300 xl:px-4 ${
-                    openDropdown === "categories"
-                      ? "text-[#b77b19]"
-                      : "text-[#173f33] hover:text-[#b77b19]"
+                  className={`relative flex h-[76px] items-center gap-2 px-3 text-[15px] font-semibold transition duration-300 after:absolute after:bottom-3 after:left-1/2 after:h-[2px] after:-translate-x-1/2 after:bg-[#d2a348] after:transition-all xl:px-4 ${
+                    openDropdown === "categories" || hasCategoryFilter
+                      ? "text-[#b77b19] after:w-8"
+                      : "text-[#173f33] after:w-0 hover:text-[#b77b19] hover:after:w-7"
                   }`}
                 >
                   Category
@@ -350,15 +368,18 @@ const Navbar = () => {
                             onMouseEnter={() => setSelectedCategory(category)}
                             onFocus={() => setSelectedCategory(category)}
                             className={`flex items-center rounded-lg pr-2 transition ${
-                              selectedId === categoryId
-                                ? "bg-[#fff8e9]"
+                              selectedId === categoryId || isCategoryActive(category.name)
+                                ? "bg-[#fff0cf]"
                                 : "hover:bg-[#fffaf0]"
                             }`}
                           >
                             <button
                               type="button"
                               onClick={() => handleCategoryClick(category)}
-                              className="flex min-w-0 flex-1 items-center gap-3 px-2 py-2.5 text-left text-sm font-medium text-[#30271b]"
+                              aria-current={isCategoryActive(category.name) ? "page" : undefined}
+                              className={`flex min-w-0 flex-1 items-center gap-3 px-2 py-2.5 text-left text-sm font-medium ${
+                                isCategoryActive(category.name) ? "text-[#8c5e13]" : "text-[#30271b]"
+                              }`}
                             >
                               <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md bg-[#fbf5e9]">
                                 {image ? (
@@ -421,10 +442,10 @@ const Navbar = () => {
                     )
                   }
                   aria-expanded={openDropdown === "metals"}
-                  className={`flex h-[76px] items-center gap-2 px-3 text-[15px] font-semibold transition duration-300 xl:px-4 ${
-                    openDropdown === "metals"
-                      ? "text-[#b77b19]"
-                      : "text-[#173f33] hover:text-[#b77b19]"
+                  className={`relative flex h-[76px] items-center gap-2 px-3 text-[15px] font-semibold transition duration-300 after:absolute after:bottom-3 after:left-1/2 after:h-[2px] after:-translate-x-1/2 after:bg-[#d2a348] after:transition-all xl:px-4 ${
+                    openDropdown === "metals" || hasMetalFilter
+                      ? "text-[#b77b19] after:w-8"
+                      : "text-[#173f33] after:w-0 hover:text-[#b77b19] hover:after:w-7"
                   }`}
                 >
                   Metal
@@ -449,7 +470,10 @@ const Navbar = () => {
                         key={metal.id}
                         type="button"
                         onClick={() => handleMetalClick(metal.name)}
-                        className="flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left text-sm font-medium text-[#30271b] transition hover:bg-[#fff8e9] hover:text-[#8c5e13]"
+                        aria-current={isMetalActive(metal.name) ? "page" : undefined}
+                        className={`flex w-full items-center gap-3 rounded-lg px-2 py-2.5 text-left text-sm font-medium transition hover:bg-[#fff8e9] hover:text-[#8c5e13] ${
+                          isMetalActive(metal.name) ? "bg-[#fff0cf] text-[#8c5e13]" : "text-[#30271b]"
+                        }`}
                       >
                         <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#efe5d4] bg-[#fbf5e9]">
                           {metal.image ? (
@@ -475,10 +499,10 @@ const Navbar = () => {
                   onClick={() => setOpenDropdown(openDropdown === "pages" ? null : "pages")}
                   aria-expanded={openDropdown === "pages"}
                   aria-haspopup="true"
-                  className={`flex h-[76px] items-center gap-2 px-3 text-[15px] font-semibold transition duration-300 xl:px-4 ${
-                    openDropdown === "pages"
-                      ? "text-[#b77b19]"
-                      : "text-[#173f33] hover:text-[#b77b19]"
+                  className={`relative flex h-[76px] items-center gap-2 px-3 text-[15px] font-semibold transition duration-300 after:absolute after:bottom-3 after:left-1/2 after:h-[2px] after:-translate-x-1/2 after:bg-[#d2a348] after:transition-all xl:px-4 ${
+                    openDropdown === "pages" || isInfoPageActive
+                      ? "text-[#b77b19] after:w-8"
+                      : "text-[#173f33] after:w-0 hover:text-[#b77b19] hover:after:w-7"
                   }`}
                 >
                   Pages
@@ -734,7 +758,13 @@ const Navbar = () => {
               <NavLink
                 to="/explore"
                 onClick={closeMenus}
-                className="block rounded-lg px-4 py-3 text-sm font-semibold text-[#173f33] hover:bg-[#f1e5cb]"
+                className={({ isActive }) =>
+                  `block rounded-lg px-4 py-3 text-sm font-semibold ${
+                    isActive && !hasCollectionFilter
+                      ? "bg-[#064638] text-[#f3d795]"
+                      : "text-[#173f33] hover:bg-[#f1e5cb]"
+                  }`
+                }
               >
                 Explore
               </NavLink>
@@ -746,7 +776,9 @@ const Navbar = () => {
                     openDropdown === "categories" ? null : "categories"
                   )
                 }
-                className="flex w-full items-center justify-between rounded-lg px-4 py-3 text-sm font-semibold text-[#173f33] hover:bg-[#f1e5cb]"
+                className={`flex w-full items-center justify-between rounded-lg px-4 py-3 text-sm font-semibold hover:bg-[#f1e5cb] ${
+                  hasCategoryFilter ? "bg-[#fff0cf] text-[#8c5e13]" : "text-[#173f33]"
+                }`}
               >
                 Category
                 <ChevronDown
@@ -764,7 +796,10 @@ const Navbar = () => {
                       key={category.id || category.catId}
                       type="button"
                       onClick={() => handleCategoryClick(category)}
-                      className="block w-full rounded-lg px-3 py-2.5 text-left text-sm text-[#365547] hover:bg-[#f1e5cb]"
+                      aria-current={isCategoryActive(category.name) ? "page" : undefined}
+                      className={`block w-full rounded-lg px-3 py-2.5 text-left text-sm hover:bg-[#f1e5cb] ${
+                        isCategoryActive(category.name) ? "bg-[#fff0cf] font-semibold text-[#8c5e13]" : "text-[#365547]"
+                      }`}
                     >
                       {category.name}
                     </button>
@@ -779,7 +814,9 @@ const Navbar = () => {
                     openDropdown === "metals" ? null : "metals"
                   )
                 }
-                className="flex w-full items-center justify-between rounded-lg px-4 py-3 text-sm font-semibold text-[#173f33] hover:bg-[#f1e5cb]"
+                className={`flex w-full items-center justify-between rounded-lg px-4 py-3 text-sm font-semibold hover:bg-[#f1e5cb] ${
+                  hasMetalFilter ? "bg-[#fff0cf] text-[#8c5e13]" : "text-[#173f33]"
+                }`}
               >
                 Metal
                 <ChevronDown
@@ -797,7 +834,10 @@ const Navbar = () => {
                       key={metal.id}
                       type="button"
                       onClick={() => handleMetalClick(metal.name)}
-                      className="block w-full rounded-lg px-3 py-2.5 text-left text-sm text-[#365547] hover:bg-[#f1e5cb]"
+                      aria-current={isMetalActive(metal.name) ? "page" : undefined}
+                      className={`block w-full rounded-lg px-3 py-2.5 text-left text-sm hover:bg-[#f1e5cb] ${
+                        isMetalActive(metal.name) ? "bg-[#fff0cf] font-semibold text-[#8c5e13]" : "text-[#365547]"
+                      }`}
                     >
                       {metal.name}
                     </button>
@@ -809,7 +849,9 @@ const Navbar = () => {
                 type="button"
                 onClick={() => setOpenDropdown(openDropdown === "pages" ? null : "pages")}
                 aria-expanded={openDropdown === "pages"}
-                className="flex w-full items-center justify-between rounded-lg px-4 py-3 text-sm font-semibold text-[#173f33] hover:bg-[#f1e5cb]"
+                className={`flex w-full items-center justify-between rounded-lg px-4 py-3 text-sm font-semibold hover:bg-[#f1e5cb] ${
+                  isInfoPageActive ? "bg-[#fff0cf] text-[#8c5e13]" : "text-[#173f33]"
+                }`}
               >
                 Pages
                 <ChevronDown

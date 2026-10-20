@@ -7,9 +7,10 @@ import { formatCurrency } from "../../utils/currency";
 
 const formatPrice = formatCurrency;
 
-const ProductCard = ({ product }) => {
+const ProductCard = ({ product, queryString = "" }) => {
   const { wishlist, toggleWishlist } = useContext(StoreContext);
   const productId = product.id ?? product.product_id ?? product.productId;
+  const productPath = `/product/${productId}${queryString ? `?${queryString}` : ""}`;
   const isFavorite = wishlist.some(
     (item) => String(item.product_id ?? item.productId ?? item.id) === String(productId)
   );
@@ -34,7 +35,7 @@ const ProductCard = ({ product }) => {
     <article className="group flex h-full flex-col overflow-hidden rounded-[14px] border border-[#eadfce] bg-white shadow-sm transition-all duration-300 hover:border-[#d8b46c] hover:shadow-lg">
       <div className="relative aspect-[1.1/1] shrink-0 overflow-hidden bg-[#f6efe4]">
         <Link
-          to={`/product/${productId}`}
+          to={productPath}
           aria-label={`View ${product.name} details`}
           className="block h-full w-full"
         >
@@ -61,7 +62,7 @@ const ProductCard = ({ product }) => {
 
       <div className="relative z-10 -mt-3 flex min-h-[76px] flex-1 flex-col rounded-t-[14px] bg-white px-3 pb-2.5 pt-2 sm:px-4 sm:pb-3">
         <h3 className="line-clamp-1 font-serif text-[13px] font-semibold leading-5 text-[#292018] transition-colors hover:text-[#174a38] sm:text-sm">
-          <Link to={`/product/${productId}`} aria-label={`View ${product.name} details`}>
+          <Link to={productPath} aria-label={`View ${product.name} details`}>
             {product.name}
           </Link>
         </h3>

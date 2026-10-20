@@ -1,29 +1,22 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import {
   ArrowRight,
   Clock3,
   MapPin,
   MessageCircle,
   Phone,
-  Store
+  Store,
+  Gem,
+  ShoppingBag,
+  CalendarDays,
 } from "lucide-react";
 import PageContainer from "../CommenComponents/PageContainer";
+import PageHeader from "../CommenComponents/PageHeader";
 
 const SHOP_PHONE = "9659133504";
 const SHOP_PHONE_LABEL = "+91 96591 33504";
 const SHOP_ADDRESS = "No.58 Vaitheeshwaran Nagar, Tirupattur - 635653";
 const MAP_URL = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(SHOP_ADDRESS)}`;
-
-function Breadcrumb() {
-  return (
-    <nav className="text-xs text-white/70" aria-label="Breadcrumb">
-      <Link to="/" className="transition hover:text-[#d9b568]">Home</Link>
-      <span className="mx-2" aria-hidden="true">›</span>
-      <span className="font-semibold text-white">Contact Us</span>
-    </nav>
-  );
-}
 
 export default function ContactPage() {
   const [form, setForm] = useState({ name: "", email: "", phone: "", subject: "", message: "" });
@@ -50,25 +43,7 @@ export default function ContactPage() {
 
   return (
     <main className="bg-[#fffaf0]">
-      <section className="relative isolate min-h-[300px] overflow-hidden bg-[#003629] text-white sm:min-h-[340px]">
-        <img src="/images/Hero/hero.png" alt="" className="absolute inset-0 -z-20 h-full w-full object-cover object-[70%_center]" />
-        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#00281f]/95 via-[#003629]/75 to-[#003629]/10" />
-        <div className="absolute inset-3 border border-[#d9b568]/50 sm:inset-5" aria-hidden="true" />
-        <PageContainer className="relative flex min-h-[300px] items-center py-8 sm:min-h-[340px]">
-          <div className="max-w-xl">
-            <Breadcrumb />
-            <p className="mt-7 text-[10px] font-bold uppercase tracking-[0.28em] text-[#e9c66d]">Get in Touch</p>
-            <h1 className="mt-3 font-serif text-4xl font-bold leading-[1.05] sm:text-5xl">
-              We Are Here
-              <br />
-              <span className="text-[#e9bd56]">For You</span>
-            </h1>
-            <p className="mt-4 max-w-lg text-sm leading-6 text-[#fff7e8]/90">
-              Have a question or need assistance? Our team is ready to help you with a warm and friendly service.
-            </p>
-          </div>
-        </PageContainer>
-      </section>
+      <PageHeader title="Contact Us" />
 
       <PageContainer>
         <section className="grid grid-cols-1 divide-y divide-[#eadfc8] rounded-b-2xl border border-t-0 border-[#eadfc8] bg-white shadow-sm sm:grid-cols-3 sm:divide-x sm:divide-y-0" aria-label="Contact options">
@@ -95,14 +70,14 @@ export default function ContactPage() {
       </PageContainer>
 
       <PageContainer className="py-8 sm:py-10">
-        <div className="grid gap-5 lg:grid-cols-2">
-          <section className="rounded-2xl border border-[#eee3d0] bg-white p-5 shadow-sm sm:p-7">
+        <div className="grid min-w-0 gap-5 lg:grid-cols-2">
+          <section className="min-w-0 rounded-2xl border border-[#eee3d0] bg-white p-4 shadow-sm sm:p-7">
             <div className="mb-5">
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#ae7617]">We&apos;d love to hear from you</p>
               <h2 className="mt-1 font-serif text-2xl font-bold text-[#153b2e]">Send Us a Message</h2>
               <p className="mt-1 text-xs text-[#777066]">Fill in the details and continue to WhatsApp to send your message.</p>
             </div>
-            <form onSubmit={sendMessage} className="space-y-3">
+            <form id="contact-message-form" onSubmit={sendMessage} className="scroll-mt-24 space-y-3">
               <label className="sr-only" htmlFor="contact-name">Full name</label>
               <input id="contact-name" name="name" value={form.name} onChange={updateField} className={inputClass} placeholder="Full Name *" autoComplete="name" required />
               <label className="sr-only" htmlFor="contact-email">Email address</label>
@@ -125,7 +100,7 @@ export default function ContactPage() {
             </form>
           </section>
 
-          <section className="rounded-2xl border border-[#eee3d0] bg-white p-5 shadow-sm sm:p-7">
+          <section className="min-w-0 rounded-2xl border border-[#eee3d0] bg-white p-4 shadow-sm sm:p-7">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#ae7617]">Come see us</p>
             <h2 className="mt-1 font-serif text-2xl font-bold text-[#153b2e]">Our Showroom Location</h2>
             <p className="mt-1 text-xs text-[#777066]">We look forward to welcoming you.</p>
@@ -134,16 +109,16 @@ export default function ContactPage() {
               href={MAP_URL}
               target="_blank"
               rel="noreferrer"
-              className="group relative mt-5 flex h-52 items-center justify-center overflow-hidden rounded-xl border border-[#d9e4d7] bg-[#eaf1e8] p-5 text-center"
+              className="group relative mt-5 flex h-48 items-center justify-center overflow-hidden rounded-xl border border-[#d9e4d7] bg-[#eaf1e8] p-3 text-center sm:h-52 sm:p-5"
               style={{
                 backgroundImage: "linear-gradient(30deg, transparent 46%, rgba(255,255,255,.85) 47%, rgba(255,255,255,.85) 50%, transparent 51%), linear-gradient(145deg, transparent 35%, rgba(255,255,255,.75) 36%, rgba(255,255,255,.75) 39%, transparent 40%), linear-gradient(90deg, transparent 70%, rgba(191,215,228,.55) 70%)"
               }}
               aria-label={`Open directions to Sri Golds, ${SHOP_ADDRESS}`}
             >
-              <span className="absolute left-[18%] top-[26%] rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold text-[#526253] shadow-sm">Vellore</span>
-              <span className="absolute right-[15%] top-[22%] rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold text-[#526253] shadow-sm">Chennai</span>
-              <span className="absolute bottom-[22%] left-[20%] rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold text-[#526253] shadow-sm">Salem</span>
-              <span className="relative flex flex-col items-center gap-2 rounded-xl border border-[#ead8b6] bg-white/95 px-5 py-3 shadow-md transition group-hover:-translate-y-1">
+              <span className="absolute left-[18%] top-[26%] hidden rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold text-[#526253] shadow-sm sm:block">Vellore</span>
+              <span className="absolute right-[15%] top-[22%] hidden rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold text-[#526253] shadow-sm sm:block">Chennai</span>
+              <span className="absolute bottom-[22%] left-[20%] hidden rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold text-[#526253] shadow-sm sm:block">Salem</span>
+              <span className="relative flex max-w-full flex-col items-center gap-2 rounded-xl border border-[#ead8b6] bg-white/95 px-4 py-3 shadow-md transition group-hover:-translate-y-1 sm:px-5">
                 <MapPin size={28} className="text-[#bd821e]" aria-hidden="true" />
                 <span className="font-serif text-base font-bold text-[#153b2e]">Sri Golds · Tirupattur</span>
                 <span className="text-xs text-[#777066]">Open directions</span>
@@ -175,19 +150,135 @@ export default function ContactPage() {
         </div>
       </PageContainer>
 
-      <section className="relative overflow-hidden bg-[#00382a] py-8 text-white">
-        <img src="/images/diamondproduct.png" alt="" className="absolute inset-0 h-full w-full object-cover object-[70%_center] opacity-25" loading="lazy" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#00291f]/95 via-[#00382a]/80 to-[#00382a]/35" />
-        <PageContainer className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="font-serif text-2xl font-bold">We&apos;re Here to Help</h2>
-            <p className="mt-1 text-sm text-white/80">Reach our team for product enquiries and store assistance.</p>
+      {/* How Can We Help You - Refined Premium Design */}
+      <PageContainer className="py-8 sm:py-12">
+        <section className="overflow-hidden rounded-2xl border border-[#e5d3ad] bg-white shadow-[0_12px_35px_rgba(50,40,20,0.07)]">
+          <div className="grid lg:grid-cols-[0.82fr_1.5fr]">
+
+            {/* Left: Emerald introduction */}
+            <div className="relative isolate flex flex-col justify-center overflow-hidden bg-gradient-to-br from-[#064734] via-[#043b2c] to-[#00291f] p-6 text-white sm:p-9 lg:p-10">
+              {/* Decorative circles */}
+              <div className="pointer-events-none absolute -right-16 -top-16 -z-10 h-64 w-64 rounded-full border border-[#e9c66d]/15" />
+              <div className="pointer-events-none absolute -right-8 -top-8 -z-10 h-44 w-44 rounded-full border border-[#e9c66d]/20" />
+              <div className="pointer-events-none absolute bottom-0 right-0 -z-10 h-32 w-32 rounded-tl-full bg-[#e9c66d]/5" />
+
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#e9c66d]/40 bg-white/[0.06] text-[#f2d58a] shadow-inner">
+                <MessageCircle size={23} strokeWidth={1.5} />
+              </div>
+
+              <p className="mt-6 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.25em] text-[#f2d58a] sm:text-xs">
+                <span className="h-px w-6 bg-[#f2d58a]" />
+                We're Here for You
+              </p>
+
+              <h2 className="mt-3 font-serif text-3xl font-semibold leading-tight sm:text-4xl">
+                How Can We
+                <span className="mt-1 block text-[#f2d58a]">
+                  Help You?
+                </span>
+              </h2>
+
+              <p className="mt-4 max-w-sm text-sm leading-7 text-white/75">
+                Every jewellery journey is personal. Tell us what you need,
+                and our team will help you take the next step.
+              </p>
+
+              <div className="mt-7 flex items-center gap-3 border-t border-white/15 pt-5">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f2d58a]/10 text-[#f2d58a]">
+                  <Gem size={18} strokeWidth={1.5} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">
+                    Personal assistance
+                  </p>
+                  <p className="mt-0.5 text-xs text-white/60">
+                    Here to help you choose with confidence
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Enquiry options */}
+            <div className="grid grid-cols-1 sm:grid-cols-2">
+              {[
+                {
+                  icon: Gem,
+                  number: "01",
+                  title: "Product Enquiry",
+                  description:
+                    "Explore designs, jewellery details, and availability.",
+                  subject: "Product enquiry",
+                },
+                {
+                  icon: ShoppingBag,
+                  number: "02",
+                  title: "Order Assistance",
+                  description:
+                    "Get help with questions about your order.",
+                  subject: "Order assistance",
+                },
+                {
+                  icon: CalendarDays,
+                  number: "03",
+                  title: "Visit Our Showroom",
+                  description:
+                    "Planning a visit to our Tirupattur showroom?",
+                  subject: "Store visit",
+                },
+                {
+                  icon: MessageCircle,
+                  number: "04",
+                  title: "General Enquiry",
+                  description:
+                    "Have another question? We're happy to help.",
+                  subject: "Other",
+                },
+              ].map(({ icon: Icon, number, title, description, subject }) => (
+                <button
+                  key={subject}
+                  type="button"
+                  onClick={() => {
+                    setForm((current) => ({ ...current, subject }));
+                    document
+                      .getElementById("contact-message-form")
+                      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                  className="group relative flex min-h-[132px] min-w-0 items-start gap-3 border-b border-[#eee5d5] p-4 text-left transition-colors duration-300 last:border-b-0 hover:bg-[#fffaf0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#bd821e] sm:min-h-[190px] sm:gap-4 sm:border-r sm:p-6 sm:nth-[2]:border-r-0 sm:nth-[3]:border-b-0 sm:nth-[4]:border-b-0 lg:p-7"
+                >
+                  <span className="absolute right-5 top-3 font-serif text-3xl font-bold text-[#f1e8d7] transition-colors group-hover:text-[#e8d5ac]">
+                    {number}
+                  </span>
+
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#e7d5b0] bg-[#fff8e8] text-[#a87418] transition-all duration-300 group-hover:border-[#064734] group-hover:bg-[#064734] group-hover:text-[#f2d58a] group-hover:shadow-md">
+                    <Icon size={21} strokeWidth={1.6} aria-hidden="true" />
+                  </span>
+
+                  <span className="min-w-0 flex-1 pt-0.5">
+                    <span className="block pr-5 font-serif text-base font-bold leading-snug text-[#153b2e] sm:text-lg">
+                      {title}
+                    </span>
+
+                    <span className="mt-2 block text-xs leading-6 text-[#777066] sm:text-sm">
+                      {description}
+                    </span>
+
+                    <span className="mt-4 inline-flex items-center gap-2 text-xs font-bold text-[#9a6817]">
+                      Get assistance
+                      <ArrowRight
+                        size={15}
+                        className="transition-transform duration-300 group-hover:translate-x-1"
+                        aria-hidden="true"
+                      />
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
-          <a href={`tel:+91${SHOP_PHONE}`} className="inline-flex w-fit items-center gap-2 rounded-full bg-gradient-to-r from-[#f2cf76] to-[#d9a441] px-5 py-3 text-sm font-bold text-[#153729]">
-            <Phone size={16} aria-hidden="true" /> Call Now
-          </a>
-        </PageContainer>
-      </section>
+        </section>
+      </PageContainer>
+
+
     </main>
   );
 }
