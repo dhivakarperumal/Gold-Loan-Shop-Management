@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
-  ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Banknote,
+  ArrowDownLeft, ArrowUpRight, Banknote,
   Download, FileText, LayoutGrid, List, Plus, RefreshCw, Search, Wallet, X
 } from "lucide-react";
 import toast from "react-hot-toast";
@@ -49,7 +49,7 @@ function FundManagement() {
   const [transactions, setTransactions] = useState([]);
   const [totalTransactions, setTotalTransactions] = useState(0);
   const [dateRange, setDateRange] = useState({ preset: "all", startDate: "", endDate: "" });
-  const [filters, setFilters] = useState({ account_id: "", transaction_type: "ALL", search: "" });
+  const [filters, setFilters] = useState({ transaction_type: "ALL", search: "" });
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState("");
@@ -57,13 +57,7 @@ function FundManagement() {
   const [entry, setEntry] = useState(emptyEntry);
   const [receipt, setReceipt] = useState(null);
   const [saving, setSaving] = useState(false);
-  const [transferOpen, setTransferOpen] = useState(false);
-  const [transfer, setTransfer] = useState({
-    source_account_id: "", destination_account_id: "", transaction_date: today(), amount: "",
-    payment_method: "Bank Transfer", reference_number: "", description: ""
-  });
   const [selectedTransaction, setSelectedTransaction] = useState(null);
-  const [refreshing, setRefreshing] = useState(false);
   const [transactionView, setTransactionView] = useState("table");
 
   const fetchData = useCallback(async (quiet = false) => {
@@ -72,7 +66,7 @@ function FundManagement() {
     try {
       const params = {
         startDate: dateRange.startDate, endDate: dateRange.endDate,
-        page, page_size: 20, account_id: filters.account_id,
+        page, page_size: 20,
         transaction_type: filters.transaction_type, search: filters.search
       };
       const [accountsResponse, summaryResponse, transactionResponse] = await Promise.all([
@@ -89,9 +83,8 @@ function FundManagement() {
       setLoadError(message);
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
-  }, [dateRange, filters.account_id, filters.search, filters.transaction_type, page]);
+  }, [dateRange, filters.search, filters.transaction_type, page]);
 
   useEffect(() => { fetchData();   }, [fetchData]);
 
@@ -125,21 +118,6 @@ function FundManagement() {
       await fetchData(true);
     } catch (error) {
       toast.error(error.response?.data?.message || "The transaction could not be saved.");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const saveTransfer = async (event) => {
-    event.preventDefault();
-    setSaving(true);
-    try {
-      await api.post("/funds/transfers", { ...transfer, idempotency_key: crypto.randomUUID() });
-      toast.success("Account transfer recorded.");
-      setTransferOpen(false);
-      await fetchData(true);
-    } catch (error) {
-      toast.error(error.response?.data?.message || "The transfer could not be saved.");
     } finally {
       setSaving(false);
     }
@@ -237,12 +215,6 @@ function FundManagement() {
         </div>
         <div className="flex flex-wrap items-start justify-end gap-2 print:hidden">
         <DateRangeFilter onApply={(range) => { setDateRange(range); setPage(1); }} />
-        <button onClick={() => { setRefreshing(true); fetchData(true); }} className="inline-flex items-center gap-2 rounded-xl border border-white/25 px-3 py-2 text-sm font-bold hover:bg-white/10" aria-label="Refresh funds">
-            <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} /> Refresh
-          </button>
-          <button onClick={() => setTransferOpen(true)} className="inline-flex items-center gap-2 rounded-xl bg-white/10 px-3 py-2 text-sm font-bold hover:bg-white/20">
-            <ArrowLeftRight size={16} /> Transfer
-          </button>
           <button onClick={() => openEntry("FUND_ADDED")} className="inline-flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm font-extrabold text-[#00594f] hover:bg-emerald-50">
             <Plus size={16} /> Add Fund
           </button>
@@ -270,15 +242,11 @@ function FundManagement() {
         ))}
       </section>
 
-      <div className="grid gap-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-3 print:hidden">
+      <div className="grid gap-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-2 print:hidden">
         <label className="relative">
           <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input value={filters.search} onChange={(event) => updateFilter("search", event.target.value)} placeholder="Search customer, reference..." className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm" />
         </label>
-        <select value={filters.account_id} onChange={(event) => updateFilter("account_id", event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700">
-          <option value="">All accounts</option>
-          {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
-        </select>
         <select value={filters.transaction_type} onChange={(event) => updateFilter("transaction_type", event.target.value)} className="rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-700">
           <option value="ALL">All transaction types</option>
           <option value="FUND_ADDED">Fund Added</option><option value="DEBIT">Debit</option><option value="CREDIT">Credit</option><option value="TRANSFER_IN">Transfer In</option><option value="TRANSFER_OUT">Transfer Out</option>
@@ -406,25 +374,6 @@ function FundManagement() {
               <label className="text-xs font-bold text-slate-600 sm:col-span-2">Upload Receipt <span className="font-normal text-slate-400">(PDF, JPG, PNG, WEBP; max 10 MB)</span><input type="file" accept=".pdf,.jpg,.jpeg,.png,.webp,application/pdf,image/jpeg,image/png,image/webp" onChange={(event) => setReceipt(event.target.files?.[0] || null)} className="mt-1 block w-full rounded-lg border border-slate-200 px-3 py-2 text-sm font-normal" /></label>
             </div>
             <div className="flex justify-end gap-2 border-t border-slate-100 p-5"><button type="button" onClick={() => setEntryType("")} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-600">Cancel</button><button disabled={saving || !activeAccounts.length} className="rounded-lg bg-[#00695C] px-4 py-2.5 text-sm font-extrabold text-white disabled:opacity-50">{saving ? "Saving…" : "Save Transaction"}</button></div>
-          </form>
-        </div>
-      )}
-
-      {transferOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
-          <form onSubmit={saveTransfer} className="w-full max-w-xl rounded-2xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-100 p-5"><div><p className="text-xs font-bold uppercase tracking-widest text-sky-700">Internal movement</p><h2 className="mt-1 text-xl font-black">Transfer Between Accounts</h2></div><button type="button" onClick={() => setTransferOpen(false)} aria-label="Close"><X size={20} /></button></div>
-            <div className="grid gap-4 p-5 sm:grid-cols-2">
-              <label className="text-xs font-bold text-slate-600">From Account<select required value={transfer.source_account_id} onChange={(event) => setTransfer({ ...transfer, source_account_id: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal"><option value="">Select source</option>{activeAccounts.map((account) => <option key={account.id} value={account.id}>{account.name} · {money(account.current_balance)}</option>)}</select></label>
-              <label className="text-xs font-bold text-slate-600">To Account<select required value={transfer.destination_account_id} onChange={(event) => setTransfer({ ...transfer, destination_account_id: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal"><option value="">Select destination</option>{activeAccounts.filter((account) => String(account.id) !== transfer.source_account_id).map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>
-              <label className="text-xs font-bold text-slate-600">Transfer Date<input required type="date" value={transfer.transaction_date} onChange={(event) => setTransfer({ ...transfer, transaction_date: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal" /></label>
-              <label className="text-xs font-bold text-slate-600">Amount (₹)<input required min="0.01" step="0.01" type="number" value={transfer.amount} onChange={(event) => setTransfer({ ...transfer, amount: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal" /></label>
-              <label className="text-xs font-bold text-slate-600">Payment Method<select value={transfer.payment_method} onChange={(event) => setTransfer({ ...transfer, payment_method: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal">{PAYMENT_METHODS.map((method) => <option key={method}>{method}</option>)}</select></label>
-              <label className="text-xs font-bold text-slate-600">Reference Number<input value={transfer.reference_number} onChange={(event) => setTransfer({ ...transfer, reference_number: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal" /></label>
-              <label className="text-xs font-bold text-slate-600 sm:col-span-2">Description<textarea rows="2" value={transfer.description} onChange={(event) => setTransfer({ ...transfer, description: event.target.value })} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-normal" /></label>
-              <p className="text-xs text-slate-500 sm:col-span-2">Both ledger entries are committed atomically. Internal transfers do not count as income or expenses.</p>
-            </div>
-            <div className="flex justify-end gap-2 border-t border-slate-100 p-5"><button type="button" onClick={() => setTransferOpen(false)} className="rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-bold">Cancel</button><button disabled={saving} className="rounded-lg bg-[#00695C] px-4 py-2.5 text-sm font-extrabold text-white disabled:opacity-50">{saving ? "Transferring…" : "Confirm Transfer"}</button></div>
           </form>
         </div>
       )}
