@@ -117,8 +117,18 @@ async function initializeLoanModule() {
     )
   `);
   const [renewalColumns] = await pool.query('SHOW COLUMNS FROM loan_renewals');
-  if (!renewalColumns.some((column) => column.Field === 'late_payment_fee')) {
-    await pool.query('ALTER TABLE loan_renewals ADD COLUMN late_payment_fee DECIMAL(14,2) NOT NULL DEFAULT 0 AFTER interest_paid');
+  const existingRenewalColumns = new Set(renewalColumns.map((column) => column.Field));
+  const renewalColumnMigrations = {
+    late_payment_fee: 'DECIMAL(14,2) NOT NULL DEFAULT 0 AFTER interest_paid',
+    fund_account_id: 'BIGINT UNSIGNED NULL AFTER accrued_interest',
+    payment_method: 'VARCHAR(40) NULL AFTER fund_account_id',
+    reference_number: 'VARCHAR(100) NULL AFTER payment_method',
+    idempotency_key: 'VARCHAR(150) NULL AFTER reference_number'
+  };
+  for (const [column, definition] of Object.entries(renewalColumnMigrations)) {
+    if (!existingRenewalColumns.has(column)) {
+      await pool.query(`ALTER TABLE loan_renewals ADD COLUMN \`${column}\` ${definition}`);
+    }
   }
   await pool.query(`
     CREATE TABLE IF NOT EXISTS loan_review_actions (
@@ -620,6 +630,17 @@ async function recordLoanReviewAction(id, action, details, adminUserId) {
 }
 
 async function renewLoan(id, paymentAmount, adminUserId, paymentDetails) {
+  const renewalDetails = {
+    account_id: paymentDetails?.account_id ? Number(paymentDetails.account_id) : null,
+    payment_method: paymentDetails?.payment_method || 'Cash',
+    reference_number: paymentDetails?.reference_number || null,
+    idempotency_key: paymentDetails?.idempotency_key || crypto.randomUUID()
+  };
+  if (renewalDetails.account_id != null && !Number.isInteger(renewalDetails.account_id)) {
+    const error = new Error('Select a valid fund account');
+    error.code = 'INVALID_RENEWAL_PAYMENT';
+    throw error;
+  }
   const connection = await pool.getConnection();
   try {
     await connection.beginTransaction();
@@ -633,15 +654,30 @@ async function renewLoan(id, paymentAmount, adminUserId, paymentDetails) {
       throw error;
     }
     const loan = loans[0];
-    const [fundAccounts] = await connection.execute(
-      'SELECT id, is_active FROM fund_accounts WHERE id = ? FOR UPDATE',
-      [paymentDetails.account_id]
+    const [previousRenewals] = await connection.execute(
+      'SELECT id FROM loan_renewals WHERE idempotency_key = ? LIMIT 1',
+      [renewalDetails.idempotency_key]
     );
+    if (previousRenewals.length) {
+      const error = new Error('This renewal payment was already submitted. Reload the loan before trying again.');
+      error.code = 'DUPLICATE_RENEWAL';
+      throw error;
+    }
+    const [fundAccounts] = renewalDetails.account_id
+      ? await connection.execute(
+        'SELECT id, is_active FROM fund_accounts WHERE id = ? FOR UPDATE',
+        [renewalDetails.account_id]
+      )
+      : await connection.execute(
+        `SELECT id, is_active FROM fund_accounts WHERE is_active = TRUE
+         ORDER BY CASE WHEN account_type = 'Cash' THEN 0 ELSE 1 END, id LIMIT 1 FOR UPDATE`
+      );
     if (!fundAccounts.length || !fundAccounts[0].is_active) {
-      const error = new Error('Select an active fund account');
+      const error = new Error('No active fund account is available to record this payment');
       error.code = 'FUND_ACCOUNT_NOT_FOUND';
       throw error;
     }
+    renewalDetails.account_id = Number(fundAccounts[0].id);
     const [[dateRow]] = await connection.query(
       "SELECT DATE_FORMAT(CURRENT_DATE(), '%Y-%m-%d') AS renewal_date"
     );
@@ -685,46 +721,47 @@ async function renewLoan(id, paymentAmount, adminUserId, paymentDetails) {
     await connection.execute(
       `INSERT INTO loan_renewals (
         loan_id, renewal_date, period_start_date, previous_maturity_date, new_maturity_date,
-        payment_amount, interest_paid, principal_paid, principal_before, principal_after,
-        accrued_interest, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        payment_amount, interest_paid, late_payment_fee, principal_paid, principal_before,
+        principal_after, accrued_interest, fund_account_id, payment_method, reference_number,
+        idempotency_key, created_by
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id, preview.renewal_date, preview.period_start_date, previousMaturityDate, newMaturityDate,
         amount.toFixed(2), interestPaid.toFixed(2), latePaymentFee.toFixed(2), principalPaid.toFixed(2),
         preview.current_principal.toFixed(2), principalAfter.toFixed(2),
-        preview.accrued_interest.toFixed(2), paymentDetails.account_id, paymentDetails.payment_method,
-        paymentDetails.reference_number || null, paymentDetails.idempotency_key, adminUserId || null
+        preview.accrued_interest.toFixed(2), renewalDetails.account_id, renewalDetails.payment_method,
+        renewalDetails.reference_number, renewalDetails.idempotency_key, adminUserId || null
       ]
     );
     if (principalPaid > 0) {
       await insertTransaction(connection, {
-        account_id: paymentDetails.account_id,
+        account_id: renewalDetails.account_id,
         transaction_type: 'CREDIT',
         category: 'Customer Loan Repayment',
         transaction_date: preview.renewal_date,
         amount: principalPaid.toFixed(2),
         party_name: loan.customer_name,
         related_reference: loan.loan_number,
-        payment_method: paymentDetails.payment_method,
-        reference_number: paymentDetails.reference_number,
+        payment_method: renewalDetails.payment_method,
+        reference_number: renewalDetails.reference_number,
         description: 'Principal portion of loan repayment',
-        idempotency_key: `${paymentDetails.idempotency_key}:principal`,
+        idempotency_key: `${renewalDetails.idempotency_key}:principal`,
         created_by: adminUserId
       });
     }
     if (interestPaid > 0) {
       await insertTransaction(connection, {
-        account_id: paymentDetails.account_id,
+        account_id: renewalDetails.account_id,
         transaction_type: 'CREDIT',
         category: 'Interest Collection',
         transaction_date: preview.renewal_date,
         amount: interestPaid.toFixed(2),
         party_name: loan.customer_name,
         related_reference: loan.loan_number,
-        payment_method: paymentDetails.payment_method,
-        reference_number: paymentDetails.reference_number,
+        payment_method: renewalDetails.payment_method,
+        reference_number: renewalDetails.reference_number,
         description: 'Interest portion of loan repayment',
-        idempotency_key: `${paymentDetails.idempotency_key}:interest`,
+        idempotency_key: `${renewalDetails.idempotency_key}:interest`,
         created_by: adminUserId
       });
     }
