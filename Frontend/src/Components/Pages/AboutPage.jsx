@@ -80,208 +80,294 @@ export default function AboutPage() {
         </PageContainer>
       </section>
 
-      <section className="relative overflow-hidden bg-[#00382a] py-12 text-white sm:py-14">
-        <img src="/images/goldproduct.png" alt="" className="absolute inset-0 h-full w-full object-cover object-[70%_55%] opacity-30" loading="lazy" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#00291f]/95 via-[#00382a]/85 to-[#00382a]/35" />
+      {/* Our Heritage */}
+      <section className="relative isolate overflow-hidden bg-[#00382a] text-white">
+        {/* Background image */}
+        <img
+          src="/images/goldproduct.png"
+          alt=""
+          aria-hidden="true"
+          loading="lazy"
+          className="absolute inset-0 -z-20 h-full w-full object-cover object-[70%_55%]"
+        />
+
+        {/* Rich emerald overlays */}
+        <div className="absolute inset-0 -z-10 bg-gradient-to-r from-[#00271e]/95 via-[#00382a]/85 to-[#00382a]/45" />
+        <div className="absolute inset-0 -z-10 bg-gradient-to-t from-[#00271e]/55 via-transparent to-transparent" />
+
+        {/* Decorative gold accents */}
+        <div className="pointer-events-none absolute -right-16 -top-24 -z-10 h-72 w-72 rounded-full border border-[#e9c66d]/20 sm:h-96 sm:w-96" />
+        <div className="pointer-events-none absolute -right-8 -top-16 -z-10 h-56 w-56 rounded-full border border-[#e9c66d]/15 sm:h-80 sm:w-80" />
+
         <PageContainer className="relative">
-          <div className="max-w-2xl">
-            <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#e9c66d]">Our Heritage</p>
-            <h2 className="mt-2 font-serif text-3xl font-bold sm:text-4xl">Tradition Meets Modern Elegance</h2>
-            <p className="mt-3 max-w-xl text-sm leading-6 text-white/80">
-              From classic inspiration to contemporary design, we celebrate the artistry and meaning behind every piece.
-            </p>
-            <Link to="/explore" className="mt-5 inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#f2cf76] to-[#d9a441] px-5 py-2.5 text-sm font-bold text-[#153729] transition hover:brightness-105">
-              Discover Our Collections <ArrowRight size={16} aria-hidden="true" />
-            </Link>
+          <div className="grid items-center gap-8 py-12 sm:py-16 lg:grid-cols-[1fr_auto] lg:gap-12 lg:py-20">
+            {/* Content */}
+            <div className="max-w-3xl">
+              <div className="mb-5 inline-flex items-center gap-3">
+                <span className="h-px w-9 bg-[#e9c66d]" />
+                <p className="text-[10px] font-bold uppercase tracking-[0.3em] text-[#f2d58a] sm:text-xs">
+                  Our Heritage
+                </p>
+              </div>
+
+              <h2 className="max-w-2xl font-serif text-3xl font-semibold leading-tight sm:text-4xl lg:text-5xl xl:text-[3.5rem]">
+                Tradition Meets
+                <span className="mt-1 block text-[#f2d58a]">
+                  Modern Elegance
+                </span>
+              </h2>
+
+              <p className="mt-5 max-w-xl text-sm leading-7 text-white/80 sm:text-base sm:leading-8">
+                From timeless traditional designs to contemporary elegance, every
+                piece celebrates beauty, meaningful moments, and the art of
+                jewellery.
+              </p>
+
+              {/* Brand highlights */}
+              <div className="mt-7 flex flex-wrap gap-x-6 gap-y-3 border-t border-white/15 pt-5 sm:gap-x-8">
+                {[
+                  "Timeless Designs",
+                  "Quality Focused",
+                  "Made for Every Moment",
+                ].map((item) => (
+                  <div key={item} className="flex items-center gap-2">
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[#e9c66d]/60 text-[#f2d58a]">
+                      <span className="text-[10px]">✓</span>
+                    </span>
+                    <span className="text-xs font-medium text-white/90 sm:text-sm">
+                      {item}
+                    </span>
+                  </div>
+                ))}
+              </div>
+
+              {/* CTA */}
+              <div className="mt-8 flex flex-wrap items-center gap-5">
+                <Link
+                  to="/explore"
+                  className="group inline-flex items-center gap-3 rounded-full bg-gradient-to-r from-[#f4d68a] to-[#d8a43c] px-6 py-3.5 text-sm font-bold text-[#153729] shadow-lg shadow-black/10 transition duration-300 hover:-translate-y-0.5 hover:shadow-xl"
+                >
+                  Discover Our Collections
+                  <ArrowRight
+                    size={17}
+                    className="transition-transform duration-300 group-hover:translate-x-1"
+                    aria-hidden="true"
+                  />
+                </Link>
+
+                <span className="text-xs tracking-wide text-white/65">
+                  Elegance that lasts
+                </span>
+              </div>
+            </div>
+
+            {/* Decorative emblem */}
+            <div className="hidden lg:flex lg:justify-center">
+              <div className="flex h-36 w-36 items-center justify-center rounded-full border border-[#e9c66d]/50 p-3 xl:h-44 xl:w-44">
+                <div className="flex h-full w-full flex-col items-center justify-center rounded-full border border-[#e9c66d]/25">
+                  <Gem
+                    size={34}
+                    strokeWidth={1.2}
+                    className="text-[#f2d58a]"
+                    aria-hidden="true"
+                  />
+                  <span className="mt-3 font-serif text-sm tracking-[0.18em] text-[#f2d58a]">
+                    SRI GOLDS
+                  </span>
+                  <span className="mt-1 text-[8px] uppercase tracking-[0.22em] text-white/65">
+                    Timeless Elegance
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
         </PageContainer>
       </section>
 
 
 
-    
-{/* Our History Section */}
-<section className="overflow-hidden bg-[#fffaf0] py-12 sm:py-16 lg:py-20">
-  <PageContainer>
-    {/* Heading */}
-    <div className="mx-auto mb-10 max-w-3xl text-center sm:mb-14">
-      <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-[#ae7617]">
-        The Sri Golds Journey
-      </p>
 
-      <h2 className="mt-3 font-serif text-3xl font-bold text-[#153b2e] sm:text-4xl lg:text-5xl">
-        Our History
-      </h2>
 
-      <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-[#68645c] sm:text-base">
-        A journey shaped by tradition, meaningful moments, and a commitment
-        to bringing beautiful jewellery into your life.
-      </p>
+      {/* Our History Section */}
+      <section className="overflow-hidden bg-[#fffaf0] py-12 sm:py-16 lg:py-20">
+        <PageContainer>
+          {/* Heading */}
+          <div className="mx-auto mb-10 max-w-3xl text-center sm:mb-14">
+            <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-[#ae7617]">
+              The Sri Golds Journey
+            </p>
 
-      <div className="mt-5 flex items-center justify-center gap-3">
-        <span className="h-px w-14 bg-[#d6a63c]" />
-        <Gem size={19} className="text-[#b47a19]" />
-        <span className="h-px w-14 bg-[#d6a63c]" />
-      </div>
-    </div>
+            <h2 className="mt-3 font-serif text-3xl font-bold text-[#153b2e] sm:text-4xl lg:text-5xl">
+              Our History
+            </h2>
 
-    {/* Wider Timeline */}
-    <div className="relative mx-auto max-w-6xl">
-      {/* Gold timeline line */}
-      <div
-        className="absolute bottom-8 left-5 top-8 w-px bg-gradient-to-b from-[#e6ce91] via-[#bd9139] to-[#e6ce91] sm:left-1/2 sm:-translate-x-1/2"
-        aria-hidden="true"
-      />
+            <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-[#68645c] sm:text-base">
+              A journey shaped by tradition, meaningful moments, and a commitment
+              to bringing beautiful jewellery into your life.
+            </p>
 
-      {[
-        {
-          year: "Since 1984",
-          title: "The Beginning",
-          description:
-            "Sri Golds began its journey with a commitment to jewellery, personal service, and customer trust.",
-          icon: Clock3,
-          image: "/images/Luxury Gold Jewelry Showcase.png",
-          imageAlt: "Sri Golds jewellery showroom",
-          side: "left",
-          number: "01",
-        },
-        {
-          year: "Growing Together",
-          title: "Expanding Our Collections",
-          description:
-            "Discover jewellery inspired by tradition and contemporary style, with designs for everyday wear and special occasions.",
-          icon: Gem,
-          image: "/images/goldproduct.png",
-          imageAlt: "Gold jewellery collection",
-          side: "right",
-          number: "02",
-        },
-        {
-          year: "A Lasting Promise",
-          title: "Building Customer Trust",
-          description:
-            "We focus on quality, thoughtful service, and helping customers find jewellery for life's most meaningful moments.",
-          icon: Handshake,
-          image: "/images/Luxury Gold Jewelry Showcase.png",
-          imageAlt: "Jewellery displayed in the showroom",
-          side: "left",
-          number: "03",
-        },
-        {
-          year: "Looking Ahead",
-          title: "Our Future Journey",
-          description:
-            "Our goal is to continue celebrating every generation with beautiful collections and a warm, personal experience.",
-          icon: TrendingUp,
-          image: "/images/goldproduct.png",
-          imageAlt: "Elegant gold jewellery",
-          side: "right",
-          number: "04",
-        },
-      ].map(
-        ({
-          year,
-          title,
-          description,
-          icon: Icon,
-          image,
-          imageAlt,
-          side,
-          number,
-        }) => (
-          <div key={number} className="relative mb-8 last:mb-0 sm:mb-12">
-            <div className="grid grid-cols-1 items-center gap-4 pl-12 sm:grid-cols-[minmax(0,1fr)_64px_minmax(0,1fr)] sm:gap-5 sm:pl-0 lg:gap-8">
-              {/* Image side */}
-              <div
-                className={`min-w-0 ${
-                  side === "right"
-                    ? "sm:col-start-3 sm:row-start-1"
-                    : "sm:col-start-1 sm:row-start-1"
-                }`}
-              >
-                <div className="group relative overflow-hidden rounded-2xl border border-[#e5cf9d] bg-white p-2 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
-                  <div className="relative h-48 overflow-hidden rounded-xl sm:h-52 lg:h-60">
-                    <img
-                      src={image}
-                      alt={imageAlt}
-                      loading="lazy"
-                      className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#082c21]/65 via-transparent to-transparent" />
-                    <span className="absolute bottom-4 left-4 font-serif text-xl font-semibold text-white">
-                      Sri Golds
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between gap-2 px-3 py-3">
-                    <span className="text-xs font-medium text-[#665842]">
-                      Tradition &amp; Elegance
-                    </span>
-                    <Gem size={16} className="shrink-0 text-[#b47a19]" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Timeline marker */}
-              <div
-                className="absolute left-5 top-5 z-10 flex h-10 w-10 -translate-x-1/2 items-center justify-center rounded-full border-2 border-[#d6ae58] bg-[#064734] text-[#f3d278] shadow-md sm:static sm:col-start-2 sm:row-start-1 sm:mx-auto sm:translate-x-0"
-                aria-hidden="true"
-              >
-                <Icon size={18} strokeWidth={1.7} />
-              </div>
-
-              {/* History content */}
-              <div
-                className={`min-w-0 ${
-                  side === "right"
-                    ? "sm:col-start-1 sm:row-start-1"
-                    : "sm:col-start-3 sm:row-start-1"
-                }`}
-              >
-                <div className="relative h-full rounded-2xl border border-[#ead8b6] bg-white p-5 shadow-sm transition duration-300 hover:border-[#d3b56d] hover:shadow-md sm:p-6 lg:p-8">
-                  <span className="absolute right-4 top-3 font-serif text-4xl font-bold text-[#f3ead7] sm:right-6 sm:top-4 sm:text-5xl">
-                    {number}
-                  </span>
-
-                  <div className="relative">
-                    <span className="inline-flex rounded-full border border-[#ead8b6] bg-[#fff7e5] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#986817] sm:text-xs">
-                      {year}
-                    </span>
-
-                    <h3 className="mt-4 font-serif text-xl font-bold leading-snug text-[#153b2e] sm:text-2xl">
-                      {title}
-                    </h3>
-
-                    <p className="mt-3 text-sm leading-7 text-[#68645c]">
-                      {description}
-                    </p>
-
-                    <div className="mt-5 h-px w-16 bg-[#d6a63c]" />
-                  </div>
-                </div>
-              </div>
+            <div className="mt-5 flex items-center justify-center gap-3">
+              <span className="h-px w-14 bg-[#d6a63c]" />
+              <Gem size={19} className="text-[#b47a19]" />
+              <span className="h-px w-14 bg-[#d6a63c]" />
             </div>
           </div>
-        )
-      )}
-    </div>
 
-    {/* Bottom CTA */}
-    <div className="mt-10 text-center sm:mt-14">
-      <p className="mb-4 font-serif text-lg text-[#153b2e] sm:text-xl">
-        Find a piece to be part of your story.
-      </p>
+          {/* Wider Timeline */}
+          <div className="relative mx-auto max-w-6xl">
+            {/* Gold timeline line */}
+            <div
+              className="absolute bottom-8 left-5 top-8 w-px bg-gradient-to-b from-[#e6ce91] via-[#bd9139] to-[#e6ce91] sm:left-1/2 sm:-translate-x-1/2"
+              aria-hidden="true"
+            />
 
-      <Link
-        to="/explore"
-        className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#f2cf76] to-[#d9a441] px-7 py-3 text-sm font-bold text-[#153729] shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-      >
-        Explore Our Collections
-        <ArrowRight size={17} aria-hidden="true" />
-      </Link>
-    </div>
-  </PageContainer>
-</section>
+            {[
+              {
+                year: "Since 1984",
+                title: "The Beginning",
+                description:
+                  "Sri Golds began its journey with a commitment to jewellery, personal service, and customer trust.",
+                icon: Clock3,
+                image: "/images/Luxury Gold Jewelry Showcase.png",
+                imageAlt: "Sri Golds jewellery showroom",
+                side: "left",
+                number: "01",
+              },
+              {
+                year: "Growing Together",
+                title: "Expanding Our Collections",
+                description:
+                  "Discover jewellery inspired by tradition and contemporary style, with designs for everyday wear and special occasions.",
+                icon: Gem,
+                image: "/images/goldproduct.png",
+                imageAlt: "Gold jewellery collection",
+                side: "right",
+                number: "02",
+              },
+              {
+                year: "A Lasting Promise",
+                title: "Building Customer Trust",
+                description:
+                  "We focus on quality, thoughtful service, and helping customers find jewellery for life's most meaningful moments.",
+                icon: Handshake,
+                image: "/images/Luxury Gold Jewelry Showcase.png",
+                imageAlt: "Jewellery displayed in the showroom",
+                side: "left",
+                number: "03",
+              },
+              {
+                year: "Looking Ahead",
+                title: "Our Future Journey",
+                description:
+                  "Our goal is to continue celebrating every generation with beautiful collections and a warm, personal experience.",
+                icon: TrendingUp,
+                image: "/images/goldproduct.png",
+                imageAlt: "Elegant gold jewellery",
+                side: "right",
+                number: "04",
+              },
+            ].map(
+              ({
+                year,
+                title,
+                description,
+                icon: Icon,
+                image,
+                imageAlt,
+                side,
+                number,
+              }) => (
+                <div key={number} className="relative mb-8 last:mb-0 sm:mb-12">
+                  <div className="grid grid-cols-1 items-center gap-4 pl-12 sm:grid-cols-[minmax(0,1fr)_64px_minmax(0,1fr)] sm:gap-5 sm:pl-0 lg:gap-8">
+                    {/* Image side */}
+                    <div
+                      className={`min-w-0 ${side === "right"
+                          ? "sm:col-start-3 sm:row-start-1"
+                          : "sm:col-start-1 sm:row-start-1"
+                        }`}
+                    >
+                      <div className="group relative overflow-hidden rounded-2xl border border-[#e5cf9d] bg-white p-2 shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg">
+                        <div className="relative h-48 overflow-hidden rounded-xl sm:h-52 lg:h-60">
+                          <img
+                            src={image}
+                            alt={imageAlt}
+                            loading="lazy"
+                            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-[#082c21]/65 via-transparent to-transparent" />
+                          <span className="absolute bottom-4 left-4 font-serif text-xl font-semibold text-white">
+                            Sri Golds
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between gap-2 px-3 py-3">
+                          <span className="text-xs font-medium text-[#665842]">
+                            Tradition &amp; Elegance
+                          </span>
+                          <Gem size={16} className="shrink-0 text-[#b47a19]" />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Timeline marker */}
+                    <div
+                      className="absolute left-5 top-5 z-10 flex h-10 w-10 -translate-x-1/2 items-center justify-center rounded-full border-2 border-[#d6ae58] bg-[#064734] text-[#f3d278] shadow-md sm:static sm:col-start-2 sm:row-start-1 sm:mx-auto sm:translate-x-0"
+                      aria-hidden="true"
+                    >
+                      <Icon size={18} strokeWidth={1.7} />
+                    </div>
+
+                    {/* History content */}
+                    <div
+                      className={`min-w-0 ${side === "right"
+                          ? "sm:col-start-1 sm:row-start-1"
+                          : "sm:col-start-3 sm:row-start-1"
+                        }`}
+                    >
+                      <div className="relative h-full rounded-2xl border border-[#ead8b6] bg-white p-5 shadow-sm transition duration-300 hover:border-[#d3b56d] hover:shadow-md sm:p-6 lg:p-8">
+                        <span className="absolute right-4 top-3 font-serif text-4xl font-bold text-[#f3ead7] sm:right-6 sm:top-4 sm:text-5xl">
+                          {number}
+                        </span>
+
+                        <div className="relative">
+                          <span className="inline-flex rounded-full border border-[#ead8b6] bg-[#fff7e5] px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-[#986817] sm:text-xs">
+                            {year}
+                          </span>
+
+                          <h3 className="mt-4 font-serif text-xl font-bold leading-snug text-[#153b2e] sm:text-2xl">
+                            {title}
+                          </h3>
+
+                          <p className="mt-3 text-sm leading-7 text-[#68645c]">
+                            {description}
+                          </p>
+
+                          <div className="mt-5 h-px w-16 bg-[#d6a63c]" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )
+            )}
+          </div>
+
+          {/* Bottom CTA */}
+          <div className="mt-10 text-center sm:mt-14">
+            <p className="mb-4 font-serif text-lg text-[#153b2e] sm:text-xl">
+              Find a piece to be part of your story.
+            </p>
+
+            <Link
+              to="/explore"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#f2cf76] to-[#d9a441] px-7 py-3 text-sm font-bold text-[#153729] shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+            >
+              Explore Our Collections
+              <ArrowRight size={17} aria-hidden="true" />
+            </Link>
+          </div>
+        </PageContainer>
+      </section>
 
 
 
