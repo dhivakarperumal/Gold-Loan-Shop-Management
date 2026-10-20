@@ -146,7 +146,7 @@ export default function MetalsShowcase() {
               return (
                 <article
                   key={metal.id}
-                  className={`group relative grid min-h-[225px] grid-cols-[46%_54%] overflow-hidden rounded-xl border border-[#e6cf9c] bg-gradient-to-br ${details?.cardGradient || "from-[#f5e9ce] via-[#fffdf8] to-[#dfd0ad]"} shadow-[0_3px_12px_rgba(113,79,24,0.06)] sm:min-h-[245px] lg:min-h-[270px] xl:min-h-[290px]`}
+                  className={`group relative grid min-h-[190px] grid-cols-[44%_56%] overflow-hidden rounded-xl border border-[#e6cf9c] bg-gradient-to-br ${details?.cardGradient || "from-[#f5e9ce] via-[#fffdf8] to-[#dfd0ad]"} shadow-[0_3px_12px_rgba(113,79,24,0.06)] sm:min-h-[210px] lg:min-h-[230px]`}
                 >
                   <Link
                     to={exploreUrl}
@@ -173,12 +173,12 @@ export default function MetalsShowcase() {
 
                     <div className="absolute inset-0 bg-gradient-to-t from-[#002d21]/25 via-transparent to-transparent" />
 
-                    <span className="absolute bottom-4 left-3 z-10 flex h-14 w-14 items-center justify-center rounded-full border-2 border-[#d8a53b] bg-[#003c2b] font-serif text-2xl font-bold text-[#f3d278] shadow-md sm:bottom-5 sm:left-5 sm:h-[72px] sm:w-[72px] sm:text-3xl">
+                    <span className="absolute bottom-3 left-3 z-10 flex h-12 w-12 items-center justify-center rounded-full border-2 border-[#d8a53b] bg-[#003c2b] font-serif text-xl font-bold text-[#f3d278] shadow-md sm:bottom-4 sm:left-4 sm:h-14 sm:w-14 sm:text-2xl">
                       {details?.symbol || <Gem size={24} />}
                     </span>
                   </Link>
 
-                  <div className="relative flex min-w-0 flex-col justify-center overflow-hidden bg-gradient-to-br from-white/75 via-white/55 to-transparent px-3 py-4 pl-5 sm:px-5 sm:py-4 sm:pl-7 lg:px-7 lg:pl-9">
+                  <div className="relative flex min-w-0 flex-col justify-center overflow-hidden bg-gradient-to-br from-white/75 via-white/55 to-transparent px-3 py-3 pl-5 sm:px-4 sm:py-3 sm:pl-6 lg:px-6 lg:pl-8">
                     <Flower2
                       size={104}
                       strokeWidth={0.7}
@@ -191,30 +191,30 @@ export default function MetalsShowcase() {
                       className="pointer-events-none absolute -bottom-6 right-10 hidden text-[#d7b568]/15 sm:block"
                       aria-hidden="true"
                     />
-                    <span className="relative mb-2 h-[2px] w-10 bg-[#c48a22] sm:w-12" />
+                    <span className="relative mb-1.5 h-[2px] w-8 bg-[#c48a22] sm:w-10" />
 
-                    <h3 className="relative font-serif text-2xl font-bold leading-tight text-[#073b2b] sm:text-3xl lg:text-4xl">
+                    <h3 className="relative font-serif text-xl font-bold leading-tight text-[#073b2b] sm:text-2xl lg:text-3xl">
                       {metal.name}
                     </h3>
 
                     {purity && (
-                      <p className="relative mt-2 break-words text-[10px] font-bold uppercase leading-relaxed tracking-wide text-[#a36c12] sm:text-xs lg:text-sm">
+                      <p className="relative mt-1 break-words text-[9px] font-bold uppercase leading-snug tracking-wide text-[#a36c12] sm:text-[10px] lg:text-xs">
                         {purity}
                       </p>
                     )}
 
-                    <p className="relative mt-2 line-clamp-3 text-xs leading-relaxed text-[#68645c] sm:text-sm">
+                    <p className="relative mt-1.5 line-clamp-2 text-[11px] leading-snug text-[#68645c] sm:text-xs lg:text-sm">
                       {description ||
                         `Discover our beautiful ${metal.name.toLowerCase()} collection, selected for quality and timeless style.`}
                     </p>
 
                     <Link
                       to={exploreUrl}
-                      className="relative mt-3 inline-flex w-fit items-center gap-2 border-b border-[#d9a441] pb-1 text-xs font-bold text-[#073b2b] transition hover:text-[#a66b00] sm:mt-4 sm:text-sm"
+                      className="relative mt-2.5 inline-flex w-fit items-center gap-1.5 border-b border-[#d9a441] pb-0.5 text-[11px] font-bold text-[#073b2b] transition hover:text-[#a66b00] sm:mt-3 sm:text-xs"
                     >
                       Explore {metal.name}
                       <ArrowRight
-                        size={19}
+                        size={16}
                         className="text-[#a66b00] transition-transform group-hover:translate-x-1"
                         aria-hidden="true"
                       />
