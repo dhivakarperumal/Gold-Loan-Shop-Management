@@ -70,14 +70,14 @@ export default function ContactPage() {
       </PageContainer>
 
       <PageContainer className="py-8 sm:py-10">
-        <div className="grid gap-5 lg:grid-cols-2">
-          <section className="rounded-2xl border border-[#eee3d0] bg-white p-5 shadow-sm sm:p-7">
+        <div className="grid min-w-0 gap-5 lg:grid-cols-2">
+          <section className="min-w-0 rounded-2xl border border-[#eee3d0] bg-white p-4 shadow-sm sm:p-7">
             <div className="mb-5">
               <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#ae7617]">We&apos;d love to hear from you</p>
               <h2 className="mt-1 font-serif text-2xl font-bold text-[#153b2e]">Send Us a Message</h2>
               <p className="mt-1 text-xs text-[#777066]">Fill in the details and continue to WhatsApp to send your message.</p>
             </div>
-            <form onSubmit={sendMessage} className="space-y-3">
+            <form id="contact-message-form" onSubmit={sendMessage} className="scroll-mt-24 space-y-3">
               <label className="sr-only" htmlFor="contact-name">Full name</label>
               <input id="contact-name" name="name" value={form.name} onChange={updateField} className={inputClass} placeholder="Full Name *" autoComplete="name" required />
               <label className="sr-only" htmlFor="contact-email">Email address</label>
@@ -100,7 +100,7 @@ export default function ContactPage() {
             </form>
           </section>
 
-          <section className="rounded-2xl border border-[#eee3d0] bg-white p-5 shadow-sm sm:p-7">
+          <section className="min-w-0 rounded-2xl border border-[#eee3d0] bg-white p-4 shadow-sm sm:p-7">
             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#ae7617]">Come see us</p>
             <h2 className="mt-1 font-serif text-2xl font-bold text-[#153b2e]">Our Showroom Location</h2>
             <p className="mt-1 text-xs text-[#777066]">We look forward to welcoming you.</p>
@@ -109,16 +109,16 @@ export default function ContactPage() {
               href={MAP_URL}
               target="_blank"
               rel="noreferrer"
-              className="group relative mt-5 flex h-52 items-center justify-center overflow-hidden rounded-xl border border-[#d9e4d7] bg-[#eaf1e8] p-5 text-center"
+              className="group relative mt-5 flex h-48 items-center justify-center overflow-hidden rounded-xl border border-[#d9e4d7] bg-[#eaf1e8] p-3 text-center sm:h-52 sm:p-5"
               style={{
                 backgroundImage: "linear-gradient(30deg, transparent 46%, rgba(255,255,255,.85) 47%, rgba(255,255,255,.85) 50%, transparent 51%), linear-gradient(145deg, transparent 35%, rgba(255,255,255,.75) 36%, rgba(255,255,255,.75) 39%, transparent 40%), linear-gradient(90deg, transparent 70%, rgba(191,215,228,.55) 70%)"
               }}
               aria-label={`Open directions to Sri Golds, ${SHOP_ADDRESS}`}
             >
-              <span className="absolute left-[18%] top-[26%] rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold text-[#526253] shadow-sm">Vellore</span>
-              <span className="absolute right-[15%] top-[22%] rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold text-[#526253] shadow-sm">Chennai</span>
-              <span className="absolute bottom-[22%] left-[20%] rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold text-[#526253] shadow-sm">Salem</span>
-              <span className="relative flex flex-col items-center gap-2 rounded-xl border border-[#ead8b6] bg-white/95 px-5 py-3 shadow-md transition group-hover:-translate-y-1">
+              <span className="absolute left-[18%] top-[26%] hidden rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold text-[#526253] shadow-sm sm:block">Vellore</span>
+              <span className="absolute right-[15%] top-[22%] hidden rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold text-[#526253] shadow-sm sm:block">Chennai</span>
+              <span className="absolute bottom-[22%] left-[20%] hidden rounded-full bg-white/90 px-2.5 py-1 text-[10px] font-semibold text-[#526253] shadow-sm sm:block">Salem</span>
+              <span className="relative flex max-w-full flex-col items-center gap-2 rounded-xl border border-[#ead8b6] bg-white/95 px-4 py-3 shadow-md transition group-hover:-translate-y-1 sm:px-5">
                 <MapPin size={28} className="text-[#bd821e]" aria-hidden="true" />
                 <span className="font-serif text-base font-bold text-[#153b2e]">Sri Golds · Tirupattur</span>
                 <span className="text-xs text-[#777066]">Open directions</span>
@@ -243,7 +243,7 @@ export default function ContactPage() {
                       .getElementById("contact-message-form")
                       ?.scrollIntoView({ behavior: "smooth", block: "start" });
                   }}
-                  className="group relative flex min-h-[155px] items-start gap-4 border-b border-[#eee5d5] p-5 text-left transition-colors duration-300 last:border-b-0 hover:bg-[#fffaf0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#bd821e] sm:min-h-[190px] sm:border-r sm:p-6 sm:nth-[2]:border-r-0 sm:nth-[3]:border-b-0 sm:nth-[4]:border-b-0 lg:p-7"
+                  className="group relative flex min-h-[132px] min-w-0 items-start gap-3 border-b border-[#eee5d5] p-4 text-left transition-colors duration-300 last:border-b-0 hover:bg-[#fffaf0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#bd821e] sm:min-h-[190px] sm:gap-4 sm:border-r sm:p-6 sm:nth-[2]:border-r-0 sm:nth-[3]:border-b-0 sm:nth-[4]:border-b-0 lg:p-7"
                 >
                   <span className="absolute right-5 top-3 font-serif text-3xl font-bold text-[#f1e8d7] transition-colors group-hover:text-[#e8d5ac]">
                     {number}
