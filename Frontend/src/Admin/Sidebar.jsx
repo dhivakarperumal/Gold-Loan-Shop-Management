@@ -109,7 +109,7 @@ const navItems = [
       { path: "/admin/banners", label: "Offers & Banners", icon: Tag },
       { path: "/admin/videos", label: "Showcase Videos", icon: Video },
       { path: "/admin/reviews", label: "Reviews", icon: Star },
-      { path: "/admin/users/all", label: "Customers", icon: Users },
+      
     ],
   },
 
