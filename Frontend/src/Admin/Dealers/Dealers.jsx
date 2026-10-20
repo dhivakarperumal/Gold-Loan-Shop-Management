@@ -69,7 +69,6 @@ const Dealers = () => {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
-  const [categoryFilter, setCategoryFilter] = useState("All");
   const [viewMode, setViewMode] = useState("table");
   const [dateRange, setDateRange] = useState({ preset: "all", startDate: "", endDate: "" });
   const [page, setPage] = useState(1);
@@ -99,13 +98,12 @@ const Dealers = () => {
     const response = await api.get("/dealers", { params: {
       page, limit: 25, search: search.trim(),
       status: statusFilter === "All" ? undefined : statusFilter,
-      category_id: categoryFilter === "All" ? undefined : categoryFilter,
       startDate: dateRange.startDate,
       endDate: dateRange.endDate
     } });
     setDealers(response.data.dealers || []);
     setPagination(response.data.pagination || { total: 0, totalPages: 1 });
-  }, [page, search, statusFilter, categoryFilter, dateRange.startDate, dateRange.endDate]);
+  }, [page, search, statusFilter, dateRange.startDate, dateRange.endDate]);
 
   const fetchAll = useCallback(async () => {
     setError("");
@@ -478,6 +476,16 @@ const Dealers = () => {
   };
 
   const visibleDealers = useMemo(() => dealers, [dealers]);
+  const visiblePurchases = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return purchases;
+    return purchases.filter((purchase) => [
+      purchase.document_number,
+      purchase.dealer_name,
+      purchase.document_type,
+      purchase.supplier_invoice_number
+    ].some((value) => String(value || "").toLowerCase().includes(query)));
+  }, [purchases, search]);
   const openJobs = jobs.filter((job) => !["Reconciled", "Cancelled"].includes(job.status));
 
   return <div className="space-y-6">
@@ -495,7 +503,7 @@ const Dealers = () => {
       </div>
     </div>
 
-    {section !== "dealers" && <DateRangeFilter onApply={(range) => { setPage(1); setDateRange(range); }} />}
+    {!["dealers", "purchases"].includes(section) && <DateRangeFilter onApply={(range) => { setPage(1); setDateRange(range); }} />}
 
     <div className="grid grid-cols-2 gap-3 xl:grid-cols-6">
       {[
@@ -522,7 +530,7 @@ const Dealers = () => {
     {loading ? <div className="flex min-h-64 items-center justify-center gap-3 rounded-xl border border-slate-100 bg-white text-sm font-bold text-slate-500"><LoaderCircle className="animate-spin" /> Loading dealer records...</div> : <>
       {section === "dealers" && <>
         <section aria-label="Dealer filters and display options" className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:flex-row md:items-center">
-          <label className="relative min-w-0 flex-1">
+          <label className="relative min-w-0 flex-1 md:max-w-md">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <span className="sr-only">Search dealers</span>
             <input value={search} onChange={(event) => { setPage(1); setSearch(event.target.value); }} placeholder="Search dealers by name, ID, contact..." className="w-full rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 pl-12 text-sm font-medium text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#008577] focus:bg-white" />
@@ -531,29 +539,21 @@ const Dealers = () => {
             <select aria-label="Filter dealers by status" value={statusFilter} onChange={(event) => { setPage(1); setStatusFilter(event.target.value); }} className="min-h-11 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-600 outline-none focus:border-[#008577]">
               <option value="All">Select Status</option><option>Active</option><option>Inactive</option><option>On Hold</option>
             </select>
-            <select aria-label="Filter dealers by category" value={categoryFilter} onChange={(event) => { setPage(1); setCategoryFilter(event.target.value); }} className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-600 outline-none focus:border-[#008577]">
-              <option value="All">All categories</option>{categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
-            </select>
             <DateRangeFilter className="shrink-0" onApply={(range) => { setPage(1); setDateRange(range); }} />
             <div role="group" aria-label="Dealer display mode" className="flex items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
               <button type="button" onClick={() => setViewMode("table")} aria-label="List view" aria-pressed={viewMode === "table"} className={`rounded-lg p-2.5 transition ${viewMode === "table" ? "bg-[#003B3B] text-white" : "text-slate-400 hover:text-slate-700"}`}><List size={18} /></button>
               <button type="button" onClick={() => setViewMode("grid")} aria-label="Card view" aria-pressed={viewMode === "grid"} className={`rounded-lg p-2.5 transition ${viewMode === "grid" ? "bg-[#003B3B] text-white" : "text-slate-400 hover:text-slate-700"}`}><LayoutGrid size={18} /></button>
             </div>
-            <button type="button" onClick={async () => {
-              const name = window.prompt("New dealer category");
-              if (!name?.trim()) return;
-              try { await api.post("/dealers/categories", { name: name.trim() }); toast.success("Dealer category added"); await fetchAll(); }
-              catch (requestError) { toast.error(requestError.response?.data?.message || "Unable to add category"); }
-            }} className="min-h-11 rounded-xl border border-[#003B3B] px-3 py-2 text-xs font-bold text-[#003B3B] hover:bg-emerald-50">Add category</button>
             <button type="button" onClick={() => startDealerEdit()} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#008577]"><Plus size={17} /> Register Dealer</button>
           </div>
         </section>
         {viewMode === "table" ? <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
         <div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left">
           <thead><tr className="bg-gradient-to-r from-[#003B3B] to-[#008577] text-xs uppercase tracking-wide text-white">
-            <th className="px-4 py-3">Dealer</th><th className="px-4 py-3">Category / GSTIN</th><th className="px-4 py-3">Contact</th><th className="px-4 py-3 text-right">Payable</th><th className="px-4 py-3 text-right">Receivable</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th>
+            <th className="px-4 py-4">S No</th><th className="px-4 py-4">Dealer</th><th className="px-4 py-4">Category / GSTIN</th><th className="px-4 py-4">Contact</th><th className="px-4 py-4 text-right">Payable</th><th className="px-4 py-4 text-right">Receivable</th><th className="px-4 py-4">Status</th><th className="px-4 py-4 text-right">Actions</th>
           </tr></thead>
-          <tbody>{visibleDealers.length === 0 ? <tr><td colSpan="7" className="p-10 text-center text-sm text-slate-400">No dealer records match your search.</td></tr> : visibleDealers.map((dealer) => <tr key={dealer.id} className="border-b border-slate-100 hover:bg-emerald-50/30">
+          <tbody>{visibleDealers.length === 0 ? <tr><td colSpan="8" className="p-10 text-center text-sm text-slate-400">No dealer records match your search.</td></tr> : visibleDealers.map((dealer, index) => <tr key={dealer.id} className="border-b border-slate-100 hover:bg-emerald-50/30">
+            <td className="px-4 py-3 text-sm text-slate-500">{(page - 1) * 25 + index + 1}</td>
             <td className="px-4 py-3"><button type="button" onClick={() => void openDealerDocs(dealer)} className="text-left font-bold text-[#003B3B] hover:underline">{dealer.name}</button><p className="text-xs text-slate-400">{dealer.dealer_code}</p></td>
             <td className="px-4 py-3 text-sm text-slate-700">{dealer.category_name}<p className="text-xs text-slate-400">{dealer.gstin || "GSTIN not recorded"}</p></td>
             <td className="px-4 py-3 text-sm text-slate-700">{dealer.contact_person}<p className="text-xs text-slate-400">{dealer.phone} · {dealer.email || "No email"}</p></td>
@@ -594,10 +594,40 @@ const Dealers = () => {
         </section>}
       </>}
 
-      {section === "purchases" && <section className="overflow-hidden rounded-xl border border-slate-100 bg-white">
-        <div className="flex items-center justify-between border-b border-slate-100 p-4"><div><h2 className="font-black text-slate-800">Purchase documents & accounts payable</h2><p className="text-xs text-slate-500">Posted documents retain invoice-rate and tax snapshots.</p></div><button type="button" onClick={() => exportCsv([["Document","Dealer","Type","Date","Due date","Total","Paid","Outstanding"], ...purchases.map((row) => [row.document_number,row.dealer_name,row.document_type,row.document_date,row.due_date,row.total,row.paid_amount,row.outstanding])], "dealer-purchases.csv")} className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold"><Download size={15} /> Export CSV</button></div>
-        <div className="overflow-x-auto"><table className="w-full min-w-[850px] text-left"><thead><tr className="bg-[#003B3B] text-xs uppercase text-white"><th className="p-3">Document</th><th className="p-3">Dealer</th><th className="p-3">Invoice ref</th><th className="p-3">Date / Due</th><th className="p-3 text-right">Amount</th><th className="p-3 text-right">Paid</th><th className="p-3 text-right">Outstanding</th></tr></thead><tbody>{purchases.length ? purchases.map((item) => <tr key={item.id} className="border-b text-sm"><td className="p-3 font-bold text-[#003B3B]">{item.document_number}<p className="text-[10px] font-normal uppercase text-slate-400">{item.document_type.replaceAll("_"," ")}</p></td><td className="p-3">{item.dealer_name}</td><td className="p-3">{item.supplier_invoice_number || "—"}</td><td className="p-3">{item.document_date}<p className="text-xs text-slate-400">Due {item.due_date || "—"}</p></td><td className="p-3 text-right">{currency(item.total)}</td><td className="p-3 text-right">{currency(item.paid_amount)}</td><td className="p-3 text-right font-bold">{currency(item.outstanding)}</td></tr>) : <tr><td colSpan="7" className="p-10 text-center text-slate-400">No purchase documents posted.</td></tr>}</tbody></table></div>
-      </section>}
+      {section === "purchases" && <>
+        <section aria-label="Purchase filters and display options" className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:flex-row md:items-center">
+          <label className="relative min-w-0 flex-1 md:max-w-md">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <span className="sr-only">Search purchase documents</span>
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search document, dealer, invoice..." className="w-full rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 pl-12 text-sm font-medium text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#008577] focus:bg-white" />
+          </label>
+          <div className="flex flex-wrap items-center gap-2 md:ml-auto">
+            <DateRangeFilter className="shrink-0" onApply={(range) => { setPage(1); setDateRange(range); }} />
+            <div role="group" aria-label="Purchase display mode" className="flex items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+              <button type="button" onClick={() => setViewMode("table")} aria-label="List view" aria-pressed={viewMode === "table"} className={`rounded-lg p-2.5 transition ${viewMode === "table" ? "bg-[#003B3B] text-white" : "text-slate-400 hover:text-slate-700"}`}><List size={18} /></button>
+              <button type="button" onClick={() => setViewMode("grid")} aria-label="Card view" aria-pressed={viewMode === "grid"} className={`rounded-lg p-2.5 transition ${viewMode === "grid" ? "bg-[#003B3B] text-white" : "text-slate-400 hover:text-slate-700"}`}><LayoutGrid size={18} /></button>
+            </div>
+          </div>
+        </section>
+        <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+          <div className="flex justify-end border-b border-slate-100 p-4">
+            <button type="button" onClick={() => exportCsv([["Document","Dealer","Type","Date","Due date","Total","Paid","Outstanding"], ...visiblePurchases.map((row) => [row.document_number,row.dealer_name,row.document_type,row.document_date,row.due_date,row.total,row.paid_amount,row.outstanding])], "dealer-purchases.csv")} className="inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold"><Download size={15} /> Export CSV</button>
+          </div>
+          {viewMode === "table" ? <div className="overflow-x-auto"><table className="w-full min-w-[950px] text-left">
+            <thead><tr className="bg-[#003B3B] text-xs uppercase text-white">
+              <th className="rounded-tl-xl px-4 py-4">S No</th><th className="px-4 py-4">Document</th><th className="px-4 py-4">Dealer</th><th className="px-4 py-4">Invoice ref</th><th className="px-4 py-4">Date / Due</th><th className="px-4 py-4 text-right">Amount</th><th className="px-4 py-4 text-right">Paid</th><th className="rounded-tr-xl px-4 py-4 text-right">Outstanding</th>
+            </tr></thead>
+            <tbody>{visiblePurchases.length ? visiblePurchases.map((item, index) => <tr key={item.id} className="border-b border-slate-100 text-sm hover:bg-emerald-50/30">
+              <td className="px-4 py-3 text-slate-500">{index + 1}</td><td className="px-4 py-3 font-bold text-[#003B3B]">{item.document_number}<p className="text-[10px] font-normal uppercase text-slate-400">{item.document_type.replaceAll("_", " ")}</p></td><td className="px-4 py-3">{item.dealer_name}</td><td className="px-4 py-3">{item.supplier_invoice_number || "—"}</td><td className="px-4 py-3">{item.document_date}<p className="text-xs text-slate-400">Due {item.due_date || "—"}</p></td><td className="px-4 py-3 text-right">{currency(item.total)}</td><td className="px-4 py-3 text-right">{currency(item.paid_amount)}</td><td className="px-4 py-3 text-right font-bold">{currency(item.outstanding)}</td>
+            </tr>) : <tr><td colSpan="8" className="p-10 text-center text-slate-400">{purchases.length ? "No purchase documents match your search." : "No purchase documents posted."}</td></tr>}</tbody>
+          </table></div> : <div className="grid gap-4 p-4 sm:grid-cols-2 xl:grid-cols-3">
+            {visiblePurchases.length ? visiblePurchases.map((item, index) => <article key={item.id} className="rounded-xl border border-slate-100 p-4">
+              <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-bold uppercase text-slate-400">S No {index + 1}</p><h3 className="mt-1 font-bold text-[#003B3B]">{item.document_number}</h3><p className="text-[10px] uppercase text-slate-400">{item.document_type.replaceAll("_", " ")}</p></div><span className="text-right text-xs font-bold text-slate-700">{currency(item.outstanding)}<span className="block font-normal text-slate-400">Outstanding</span></span></div>
+              <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-3 text-sm"><div><dt className="text-[10px] font-bold uppercase text-slate-400">Dealer</dt><dd className="mt-1">{item.dealer_name || "—"}</dd></div><div><dt className="text-[10px] font-bold uppercase text-slate-400">Invoice ref</dt><dd className="mt-1">{item.supplier_invoice_number || "—"}</dd></div><div><dt className="text-[10px] font-bold uppercase text-slate-400">Date / Due</dt><dd className="mt-1">{item.document_date || "—"}<span className="block text-xs text-slate-400">Due {item.due_date || "—"}</span></dd></div><div><dt className="text-[10px] font-bold uppercase text-slate-400">Amount / Paid</dt><dd className="mt-1">{currency(item.total)}<span className="block text-xs text-slate-400">Paid {currency(item.paid_amount)}</span></dd></div></dl>
+            </article>) : <p className="p-8 text-center text-sm text-slate-400 sm:col-span-2 xl:col-span-3">{purchases.length ? "No purchase documents match your search." : "No purchase documents posted."}</p>}
+          </div>}
+        </section>
+      </>}
 
       {section === "jobs" && <section className="overflow-hidden rounded-xl border border-slate-100 bg-white">
         <div className="border-b border-slate-100 p-4"><h2 className="font-black text-slate-800">Goldsmith issue, receipt & reconciliation</h2><p className="text-xs text-slate-500">Weights are tracked by purity and fine-gold equivalent. Unexplained variance requires approval reason.</p>{jobs.filter((job) => job.reconciliation_status === "Pending").map((job) => <div key={job.id} className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm"><span>{job.job_number} has a pending fine-gold variance of {Number(job.reconciliation_variance).toFixed(3)} g.</span><button type="button" onClick={() => void approveReconciliation(job)} className="rounded bg-amber-700 px-3 py-1.5 text-xs font-bold text-white">Approve with reason</button></div>)}</div>
