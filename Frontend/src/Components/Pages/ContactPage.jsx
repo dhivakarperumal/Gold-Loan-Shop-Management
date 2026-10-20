@@ -5,7 +5,10 @@ import {
   MapPin,
   MessageCircle,
   Phone,
-  Store
+  Store,
+  Gem,
+  ShoppingBag,
+  CalendarDays,
 } from "lucide-react";
 import PageContainer from "../CommenComponents/PageContainer";
 import PageHeader from "../CommenComponents/PageHeader";
@@ -147,19 +150,109 @@ export default function ContactPage() {
         </div>
       </PageContainer>
 
-      <section className="relative overflow-hidden bg-[#00382a] py-8 text-white">
-        <img src="/images/diamondproduct.png" alt="" className="absolute inset-0 h-full w-full object-cover object-[70%_center] opacity-25" loading="lazy" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#00291f]/95 via-[#00382a]/80 to-[#00382a]/35" />
-        <PageContainer className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h2 className="font-serif text-2xl font-bold">We&apos;re Here to Help</h2>
-            <p className="mt-1 text-sm text-white/80">Reach our team for product enquiries and store assistance.</p>
+
+
+      {/* How Can We Help You - Premium Split Layout */}
+      <PageContainer className="py-8 sm:py-12">
+        <section className="overflow-hidden rounded-2xl border border-[#e8d8b8] bg-white shadow-sm">
+          <div className="grid lg:grid-cols-[0.8fr_1.5fr]">
+
+            {/* Left Intro Panel */}
+            <div className="relative isolate flex flex-col justify-center overflow-hidden bg-[#063d2e] p-6 text-white sm:p-9 lg:p-10">
+              <div className="pointer-events-none absolute -right-16 -top-16 -z-10 h-52 w-52 rounded-full border border-[#e9c66d]/20" />
+              <div className="pointer-events-none absolute -right-8 -top-8 -z-10 h-36 w-36 rounded-full border border-[#e9c66d]/20" />
+
+              <span className="flex h-12 w-12 items-center justify-center rounded-full border border-[#e9c66d]/50 bg-white/5 text-[#f2d58a]">
+                <MessageCircle size={24} strokeWidth={1.5} />
+              </span>
+
+              <p className="mt-6 text-[10px] font-bold uppercase tracking-[0.25em] text-[#f2d58a]">
+                We're Here for You
+              </p>
+
+              <h2 className="mt-2 font-serif text-3xl font-bold leading-tight sm:text-4xl">
+                How Can We
+                <span className="block text-[#f2d58a]">Help You?</span>
+              </h2>
+
+              <p className="mt-4 max-w-sm text-sm leading-7 text-white/75">
+                Whether you're exploring a design or planning a visit, we're
+                happy to help you find what you're looking for.
+              </p>
+
+              <div className="mt-7 flex items-center gap-2 border-t border-white/15 pt-5 text-xs text-white/80">
+                <Gem size={17} className="text-[#f2d58a]" />
+                <span>Personal assistance from Sri Golds</span>
+              </div>
+            </div>
+
+            {/* Right Enquiry Options */}
+            <div className="grid grid-cols-1 divide-y divide-[#eee4d2] sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+              {[
+                {
+                  icon: Gem,
+                  title: "Product Enquiry",
+                  description: "Ask about designs and product availability.",
+                  subject: "Product enquiry",
+                },
+                {
+                  icon: ShoppingBag,
+                  title: "Order Assistance",
+                  description: "Get help with an existing order.",
+                  subject: "Order assistance",
+                },
+                {
+                  icon: CalendarDays,
+                  title: "Store Visit",
+                  description: "Planning to visit our Tirupattur showroom?",
+                  subject: "Store visit",
+                },
+                {
+                  icon: MessageCircle,
+                  title: "General Enquiry",
+                  description: "Have another question? Talk to our team.",
+                  subject: "Other",
+                },
+              ].map(({ icon: Icon, title, description, subject }) => (
+                <button
+                  key={subject}
+                  type="button"
+                  onClick={() => {
+                    setForm((current) => ({ ...current, subject }));
+                    document
+                      .getElementById("contact-message-form")
+                      ?.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }}
+                  className="group flex min-h-[142px] items-center gap-4 p-5 text-left transition-colors hover:bg-[#fffaf0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#bd821e] sm:min-h-[175px] sm:p-6"
+                >
+                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[#ead9b5] bg-[#fff8e9] text-[#a87418] transition-colors group-hover:border-[#064734] group-hover:bg-[#064734] group-hover:text-[#f2d58a]">
+                    <Icon size={22} strokeWidth={1.6} />
+                  </span>
+
+                  <span className="min-w-0 flex-1">
+                    <span className="block font-serif text-base font-bold text-[#153b2e] sm:text-lg">
+                      {title}
+                    </span>
+
+                    <span className="mt-1 block text-xs leading-5 text-[#777066]">
+                      {description}
+                    </span>
+
+                    <span className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-[#9a6817]">
+                      Get help
+                      <ArrowRight
+                        size={14}
+                        className="transition-transform group-hover:translate-x-1"
+                      />
+                    </span>
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
-          <a href={`tel:+91${SHOP_PHONE}`} className="inline-flex w-fit items-center gap-2 rounded-full bg-gradient-to-r from-[#f2cf76] to-[#d9a441] px-5 py-3 text-sm font-bold text-[#153729]">
-            <Phone size={16} aria-hidden="true" /> Call Now
-          </a>
-        </PageContainer>
-      </section>
+        </section>
+      </PageContainer>
+
     </main>
   );
 }
