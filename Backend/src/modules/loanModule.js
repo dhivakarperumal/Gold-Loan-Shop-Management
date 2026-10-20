@@ -98,6 +98,7 @@ async function initializeLoanModule() {
       new_maturity_date DATE NULL,
       payment_amount DECIMAL(14,2) NOT NULL,
       interest_paid DECIMAL(14,2) NOT NULL,
+      late_payment_fee DECIMAL(14,2) NOT NULL DEFAULT 0,
       principal_paid DECIMAL(14,2) NOT NULL,
       principal_before DECIMAL(14,2) NOT NULL,
       principal_after DECIMAL(14,2) NOT NULL,
@@ -107,6 +108,25 @@ async function initializeLoanModule() {
       CONSTRAINT fk_loan_renewals_loan FOREIGN KEY (loan_id)
         REFERENCES loans(id) ON DELETE RESTRICT,
       INDEX idx_loan_renewals_loan_date (loan_id, renewal_date, id)
+    )
+  `);
+  const [renewalColumns] = await pool.query('SHOW COLUMNS FROM loan_renewals');
+  if (!renewalColumns.some((column) => column.Field === 'late_payment_fee')) {
+    await pool.query('ALTER TABLE loan_renewals ADD COLUMN late_payment_fee DECIMAL(14,2) NOT NULL DEFAULT 0 AFTER interest_paid');
+  }
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS loan_review_actions (
+      id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT PRIMARY KEY,
+      loan_id BIGINT UNSIGNED NOT NULL,
+      action_type ENUM('notice_sent', 'suspended', 'reinstated') NOT NULL,
+      notice_method VARCHAR(20) NULL,
+      customer_message TEXT NULL,
+      notes TEXT NOT NULL,
+      created_by BIGINT UNSIGNED NULL,
+      created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      CONSTRAINT fk_loan_review_actions_loan FOREIGN KEY (loan_id)
+        REFERENCES loans(id) ON DELETE RESTRICT,
+      INDEX idx_loan_review_actions_loan_date (loan_id, created_at, id)
     )
   `);
   await pool.query(`
@@ -326,6 +346,18 @@ function addMonths(value, months) {
   return date.toISOString().slice(0, 10);
 }
 
+function isLoanReviewDue(loan, today) {
+  const loanDate = asDateString(loan.loan_date);
+  const maturityDate = asDateString(loan.maturity_date);
+  const todayDate = asDateString(today);
+  return Boolean(loanDate && maturityDate)
+    && ['Active', 'Suspended'].includes(loan.loan_status)
+    && loan.release_status !== 'Released'
+    && Number(loan.outstanding_principal ?? loan.principal_amount) > 0
+    && maturityDate < todayDate
+    && addMonths(loanDate, 15) <= todayDate;
+}
+
 function monthPeriodsBetween(start, end) {
   const startDate = dateAtUtc(start);
   const endDate = dateAtUtc(end);
@@ -388,16 +420,27 @@ function calculateRenewalInterest(loan, periodStart, renewalDate, principal) {
 
 function makeRenewalPreview(loan, renewalDate) {
   const principal = Number(loan.outstanding_principal ?? loan.principal_amount);
-  const accruedInterest = calculateRenewalInterest(
+  const periodStartDate = asDateString(loan.interest_calculation_start_date);
+  const maturityDate = asDateString(loan.maturity_date);
+  const regularInterestEnd = maturityDate && maturityDate < renewalDate ? maturityDate : renewalDate;
+  const regularInterest = calculateRenewalInterest(
     loan,
-    asDateString(loan.interest_calculation_start_date),
-    renewalDate,
+    periodStartDate,
+    regularInterestEnd,
     principal
   );
+  const lateRate = Number(loan.late_payment_interest_rate || 0);
+  const latePaymentFee = maturityDate && renewalDate > maturityDate && lateRate > 0
+    ? Math.round(principal * lateRate / 100
+      * periodsBetween(maturityDate, renewalDate, loan.interest_frequency, loan.custom_period_days) * 100) / 100
+    : 0;
+  const accruedInterest = Math.round((regularInterest + latePaymentFee) * 100) / 100;
   return {
     renewal_date: renewalDate,
-    period_start_date: asDateString(loan.interest_calculation_start_date),
+    period_start_date: periodStartDate,
     current_principal: principal,
+    regular_interest: regularInterest,
+    late_payment_fee: latePaymentFee,
     accrued_interest: accruedInterest,
     total_due: Math.round((principal + accruedInterest) * 100) / 100,
     minimum_payment: accruedInterest,
@@ -430,16 +473,136 @@ async function getLoanRenewal(id) {
     if (!loan) return null;
     const [history] = await connection.execute(
       `SELECT id, renewal_date, period_start_date, previous_maturity_date, new_maturity_date,
-        payment_amount, interest_paid, principal_paid, principal_before, principal_after,
+        payment_amount, interest_paid, late_payment_fee, principal_paid, principal_before, principal_after,
         accrued_interest, created_at
        FROM loan_renewals WHERE loan_id = ? ORDER BY renewal_date DESC, id DESC`,
       [id]
     );
+    const reviewActions = await getLoanReviewActionsFrom(connection, id);
     return {
       loan,
       preview: makeRenewalPreview(loan, dateRow.renewal_date),
-      history
+      history,
+      reviewActions
     };
+  } finally {
+    connection.release();
+  }
+}
+
+async function getLoanReviewActionsFrom(connection, id) {
+  const [rows] = await connection.execute(
+    `SELECT id, action_type, notice_method, customer_message, notes, created_by, created_at
+     FROM loan_review_actions WHERE loan_id = ? ORDER BY created_at DESC, id DESC`,
+    [id]
+  );
+  return rows;
+}
+
+async function recordLoanReviewAction(id, action, details, adminUserId) {
+  const connection = await pool.getConnection();
+  try {
+    await connection.beginTransaction();
+    const [loans] = await connection.execute(
+      'SELECT * FROM loans WHERE id = ? FOR UPDATE',
+      [id]
+    );
+    if (!loans.length) {
+      const error = new Error('Loan not found');
+      error.code = 'LOAN_NOT_FOUND';
+      throw error;
+    }
+
+    const loan = loans[0];
+    const [[dateRow]] = await connection.query(
+      "SELECT DATE_FORMAT(CURRENT_DATE(), '%Y-%m-%d') AS today"
+    );
+    if (!isLoanReviewDue(loan, dateRow.today)) {
+      const error = new Error('This loan has not reached the eligible 15-month review point');
+      error.code = 'LOAN_REVIEW_NOT_DUE';
+      throw error;
+    }
+
+    const notes = String(details?.notes || '').trim();
+    if (!notes || notes.length > 2000) {
+      const error = new Error('Review notes are required and must be 2,000 characters or fewer');
+      error.code = 'INVALID_REVIEW_NOTES';
+      throw error;
+    }
+
+    let method = null;
+    let message = null;
+    if (action === 'notice_sent') {
+      const allowedMethods = new Set(['sms', 'whatsapp', 'call', 'letter', 'in_person', 'other']);
+      method = String(details?.notice_method || '').trim().toLowerCase();
+      message = String(details?.customer_message || '').trim();
+      if (!allowedMethods.has(method) || !message || message.length > 4000) {
+        const error = new Error('Choose a valid notice method and provide a customer message of at most 4,000 characters');
+        error.code = 'INVALID_REVIEW_NOTICE';
+        throw error;
+      }
+      if (!['Active', 'Suspended'].includes(loan.loan_status)) {
+        const error = new Error('Notice can only be recorded for an active or suspended loan');
+        error.code = 'LOAN_NOT_ACTIVE';
+        throw error;
+      }
+    } else if (action === 'suspend') {
+      if (loan.loan_status !== 'Active') {
+        const error = new Error('Only active loans can be suspended');
+        error.code = 'LOAN_NOT_ACTIVE';
+        throw error;
+      }
+      const [[latestAction]] = await connection.execute(
+        `SELECT action_type FROM loan_review_actions
+         WHERE loan_id = ?
+         ORDER BY created_at DESC, id DESC LIMIT 1`,
+        [id]
+      );
+      if (latestAction?.action_type !== 'notice_sent') {
+        const error = new Error('Record a customer notice before suspending renewal');
+        error.code = 'REVIEW_NOTICE_REQUIRED';
+        throw error;
+      }
+      await connection.execute(
+        "UPDATE loans SET loan_status = 'Suspended' WHERE id = ?",
+        [id]
+      );
+    } else if (action === 'reinstate') {
+      if (loan.loan_status !== 'Suspended') {
+        const error = new Error('Only suspended loans can be reinstated');
+        error.code = 'LOAN_NOT_SUSPENDED';
+        throw error;
+      }
+      await connection.execute(
+        "UPDATE loans SET loan_status = 'Active' WHERE id = ?",
+        [id]
+      );
+    } else {
+      const error = new Error('Unsupported loan review action');
+      error.code = 'INVALID_REVIEW_ACTION';
+      throw error;
+    }
+
+    await connection.execute(
+      `INSERT INTO loan_review_actions
+        (loan_id, action_type, notice_method, customer_message, notes, created_by)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [
+        id,
+        action === 'suspend' ? 'suspended' : action === 'reinstate' ? 'reinstated' : action,
+        method,
+        message,
+        notes,
+        adminUserId || null
+      ]
+    );
+    const updatedLoan = await getLoanByIdFrom(connection, id);
+    const reviewActions = await getLoanReviewActionsFrom(connection, id);
+    await connection.commit();
+    return { loan: updatedLoan, reviewActions };
+  } catch (error) {
+    await connection.rollback();
+    throw error;
   } finally {
     connection.release();
   }
@@ -495,18 +658,19 @@ async function renewLoan(id, paymentAmount, adminUserId) {
       throw error;
     }
     const { interestPaid, principalPaid, principalAfter } = allocateRenewalPayment(preview, amount);
+    const latePaymentFee = preview.late_payment_fee;
     const fullyRepaid = principalAfter === 0;
     const newMaturityDate = fullyRepaid ? null : preview.next_maturity_date;
     const previousMaturityDate = asDateString(loan.maturity_date);
     await connection.execute(
       `INSERT INTO loan_renewals (
         loan_id, renewal_date, period_start_date, previous_maturity_date, new_maturity_date,
-        payment_amount, interest_paid, principal_paid, principal_before, principal_after,
+        payment_amount, interest_paid, late_payment_fee, principal_paid, principal_before, principal_after,
         accrued_interest, created_by
-      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id, preview.renewal_date, preview.period_start_date, previousMaturityDate, newMaturityDate,
-        amount.toFixed(2), interestPaid.toFixed(2), principalPaid.toFixed(2),
+        amount.toFixed(2), interestPaid.toFixed(2), latePaymentFee.toFixed(2), principalPaid.toFixed(2),
         preview.current_principal.toFixed(2), principalAfter.toFixed(2),
         preview.accrued_interest.toFixed(2), adminUserId || null
       ]
@@ -523,7 +687,7 @@ async function renewLoan(id, paymentAmount, adminUserId) {
     const updatedLoan = await getLoanByIdFrom(connection, id);
     const [history] = await connection.execute(
       `SELECT id, renewal_date, period_start_date, previous_maturity_date, new_maturity_date,
-        payment_amount, interest_paid, principal_paid, principal_before, principal_after,
+        payment_amount, interest_paid, late_payment_fee, principal_paid, principal_before, principal_after,
         accrued_interest, created_at
        FROM loan_renewals WHERE loan_id = ? ORDER BY renewal_date DESC, id DESC`,
       [id]
@@ -554,7 +718,7 @@ async function renewLoan(id, paymentAmount, adminUserId) {
 async function getLoanRenewalHistory(id) {
   const [rows] = await pool.execute(
     `SELECT id, renewal_date, period_start_date, previous_maturity_date, new_maturity_date,
-      payment_amount, interest_paid, principal_paid, principal_before, principal_after,
+      payment_amount, interest_paid, late_payment_fee, principal_paid, principal_before, principal_after,
       accrued_interest, created_at
      FROM loan_renewals WHERE loan_id = ? ORDER BY renewal_date DESC, id DESC`,
     [id]
@@ -699,6 +863,7 @@ module.exports = {
   getLoanById,
   getLoanRenewal,
   getLoanRenewalHistory,
+  isLoanReviewDue,
   initializeLoanModule,
   listInterestTypes,
   listLoans,
@@ -706,6 +871,7 @@ module.exports = {
   listLoansForCustomer,
   listLoansForUser,
   makeRenewalPreview,
+  recordLoanReviewAction,
   releaseGold,
   renewLoan,
   setInterestType,
