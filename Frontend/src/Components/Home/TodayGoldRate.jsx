@@ -61,23 +61,19 @@ const RATE_GROUPS = [
 const themeClasses = {
   gold: {
     header: "border-[#f0d69c] bg-gradient-to-br from-[#fff5dc] to-[#f8e7bd]",
-    icon: "bg-[#d9a441] text-white",
-    arrow: "border-[#d9a441] bg-[#a87516] text-white"
+    icon: "bg-[#d9a441] text-white"
   },
   silver: {
     header: "border-[#d6ded8] bg-gradient-to-br from-[#f5f7f2] to-[#e5ebe3]",
-    icon: "bg-[#aeb8ad] text-white",
-    arrow: "border-[#879589] text-[#345244]"
+    icon: "bg-[#aeb8ad] text-white"
   },
   platinum: {
     header: "border-[#d6ded8] bg-gradient-to-br from-[#eef3ec] to-[#dce8dc]",
-    icon: "bg-[#81968a] text-white",
-    arrow: "border-[#879589] text-[#345244]"
+    icon: "bg-[#81968a] text-white"
   },
   diamond: {
     header: "border-[#f0d69c] bg-gradient-to-br from-[#fff8e9] to-[#faedcf]",
-    icon: "bg-[#d9a441] text-white",
-    arrow: "border-[#d9a441] text-[#93620d]"
+    icon: "bg-[#d9a441] text-white"
   }
 };
 
@@ -181,24 +177,24 @@ export default function TodayGoldRate() {
               {RATE_GROUPS.map((group) => {
                 const { metal, tagline, icon: Icon, theme } = group;
                 return (
-                <button
-                  key={metal}
-                  type="button"
-                  onClick={() => {
-                    setSelectedMetal(metal);
-                    setIsRatesOpen(true);
-                  }}
-                  aria-label={`View ${metal} rates`}
-                  className="flex min-w-0 items-center gap-2 border-white/15 text-left transition hover:brightness-110 focus-visible:rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d58a] min-[480px]:justify-center min-[480px]:border-r min-[480px]:last:border-r-0 min-[480px]:last:pr-0 min-[480px]:sm:flex-col min-[480px]:sm:gap-1 min-[480px]:sm:border-r min-[480px]:sm:pr-3 md:border-r"
-                >
-                  <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${themeClasses[theme].icon}`}>
-                    <Icon size={17} aria-hidden="true" />
-                  </span>
-                  <span className="min-w-0 min-[480px]:text-center">
-                    <span className="block text-xs font-semibold text-white">{metal}</span>
-                    <span className="block truncate text-[10px] text-white/65">{tagline}</span>
-                  </span>
-                </button>
+                  <button
+                    key={metal}
+                    type="button"
+                    onClick={() => {
+                      setSelectedMetal(metal);
+                      setIsRatesOpen(true);
+                    }}
+                    aria-label={`View ${metal} rates`}
+                    className="flex min-w-0 items-center gap-2 border-white/15 text-left transition hover:brightness-110 focus-visible:rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d58a] min-[480px]:justify-center min-[480px]:border-r min-[480px]:last:border-r-0 min-[480px]:last:pr-0 min-[480px]:sm:flex-col min-[480px]:sm:gap-1 min-[480px]:sm:border-r min-[480px]:sm:pr-3 md:border-r"
+                  >
+                    <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${themeClasses[theme].icon}`}>
+                      <Icon size={17} aria-hidden="true" />
+                    </span>
+                    <span className="min-w-0 min-[480px]:text-center">
+                      <span className="block text-xs font-semibold text-white">{metal}</span>
+                      <span className="block truncate text-[10px] text-white/65">{tagline}</span>
+                    </span>
+                  </button>
                 );
               })}
             </div>
