@@ -111,6 +111,8 @@ const ProductDetail = () => {
     "Explore",
     ...searchParams.getAll("category").map((category) => `Category: ${category}`),
     ...searchParams.getAll("metal").map((metal) => `Metal: ${metal}`),
+    ...(searchParams.get("subcategory") ? [`Subcategory: ${searchParams.get("subcategory")}`] : []),
+    product?.name || "Product Details",
   ];
 
   useEffect(() => {
@@ -286,7 +288,7 @@ const ProductDetail = () => {
       <PageHeader title={product.name || "Product Details"} breadcrumbs={productBreadcrumbs} />
       <PageContainer className="py-6">
         {/* <div className="mb-4 flex justify-end">
-          <Link to="/explore" className="inline-flex items-center gap-2 rounded-full border border-[#ece6da] bg-white px-4 py-2 text-xs font-semibold text-[#34443e] shadow-sm transition hover:border-[#174a38]">
+          <Link to={searchParams.toString() ? `/explore?${searchParams.toString()}` : "/explore"} className="inline-flex items-center gap-2 rounded-full border border-[#ece6da] bg-white px-4 py-2 text-xs font-semibold text-[#34443e] shadow-sm transition hover:border-[#174a38]">
             <FaArrowLeft /> Back to Products
           </Link>
         </div> */}
