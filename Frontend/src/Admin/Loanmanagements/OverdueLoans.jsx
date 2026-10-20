@@ -91,15 +91,8 @@ export default function OverdueLoans() {
   const reviewRequiredCount = overdueLoans.filter((loan) => isLoanReviewDue(loan, today)).length;
 
   return (
-    <main className="space-y-6 p-4 sm:p-6">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#008577]">Loan Management</p>
-          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">Overdue Loans</h1>
-          <p className="mt-1 text-sm text-slate-500">Active loans past their maturity date and grace period, with customer contact details.</p>
-        </div>
-        <span className="text-xs font-semibold text-slate-400">{loading ? "Loading..." : `${filteredLoans.length} overdue ${filteredLoans.length === 1 ? "loan" : "loans"}`}</span>
-      </header>
+    <main className="space-y-6 p-2 sm:p-2">
+      
 
       <section aria-label="Overdue loan summary" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <article className="flex items-center justify-between rounded-2xl border border-rose-100 bg-white p-5 shadow-sm">
@@ -147,7 +140,7 @@ export default function OverdueLoans() {
 
       {viewMode === "table" ? <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
         <div className="overflow-x-auto">
-          <table className="mx-auto w-[1100px] min-w-[1100px] table-fixed border-separate border-spacing-0 text-left">
+          <table className="mx-auto w-[1200px] min-w-[1100px] table-fixed border-separate border-spacing-0 text-left">
             <colgroup>
               <col className="[width:5%]" />
               <col className="[width:17%]" />
