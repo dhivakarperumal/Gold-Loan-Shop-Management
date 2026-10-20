@@ -1,5 +1,6 @@
 import { toast } from "react-hot-toast";
 import api, { getPrivateFile } from "../../api";
+import { loanReviewDate } from "./loanPolicy";
 
 const SHOP_NAME = "Sri Golds";
 const SHOP_ADDRESS = "No.58 Vaitheeshwaran Nagar, Tirupattur - 635653";
@@ -81,13 +82,17 @@ function createDocument(loan) {
   const fixedInterest = loan.fixed_interest_amount == null
     ? "—"
     : money(loan.fixed_interest_amount);
+  const latePaymentTerms = loan.late_payment_interest_rate == null
+    ? "No late-payment rate is configured for this loan."
+    : `${rateText(loan.late_payment_interest_rate)}% of outstanding principal per ${titleCase(loan.interest_frequency)} period, applied as a simple, non-compounding charge from the day after maturity.`;
+  const reviewDate = loanReviewDate(loan);
   const optionalTerms = [
     ["Fixed Interest Amount", fixedInterest],
     ["Custom Interest Period", loan.custom_period_days == null ? "—" : `${loan.custom_period_days} days`],
     ["Compounding Frequency", loan.compounding_frequency ? titleCase(loan.compounding_frequency) : "—"],
     ["Grace Period", `${loan.grace_period_days || 0} days`],
     ["Interest-Free Period", `${loan.interest_free_days || 0} days`],
-    ["Late Payment Rate", loan.late_payment_interest_rate == null ? "Not set" : `${rateText(loan.late_payment_interest_rate)}%`],
+    ["Late Payment Rate", loan.late_payment_interest_rate == null ? "Not set" : `${rateText(loan.late_payment_interest_rate)}% per ${titleCase(loan.interest_frequency)} period`],
     ["Minimum Interest", loan.minimum_interest_amount == null ? "—" : money(loan.minimum_interest_amount)],
     ["Maximum Interest", loan.maximum_interest_amount == null ? "—" : money(loan.maximum_interest_amount)]
   ];
@@ -240,6 +245,7 @@ function createDocument(loan) {
         ${detail("Calculation start date", dateText(loan.interest_calculation_start_date))}
         ${detail("Day-count convention", titleCase(loan.day_count_convention))}
         ${detail("Payment frequency", titleCase(loan.payment_frequency))}
+        ${detail("Initial loan term", "11 months; renewals set a new 11-month term from the recorded renewal date")}
         ${detail("Loan date", dateText(loan.loan_date))}
         ${detail("Maturity date", dateText(loan.maturity_date))}
         ${detail("Processing fee", money(loan.processing_fee))}
@@ -248,7 +254,15 @@ function createDocument(loan) {
       </div>
       ${loan.notes ? `<div class="detail notes"><span>Notes</span><strong>${escapeHtml(loan.notes)}</strong></div>` : ""}
     </section>
-    <p class="acknowledgment">The borrower confirms that the customer and pledged-item details above are correct and acknowledges the loan amount, interest method, repayment frequency, charges, and maturity date. The borrower and authorized shop representative should review and sign this document. Keep a signed copy for both parties.</p>
+    <section class="section">
+      <h3>Late payment and account review</h3>
+      <div class="grid">
+        <div class="wide">${detail("Late-payment terms", latePaymentTerms)}</div>
+        ${detail("15-month review date", dateText(reviewDate))}
+        <div class="wide">${detail("Review process", "If an outstanding balance remains after maturity, the account is flagged for authorized manual review on or after 15 months from the original loan date. This review flag does not authorize automatic seizure or forfeiture of pledged collateral. Any collateral handling must follow the signed agreement, applicable law, required notice, and authorized review.")}</div>
+      </div>
+    </section>
+    <p class="acknowledgment">The borrower confirms that the customer and pledged-item details above are correct and acknowledges the loan amount, interest method, repayment frequency, charges, late-payment terms, maturity date, and account review process. The borrower and authorized shop representative should review and sign this document. Keep a signed copy for both parties.</p>
     <div class="signatures">
       <div class="signature"><strong>${escapeHtml(loan.customer_name)}</strong><span>Borrower signature / thumb impression</span><span>Date: ____________________</span></div>
       <div class="signature"><strong>${SHOP_NAME}</strong><span>Authorized shop representative signature</span><span>Date: ____________________</span></div>
