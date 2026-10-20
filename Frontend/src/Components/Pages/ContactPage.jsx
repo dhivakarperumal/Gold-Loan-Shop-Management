@@ -150,70 +150,90 @@ export default function ContactPage() {
         </div>
       </PageContainer>
 
-
-
-      {/* How Can We Help You - Premium Split Layout */}
+      {/* How Can We Help You - Refined Premium Design */}
       <PageContainer className="py-8 sm:py-12">
-        <section className="overflow-hidden rounded-2xl border border-[#e8d8b8] bg-white shadow-sm">
-          <div className="grid lg:grid-cols-[0.8fr_1.5fr]">
+        <section className="overflow-hidden rounded-2xl border border-[#e5d3ad] bg-white shadow-[0_12px_35px_rgba(50,40,20,0.07)]">
+          <div className="grid lg:grid-cols-[0.82fr_1.5fr]">
 
-            {/* Left Intro Panel */}
-            <div className="relative isolate flex flex-col justify-center overflow-hidden bg-[#063d2e] p-6 text-white sm:p-9 lg:p-10">
-              <div className="pointer-events-none absolute -right-16 -top-16 -z-10 h-52 w-52 rounded-full border border-[#e9c66d]/20" />
-              <div className="pointer-events-none absolute -right-8 -top-8 -z-10 h-36 w-36 rounded-full border border-[#e9c66d]/20" />
+            {/* Left: Emerald introduction */}
+            <div className="relative isolate flex flex-col justify-center overflow-hidden bg-gradient-to-br from-[#064734] via-[#043b2c] to-[#00291f] p-6 text-white sm:p-9 lg:p-10">
+              {/* Decorative circles */}
+              <div className="pointer-events-none absolute -right-16 -top-16 -z-10 h-64 w-64 rounded-full border border-[#e9c66d]/15" />
+              <div className="pointer-events-none absolute -right-8 -top-8 -z-10 h-44 w-44 rounded-full border border-[#e9c66d]/20" />
+              <div className="pointer-events-none absolute bottom-0 right-0 -z-10 h-32 w-32 rounded-tl-full bg-[#e9c66d]/5" />
 
-              <span className="flex h-12 w-12 items-center justify-center rounded-full border border-[#e9c66d]/50 bg-white/5 text-[#f2d58a]">
-                <MessageCircle size={24} strokeWidth={1.5} />
-              </span>
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#e9c66d]/40 bg-white/[0.06] text-[#f2d58a] shadow-inner">
+                <MessageCircle size={23} strokeWidth={1.5} />
+              </div>
 
-              <p className="mt-6 text-[10px] font-bold uppercase tracking-[0.25em] text-[#f2d58a]">
+              <p className="mt-6 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.25em] text-[#f2d58a] sm:text-xs">
+                <span className="h-px w-6 bg-[#f2d58a]" />
                 We're Here for You
               </p>
 
-              <h2 className="mt-2 font-serif text-3xl font-bold leading-tight sm:text-4xl">
+              <h2 className="mt-3 font-serif text-3xl font-semibold leading-tight sm:text-4xl">
                 How Can We
-                <span className="block text-[#f2d58a]">Help You?</span>
+                <span className="mt-1 block text-[#f2d58a]">
+                  Help You?
+                </span>
               </h2>
 
               <p className="mt-4 max-w-sm text-sm leading-7 text-white/75">
-                Whether you're exploring a design or planning a visit, we're
-                happy to help you find what you're looking for.
+                Every jewellery journey is personal. Tell us what you need,
+                and our team will help you take the next step.
               </p>
 
-              <div className="mt-7 flex items-center gap-2 border-t border-white/15 pt-5 text-xs text-white/80">
-                <Gem size={17} className="text-[#f2d58a]" />
-                <span>Personal assistance from Sri Golds</span>
+              <div className="mt-7 flex items-center gap-3 border-t border-white/15 pt-5">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#f2d58a]/10 text-[#f2d58a]">
+                  <Gem size={18} strokeWidth={1.5} />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-white">
+                    Personal assistance
+                  </p>
+                  <p className="mt-0.5 text-xs text-white/60">
+                    Here to help you choose with confidence
+                  </p>
+                </div>
               </div>
             </div>
 
-            {/* Right Enquiry Options */}
-            <div className="grid grid-cols-1 divide-y divide-[#eee4d2] sm:grid-cols-2 sm:divide-x sm:divide-y-0">
+            {/* Right: Enquiry options */}
+            <div className="grid grid-cols-1 sm:grid-cols-2">
               {[
                 {
                   icon: Gem,
+                  number: "01",
                   title: "Product Enquiry",
-                  description: "Ask about designs and product availability.",
+                  description:
+                    "Explore designs, jewellery details, and availability.",
                   subject: "Product enquiry",
                 },
                 {
                   icon: ShoppingBag,
+                  number: "02",
                   title: "Order Assistance",
-                  description: "Get help with an existing order.",
+                  description:
+                    "Get help with questions about your order.",
                   subject: "Order assistance",
                 },
                 {
                   icon: CalendarDays,
-                  title: "Store Visit",
-                  description: "Planning to visit our Tirupattur showroom?",
+                  number: "03",
+                  title: "Visit Our Showroom",
+                  description:
+                    "Planning a visit to our Tirupattur showroom?",
                   subject: "Store visit",
                 },
                 {
                   icon: MessageCircle,
+                  number: "04",
                   title: "General Enquiry",
-                  description: "Have another question? Talk to our team.",
+                  description:
+                    "Have another question? We're happy to help.",
                   subject: "Other",
                 },
-              ].map(({ icon: Icon, title, description, subject }) => (
+              ].map(({ icon: Icon, number, title, description, subject }) => (
                 <button
                   key={subject}
                   type="button"
@@ -223,26 +243,31 @@ export default function ContactPage() {
                       .getElementById("contact-message-form")
                       ?.scrollIntoView({ behavior: "smooth", block: "start" });
                   }}
-                  className="group flex min-h-[142px] items-center gap-4 p-5 text-left transition-colors hover:bg-[#fffaf0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#bd821e] sm:min-h-[175px] sm:p-6"
+                  className="group relative flex min-h-[155px] items-start gap-4 border-b border-[#eee5d5] p-5 text-left transition-colors duration-300 last:border-b-0 hover:bg-[#fffaf0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#bd821e] sm:min-h-[190px] sm:border-r sm:p-6 sm:nth-[2]:border-r-0 sm:nth-[3]:border-b-0 sm:nth-[4]:border-b-0 lg:p-7"
                 >
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-[#ead9b5] bg-[#fff8e9] text-[#a87418] transition-colors group-hover:border-[#064734] group-hover:bg-[#064734] group-hover:text-[#f2d58a]">
-                    <Icon size={22} strokeWidth={1.6} />
+                  <span className="absolute right-5 top-3 font-serif text-3xl font-bold text-[#f1e8d7] transition-colors group-hover:text-[#e8d5ac]">
+                    {number}
                   </span>
 
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-serif text-base font-bold text-[#153b2e] sm:text-lg">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-[#e7d5b0] bg-[#fff8e8] text-[#a87418] transition-all duration-300 group-hover:border-[#064734] group-hover:bg-[#064734] group-hover:text-[#f2d58a] group-hover:shadow-md">
+                    <Icon size={21} strokeWidth={1.6} aria-hidden="true" />
+                  </span>
+
+                  <span className="min-w-0 flex-1 pt-0.5">
+                    <span className="block pr-5 font-serif text-base font-bold leading-snug text-[#153b2e] sm:text-lg">
                       {title}
                     </span>
 
-                    <span className="mt-1 block text-xs leading-5 text-[#777066]">
+                    <span className="mt-2 block text-xs leading-6 text-[#777066] sm:text-sm">
                       {description}
                     </span>
 
-                    <span className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-[#9a6817]">
-                      Get help
+                    <span className="mt-4 inline-flex items-center gap-2 text-xs font-bold text-[#9a6817]">
+                      Get assistance
                       <ArrowRight
-                        size={14}
-                        className="transition-transform group-hover:translate-x-1"
+                        size={15}
+                        className="transition-transform duration-300 group-hover:translate-x-1"
+                        aria-hidden="true"
                       />
                     </span>
                   </span>
@@ -252,6 +277,7 @@ export default function ContactPage() {
           </div>
         </section>
       </PageContainer>
+
 
     </main>
   );
