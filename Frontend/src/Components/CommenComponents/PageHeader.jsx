@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 
 const PageHeader = ({ title, background }) => {
 
-  const bgImage = background || "/images/baneer/pageheader.png";
+  const bgImage = background || "/images/banner/pageheader.png";
 
   return (
     <div
