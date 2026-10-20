@@ -107,13 +107,6 @@ const ProductDetail = () => {
   const [activeImage, setActiveImage] = useState(0);
   const [activeVariantIndex, setActiveVariantIndex] = useState(0);
   const [activeTab, setActiveTab] = useState("information");
-  const productBreadcrumbs = [
-    "Explore",
-    ...searchParams.getAll("category").map((category) => `Category: ${category}`),
-    ...searchParams.getAll("metal").map((metal) => `Metal: ${metal}`),
-    ...(searchParams.get("subcategory") ? [`Subcategory: ${searchParams.get("subcategory")}`] : []),
-    product?.name || "Product Details",
-  ];
 
   useEffect(() => {
     const controller = new AbortController();
@@ -177,7 +170,7 @@ const ProductDetail = () => {
   if (loading) {
     return (
       <main className="bg-[#fffdf8]" role="status">
-        <PageHeader title="Product Details" breadcrumbs={productBreadcrumbs} />
+        <PageHeader title="Product Details" breadcrumbs={["Explore"]} />
         <PageContainer className="py-20 text-center text-sm font-semibold text-[#746b5d]">
           Loading product details...
         </PageContainer>
@@ -188,7 +181,7 @@ const ProductDetail = () => {
   if (!product) {
     return (
       <main className="bg-[#fffdf8]">
-        <PageHeader title="Product Details" breadcrumbs={productBreadcrumbs} />
+        <PageHeader title="Product Details" breadcrumbs={["Explore"]} />
         <PageContainer className="py-20 text-center">
           <div className="mx-auto max-w-2xl rounded-3xl border border-[#eadfce] bg-white p-8 shadow-sm">
             <FaGem className="mx-auto text-3xl text-[#bd913e]" />
@@ -285,7 +278,7 @@ const ProductDetail = () => {
 
   return (
     <main className="min-h-screen bg-[#fffdf8]">
-      <PageHeader title={product.name || "Product Details"} breadcrumbs={productBreadcrumbs} />
+      <PageHeader title={product.name || "Product Details"} breadcrumbs={["Explore"]} />
       <PageContainer className="py-6">
         {/* <div className="mb-4 flex justify-end">
           <Link to={searchParams.toString() ? `/explore?${searchParams.toString()}` : "/explore"} className="inline-flex items-center gap-2 rounded-full border border-[#ece6da] bg-white px-4 py-2 text-xs font-semibold text-[#34443e] shadow-sm transition hover:border-[#174a38]">

@@ -89,12 +89,10 @@ const Explore = () => {
   const selectedCategories = searchParams.getAll("category");
   const selectedMetals = searchParams.getAll("metal");
   const subcategoryFilter = searchParams.get("subcategory")?.trim().toLowerCase() || "";
-  const exploreBreadcrumbs = [
-    "Explore",
-    ...selectedCategories.map((category) => `Category: ${category}`),
-    ...selectedMetals.map((metal) => `Metal: ${metal}`),
-    ...(subcategoryFilter ? [`Subcategory: ${searchParams.get("subcategory").trim()}`] : []),
-  ];
+  const headerTitle = searchParams.get("subcategory")?.trim()
+    || selectedCategories[0]
+    || selectedMetals[0]
+    || "Explore";
   const priceSliderMaximum = useMemo(() => {
     const highestProductPrice = products.reduce(
       (highest, product) => Math.max(highest, getProductPrice(product)),
@@ -340,7 +338,7 @@ const Explore = () => {
 
   return (
     <main className="min-h-screen bg-[#fffdf8] pb-12">
-      <PageHeader title="Explore" breadcrumbs={exploreBreadcrumbs} />
+      <PageHeader title={headerTitle} breadcrumbTitle="Explore" />
 
       <div className={`mx-auto grid max-w-[1700px] items-start gap-x-4 px-4 pt-4 sm:px-6 lg:px-8 ${filtersOpen ? "lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[235px_minmax(0,1fr)]" : "lg:grid-cols-1"}`}>
         <section className={`mt-4 lg:row-start-1 lg:mt-3 ${filtersOpen ? "lg:col-start-2" : "lg:col-start-1"}`} aria-labelledby="top-searches-title">

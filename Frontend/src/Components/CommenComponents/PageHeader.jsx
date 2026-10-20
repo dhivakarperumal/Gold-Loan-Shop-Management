@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 
-const PageHeader = ({ title, background, breadcrumbs = [] }) => {
+const PageHeader = ({ title, background, breadcrumbs = [], breadcrumbTitle = title }) => {
   const subtitles = {
     "About Us": "OUR STORY  •  OUR VALUES  •  YOUR TRUST",
     "Contact Us": "HERE TO HELP  •  HERE TO LISTEN",
@@ -11,7 +11,7 @@ const PageHeader = ({ title, background, breadcrumbs = [] }) => {
   const words = title.trim().split(/\s+/);
   const accentWord = words.pop();
   const bgImage = background || "/images/banner/pageheader.png";
-  const breadcrumbLabels = breadcrumbs.length ? breadcrumbs : [title];
+  const breadcrumbLabels = [...breadcrumbs, breadcrumbTitle];
 
   return (
     <div
