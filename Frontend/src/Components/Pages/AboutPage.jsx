@@ -48,7 +48,7 @@ export default function AboutPage() {
               <img src="/images/goldproduct.png" alt="Gold jewellery crafted with care" className="mt-6 h-44 w-full min-w-0 rounded-xl object-cover shadow-md sm:mt-10 sm:h-64 sm:rounded-2xl lg:mt-12 lg:h-72" loading="lazy" />
               <div className="col-span-2 flex min-w-0 items-center gap-3 rounded-xl border border-[#ead8b6] bg-gradient-to-r from-[#fff2d3] to-[#fffaf0] px-3 py-3 sm:px-4">
                 <Heart size={22} className="shrink-0 text-[#b47a19]" aria-hidden="true" />
-                <p className="min-w-0 text-xs leading-5 text-[#665842] sm:text-sm">
+                <p className="min-w-0 text-justify text-xs leading-5 text-[#665842] sm:text-sm">
                   Jewellery made to celebrate life&apos;s milestones and become part of your story.
                 </p>
               </div>
@@ -56,10 +56,10 @@ export default function AboutPage() {
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#ae7617]">About Sri Golds</p>
               <h2 className="mt-2 font-serif text-2xl font-bold leading-tight text-[#153b2e] sm:text-3xl lg:text-4xl">Crafting Brighter Moments</h2>
-              <p className="mt-4 text-sm leading-7 text-[#68645c]">
+              <p className="mt-4 text-justify text-sm leading-7 text-[#68645c]">
                 Sri Golds is a trusted jewellery brand dedicated to offering gold, diamond and silver jewellery for every occasion. We bring together thoughtful designs and a tradition of craftsmanship to help you find pieces worth treasuring.
               </p>
-              <p className="mt-3 text-sm leading-7 text-[#68645c]">
+              <p className="mt-3 text-justify text-sm leading-7 text-[#68645c]">
                 From everyday favourites to pieces for life&apos;s biggest celebrations, we welcome you to discover jewellery chosen with care and a personal touch.
               </p>
               <div className="mt-5 grid grid-cols-1 gap-2.5 min-[420px]:grid-cols-2 sm:mt-6 sm:gap-3">
@@ -110,7 +110,7 @@ export default function AboutPage() {
                 </span>
               </h2>
 
-              <p className="mt-3 max-w-md text-xs leading-6 text-white/90 sm:text-sm sm:leading-7">
+              <p className="mt-3 max-w-md text-justify text-xs leading-6 text-white/90 sm:text-sm sm:leading-7">
                 From classic inspiration to contemporary design, we celebrate
                 the artistry and meaning behind every piece.
               </p>
@@ -206,7 +206,7 @@ export default function AboutPage() {
                   {title}
                 </h3>
 
-                <p className="mt-2 text-sm leading-6 text-[#716a5e]">
+                <p className="mt-2 text-justify text-sm leading-6 text-[#716a5e]">
                   {description}
                 </p>
 
@@ -369,7 +369,7 @@ export default function AboutPage() {
                             {title}
                           </h3>
 
-                          <p className="mt-3 text-sm leading-6 text-[#68645c] sm:leading-7">
+                          <p className="mt-3 text-justify text-sm leading-6 text-[#68645c] sm:leading-7">
                             {description}
                           </p>
 
