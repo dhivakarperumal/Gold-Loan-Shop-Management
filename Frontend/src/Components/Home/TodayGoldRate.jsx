@@ -102,9 +102,6 @@ function RateCard({ group, current }) {
           <h3 className="font-serif text-xl font-bold leading-tight text-[#153c2e]">{group.metal}</h3>
           <p className="mt-1 text-xs text-[#745b35]">{group.tagline}</p>
         </div>
-        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border ${theme.arrow}`}>
-          <ChevronRight size={16} aria-hidden="true" />
-        </span>
       </div>
 
       <div className="flex flex-1 flex-col gap-2 p-2">
@@ -141,6 +138,7 @@ function RateCard({ group, current }) {
 export default function TodayGoldRate() {
   const { current, loading, error, refresh } = useGoldRates();
   const [isRatesOpen, setIsRatesOpen] = useState(false);
+  const [selectedMetal, setSelectedMetal] = useState(null);
 
   useEffect(() => {
     if (!isRatesOpen) return undefined;
@@ -180,8 +178,19 @@ export default function TodayGoldRate() {
             </div>
 
             <div className="grid grid-cols-2 gap-3 min-[480px]:grid-cols-4 md:gap-2 lg:gap-4">
-              {RATE_GROUPS.map(({ metal, tagline, icon: Icon, theme }) => (
-                <div key={metal} className="flex min-w-0 items-center gap-2 border-white/15 min-[480px]:justify-center min-[480px]:border-r min-[480px]:last:border-r-0 min-[480px]:last:pr-0 min-[480px]:sm:flex-col min-[480px]:sm:gap-1 min-[480px]:sm:border-r min-[480px]:sm:pr-3 md:border-r">
+              {RATE_GROUPS.map((group) => {
+                const { metal, tagline, icon: Icon, theme } = group;
+                return (
+                <button
+                  key={metal}
+                  type="button"
+                  onClick={() => {
+                    setSelectedMetal(metal);
+                    setIsRatesOpen(true);
+                  }}
+                  aria-label={`View ${metal} rates`}
+                  className="flex min-w-0 items-center gap-2 border-white/15 text-left transition hover:brightness-110 focus-visible:rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#f2d58a] min-[480px]:justify-center min-[480px]:border-r min-[480px]:last:border-r-0 min-[480px]:last:pr-0 min-[480px]:sm:flex-col min-[480px]:sm:gap-1 min-[480px]:sm:border-r min-[480px]:sm:pr-3 md:border-r"
+                >
                   <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${themeClasses[theme].icon}`}>
                     <Icon size={17} aria-hidden="true" />
                   </span>
@@ -189,8 +198,9 @@ export default function TodayGoldRate() {
                     <span className="block text-xs font-semibold text-white">{metal}</span>
                     <span className="block truncate text-[10px] text-white/65">{tagline}</span>
                   </span>
-                </div>
-              ))}
+                </button>
+                );
+              })}
             </div>
 
             <div className="flex items-center justify-between gap-3 border-t border-white/20 pt-4 md:flex-col md:items-stretch md:border-0 md:pt-0">
@@ -202,7 +212,10 @@ export default function TodayGoldRate() {
               </div>
               <button
                 type="button"
-                onClick={() => setIsRatesOpen(true)}
+                onClick={() => {
+                  setSelectedMetal(null);
+                  setIsRatesOpen(true);
+                }}
                 className="inline-flex shrink-0 items-center justify-center gap-2 rounded-full bg-gradient-to-r from-[#f2cf76] to-[#d9a441] px-4 py-2.5 text-xs font-bold text-[#153729] shadow-md transition hover:brightness-110 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#064734] sm:px-5"
               >
                 View Gold Rates <ChevronRight size={15} aria-hidden="true" />
@@ -228,7 +241,9 @@ export default function TodayGoldRate() {
             <header className="flex items-start justify-between gap-4 bg-gradient-to-r from-[#003a2b] via-[#064d38] to-[#003626] px-4 py-4 text-white sm:px-6 sm:py-5">
               <div className="min-w-0">
                 <p className="text-[9px] font-bold uppercase tracking-[0.25em] text-[#f1d384] sm:text-[10px]">Today&apos;s Market Rates</p>
-                <h2 id="metal-rates-dialog-title" className="mt-1 font-serif text-xl font-bold sm:text-2xl">Precious Metal Rates</h2>
+                <h2 id="metal-rates-dialog-title" className="mt-1 font-serif text-xl font-bold sm:text-2xl">
+                  {selectedMetal ? `${selectedMetal} Rates` : "Precious Metal Rates"}
+                </h2>
                 <p className="mt-1 text-[11px] text-white/75 sm:text-xs">
                   {current?.rate_date ? `Updated ${formatRateDate(current.rate_date)}` : "Rates are updated daily"}
                 </p>
@@ -253,8 +268,8 @@ export default function TodayGoldRate() {
               ) : !current ? (
                 <p className="py-12 text-center text-sm text-[#777066]" role="status">No active rates are available.</p>
               ) : (
-                <div className="grid items-stretch gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                  {RATE_GROUPS.map((group) => (
+                <div className={`grid items-stretch gap-3 ${selectedMetal ? "mx-auto max-w-md" : "sm:grid-cols-2 xl:grid-cols-4"}`}>
+                  {RATE_GROUPS.filter((group) => !selectedMetal || group.metal === selectedMetal).map((group) => (
                     <RateCard key={group.metal} group={group} current={current} />
                   ))}
                 </div>
