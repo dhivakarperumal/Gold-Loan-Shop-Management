@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { FiArrowLeft, FiCalendar, FiCheckCircle, FiChevronRight, FiRefreshCw, FiSearch, FiShield } from "react-icons/fi";
+import { FiAlertCircle, FiArrowLeft, FiCalendar, FiCheckCircle, FiChevronRight, FiGrid, FiLayers, FiList, FiPlus, FiRefreshCw, FiSearch, FiShield } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api, { getPrivateFile } from "../../api";
 import { isLoanReviewDue, loanReviewDate } from "./loanPolicy";
@@ -21,6 +21,10 @@ function rateText(value) {
   return Number.isFinite(rate) ? `${rate.toFixed(2)}%` : "—";
 }
 
+function localDateKey(date) {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
 function Info({ label, value }) {
   return (
     <div className="min-w-0 rounded-xl border border-slate-100 bg-slate-50/80 p-3">
@@ -36,6 +40,8 @@ export default function LoanRenewal() {
   const [loans, setLoans] = useState([]);
   const [renewalData, setRenewalData] = useState(null);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [viewMode, setViewMode] = useState("table");
   const [paymentAmount, setPaymentAmount] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -107,10 +113,23 @@ export default function LoanRenewal() {
 
   const filteredLoans = loans.filter((item) => {
     const query = search.trim().toLowerCase();
-    return !query || [
+    const matchesSearch = !query || [
       item.loan_number, item.customer_name, item.customer_code, item.customer_mobile
     ].some((value) => String(value || "").toLowerCase().includes(query));
+    const matchesStatus = statusFilter === "All"
+      || String(item.loan_status || "").toLowerCase() === statusFilter.toLowerCase();
+    return matchesSearch && matchesStatus;
   });
+  const todayKey = localDateKey(new Date());
+  const renewalSummary = [
+    { label: "Total Loans", value: loans.length, icon: FiLayers, color: "border-slate-200 text-[#008577]", iconColor: "bg-teal-50 text-[#008577]" },
+    { label: "Maturing Today", value: loans.filter((item) => String(item.maturity_date || "").slice(0, 10) === todayKey).length, icon: FiCalendar, color: "border-amber-100 text-amber-700", iconColor: "bg-amber-50 text-amber-700" },
+    { label: "Past Maturity", value: loans.filter((item) => {
+      const maturityDate = String(item.maturity_date || "").slice(0, 10);
+      return Boolean(maturityDate) && maturityDate < todayKey;
+    }).length, icon: FiAlertCircle, color: "border-rose-100 text-rose-700", iconColor: "bg-rose-50 text-rose-700" },
+    { label: "15-Month Reviews", value: loans.filter((item) => isLoanReviewDue(item)).length, icon: FiShield, color: "border-emerald-100 text-emerald-700", iconColor: "bg-emerald-50 text-emerald-700" }
+  ];
 
   const amount = Number(paymentAmount);
   const preview = renewalData?.preview;
@@ -185,20 +204,40 @@ export default function LoanRenewal() {
           </div>
           <span className="text-xs font-semibold text-slate-400">{loans.length} loans</span>
         </header>
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <DateRangeFilter onApply={(range) => { setLoading(true); setDateRange(range); }} />
-          <label className="relative block max-w-xl flex-1">
-            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <section aria-label="Loan renewal summary" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          {renewalSummary.map(({ label, value, icon: Icon, color, iconColor }) => (
+            <article key={label} className={`flex items-center justify-between rounded-2xl border bg-white p-5 shadow-sm ${color}`}>
+              <div>
+                <p className="text-sm font-semibold text-slate-500">{label}</p>
+                <p className="mt-2 text-2xl font-extrabold">{loading ? "—" : value}</p>
+              </div>
+              <span className={`rounded-xl p-3 ${iconColor}`}><Icon size={21} /></span>
+            </article>
+          ))}
+        </section>
+        <section aria-label="Loan renewal filters" className="flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white p-3 shadow-[0_2px_10px_rgba(15,23,42,0.04)] sm:flex-row sm:items-center sm:justify-between sm:p-4">
+          <label className="relative min-w-0 sm:w-1/3 sm:min-w-[280px] sm:flex-none">
+            <FiSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
             <span className="sr-only">Search loans</span>
-            <input value={search} onChange={(event) => setSearch(event.target.value)} type="search" placeholder="Search loan number, customer, mobile..."
-              className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none focus:border-[#008577] focus:ring-4 focus:ring-emerald-700/10" />
+            <input value={search} onChange={(event) => setSearch(event.target.value)} type="search" placeholder="Search loans by number, customer..."
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/80 py-3 pl-12 pr-4 text-sm font-medium text-slate-700 outline-none transition placeholder:font-normal placeholder:text-slate-400 hover:border-slate-300 focus:border-[#008577] focus:bg-white focus:ring-4 focus:ring-emerald-700/10" />
           </label>
-        </div>
-        <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
-          <div className="border-b border-slate-100 px-5 py-4">
-            <h2 className="font-bold text-slate-800">Choose a loan</h2>
-            <p className="mt-0.5 text-xs text-slate-500">Open an active loan to renew or a suspended loan to review its status.</p>
+          <div className="flex flex-wrap items-center justify-between gap-2 sm:ml-auto sm:justify-start sm:gap-3">
+            <DateRangeFilter onApply={(range) => { setLoading(true); setDateRange(range); }} />
+            <select aria-label="Filter loans by status" value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}
+              className="min-w-[142px] rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm font-semibold text-slate-600 outline-none transition hover:border-slate-300 focus:border-[#008577] focus:ring-4 focus:ring-emerald-700/10">
+              <option value="All">Select Status</option>
+              <option value="Active">Active</option>
+              <option value="Suspended">Suspended</option>
+            </select>
+            <div className="flex rounded-xl border border-slate-200 bg-slate-100/80 p-1">
+              <button type="button" onClick={() => setViewMode("table")} aria-label="List view" aria-pressed={viewMode === "table"} className={`rounded-lg p-2.5 transition-all ${viewMode === "table" ? "bg-[#064A41] text-white shadow-sm" : "text-slate-400 hover:text-slate-700"}`}><FiList size={17} /></button>
+              <button type="button" onClick={() => setViewMode("card")} aria-label="Card view" aria-pressed={viewMode === "card"} className={`rounded-lg p-2.5 transition-all ${viewMode === "card" ? "bg-[#064A41] text-white shadow-sm" : "text-slate-400 hover:text-slate-700"}`}><FiGrid size={17} /></button>
+            </div>
+            <Link to="/admin/loans/createloan" className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-[#064A41] px-4 py-3 text-sm font-bold text-white shadow-md shadow-emerald-950/15 transition hover:-translate-y-0.5 hover:bg-[#087263] focus:outline-none focus:ring-4 focus:ring-emerald-700/20"><FiPlus size={16} /> Create Loan</Link>
           </div>
+        </section>
+        {viewMode === "table" ? <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[780px] border-separate border-spacing-0 text-left">
               <thead><tr className="bg-[#064A41] text-[11px] font-bold uppercase tracking-wide text-emerald-50/90">
@@ -234,7 +273,38 @@ export default function LoanRenewal() {
               </tbody>
             </table>
           </div>
-        </section>
+        </section> : loading
+          ? <section className="rounded-2xl border border-slate-200 bg-white px-4 py-14 text-center text-sm text-slate-400">Loading loans...</section>
+          : filteredLoans.length === 0
+            ? <section className="rounded-2xl border border-slate-200 bg-white px-4 py-14 text-center text-sm text-slate-400">{loans.length ? "No loans match your filters." : "No active loans are available for renewal."}</section>
+            : <section aria-label="Loans for renewal in card view" className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+              {filteredLoans.map((item) => (
+                <article key={item.id} className="min-w-0 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Loan Number</p>
+                      <h2 className="mt-1 break-words font-bold text-[#064A41]">{item.loan_number}</h2>
+                      <p className="mt-1 text-sm font-semibold text-slate-800">{item.customer_name || "—"}</p>
+                      <p className="text-xs text-slate-500">{item.customer_mobile || "Mobile unavailable"}</p>
+                    </div>
+                    <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-bold ${item.loan_status === "Active" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800"}`}>{item.loan_status}</span>
+                  </div>
+                  <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-4">
+                    <Info label="Principal" value={money(item.principal_amount)} />
+                    <Info label="Balance" value={money(item.outstanding_principal ?? item.principal_amount)} />
+                    <Info label="Interest" value={`${rateText(item.interest_rate)} / ${String(item.interest_frequency || "").replaceAll("_", " ")}`} />
+                    <Info label="Maturity" value={dateText(item.maturity_date)} />
+                  </dl>
+                  <div className="mt-4 flex justify-end border-t border-slate-100 pt-4">
+                    {item.loan_status === "Active" && Number(item.outstanding_principal ?? item.principal_amount) === 0
+                      ? <Link to={`/admin/loans/completeloan/${item.id}`} className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">Complete loan <FiChevronRight /></Link>
+                      : item.loan_status === "Active"
+                        ? <Link to={`/admin/loans/loanreniwel/${item.id}`} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">Renew <FiChevronRight /></Link>
+                        : <Link to={`/admin/loans/loanreniwel/${item.id}`} className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">Review <FiChevronRight /></Link>}
+                  </div>
+                </article>
+              ))}
+            </section>}
       </main>
     );
   }
