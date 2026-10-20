@@ -489,7 +489,7 @@ const Dealers = () => {
   const openJobs = jobs.filter((job) => !["Reconciled", "Cancelled"].includes(job.status));
 
   return <div className="space-y-6">
-    <div className="flex flex-wrap items-center justify-between gap-4">
+    {section !== "purchases" && <div className="flex flex-wrap items-center justify-between gap-4">
       <div>
         <p className="text-xs font-black uppercase tracking-[0.18em] text-[#008577]">Sri Vengateswara Gold Shop</p>
         <h1 className="mt-1 text-2xl font-black text-slate-900">Dealer Management</h1>
@@ -500,7 +500,7 @@ const Dealers = () => {
         {section === "jobs" && <button type="button" onClick={() => setDialog("job")} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#008577]"><Plus size={17} /> Create Job Order</button>}
         {section === "refining" && <><button type="button" onClick={() => setDialog("oldGold")} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#008577]"><Plus size={17} /> Receive Old Gold</button><button type="button" onClick={() => setDialog("refining")} className="inline-flex items-center gap-2 rounded-lg border border-[#003B3B] px-4 py-2.5 text-sm font-bold text-[#003B3B]"><ArrowDownToLine size={16} /> Refining Receipt</button></>}
       </div>
-    </div>
+    </div>}
 
     {!["dealers", "purchases"].includes(section) && <DateRangeFilter onApply={(range) => { setPage(1); setDateRange(range); }} />}
 
