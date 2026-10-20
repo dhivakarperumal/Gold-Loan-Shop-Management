@@ -140,35 +140,39 @@ export default function OverdueLoans() {
 
       {viewMode === "table" ? <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
         <div className="overflow-x-auto">
-          <table className="mx-auto w-[1200px] min-w-[1100px] table-fixed border-separate border-spacing-0 text-left">
+          <table className="w-full min-w-[900px] table-fixed border-collapse text-left">
             <colgroup>
-              <col className="[width:5%]" />
+              <col className="[width:4%]" />
               <col className="[width:17%]" />
-              <col className="[width:23%]" />
-              <col className="[width:14%]" />
-              <col className="[width:14%]" />
               <col className="[width:13%]" />
-              <col className="[width:8%]" />
-              <col className="[width:6%]" />
+              <col className="[width:12%]" />
+              <col className="[width:15%]" />
+              <col className="[width:16%]" />
+              <col className="[width:13%]" />
+              <col className="[width:10%]" />
             </colgroup>
-            <thead><tr className="bg-[#064A41] text-[11px] font-bold uppercase tracking-wide text-emerald-50/90">
-              {["S No", "Loan / Pledge", "Customer", "Loan Amount", "Outstanding", "Maturity", "Overdue", "View"].map((heading) => <th key={heading} className="whitespace-nowrap px-2 py-3.5 first:rounded-tl-xl first:pl-3 last:rounded-tr-xl last:pr-3">{heading}</th>)}
-            </tr></thead>
+            <thead>
+              <tr className="bg-[#064A41] text-[11px] font-bold uppercase tracking-wide text-emerald-50/90">
+                {["S No", "Loan / Pledge", "Customer", "Loan Amount", "Outstanding", "Maturity", "Overdue", "View"].map((heading) => (
+                  <th key={heading} scope="col" className="whitespace-nowrap px-2 py-3 first:pl-3 last:pr-3">{heading}</th>
+                ))}
+              </tr>
+            </thead>
             <tbody className="divide-y divide-slate-100">
               {loading
                 ? <tr><td colSpan="8" className="px-4 py-14 text-center text-sm text-slate-400">Loading overdue loans...</td></tr>
                 : !filteredLoans.length
                   ? <tr><td colSpan="8" className="px-4 py-14 text-center text-sm text-slate-400">{overdueLoans.length ? "No overdue loans match your search." : "There are no overdue active loans."}</td></tr>
                   : filteredLoans.map((loan, index) => (
-                    <tr key={loan.id} className="align-top text-sm transition-colors hover:bg-rose-50/30">
-                      <td className="px-2 py-4 pl-3 text-slate-500">{index + 1}</td>
-                      <td className="break-words px-2 py-4 pl-3"><span className="block font-bold text-[#064A41]">{loan.loan_number}</span>{isLoanReviewDue(loan, today) && <span className="mt-2 inline-flex rounded-full bg-amber-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-800">15-month review</span>}</td>
-                      <td className="break-words px-2 py-4"><span className="block font-semibold text-slate-800">{loan.customer_name || "—"}</span><span className="mt-1 block text-xs text-slate-500">{loan.customer_mobile || "Mobile number unavailable"}</span></td>
-                      <td className="break-words px-2 py-4 font-medium text-slate-700">{money(loan.principal_amount)}<span className="mt-1 block text-xs text-slate-500">{Number(loan.interest_rate || 0).toFixed(2)}% interest</span></td>
-                      <td className="break-words px-2 py-4 font-bold text-rose-700">{money(loan.outstanding_principal ?? loan.principal_amount)}</td>
-                      <td className="break-words px-2 py-4 text-slate-600"><span className="inline-flex items-center gap-1.5"><FiCalendar />{dateText(loan.maturity_date)}</span><span className="mt-1 block text-xs text-slate-400">Grace: {Number(loan.grace_period_days) || 0} days</span></td>
-                      <td className="break-words px-2 py-4"><span className="inline-flex whitespace-nowrap rounded-full bg-rose-50 px-2.5 py-1.5 text-xs font-bold text-rose-700">{loan.overdue_days} {loan.overdue_days === 1 ? "day" : "days"}</span></td>
-                      <td className="px-2 py-4 pr-3"><Link to={`/admin/loans/details/${loan.id}`} aria-label={`View loan ${loan.loan_number}`} className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100"><FiEye /> View</Link></td>
+                    <tr key={loan.id} className="text-sm transition-colors hover:bg-rose-50/30">
+                      <td className="px-2 py-3 pl-3 align-top text-slate-500">{index + 1}</td>
+                      <td className="break-words px-2 py-3 align-top leading-snug"><span className="block font-bold text-[#064A41]">{loan.loan_number}</span>{isLoanReviewDue(loan, today) && <span className="mt-1 inline-flex rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-800">15-month review</span>}</td>
+                      <td className="break-words px-2 py-3 align-top leading-snug"><span className="block font-semibold text-slate-800">{loan.customer_name || "—"}</span><span className="mt-1 block text-[11px] text-slate-500">{loan.customer_mobile || "Mobile number unavailable"}</span></td>
+                      <td className="whitespace-nowrap px-2 py-3 align-top font-medium text-slate-700"><span className="block">{money(loan.principal_amount)}</span><span className="mt-1 block text-[11px] text-slate-500">{Number(loan.interest_rate || 0).toFixed(2)}% interest</span></td>
+                      <td className="whitespace-nowrap px-2 py-3 align-top font-bold text-rose-700">{money(loan.outstanding_principal ?? loan.principal_amount)}</td>
+                      <td className="whitespace-nowrap px-2 py-3 align-top text-slate-600"><span className="inline-flex items-center gap-1"><FiCalendar size={12} />{dateText(loan.maturity_date)}</span><span className="mt-1 block text-[11px] text-slate-400">Grace: {Number(loan.grace_period_days) || 0} days</span></td>
+                      <td className="px-2 py-3 align-top"><span className="inline-flex whitespace-nowrap rounded-full bg-rose-50 px-2 py-1 text-[11px] font-bold text-rose-700">{loan.overdue_days} {loan.overdue_days === 1 ? "day" : "days"}</span></td>
+                      <td className="px-2 py-3 pr-3 align-top"><Link to={`/admin/loans/details/${loan.id}`} aria-label={`View loan ${loan.loan_number}`} className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg bg-emerald-50 px-2 py-1.5 text-[11px] font-bold text-emerald-800 hover:bg-emerald-100"><FiEye size={12} /> View</Link></td>
                     </tr>
                   ))}
             </tbody>
