@@ -4,8 +4,6 @@ import {
   FaArrowLeft,
   FaArrowRight,
   FaCheckCircle,
-  FaChevronLeft,
-  FaChevronRight,
   FaGem,
   FaHeart,
   FaPlayCircle,
@@ -387,25 +385,6 @@ const ProductDetail = () => {
                 <span className="absolute left-2 top-2 rounded-full bg-[#f4c84a] px-2.5 py-1 text-[11px] font-bold text-[#4e390f] sm:left-3 sm:top-3 sm:px-3 sm:py-1.5 sm:text-xs">
                   {product.best_seller ? "Bestseller" : "Featured"}
                 </span>
-              )}
-              <button
-                type="button"
-                onClick={() => toggleWishlist(product, currentVariant, "")}
-                aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
-                aria-pressed={isFavorite}
-                className={`absolute right-2 top-12 z-20 grid h-9 w-9 place-items-center rounded-full bg-white/95 shadow transition hover:text-rose-600 sm:right-3 sm:top-14 sm:h-10 sm:w-10 ${isFavorite ? "text-rose-600" : "text-[#40514a]"}`}
-              >
-                <FaHeart className={isFavorite ? "text-lg" : "text-lg"} />
-              </button>
-              {images.length > 1 && (
-                <>
-                  <button type="button" aria-label="Previous product image" onClick={() => setActiveImage((activeImage + images.length - 1) % images.length)} className="absolute left-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white/95 text-[#174a38] shadow transition hover:bg-white sm:left-3 sm:h-10 sm:w-10">
-                    <FaChevronLeft />
-                  </button>
-                  <button type="button" aria-label="Next product image" onClick={() => setActiveImage((activeImage + 1) % images.length)} className="absolute right-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white/95 text-[#174a38] shadow transition hover:bg-white sm:right-3 sm:h-10 sm:w-10">
-                    <FaChevronRight />
-                  </button>
-                </>
               )}
               </div>
               </div>
