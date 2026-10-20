@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ArrowDownLeft, ArrowLeftRight, ArrowUpRight, Banknote, CalendarDays,
   Download, FileText, Plus, RefreshCw, Search, Wallet, X
+  , ChevronDown
 } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../api";
@@ -66,6 +67,7 @@ function FundManagement() {
   });
   const [selectedTransaction, setSelectedTransaction] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
+  const [fundAccountActionsOpen, setFundAccountActionsOpen] = useState(false);
 
   const fetchData = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
@@ -100,9 +102,15 @@ function FundManagement() {
   const selectedAccount = accounts.find((account) => String(account.id) === String(entry.account_id));
 
   const openEntry = (type) => {
+    setFundAccountActionsOpen(false);
     setEntryType(type);
     setEntry({ ...emptyEntry(), account_id: activeAccounts[0] ? String(activeAccounts[0].id) : "", category: CATEGORIES[type][0] });
     setReceipt(null);
+  };
+
+  const openAddAccount = () => {
+    setFundAccountActionsOpen(false);
+    setAccountFormOpen(true);
   };
 
   const saveEntry = async (event) => {
@@ -234,14 +242,14 @@ function FundManagement() {
   };
 
   const statCards = [
-    { label: "Opening Balance", value: summary?.opening_balance, icon: Wallet, color: "text-sky-700 bg-sky-50" },
-    { label: "Total Fund Added", value: summary?.fund_added, icon: Plus, color: "text-emerald-700 bg-emerald-50" },
-    { label: "Total Debit", value: summary?.total_debit, icon: ArrowUpRight, color: "text-rose-700 bg-rose-50" },
-    { label: "Total Credit", value: summary?.total_credit, icon: ArrowDownLeft, color: "text-cyan-700 bg-cyan-50" },
-    { label: "Loan Disbursed", value: summary?.loan_disbursed, icon: Banknote, color: "text-amber-700 bg-amber-50" },
-    { label: "Loan Repayment", value: summary?.loan_repayment_received, icon: RefreshCw, color: "text-violet-700 bg-violet-50" },
-    { label: "Billing Collection", value: summary?.billing_collection, icon: FileText, color: "text-indigo-700 bg-indigo-50" },
-    { label: "Available Balance", value: summary?.current_balance, icon: Wallet, color: "text-white bg-[#00695C]", strong: true }
+    { label: "Opening Balance", value: summary?.opening_balance, icon: Wallet, card: "border-[#267864] bg-[#103F35]", iconColor: "bg-[#007A5E] text-white", accent: "bg-emerald-300" },
+    { label: "Total Fund Added", value: summary?.fund_added, icon: Plus, card: "border-[#9A7A32] bg-[#3D3218]", iconColor: "bg-gradient-to-br from-amber-300 to-amber-600 text-white", accent: "bg-amber-300" },
+    { label: "Total Debit", value: summary?.total_debit, icon: ArrowUpRight, card: "border-[#2F719B] bg-[#12324B]", iconColor: "bg-[#007A67] text-white", accent: "bg-sky-300" },
+    { label: "Total Credit", value: summary?.total_credit, icon: ArrowDownLeft, card: "border-[#A45945] bg-[#48281F]", iconColor: "bg-gradient-to-br from-amber-300 to-amber-600 text-white", accent: "bg-orange-300" },
+    { label: "Loan Disbursed", value: summary?.loan_disbursed, icon: Banknote, card: "border-[#267864] bg-[#103F35]", iconColor: "bg-[#007A5E] text-white", accent: "bg-emerald-300" },
+    { label: "Loan Repayment", value: summary?.loan_repayment_received, icon: RefreshCw, card: "border-[#9A7A32] bg-[#3D3218]", iconColor: "bg-gradient-to-br from-amber-300 to-amber-600 text-white", accent: "bg-amber-300" },
+    { label: "Billing Collection", value: summary?.billing_collection, icon: FileText, card: "border-[#2F719B] bg-[#12324B]", iconColor: "bg-[#007A67] text-white", accent: "bg-sky-300" },
+    { label: "Available Balance", value: summary?.current_balance, icon: Wallet, card: "border-[#267864] bg-[#103F35]", iconColor: "bg-[#007A5E] text-white", accent: "bg-emerald-300", strong: true }
   ];
 
   return (
@@ -280,14 +288,20 @@ function FundManagement() {
       {loadError && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">{loadError} <button onClick={() => fetchData()} className="ml-2 underline">Retry</button></div>}
 
       <section aria-label="Fund summary" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        {statCards.map(({ label, value, icon: Icon, color, strong }) => (
-          <article key={label} className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm ${strong ? "ring-1 ring-emerald-100" : ""}`}>
-            <div className="flex items-center justify-between gap-2">
-              <p className="text-xs font-bold text-slate-500">{label}</p>
-              <span className={`flex h-9 w-9 items-center justify-center rounded-xl ${color}`}><Icon size={18} /></span>
+        {statCards.map(({ label, value, icon: Icon, card, iconColor, accent, strong }) => (
+          <article key={label} className={`relative flex min-h-[148px] min-w-0 items-center gap-4 overflow-hidden rounded-2xl border-l-4 border-y border-r p-4 shadow-[0_3px_12px_rgba(30,41,59,0.12)] transition-transform hover:-translate-y-0.5 sm:p-5 ${card}`}>
+            <span className={`relative z-10 flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl shadow-md ${iconColor}`}><Icon size={22} /></span>
+            <div className="relative z-10 min-w-0 self-center">
+              <p className="truncate text-xs font-semibold text-slate-200">{label}</p>
+              <p className={`mt-1 truncate text-lg font-black leading-tight tracking-tight text-white sm:text-xl ${strong ? "text-emerald-200" : ""}`}>{loading && value == null ? "—" : money(value)}</p>
+              {label === "Available Balance" && summary && <p className="mt-1 truncate text-[10px] font-medium text-slate-300">Closing for this period: {money(summary.closing_balance)}</p>}
             </div>
-            <p className={`mt-3 text-xl font-black ${strong ? "text-[#00695C]" : "text-slate-900"}`}>{loading && value == null ? "—" : money(value)}</p>
-            {label === "Available Balance" && summary && <p className="mt-1 text-[11px] text-slate-400">Closing for this period: {money(summary.closing_balance)}</p>}
+            <div aria-hidden="true" className="absolute bottom-3 right-3 flex h-8 items-end gap-1 opacity-80">
+              <span className={`h-3 w-1.5 rounded-t ${accent}`} />
+              <span className={`h-5 w-1.5 rounded-t ${accent}`} />
+              <span className={`h-7 w-1.5 rounded-t ${accent}`} />
+            </div>
+            {strong && <div aria-hidden="true" className="pointer-events-none absolute -right-10 -top-10 h-28 w-28 rounded-full border border-white/10" />}
           </article>
         ))}
       </section>
@@ -298,10 +312,23 @@ function FundManagement() {
             <h2 className="text-lg font-black text-slate-900">Fund Accounts</h2>
             <p className="text-xs text-slate-500">Each account balance is calculated from its opening amount and posted ledger entries.</p>
           </div>
-          <div className="flex flex-wrap gap-2 print:hidden">
-            <button onClick={() => openEntry("DEBIT")} className="rounded-lg border border-rose-200 px-3 py-2 text-xs font-bold text-rose-700 hover:bg-rose-50">Record Debit</button>
-            <button onClick={() => openEntry("CREDIT")} className="rounded-lg border border-emerald-200 px-3 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50">Record Credit</button>
-            <button onClick={() => setAccountFormOpen(true)} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50">Add Account</button>
+          <div className="relative print:hidden">
+            <button
+              type="button"
+              aria-haspopup="true"
+              aria-expanded={fundAccountActionsOpen}
+              onClick={() => setFundAccountActionsOpen((open) => !open)}
+              className="inline-flex items-center gap-2 rounded-xl bg-[#00695C] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#00574D] focus:outline-none focus:ring-4 focus:ring-emerald-700/20"
+            >
+              <Plus size={16} /> Account Actions <ChevronDown size={15} className={`transition-transform ${fundAccountActionsOpen ? "rotate-180" : ""}`} />
+            </button>
+            {fundAccountActionsOpen && (
+              <div className="absolute right-0 top-full z-30 mt-2 w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                <button type="button" onClick={() => openEntry("DEBIT")} className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-rose-700 transition hover:bg-rose-50">Record Debit</button>
+                <button type="button" onClick={() => openEntry("CREDIT")} className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50">Record Credit</button>
+                <button type="button" onClick={openAddAccount} className="w-full rounded-lg px-3 py-2.5 text-left text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Add Account</button>
+              </div>
+            )}
           </div>
         </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
