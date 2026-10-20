@@ -206,36 +206,26 @@ const UserProfile = () => {
       <PageHeader title="My Profile" />
 
       <PageContainer className="pt-5">
-        <section className="flex flex-col items-center gap-4 rounded-2xl border border-[#e9e3d7] bg-white p-5 shadow-sm sm:flex-row sm:text-left">
-          <div className="relative shrink-0">
-            <div className="flex h-16 w-16 items-center justify-center rounded-full text-2xl font-black shadow-sm"
-              style={{ background: "linear-gradient(135deg,#D4A017,#F5C45E)", color: "#004D40" }}>
-              {initials(name) || <FiUser />}
+        <div className="mt-5 grid items-start gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
+        <aside className="min-w-0 overflow-hidden rounded-2xl border border-[#e9e3d7] bg-white p-2.5 shadow-sm">
+          <section className="flex flex-col items-center gap-3 px-3 py-4 text-center">
+            <div className="relative shrink-0">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full text-2xl font-black shadow-sm"
+                style={{ background: "linear-gradient(135deg,#D4A017,#F5C45E)", color: "#004D40" }}>
+                {initials(name) || <FiUser />}
+              </div>
+              <span className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-green-400" />
             </div>
-            <span className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-green-400" />
-          </div>
-          <div className="min-w-0 flex-1 text-center sm:text-left">
-            <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#a67b2e]">
-              {isAdmin ? "Administrator" : "Member Account"}
-            </p>
-            <h2 className="mt-1 truncate font-serif text-xl font-bold text-[#201a13]">{name}</h2>
-            <p className="mt-0.5 truncate text-sm text-slate-500">{email}</p>
-          </div>
-          <div className="flex flex-wrap justify-center gap-2">
-            {isAdmin && (
-              <button type="button" onClick={() => navigate("/admin")}
-                className="flex items-center gap-2 rounded-full border border-[#174a3f]/20 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-[#174a3f] transition hover:bg-[#f4f8f5]">
-                <FiShield size={14} /> Admin Panel
-              </button>
-            )}
-            <button type="button" onClick={handleLogout}
-              className="flex items-center gap-2 rounded-full bg-red-500/90 px-4 py-2.5 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-red-600">
-              <FiLogOut size={14} /> Logout
-            </button>
-          </div>
-        </section>
+            <div className="min-w-0 w-full">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#a67b2e]">
+                {isAdmin ? "Administrator" : "Member Account"}
+              </p>
+              <h2 className="mt-1 truncate font-serif text-lg font-bold text-[#201a13]">{name}</h2>
+              <p className="mt-0.5 truncate text-xs text-slate-500">{email}</p>
+            </div>
+          </section>
 
-        <nav aria-label="Profile sections" className="hide-scrollbar flex overflow-x-auto rounded-xl border border-[#e9e3d7] bg-white p-1.5 shadow-sm">
+        <nav aria-label="Profile sections" className="flex min-w-0 flex-col border-y border-[#eee8dc] py-2">
           {[
             { id: "profile", label: "Profile Details", icon: FiUser },
             { id: "wishlist", label: "Wishlist Products", icon: FiHeart, count: wishlist.length },
@@ -249,7 +239,7 @@ const UserProfile = () => {
               aria-selected={activeTab === id}
               aria-controls={`profile-panel-${id}`}
               onClick={() => setActiveTab(id)}
-              className={`inline-flex min-w-max flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 text-xs font-bold transition sm:text-sm ${
+              className={`inline-flex w-full min-w-0 items-center justify-start gap-2 rounded-lg px-3 py-3 text-left text-xs font-bold transition sm:text-sm ${
                 activeTab === id
                   ? "bg-[#174a3f] text-white shadow-sm"
                   : "text-[#66726c] hover:bg-[#f5f7f3] hover:text-[#174a3f]"
@@ -265,12 +255,25 @@ const UserProfile = () => {
             </button>
           ))}
         </nav>
+          <div className="flex flex-col gap-2 px-2 py-3">
+            {isAdmin && (
+              <button type="button" onClick={() => navigate("/admin")}
+                className="flex items-center justify-center gap-2 rounded-full border border-[#174a3f]/20 px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider text-[#174a3f] transition hover:bg-[#f4f8f5]">
+                <FiShield size={14} /> Admin Panel
+              </button>
+            )}
+            <button type="button" onClick={handleLogout}
+              className="flex items-center justify-center gap-2 rounded-full bg-red-500/90 px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider text-white transition hover:bg-red-600">
+              <FiLogOut size={14} /> Logout
+            </button>
+          </div>
+        </aside>
 
         <section
           role="tabpanel"
           id={`profile-panel-${activeTab}`}
           aria-labelledby={`profile-tab-${activeTab}`}
-          className="mt-5"
+          className="mt-0 min-w-0"
         >
           {activeTab === "profile" && (
             <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.7fr)_minmax(260px,0.8fr)]">
@@ -427,6 +430,7 @@ const UserProfile = () => {
             </section>
           )}
         </section>
+        </div>
       </PageContainer>
     </div>
   );
