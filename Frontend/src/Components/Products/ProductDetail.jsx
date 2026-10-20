@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   FaArrowLeft,
+  FaArrowRight,
   FaCheckCircle,
   FaChevronLeft,
   FaChevronRight,
@@ -14,6 +15,10 @@ import {
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 import PageContainer from "../CommenComponents/PageContainer";
 import api from "../../api";
+import { Autoplay } from "swiper/modules";
+import { Swiper, SwiperSlide } from "swiper/react";
+import "swiper/css";
+import ProductCard from "../Home/ProductCard";
 
 const backendUrl = (
   import.meta.env.VITE_BACKEND_URL ||
@@ -89,6 +94,131 @@ const tabs = [
   ["reviews", "Reviews"]
 ];
 
+// --- Related Products ----------------------------------------------------------
+const RelatedProducts = ({ currentProductId, metalType, category }) => {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    if (!metalType && !category) {
+      setLoading(false);
+      return;
+    }
+    const controller = new AbortController();
+
+    const fetchRelated = async () => {
+      try {
+        const response = await api.get("/products", {
+          params: { page: 1, limit: 100, search: "", status: "Active" },
+          signal: controller.signal,
+        });
+        if (!Array.isArray(response.data?.products)) {
+          throw new TypeError("The products response must contain a products array");
+        }
+
+        const normalise = (value) => String(value || "").toLowerCase().trim();
+        const targetMetal = normalise(metalType);
+        const targetCategory = normalise(category);
+
+        const filtered = response.data.products.filter((p) => {
+          const productId = String(p.id ?? p.product_id ?? p.productId ?? "");
+          if (productId === String(currentProductId)) return false;
+
+          const metalMatch = targetMetal
+            ? normalise(p.metal_type).includes(targetMetal)
+            : true;
+          const categoryMatch = targetCategory
+            ? normalise(p.category).includes(targetCategory) ||
+              normalise(p.subcategory).includes(targetCategory)
+            : true;
+
+          return metalMatch && categoryMatch;
+        });
+
+        setProducts(filtered);
+      } catch (fetchError) {
+        if (!controller.signal.aborted) {
+          console.error("Failed to fetch related products:", fetchError);
+          setError(true);
+        }
+      } finally {
+        if (!controller.signal.aborted) setLoading(false);
+      }
+    };
+
+    fetchRelated();
+    return () => controller.abort();
+  }, [currentProductId, metalType, category]);
+
+  if (loading || error || products.length === 0) return null;
+
+  const viewAllParams = new URLSearchParams();
+  if (metalType) viewAllParams.set("metal", metalType);
+  if (category) viewAllParams.set("category", category);
+
+  return (
+    <section className="w-full bg-[#fffdf8] py-6">
+      <PageContainer>
+        <div className="min-w-0">
+          <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="flex flex-col items-start text-left">
+              <span className="mb-1 text-[9px] font-bold uppercase tracking-[0.3em] text-[#a67b2e]">
+                You May Also Like
+              </span>
+              <h2 className="font-serif text-2xl font-bold tracking-wide text-[#201a13] sm:text-3xl">
+                {metalType && category
+                  ? `${metalType} ${category}`
+                  : metalType || category || "Related"}{" "}
+                Collection
+              </h2>
+              <div className="mt-2 flex items-center justify-start gap-3" aria-hidden="true">
+                <span className="h-px w-12 bg-gradient-to-r from-transparent to-[#d9a441]" />
+                <span className="h-1.5 w-1.5 rotate-45 bg-[#d9a441]" />
+                <span className="h-px w-12 bg-gradient-to-l from-transparent to-[#d9a441]" />
+              </div>
+            </div>
+            <a
+              href={`/explore?${viewAllParams.toString()}`}
+              className="inline-flex items-center gap-2 self-end text-xs font-semibold text-[#6f5426] transition-colors hover:text-[#b47a16]"
+            >
+              View All
+              <FaArrowRight className="text-[10px] text-[#b47a16]" />
+            </a>
+          </div>
+
+          <Swiper
+            modules={[Autoplay]}
+            loop={products.length > 5}
+            autoplay={
+              products.length > 5
+                ? { delay: 2200, disableOnInteraction: false, pauseOnMouseEnter: true }
+                : false
+            }
+            speed={700}
+            slidesPerView="auto"
+            spaceBetween={12}
+            breakpoints={{
+              640: { slidesPerView: 2 },
+              900: { slidesPerView: 3 },
+              1200: { slidesPerView: 4 },
+              1500: { slidesPerView: 5 },
+            }}
+            grabCursor
+            centeredSlides={products.length === 1}
+            className="!pb-2"
+          >
+            {products.map((p) => (
+              <SwiperSlide key={p.id} className="h-auto w-[260px] sm:w-[280px] xl:w-[300px]">
+                <ProductCard product={p} />
+              </SwiperSlide>
+            ))}
+          </Swiper>
+        </div>
+      </PageContainer>
+    </section>
+  );
+};
 const ProductDetail = () => {
   const { id } = useParams();
   const { wishlist, toggleWishlist, addToCart } = useContext(StoreContext);
@@ -528,6 +658,13 @@ const ProductDetail = () => {
           )}
         </div>
       </PageContainer>
+
+      {/* Related Products — same metal & category */}
+      <RelatedProducts
+        currentProductId={productId}
+        metalType={product.metal_type}
+        category={product.category}
+      />
     </main>
   );
 };
