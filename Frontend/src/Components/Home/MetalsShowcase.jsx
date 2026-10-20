@@ -119,9 +119,7 @@ export default function MetalsShowcase() {
                   style={background ? { backgroundImage: `url('${background}')` } : undefined}
                 >
                   <div className="relative z-[1] max-w-[62%]">
-                    {/* <p className={`text-[9px] font-bold uppercase tracking-[0.2em] ${textColors.eyebrow} sm:text-[10px]`}>
-                      Today&apos;s {metal.name} Rate
-                    </p> */}
+                   
                     <h3 className={`mt-1 font-serif text-2xl font-bold leading-tight ${textColors.title} sm:text-3xl`}>
                       {metal.name} 
                     </h3>
