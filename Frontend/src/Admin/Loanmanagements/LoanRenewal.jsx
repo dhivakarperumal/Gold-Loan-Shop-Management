@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { FiAlertCircle, FiArrowLeft, FiCalendar, FiCheckCircle, FiChevronRight, FiGrid, FiLayers, FiList, FiPlus, FiRefreshCw, FiSearch, FiShield, FiX } from "react-icons/fi";
+import { FiAlertCircle, FiArrowLeft, FiCalendar, FiCheckCircle, FiChevronRight, FiEye, FiGrid, FiLayers, FiList, FiPlus, FiRefreshCw, FiSearch, FiShield, FiX } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api, { getPrivateFile } from "../../api";
 import { isLoanReviewDue, loanReviewDate } from "./loanPolicy";
@@ -446,7 +446,7 @@ export default function LoanRenewal() {
                             : item.loan_status === "Active"
                               ? <div className="flex items-center gap-2">
                                 <button type="button" onClick={(event) => { event.stopPropagation(); setPaymentLoan(item); }} className="inline-flex items-center gap-1 rounded-lg bg-[#064A41] px-3 py-2 text-xs font-bold text-white hover:bg-[#087263]">Pay</button>
-                                <Link to={`/admin/loans/loanreniwel/${item.id}`} onClick={(event) => event.stopPropagation()} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">Renew <FiChevronRight /></Link>
+                                <Link to={`/admin/loans/loanreniwel/${item.id}`} onClick={(event) => event.stopPropagation()} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">Renew <FiEye /></Link>
                               </div>
                             : item.loan_status === "Suspended"
                               ? <Link to={`/admin/loans/loanreniwel/${item.id}`} onClick={(event) => event.stopPropagation()} className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">Review <FiChevronRight /></Link>
@@ -483,7 +483,7 @@ export default function LoanRenewal() {
                     {item.loan_status === "Active" && Number(item.outstanding_principal ?? item.principal_amount) === 0
                       ? <Link to={`/admin/loans/completeloan/${item.id}`} className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">Complete loan <FiChevronRight /></Link>
                       : item.loan_status === "Active"
-                        ? <Link to={`/admin/loans/loanreniwel/${item.id}`} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">Renew <FiChevronRight /></Link>
+                        ? <Link to={`/admin/loans/loanreniwel/${item.id}`} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">Renew <FiEye /></Link>
                         : <Link to={`/admin/loans/loanreniwel/${item.id}`} className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">Review <FiChevronRight /></Link>}
                   </div>
                 </article>
