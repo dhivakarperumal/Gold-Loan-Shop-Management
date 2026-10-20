@@ -152,11 +152,6 @@ const ProductDetail = () => {
       ...parseArray(product?.available_sizes)
     ])
   ];
-  const [selectedSize, setSelectedSize] = useState("");
-  const activeSize = availableVariantSizes.includes(selectedSize)
-    ? selectedSize
-    : availableVariantSizes[0] || "";
-
   const images = useMemo(() => {
     if (!product) return [];
     const variantImages = variants.flatMap((variant) => parseArray(variant.images));
@@ -227,8 +222,7 @@ const ProductDetail = () => {
   const isFavorite = wishlist.some(
     (item) => String(item.product_id ?? item.productId ?? item.id) === String(productId)
   );
-  const selectedVariantStock = currentVariant?.sizesStock?.[activeSize]
-    ?? currentVariant?.total_stock
+  const selectedVariantStock = currentVariant?.total_stock
     ?? currentVariant?.stock;
   const stock = Number(selectedVariantStock ?? product.total_stock ?? 0);
   const inStock = stock > 0;
@@ -298,7 +292,6 @@ const ProductDetail = () => {
     ["Weight", product.gross_weight != null ? `${product.gross_weight} g` : ""],
     ["Collection", product.category],
     ["Product type", product.product_type],
-    ["Selected size", activeSize]
   ].filter(([, value]) => displayValue(value));
 
   return (
@@ -397,7 +390,7 @@ const ProductDetail = () => {
               )}
               <button
                 type="button"
-                onClick={() => toggleWishlist(product, currentVariant, activeSize)}
+                onClick={() => toggleWishlist(product, currentVariant, "")}
                 aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
                 aria-pressed={isFavorite}
                 className={`absolute right-3 top-14 z-20 grid h-10 w-10 place-items-center rounded-full bg-white/95 shadow transition hover:text-rose-600 ${isFavorite ? "text-rose-600" : "text-[#40514a]"}`}
@@ -465,7 +458,6 @@ const ProductDetail = () => {
                           onClick={() => {
                             setActiveVariantIndex(index);
                             setActiveImage(0);
-                            setSelectedSize("");
                           }}
                           aria-pressed={activeVariantIndex === index}
                           className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${activeVariantIndex === index ? "border-[#174a38] bg-[#edf5ef] text-[#174a38]" : "border-[#e8e1d5] text-[#5d675f] hover:border-[#bd913e]"}`}
@@ -480,31 +472,19 @@ const ProductDetail = () => {
             )}
 
             {availableVariantSizes.length > 0 && (
-              <fieldset className="mt-4">
-                <legend className="mb-2 text-xs font-semibold text-[#59645e]">Select size</legend>
-                <div className="flex flex-wrap gap-2">
-                  {availableVariantSizes.map((size) => (
-                    <button
-                      key={size}
-                      type="button"
-                      onClick={() => setSelectedSize(size)}
-                      aria-pressed={activeSize === size}
-                      className={`min-w-11 rounded-lg border px-3 py-2 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174a38] ${activeSize === size ? "border-[#174a38] bg-[#174a38] text-white" : "border-[#e8e1d5] bg-white text-[#5d675f] hover:border-[#bd913e] hover:bg-[#fffaf0]"}`}
-                    >
-                      {size}
-                    </button>
-                  ))}
-                </div>
-              </fieldset>
+              <p className="mt-4 text-sm text-[#59645e]">
+                <span className="font-semibold">Available sizes:</span>{" "}
+                {availableVariantSizes.map(displayValue).join(", ")}
+              </p>
             )}
 
             <div className="mt-5">
-              {/* <button type="button" disabled={!inStock} onClick={() => addToCart(product, currentVariant, activeSize)} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#174a3f] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#10382f] disabled:cursor-not-allowed disabled:bg-slate-300">
+              {/* <button type="button" disabled={!inStock} onClick={() => addToCart(product, currentVariant, "")} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#174a3f] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#10382f] disabled:cursor-not-allowed disabled:bg-slate-300">
                 <FaShoppingBag /> {inStock ? "Add to Cart" : "Out of Stock"}
               </button> */}
               <button
                 type="button"
-                onClick={() => toggleWishlist(product, currentVariant, activeSize)}
+                onClick={() => toggleWishlist(product, currentVariant, "")}
                 aria-label={isFavorite ? "Remove from wishlist" : "Add to wishlist"}
                 aria-pressed={isFavorite}
                 className={`inline-flex w-full items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174a38] ${isFavorite ? "border-rose-200 bg-rose-50 text-rose-700" : "border-[#e8e1d5] text-[#40514a] hover:bg-[#fbfaf7]"}`}
@@ -614,8 +594,7 @@ const ProductDetail = () => {
                   ...parseArray(variant.selectedSizes),
                   ...parseArray(variant.available_sizes)
                 ]))]],
-                ["Selected color", currentVariant?.colorName || currentVariant?.color],
-                ["Selected size", activeSize]
+                ["Selected color", currentVariant?.colorName || currentVariant?.color]
               ]} />
             </div>
           )}
