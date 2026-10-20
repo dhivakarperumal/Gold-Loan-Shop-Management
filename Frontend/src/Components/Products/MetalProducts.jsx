@@ -12,10 +12,12 @@ import "swiper/css";
  * MetalProducts
  * Shows all active products that share the same metal_type as the current product,
  * excluding the current product itself.
+ * - Hidden completely when there are no matching products.
+ * - Single result is left-aligned (no centering).
  *
  * Props:
- *  - currentProductId  : id of the product currently being viewed
- *  - metalType         : e.g. "Gold", "Silver", "Platinum"
+ *  - currentProductId : id of the product currently being viewed
+ *  - metalType        : e.g. "Gold", "Silver", "Platinum"
  */
 const MetalProducts = ({ currentProductId, metalType }) => {
   const [products, setProducts] = useState([]);
@@ -65,10 +67,8 @@ const MetalProducts = ({ currentProductId, metalType }) => {
     return () => controller.abort();
   }, [currentProductId, metalType]);
 
-  // Don't render anything while loading, on error, or when there are no results
+  // Hidden when loading, on error, or when no matching products exist
   if (loading || error || products.length === 0) return null;
-
-  const viewAllHref = `/explore?metal=${encodeURIComponent(metalType)}`;
 
   return (
     <section className="w-full bg-[#fffdf8] py-6 border-t border-[#f0e9db]">
@@ -91,7 +91,7 @@ const MetalProducts = ({ currentProductId, metalType }) => {
               </div>
             </div>
             <a
-              href={viewAllHref}
+              href={`/explore?metal=${encodeURIComponent(metalType)}`}
               className="inline-flex items-center gap-2 self-end text-xs font-semibold text-[#6f5426] transition-colors hover:text-[#b47a16]"
             >
               View All
@@ -99,7 +99,7 @@ const MetalProducts = ({ currentProductId, metalType }) => {
             </a>
           </div>
 
-          {/* Swiper carousel */}
+          {/* Swiper carousel — single result stays left-aligned */}
           <Swiper
             modules={[Autoplay]}
             loop={products.length > 5}
@@ -118,7 +118,7 @@ const MetalProducts = ({ currentProductId, metalType }) => {
               1500: { slidesPerView: 5 },
             }}
             grabCursor
-            centeredSlides={products.length === 1}
+            centeredSlides={false}
             className="!pb-2"
           >
             {products.map((p) => (
