@@ -5,6 +5,7 @@ import { toast } from "react-hot-toast";
 import api from "../../api";
 import { isLoanReviewDue } from "./loanPolicy";
 import { formatCurrency as money } from "../../utils/currency";
+import DateRangeFilter from "../Components/DateRangeFilter";
 
 function dateText(value) {
   if (!value) return "—";
@@ -36,10 +37,12 @@ export default function OverdueLoans() {
   const [loans, setLoans] = useState([]);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState({ preset: "all", startDate: "", endDate: "" });
 
   useEffect(() => {
     let active = true;
-    api.get("/loans")
+    setLoading(true);
+    api.get("/loans", { params: { startDate: dateRange.startDate, endDate: dateRange.endDate } })
       .then(({ data }) => {
         if (!Array.isArray(data)) throw new Error("The server returned an invalid loan list.");
         if (active) setLoans(data);
@@ -50,7 +53,7 @@ export default function OverdueLoans() {
       })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, []);
+  }, [dateRange.startDate, dateRange.endDate]);
 
   const today = useMemo(() => {
     const now = new Date();
@@ -112,11 +115,14 @@ export default function OverdueLoans() {
         </article>
       </section>
 
-      <label className="relative block max-w-xl">
-        <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true" />
-        <span className="sr-only">Search overdue loans and customers</span>
-        <input value={search} onChange={(event) => setSearch(event.target.value)} type="search" placeholder="Search loan, customer, mobile, address, guarantor..." className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none focus:border-[#008577] focus:ring-4 focus:ring-emerald-700/10" />
-      </label>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+        <DateRangeFilter onApply={(range) => { setLoading(true); setDateRange(range); }} />
+        <label className="relative block max-w-xl flex-1">
+          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+          <span className="sr-only">Search overdue loans and customers</span>
+          <input value={search} onChange={(event) => setSearch(event.target.value)} type="search" placeholder="Search loan, customer, mobile, address, guarantor..." className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none focus:border-[#008577] focus:ring-4 focus:ring-emerald-700/10" />
+        </label>
+      </div>
 
       <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
         <div className="border-b border-slate-100 px-5 py-4">

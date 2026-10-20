@@ -1,5 +1,6 @@
 const crypto = require('node:crypto');
 const { pool } = require('../config/db');
+const { addDateRangeCondition } = require('../utils/dateRange');
 
 const DEFAULT_CATEGORIES = [
   'Gold Supplier', 'Bullion Dealer', 'Jewellery Wholesaler', 'Goldsmith',
@@ -461,9 +462,10 @@ async function updateDealer(id, input, userId) {
   }
 }
 
-async function listDealers({ page, limit, search, status, categoryId }) {
+async function listDealers({ page, limit, search, status, categoryId, dateRange = {} }) {
   const clauses = [];
   const values = [];
+  addDateRangeCondition(clauses, values, 'd.created_at', dateRange);
   if (search) {
     clauses.push('(d.dealer_code LIKE ? OR d.name LIKE ? OR d.contact_person LIKE ? OR d.phone LIKE ? OR d.email LIKE ? OR d.gstin LIKE ?)');
     const term = `%${search}%`;
@@ -732,9 +734,10 @@ async function getPurchaseById(id, connection = pool) {
   };
 }
 
-async function listPurchases({ dealerId, page, limit, search, overdue }) {
+async function listPurchases({ dealerId, page, limit, search, overdue, dateRange = {} }) {
   const clauses = ["p.document_type IN ('invoice','purchase_return','debit_note','credit_note','old_gold')"];
   const values = [];
+  addDateRangeCondition(clauses, values, 'p.document_date', dateRange);
   if (dealerId) { clauses.push('p.dealer_id = ?'); values.push(dealerId); }
   if (search) { clauses.push('(p.document_number LIKE ? OR p.supplier_invoice_number LIKE ? OR d.name LIKE ?)'); const term = `%${search}%`; values.push(term, term, term); }
   if (overdue) clauses.push("p.document_type = 'invoice' AND p.due_date < CURDATE() AND p.total > p.paid_amount");
@@ -1187,9 +1190,10 @@ async function listOutstandingInvoices(dealerId) {
   return rows.map((row) => ({ ...row, id: Number(row.id), total: Number(row.total), paid_amount: Number(row.paid_amount), outstanding: Number(row.outstanding) }));
 }
 
-async function listJobs({ dealerId, status, page, limit }) {
+async function listJobs({ dealerId, status, page, limit, dateRange = {} }) {
   const clauses = [];
   const values = [];
+  addDateRangeCondition(clauses, values, 'j.created_at', dateRange);
   if (dealerId) { clauses.push('j.dealer_id = ?'); values.push(dealerId); }
   if (status) { clauses.push('j.status = ?'); values.push(status); }
   const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
@@ -1217,9 +1221,12 @@ async function listJobs({ dealerId, status, page, limit }) {
   return { jobs, pagination: { page, limit, total: Number(total), totalPages: Math.max(1, Math.ceil(total / limit)) } };
 }
 
-async function listOldGoldReceipts({ dealerId, page, limit }) {
-  const where = dealerId ? 'WHERE r.dealer_id = ?' : '';
-  const values = dealerId ? [dealerId] : [];
+async function listOldGoldReceipts({ dealerId, page, limit, dateRange = {} }) {
+  const clauses = [];
+  const values = [];
+  if (dealerId) { clauses.push('r.dealer_id = ?'); values.push(dealerId); }
+  addDateRangeCondition(clauses, values, 'r.received_at', dateRange);
+  const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
   const [[{ total }]] = await pool.execute(
     `SELECT COUNT(*) AS total FROM dealer_old_gold_receipts r ${where}`, values
   );

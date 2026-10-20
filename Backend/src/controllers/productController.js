@@ -10,6 +10,7 @@ const { isValidProductFile, removeProductFiles } = require('../middleware/produc
 const { findGoldRateForPurity, getCurrentGoldRates } = require('../modules/goldRateModule');
 const { calculateProductPricing, recalculateProductPrices } = require('../services/productPricing');
 const { pool } = require('../config/db');
+const { addDateRangeCondition, parseDateRange } = require('../utils/dateRange');
 
 const JSON_FIELDS = new Set(['available_sizes', 'highlights', 'images', 'variants']);
 const BOOLEAN_FIELDS = new Set(['price_includes_gst', 'featured', 'new_arrival', 'best_seller']);
@@ -105,6 +106,8 @@ function normalizeProduct(body) {
 async function getProducts(req, res, next) {
   const page = Math.max(1, Math.floor(Number(req.query.page) || 1));
   const limit = Math.min(100, Math.max(1, Math.floor(Number(req.query.limit) || 100)));
+  const dateRange = parseDateRange(req.query);
+  if (dateRange.error) return res.status(400).json({ message: dateRange.error });
   try {
     return res.json(await listProducts({
       page,
@@ -117,7 +120,8 @@ async function getProducts(req, res, next) {
       stockStatus: String(req.query.stockStatus || ''),
       lastPriceUpdate: String(req.query.lastPriceUpdate || ''),
       sortBy: String(req.query.sortBy || ''),
-      sortOrder: String(req.query.sortOrder || '')
+      sortOrder: String(req.query.sortOrder || ''),
+      dateRange
     }));
   } catch (error) {
     return next(error);

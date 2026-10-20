@@ -11,15 +11,20 @@ async function getDashboardData(range = 'month', dateRange = null) {
     };
     // 1. Loans metrics
     const loanDateFilter = dateFilter('l.loan_date');
+    const loanActivityDate = `CASE
+      WHEN l.loan_status = 'Completed' THEN COALESCE(l.gold_released_at, l.loan_date)
+      ELSE l.loan_date
+    END`;
+    const loanActivityDateFilter = dateFilter(loanActivityDate);
     const [[loanCounts]] = await pool.execute(`
       SELECT COUNT(*) AS total_loans FROM loans l ${loanDateFilter.where}
     `, loanDateFilter.values);
 
     const [statusRows] = await pool.execute(`
       SELECT l.loan_status, COUNT(*) AS count
-      FROM loans l ${loanDateFilter.where}
+      FROM loans l ${loanActivityDateFilter.where}
       GROUP BY l.loan_status
-    `, loanDateFilter.values);
+    `, loanActivityDateFilter.values);
 
     const [recentLoanRows] = await pool.execute(`
       SELECT 
@@ -33,6 +38,7 @@ async function getDashboardData(range = 'month', dateRange = null) {
         l.gold_valuation,
         l.loan_status,
         l.loan_date,
+        ${loanActivityDate} AS activity_date,
         l.created_at,
         c.id AS customer_id,
         c.full_name AS customer_name,
@@ -40,10 +46,10 @@ async function getDashboardData(range = 'month', dateRange = null) {
         c.photo_url AS customer_photo
       FROM loans l
       LEFT JOIN loan_customers c ON l.customer_id = c.id
-      ${loanDateFilter.where}
-      ORDER BY l.loan_date DESC, l.id DESC
+      ${loanActivityDateFilter.where}
+      ORDER BY activity_date DESC, l.id DESC
       LIMIT 10
-    `, loanDateFilter.values);
+    `, loanActivityDateFilter.values);
 
     // Match the Users page total: count every account in the users table.
     const userDateFilter = dateFilter('created_at');
@@ -113,6 +119,7 @@ async function getDashboardData(range = 'month', dateRange = null) {
       Processing: statusMap.Processing,
       Pending: statusMap.Pending,
       Overdue: statusMap.Overdue,
+      Completed: statusMap.Completed,
     };
 
     const formattedRecentLoans = recentLoanRows.map((l) => {
@@ -131,7 +138,7 @@ async function getDashboardData(range = 'month', dateRange = null) {
         amount: `₹ ${Number(l.principal_amount || l.gold_valuation || 0).toLocaleString('en-IN')}`,
         rawAmount: Number(l.principal_amount || 0),
         status: l.loan_status || 'Active',
-        date: l.loan_date ? new Date(l.loan_date).toLocaleDateString('en-IN', { month: 'short', day: '2-digit', year: 'numeric' }) : '—',
+        date: l.activity_date ? new Date(l.activity_date).toLocaleDateString('en-IN', { month: 'short', day: '2-digit', year: 'numeric' }) : '—',
         img,
         rawId: l.id
       };

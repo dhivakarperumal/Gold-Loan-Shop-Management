@@ -5,6 +5,7 @@ import { toast } from "react-hot-toast";
 import api, { getPrivateFile } from "../../api";
 import { isLoanReviewDue, loanReviewDate } from "./loanPolicy";
 import { formatCurrency as money } from "../../utils/currency";
+import DateRangeFilter from "../Components/DateRangeFilter";
 
 function dateText(value) {
   if (!value) return "—";
@@ -44,6 +45,7 @@ export default function LoanRenewal() {
   const [customerMessage, setCustomerMessage] = useState("");
   const [reviewNotes, setReviewNotes] = useState("");
   const [reviewActionNotes, setReviewActionNotes] = useState("");
+  const [dateRange, setDateRange] = useState({ preset: "all", startDate: "", endDate: "" });
 
   useEffect(() => {
     let active = true;
@@ -52,7 +54,9 @@ export default function LoanRenewal() {
       ? api.get(`/loans/${id}/renewal`).then(({ data }) => {
         if (active) setRenewalData(data);
       })
-      : api.get("/loans").then(({ data }) => {
+      : api.get("/loans", {
+        params: { startDate: dateRange.startDate, endDate: dateRange.endDate }
+      }).then(({ data }) => {
         if (!Array.isArray(data)) throw new Error("The server returned an invalid loan list.");
         if (active) {
           setLoans(data.filter((loan) =>
@@ -69,7 +73,7 @@ export default function LoanRenewal() {
       if (active) setLoading(false);
     });
     return () => { active = false; };
-  }, [id]);
+  }, [id, dateRange.startDate, dateRange.endDate]);
 
   const loan = renewalData?.loan;
   useEffect(() => {
@@ -181,12 +185,15 @@ export default function LoanRenewal() {
           </div>
           <span className="text-xs font-semibold text-slate-400">{loans.length} loans</span>
         </header>
-        <label className="relative block max-w-xl">
-          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-          <span className="sr-only">Search loans</span>
-          <input value={search} onChange={(event) => setSearch(event.target.value)} type="search" placeholder="Search loan number, customer, mobile..."
-            className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none focus:border-[#008577] focus:ring-4 focus:ring-emerald-700/10" />
-        </label>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <DateRangeFilter onApply={(range) => { setLoading(true); setDateRange(range); }} />
+          <label className="relative block max-w-xl flex-1">
+            <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+            <span className="sr-only">Search loans</span>
+            <input value={search} onChange={(event) => setSearch(event.target.value)} type="search" placeholder="Search loan number, customer, mobile..."
+              className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none focus:border-[#008577] focus:ring-4 focus:ring-emerald-700/10" />
+          </label>
+        </div>
         <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
           <div className="border-b border-slate-100 px-5 py-4">
             <h2 className="font-bold text-slate-800">Choose a loan</h2>

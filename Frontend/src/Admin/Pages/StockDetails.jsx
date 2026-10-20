@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { useAdmin } from "../../PrivateRouter/AdminContext";
 import api from "../../api";
 import { formatCurrency } from "../../utils/currency";
+import DateRangeFilter from "../Components/DateRangeFilter";
 import { toast, Toaster } from "react-hot-toast";
 import {
     FiBox,
@@ -22,6 +23,7 @@ const StockDetails = () => {
     const { stockCache, setStockCached } = useAdmin();
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("All");
+    const [dateRange, setDateRange] = useState({ preset: "all", startDate: "", endDate: "" });
     const [currentPage, setCurrentPage] = useState(1);
     const [viewMode, setViewMode] = useState("table");
     const itemsPerPage = 10;
@@ -30,7 +32,9 @@ const StockDetails = () => {
         page: currentPage,
         limit: itemsPerPage,
         search: searchTerm,
-        status: statusFilter
+        status: statusFilter,
+        startDate: dateRange.startDate,
+        endDate: dateRange.endDate
     });
     
     const pageData = stockCache[currentCacheKey];
@@ -54,7 +58,9 @@ const StockDetails = () => {
             page: currentPage,
             limit: itemsPerPage,
             search: searchTerm,
-            status: statusFilter
+            status: statusFilter,
+            startDate: dateRange.startDate,
+            endDate: dateRange.endDate
         };
         const cacheKey = JSON.stringify(params);
         try {
@@ -82,7 +88,7 @@ const StockDetails = () => {
         } finally {
             setLoading(false);
         }
-    }, [currentPage, searchTerm, statusFilter, setStockCached]);
+    }, [currentPage, searchTerm, statusFilter, dateRange.startDate, dateRange.endDate, setStockCached]);
 
     useEffect(() => {
         void fetchProducts();
@@ -295,6 +301,11 @@ const StockDetails = () => {
 
             {/* Filter Bar */}
             <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-wrap gap-3 items-center">
+                <DateRangeFilter onApply={(range) => {
+                    setLoading(true);
+                    setCurrentPage(1);
+                    setDateRange(range);
+                }} />
                 <div className="relative flex-1 min-w-[200px]">
                     <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
                     <input

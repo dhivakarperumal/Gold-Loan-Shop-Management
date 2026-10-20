@@ -183,9 +183,14 @@ async function listApplications(req, res, next) {
 }
 
 async function adminStats(req, res, next) {
+  const dateFrom = validDate(req.query.dateFrom);
+  const dateTo = validDate(req.query.dateTo);
+  if (dateFrom === undefined || dateTo === undefined || (dateFrom && dateTo && dateFrom > dateTo)) {
+    return res.status(400).json({ message: 'Use a valid date range' });
+  }
   try {
     return res.json({
-      stats: await getKycStats(),
+      stats: await getKycStats({ dateFrom: dateFrom || '', dateTo: dateTo || '' }),
       allowedDocumentTypes: getAllowedDocumentTypes()
     });
   } catch (error) {
