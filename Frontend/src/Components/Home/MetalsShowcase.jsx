@@ -6,6 +6,17 @@ import api from "../../api";
 import PageContainer from "../CommenComponents/PageContainer";
 
 const METAL_ORDER = ["gold", "silver", "diamond", "platinum"];
+const METAL_BACKGROUNDS = {
+  gold: "/images/metal/goldmetal.png",
+  silver: "/images/metal/silvermetal.png",
+  diamond: "/images/metal/diamondmetal.png",
+  platinum: "/images/metal/platinummetal.png",
+};
+
+function getMetalBackground(name = "") {
+  const key = METAL_ORDER.find((metal) => name.toLowerCase().includes(metal));
+  return key ? METAL_BACKGROUNDS[key] : "";
+}
 
 export default function MetalsShowcase() {
   const [metals, setMetals] = useState([]);
@@ -76,15 +87,13 @@ export default function MetalsShowcase() {
               const exploreUrl = `/explore?metal=${encodeURIComponent(
                 metal.name
               )}`;
+              const background = getMetalBackground(metal.name);
 
               return (
                 <article
                   key={metal.id}
                   className="group relative flex min-h-[170px] flex-col justify-center overflow-hidden rounded-xl border border-[#d8b66c] bg-[#f7e8c8] bg-cover bg-center px-5 py-5 shadow-[0_3px_12px_rgba(113,79,24,0.12)] transition-shadow hover:shadow-[0_8px_24px_rgba(31,53,39,0.2)] sm:min-h-[190px] sm:px-8 sm:py-6 lg:min-h-[205px]"
-                  style={{
-                    backgroundImage:
-                      "url('/images/metal/diamondmetal.png')",
-                  }}
+                  style={background ? { backgroundImage: `url('${background}')` } : undefined}
                 >
                   <div
                     aria-hidden="true"
