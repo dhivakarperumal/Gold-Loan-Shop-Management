@@ -15,24 +15,29 @@ const METAL_BACKGROUNDS = {
 const METAL_TEXT_COLORS = {
   gold: {
     eyebrow: "text-[#b58a32]",
-    title: "text-[#f7e9c6]",
-    details: "text-[#f1ead8]",
+    title: "text-[#fff8e7]",
+    details: "text-[#fffdf7]",
   },
   silver: {
-    eyebrow: "text-[#42594f]",
-    title: "text-[#183d32]",
-    details: "text-[#2f453a]",
+    eyebrow: "text-[#294438]",
+    title: "text-[#12372d]",
+    details: "text-[#26382f]",
   },
   diamond: {
-    eyebrow: "text-[#b77932]",
-    title: "text-[#955b27]",
-    details: "text-[#43594d]",
+    eyebrow: "text-[#70420f]",
+    title: "text-[#70420f]",
+    details: "text-[#283c32]",
   },
   platinum: {
     eyebrow: "text-[#d1a42d]",
-    title: "text-[#e7b629]",
-    details: "text-[#e5e5dc]",
+    title: "text-[#fff1bd]",
+    details: "text-[#fffdf7]",
   },
+};
+const DEFAULT_TEXT_COLORS = {
+  eyebrow: "text-[#294438]",
+  title: "text-[#12372d]",
+  details: "text-[#26382f]",
 };
 
 function getMetalKey(name = "") {
@@ -110,7 +115,7 @@ export default function MetalsShowcase() {
               )}`;
               const metalKey = getMetalKey(metal.name);
               const background = METAL_BACKGROUNDS[metalKey];
-              const textColors = METAL_TEXT_COLORS[metalKey] || METAL_TEXT_COLORS.gold;
+              const textColors = METAL_TEXT_COLORS[metalKey] || DEFAULT_TEXT_COLORS;
 
               return (
                 <article
