@@ -5,7 +5,6 @@ const {
   getCustomerDocument,
   getCustomerDocuments,
   getCustomerPhoto,
-  getMyCustomer,
   postCustomer,
   postCustomerDocuments,
   postCustomerPhoto,
@@ -15,7 +14,6 @@ const {
   removeCustomer
 } = require('../controllers/loanCustomerController');
 const requireAdmin = require('../middleware/requireAdmin');
-const requireAuthenticatedUser = require('../middleware/requireAuthenticatedUser');
 const {
   uploadLoanCustomerDocuments,
   uploadLoanCustomerPhoto
@@ -23,7 +21,6 @@ const {
 
 const router = express.Router();
 
-router.get('/me', requireAuthenticatedUser, getMyCustomer);
 router.use(requireAdmin);
 router.post('/photos', (req, res, next) => {
   uploadLoanCustomerPhoto.single('photo')(req, res, (error) => {

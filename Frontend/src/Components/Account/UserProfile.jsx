@@ -166,33 +166,18 @@ const UserProfile = () => {
   const [activeTab, setActiveTab] = useState("profile");
 
   useEffect(() => {
-    if (!user?.user_id || user.role !== "user") return undefined;
-
     const controller = new AbortController();
-    api.get("/loan-customers/me", { signal: controller.signal })
-      .then(({ data: customer }) => {
-        if (!customer || customer.id == null) {
-          throw new TypeError("The customer profile response is invalid");
-        }
-        return api.get(`/customers/${customer.id}/loans`, { signal: controller.signal });
-      })
-      .then(({ data }) => {
-        if (!Array.isArray(data)) {
-          throw new TypeError("The customer loans response must be an array");
-        }
-        setLoans(data);
-      })
+    api.get("/loans/my-loans", { signal: controller.signal })
+      .then(({ data }) => setLoans(Array.isArray(data) ? data : []))
       .catch((err) => {
-        if (controller.signal.aborted) return;
-        const noCustomerProfile = err?.response?.status === 404
-          && err.config?.url?.includes("/loan-customers/me");
-        if (noCustomerProfile) return;
-        console.error("Failed to load customer loan details:", err);
-        setLoansError("Could not load loan details.");
+        if (!controller.signal.aborted) {
+          // 404 just means no loan customer record linked yet — not a real error
+          if (err?.response?.status !== 404) setLoansError("Could not load loan details.");
+        }
       })
       .finally(() => { if (!controller.signal.aborted) setLoansLoading(false); });
     return () => controller.abort();
-  }, [user?.role, user?.user_id]);
+  }, []);
 
   const handleLogout = async () => {
     await logout();
@@ -215,7 +200,6 @@ const UserProfile = () => {
 
   const activeLoans    = loans.filter((l) => l.loan_status === "Active").length;
   const completedLoans = loans.filter((l) => l.loan_status === "Completed").length;
-  const isLoansLoading = user.role === "user" && loansLoading;
 
   return (
     <div className="min-h-screen pb-16" style={{ background: "#f8f7f2" }}>
@@ -245,7 +229,7 @@ const UserProfile = () => {
           {[
             { id: "profile", label: "Profile Details", icon: FiUser },
             { id: "wishlist", label: "Wishlist Products", icon: FiHeart, count: wishlist.length },
-            { id: "loans", label: "Loan Details", icon: FiPackage, count: isLoansLoading ? null : loans.length }
+            { id: "loans", label: "Loan Details", icon: FiPackage, count: loansLoading ? null : loans.length }
           ].map(({ id, label, icon: Icon, count }) => (
             <button
               key={id}
@@ -401,7 +385,7 @@ const UserProfile = () => {
                   <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#a67b2e]">Gold Loan</p>
                   <h2 className="mt-1 font-serif text-xl font-bold text-[#201a13]">Loan Details</h2>
                 </div>
-                {!isLoansLoading && !loansError && loans.length > 0 && (
+                {!loansLoading && !loansError && loans.length > 0 && (
                   <div className="flex gap-2 text-xs">
                     <span className="rounded-full bg-green-100 px-3 py-1 font-bold text-green-700">{activeLoans} Active</span>
                     <span className="rounded-full bg-blue-100 px-3 py-1 font-bold text-blue-700">{completedLoans} Completed</span>
@@ -409,7 +393,7 @@ const UserProfile = () => {
                 )}
               </div>
 
-              {isLoansLoading ? (
+              {loansLoading ? (
                 <div className="flex items-center justify-center rounded-2xl border border-[#eee8dc] bg-white py-14">
                   <div className="h-8 w-8 animate-spin rounded-full border-[3px]" style={{ borderColor: "#004D40", borderTopColor: "transparent" }} />
                 </div>

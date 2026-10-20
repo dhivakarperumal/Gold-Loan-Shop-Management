@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const { getUserById } = require('../modules/authModule');
 
-async function authenticateUser(req, res, next, allowedRoles, accessMessage) {
+async function requireAuthenticatedUser(req, res, next) {
   const authorization = req.get('authorization') || '';
   const token = authorization.startsWith('Bearer ')
     ? authorization.slice('Bearer '.length)
@@ -22,8 +22,8 @@ async function authenticateUser(req, res, next, allowedRoles, accessMessage) {
     if (!user || user.status !== 'Active') {
       return res.status(401).json({ message: 'Your account is unavailable' });
     }
-    if (!allowedRoles.includes(user.role)) {
-      return res.status(403).json({ message: accessMessage });
+    if (user.role !== 'user') {
+      return res.status(403).json({ message: 'Customer access is required' });
     }
     req.authenticatedUser = user;
     return next();
@@ -32,19 +32,4 @@ async function authenticateUser(req, res, next, allowedRoles, accessMessage) {
   }
 }
 
-function requireAuthenticatedUser(req, res, next) {
-  return authenticateUser(req, res, next, ['user'], 'Customer access is required');
-}
-
-function requireAuthenticatedUserOrAdmin(req, res, next) {
-  return authenticateUser(
-    req,
-    res,
-    next,
-    ['user', 'admin'],
-    'Customer or administrator access is required'
-  );
-}
-
 module.exports = requireAuthenticatedUser;
-module.exports.requireAuthenticatedUserOrAdmin = requireAuthenticatedUserOrAdmin;
