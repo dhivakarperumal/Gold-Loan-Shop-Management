@@ -34,6 +34,7 @@ const METAL_DETAILS = {
       "A symbol of purity and prosperity, our gold jewellery celebrates life's special moments.",
     Icon: Coins,
     fallback: "from-[#f3d49a] to-[#b47a22]",
+    cardGradient: "from-[#fff7e5] via-[#fffdf8] to-[#f6e4b8]",
   },
   silver: {
     symbol: "Ag",
@@ -42,6 +43,7 @@ const METAL_DETAILS = {
       "Elegant, versatile and timeless, our silver collection blends tradition with modern style.",
     Icon: Sparkles,
     fallback: "from-[#e6e5de] to-[#aaa99f]",
+    cardGradient: "from-[#eaf5ff] via-[#f8fbff] to-[#d9eaff]",
   },
   platinum: {
     symbol: "Pt",
@@ -50,6 +52,7 @@ const METAL_DETAILS = {
       "Rare, refined and enduring, platinum symbolises lasting strength and elegance.",
     Icon: Atom,
     fallback: "from-[#c9d9ce] to-[#718f82]",
+    cardGradient: "from-[#e8f7ed] via-[#f8fcf8] to-[#d3eddd]",
   },
   diamond: {
     symbol: "",
@@ -58,6 +61,7 @@ const METAL_DETAILS = {
       "Exceptional sparkle and brilliance, our diamonds are chosen for their unmatched beauty.",
     Icon: Gem,
     fallback: "from-[#f6e8d0] to-[#d8c6a7]",
+    cardGradient: "from-[#fff0f8] via-[#fff9fc] to-[#f5dff0]",
   },
 };
 
@@ -142,7 +146,7 @@ export default function MetalsShowcase() {
               return (
                 <article
                   key={metal.id}
-                  className="group relative grid min-h-[225px] grid-cols-[46%_54%] overflow-hidden rounded-xl border border-[#e6cf9c] bg-gradient-to-br from-[#fffaf0] via-[#fffdf8] to-[#f3e6ca] shadow-[0_3px_12px_rgba(113,79,24,0.06)] sm:min-h-[245px] lg:min-h-[270px] xl:min-h-[290px]"
+                  className={`group relative grid min-h-[225px] grid-cols-[46%_54%] overflow-hidden rounded-xl border border-[#e6cf9c] bg-gradient-to-br ${details?.cardGradient || "from-[#f5e9ce] via-[#fffdf8] to-[#dfd0ad]"} shadow-[0_3px_12px_rgba(113,79,24,0.06)] sm:min-h-[245px] lg:min-h-[270px] xl:min-h-[290px]`}
                 >
                   <Link
                     to={exploreUrl}
@@ -174,7 +178,7 @@ export default function MetalsShowcase() {
                     </span>
                   </Link>
 
-                  <div className="relative flex min-w-0 flex-col justify-center overflow-hidden bg-gradient-to-br from-[#fffdf8]/90 via-[#fffaf0]/85 to-[#f6ead2]/90 px-3 py-4 pl-5 sm:px-5 sm:py-4 sm:pl-7 lg:px-7 lg:pl-9">
+                  <div className="relative flex min-w-0 flex-col justify-center overflow-hidden bg-gradient-to-br from-white/75 via-white/55 to-transparent px-3 py-4 pl-5 sm:px-5 sm:py-4 sm:pl-7 lg:px-7 lg:pl-9">
                     <Flower2
                       size={104}
                       strokeWidth={0.7}
