@@ -40,6 +40,7 @@ const LoanDetails = React.lazy(() => import("./Admin/Loanmanagements/LoanDetails
 const InterestManagement = React.lazy(() => import("./Admin/Loanmanagements/InterestManagement.jsx"));
 const LoanRenewal = React.lazy(() => import("./Admin/Loanmanagements/LoanRenewal.jsx"));
 const GoldRelease = React.lazy(() => import("./Admin/Loanmanagements/GoldRelease.jsx"));
+const OverdueLoans = React.lazy(() => import("./Admin/Loanmanagements/OverdueLoans.jsx"));
 const BannerManagement = React.lazy(() => import("./Admin/Marketing/BannerManagement.jsx"));
 const VideoManagement = React.lazy(() => import("./Admin/Marketing/VideoManagement.jsx"));
 const Reviews = React.lazy(() => import("./Admin/Pages/Reviews.jsx"));
@@ -50,6 +51,8 @@ const ReceiptSettings = React.lazy(() => import("./Admin/Pages/ReceiptSettings.j
 const HomeSections = React.lazy(() => import("./Admin/Pages/HomeSections.jsx"));
 const Dealers = React.lazy(() => import("./Admin/Dealers/Dealers.jsx"));
 const CustomerKyc = React.lazy(() => import("./Components/Account/CustomerKyc.jsx"));
+const UserProfile  = React.lazy(() => import("./Components/Account/UserProfile.jsx"));
+
 const AdminKyc = React.lazy(() => import("./Admin/Kyc/AdminKyc.jsx"));
 const BillingManagement = React.lazy(() => import("./Admin/Pages/BillingManagement.jsx"));
 const Reports = React.lazy(() => import("./Admin/Pages/Reports.jsx"));
@@ -76,7 +79,14 @@ const router = createBrowserRouter([
           </PrivateRoute>
         )
       },
-     
+      {
+        path: "/profile",
+        element: (
+          <PrivateRoute allowedRoles={["user", "admin", "manager", "dealer"]}>
+            <UserProfile />
+          </PrivateRoute>
+        )
+      },
 
     ],
   },
@@ -104,6 +114,7 @@ const router = createBrowserRouter([
       { path: "loans/allloans", element: <AllLoans /> },
       { path: "loans/details/:id", element: <LoanDetails /> },
       { path: "loans/interestmanagement", element: <InterestManagement /> },
+      { path: "loans/overdueloans", element: <OverdueLoans /> },
       { path: "loans/loanreniwel", element: <LoanRenewal /> },
       { path: "loans/loanreniwel/:id", element: <LoanRenewal /> },
       { path: "loans/goldrelease", element: <GoldRelease /> },

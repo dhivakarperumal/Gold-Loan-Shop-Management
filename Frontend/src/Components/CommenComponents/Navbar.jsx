@@ -608,16 +608,7 @@ const Navbar = () => {
                         >
                           My Profile
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setAccountOpen(false);
-                            navigate("/orders");
-                          }}
-                          className="w-full rounded-lg px-3 py-2.5 text-left text-sm hover:bg-[#f8f0df]"
-                        >
-                          My Orders
-                        </button>
+
                         {isAdmin && (
                           <button
                             type="button"

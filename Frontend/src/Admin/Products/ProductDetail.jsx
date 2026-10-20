@@ -1,33 +1,41 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
 import { QRCodeCanvas } from "qrcode.react";
 import {
+  FiActivity,
   FiArrowLeft,
+  FiBookmark,
+  FiChevronLeft,
+  FiChevronRight,
+  FiDollarSign,
   FiEdit,
   FiExternalLink,
+  FiGrid,
+  FiImage,
+  FiInfo,
+  FiLayers,
   FiPackage,
   FiRefreshCw,
+  FiShare2,
+  FiStar,
   FiTrash2
 } from "react-icons/fi";
-import { BsQrCode } from "react-icons/bs";
 import api from "../../api";
-import { formatRateDate, getRateForPurity } from "../../PrivateRouter/goldRateUtils";
-import useGoldRates from "../../PrivateRouter/useGoldRates";
 
-const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
+const BACKEND_URL = (
+  import.meta.env.VITE_BACKEND_URL ||
+  import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") ||
+  "http://localhost:5000"
+).replace(/\/$/, "");
+
 const money = (value) => new Intl.NumberFormat("en-IN", {
-  style: "currency", currency: "INR", maximumFractionDigits: 2
+  style: "currency",
+  currency: "INR",
+  maximumFractionDigits: 2
 }).format(Number(value) || 0);
-const optionalMoney = (value) => value == null || value === "" ? "" : money(value);
 
-function assetUrl(path) {
-  if (!path || typeof path !== "string") return "";
-  if (/^(https?:|data:|blob:)/i.test(path)) return path;
-  return `${BACKEND_URL}${path.startsWith("/") ? path : `/${path}`}`;
-}
-
-function parseArray(value) {
+const parseArray = (value) => {
   if (Array.isArray(value)) return value;
   if (typeof value !== "string" || !value.trim()) return [];
   try {
@@ -36,47 +44,66 @@ function parseArray(value) {
   } catch {
     return [];
   }
-}
+};
 
-function imagePath(image) {
+const imagePath = (image) => {
   if (typeof image === "string") return image;
   return image?.url || image?.path || image?.src || "";
-}
+};
 
-function displayValue(value) {
+const assetUrl = (path) => {
+  if (!path || typeof path !== "string") return "";
+  if (/^(https?:|data:|blob:)/i.test(path)) return path;
+  return `${BACKEND_URL}${path.startsWith("/") ? path : `/${path}`}`;
+};
+
+const displayValue = (value) => {
   if (value == null || value === "") return "";
-  if (Array.isArray(value)) return value.map((item) => String(item)).join(", ");
   if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (Array.isArray(value)) return value.map(displayValue).filter(Boolean).join(", ");
   return String(value);
-}
+};
 
-function dateText(value) {
-  if (!value) return "—";
+const dateText = (value) => {
+  if (!value) return "";
   const date = new Date(value);
-  return Number.isNaN(date.valueOf()) ? String(value) : date.toLocaleDateString("en-IN", {
-    day: "2-digit", month: "short", year: "numeric"
-  });
-}
+  return Number.isNaN(date.valueOf())
+    ? String(value)
+    : date.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+};
 
-function DetailSection({ title, fields, columns = "sm:grid-cols-2 lg:grid-cols-3" }) {
+function DetailCard({ title, icon: Icon, fields, className = "" }) {
   const visibleFields = fields.filter(([, value]) => displayValue(value) !== "");
-  if (visibleFields.length === 0) return null;
+  if (!visibleFields.length) return null;
+
   return (
-    <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
-      <div className="border-b border-slate-100 bg-[#003B3B]/5 px-5 py-4">
-        <h2 className="font-bold text-[#003B3B]">{title}</h2>
-      </div>
-      <dl className={`grid gap-3 p-5 ${columns}`}>
+    <section className={`overflow-hidden rounded-xl border border-[#eee8dc] bg-white shadow-sm ${className}`}>
+      <h2 className="flex items-center gap-2 border-b border-[#f1ebdf] bg-[#fffdf8] px-4 py-3 font-semibold text-[#173f38]">
+        {Icon && <Icon className="shrink-0 text-[#c99435]" />}
+        {title}
+      </h2>
+      <dl className="divide-y divide-[#f1eee8] px-4">
         {visibleFields.map(([label, value]) => (
-          <div key={label} className="min-w-0 rounded-xl bg-slate-50 p-3">
-            <dt className="text-xs font-medium text-slate-500">{label}</dt>
-            <dd className="mt-1 break-words text-sm font-semibold text-slate-800">{displayValue(value)}</dd>
+          <div key={label} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-3 py-2.5 text-xs sm:text-sm">
+            <dt className="text-[#7d817d]">{label}</dt>
+            <dd className="break-words font-semibold text-[#344541]">{displayValue(value)}</dd>
           </div>
         ))}
       </dl>
     </section>
   );
 }
+
+const tabs = [
+  { id: "information", label: "Information", icon: FiInfo },
+  { id: "pricing", label: "Pricing & Stock", icon: FiDollarSign },
+  { id: "images", label: "Images", icon: FiImage },
+  { id: "variants", label: "Variants", icon: FiGrid },
+  { id: "specifications", label: "Specifications", icon: FiLayers },
+  { id: "additional", label: "Additional Details", icon: FiBookmark },
+  { id: "reviews", label: "Reviews", icon: FiStar },
+  { id: "activity", label: "Activity Log", icon: FiActivity }
+];
 
 function ProductDetail() {
   const { id } = useParams();
@@ -87,23 +114,23 @@ function ProductDetail() {
   const [loadedProductId, setLoadedProductId] = useState(null);
   const [refreshKey, setRefreshKey] = useState(0);
   const [errorMessage, setErrorMessage] = useState("");
-  const [activeVariant, setActiveVariant] = useState(0);
   const [activeImage, setActiveImage] = useState(0);
+  const [activeTab, setActiveTab] = useState("information");
   const [deleting, setDeleting] = useState(false);
-  const { current: activeRateSet, error: rateError } = useGoldRates();
+  const qrCodeRef = useRef(null);
 
   useEffect(() => {
     let active = true;
     api.get(`/products/${id}`)
       .then(({ data }) => {
-        if (!active) return;
         if (!data || typeof data !== "object" || Array.isArray(data)) {
           throw new Error("The server returned invalid product details.");
         }
+        if (!active) return;
         setProduct(data);
         setLoadedProductId(id);
-        setActiveVariant(0);
         setActiveImage(0);
+        setActiveTab("information");
         setErrorMessage("");
       })
       .catch((error) => {
@@ -134,8 +161,8 @@ function ProductDetail() {
   }, [id, refreshKey]);
 
   const refreshProduct = () => {
-    setLoading(true);
     setErrorMessage("");
+    setLoading(true);
     setRefreshKey((current) => current + 1);
   };
 
@@ -153,314 +180,393 @@ function ProductDetail() {
     }
   };
 
+  const handleShare = async () => {
+    const url = `${window.location.origin}/product/${id}`;
+    try {
+      if (navigator.share) {
+        await navigator.share({ title: product.name, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success("Product link copied.");
+      }
+    } catch (error) {
+      if (error.name !== "AbortError") {
+        console.error("Failed to share product:", error);
+        toast.error("Could not share the product link.");
+      }
+    }
+  };
+
+  const downloadProductQr = () => {
+    const canvas = qrCodeRef.current;
+    if (!canvas) {
+      toast.error("Product QR code is not ready to download.");
+      return;
+    }
+
+    try {
+      const downloadLink = document.createElement("a");
+      downloadLink.href = canvas.toDataURL("image/png");
+      downloadLink.download = `${product.product_code || `product-${id}`}-qr.png`;
+      downloadLink.click();
+    } catch (error) {
+      console.error("Failed to download product QR code:", error);
+      toast.error("Could not download the product QR code.");
+    }
+  };
+
   if (loading || loadedProductId !== id) {
-    return <div className="py-20 text-center text-sm font-semibold text-slate-500">Loading product details...</div>;
+    return <div className="py-20 text-center text-sm font-semibold text-slate-500" role="status">Loading product details...</div>;
   }
   if (!product) {
     return (
       <main className="mx-auto max-w-2xl rounded-2xl border border-slate-100 bg-white p-8 text-center shadow-sm">
         <FiPackage className="mx-auto text-3xl text-slate-300" />
-        <h1 className="mt-3 text-xl font-bold text-[#003B3B]">Product details unavailable</h1>
-        <p className="mt-2 text-sm text-slate-500">{errorMessage || "This product may have been removed."}</p>
+        <h1 className="mt-3 text-xl font-bold text-[#173f38]">Product details unavailable</h1>
+        <p className="mt-2 text-sm text-slate-500" role="alert">{errorMessage || "This product may have been removed."}</p>
         <div className="mt-5 flex justify-center gap-3">
           <button type="button" onClick={refreshProduct} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50">
             <FiRefreshCw /> Retry
           </button>
-          <Link to="/admin/products/all" className="rounded-lg bg-[#003B3B] px-4 py-2 text-sm font-semibold text-white hover:bg-[#008577]">All Products</Link>
+          <Link to="/admin/products/all" className="rounded-lg bg-[#174a3f] px-4 py-2 text-sm font-semibold text-white hover:bg-[#10382f]">All Products</Link>
         </div>
       </main>
     );
   }
 
   const variants = parseArray(product.variants);
-  const mainImages = parseArray(product.images).map(imagePath).filter(Boolean);
-  const currentVariant = variants[activeVariant] || {};
-  const variantImages = parseArray(currentVariant.images).map(imagePath).filter(Boolean);
-  const displayImages = variantImages.length ? variantImages : mainImages;
-  const selectedImage = displayImages[activeImage] || displayImages[0] || "";
-  const currentPurityRate = getRateForPurity(activeRateSet, product.purity);
-  const detailsLink = typeof window !== "undefined" ? window.location.href : `/admin/products/${id}`;
-  const documentFields = [
-    ["Size Guide", product.size_guide_chart],
-    ["Certificate", product.certificate]
-  ].filter(([, value]) => value);
+  const images = [
+    ...parseArray(product.images).map(imagePath),
+    ...variants.flatMap((variant) => parseArray(variant.images).map(imagePath))
+  ].filter(Boolean).filter((image, index, allImages) => allImages.indexOf(image) === index);
+  const selectedImage = images[activeImage] || images[0] || "";
+  const offerPrice = Number(product.offer_price ?? product.final_selling_price ?? product.mrp ?? 0);
+  const mrp = Number(product.mrp || 0);
+  const discount = Number(product.discount || product.offer || (mrp > offerPrice ? ((mrp - offerPrice) / mrp) * 100 : 0));
+  const stockStatus = product.stock_status || (Number(product.total_stock) > 0 ? "In Stock" : "Out of Stock");
   const productInfo = [
-    ["SKU / Product Code", product.product_code],
-    ["Brand", product.brand],
+    ["Product Name", product.name],
     ["Category", product.category],
-    ["Subcategory", product.subcategory],
-    ["Product Type", product.product_type],
+    ["Sub Category", product.subcategory],
     ["Metal Type", product.metal_type],
     ["Purity", product.purity],
-    ["Status", product.status]
+    ["SKU", product.product_code],
+    ["Stock Status", stockStatus],
+    ["Created At", dateText(product.created_at)],
+    ["Updated At", dateText(product.updated_at)]
   ];
-  const goldInfo = [
-    ["Gross Weight", product.gross_weight != null ? `${product.gross_weight} g` : ""],
-    ["Net Gold Weight", product.net_gold_weight != null ? `${product.net_gold_weight} g` : ""],
-    ["Stone Weight", product.stone_weight != null ? `${product.stone_weight} g` : ""],
-    ["Stone Type", product.stone_type],
-    ["Applied Rate Snapshot / Gram", product.gold_rate_per_gram != null ? money(product.gold_rate_per_gram) : ""],
-    ["Rate Snapshot Date", product.gold_rate_date ? dateText(product.gold_rate_date) : ""],
-    ["HUID", product.huid]
-  ];
-  const measurements = [
-    ["Product Size", product.product_size],
-    ["Available Sizes", parseArray(product.available_sizes).join(", ")],
-    ["Length", product.length],
-    ["Width", product.width],
-    ["Height", product.height],
-    ["Ring Size", product.ring_size],
-    ["Bangle Size", product.bangle_size],
-    ["Chain Length", product.chain_length],
-    ["Age", product.age],
-    ["Material / Fabric", product.material],
-    ["Artisan Work", product.work_type],
-    ["Jewelry Length", product.saree_length],
-    ["Blouse Length", product.blouse_length],
-    ["Top Length", product.top_length],
-    ["Bottom Length", product.bottom_length],
-    ["Dupatta Length", product.dupatta_length],
-    ["Gown Length", product.gown_length],
-    ["Sleeve Type", product.sleeve_type],
-    ["Neck Type", product.neck_type],
-    ["Fit Type", product.fit_type],
-    ["Zari Color", product.zari_color]
-  ];
-  const pricing = [
-    ["MRP", optionalMoney(product.mrp)],
-    ["Offer", product.offer != null ? `${product.offer}%` : ""],
-    ["Offer Price", optionalMoney(product.offer_price)],
-    ["Discount", product.discount != null ? `${product.discount}%` : ""],
-    ["GST Rate", product.gst_rate != null ? `${product.gst_rate}%` : ""],
-    ["Final Selling Price", optionalMoney(product.final_selling_price)],
-    ["Price Includes GST", product.price_includes_gst],
-    ["Making Charge Type", product.making_charge_type],
-    ["Stone Charges", product.stone_charges != null ? money(product.stone_charges) : ""],
-    ["Making Charge", product.making_charge != null ? (
-      String(product.making_charge_type).toLowerCase() === "percentage"
+  const pricingInfo = [
+    ["Gold Rate", product.gold_rate_per_gram != null ? `${money(product.gold_rate_per_gram)} / g` : ""],
+    ["Product Weight", product.gross_weight != null ? `${product.gross_weight} g` : ""],
+    ["Gold Amount", product.net_gold_weight != null && product.gold_rate_per_gram != null
+      ? money(Number(product.net_gold_weight) * Number(product.gold_rate_per_gram))
+      : ""],
+    ["Making Charges", product.making_charge != null
+      ? String(product.making_charge_type).toLowerCase() === "percentage"
         ? `${product.making_charge}%`
-        : optionalMoney(product.making_charge)
-    ) : ""],
-    ["Wastage Type", product.wastage_type],
-    ["Wastage", product.wastage != null ? (
-      String(product.wastage_type).toLowerCase() === "percentage"
+        : money(product.making_charge)
+      : ""],
+    ["Stone Charges", product.stone_charges != null ? money(product.stone_charges) : ""],
+    ["Wastage", product.wastage != null
+      ? String(product.wastage_type).toLowerCase() === "percentage"
         ? `${product.wastage}%`
         : `${product.wastage} g`
-    ) : ""]
+      : ""],
+    ["GST", product.gst_rate != null ? `${product.gst_rate}%` : ""],
+    ["Offer Price", money(offerPrice)],
+    ["Discount", discount ? `${discount.toFixed(0)}%` : ""],
+    ["MRP", mrp > offerPrice ? money(mrp) : ""],
+    ["Final Price", money(product.final_selling_price ?? offerPrice)]
   ];
-  const inventory = [
-    ["Stock Quantity", product.total_stock != null ? `${product.total_stock} units` : ""],
-    ["Stock Status", product.stock_status],
-    ["Warehouse / Location", product.warehouse],
-    ["SKU Barcode", product.sku_barcode],
-    ["Rating", product.rating != null ? `${product.rating} / 5` : ""],
-    ["Total Reviews", product.total_reviews],
-    ["Featured Product", Boolean(product.featured)],
-    ["New Arrival", Boolean(product.new_arrival)],
-    ["Best Seller", Boolean(product.best_seller)],
-    ["Created", dateText(product.created_at)],
-    ["Last Updated", dateText(product.updated_at)]
+  const additionalInfo = [
+    ["Brand", product.brand],
+    ["Product Type", product.product_type],
+    ["Stone Type", product.stone_type],
+    ["Stone Weight", product.stone_weight != null ? `${product.stone_weight} g` : ""],
+    ["HUID", product.huid],
+    ["Material", product.material],
+    ["Artisan Work", product.work_type],
+    ["Care Instructions", product.care_instructions],
+    ["Wash Care", product.wash_care],
+    ["Warranty", product.warranty],
+    ["Certificate", product.certificate ? "Available" : ""],
+    ["Price Includes GST", product.price_includes_gst]
   ];
 
   return (
-    <main className="space-y-5 pb-10">
-      <header className="flex flex-col justify-between gap-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm sm:flex-row sm:items-center">
-        <div className="flex min-w-0 items-center gap-3">
-          <Link to="/admin/products/all" aria-label="Back to all products" className="rounded-xl border border-slate-200 p-2.5 text-slate-500 transition hover:border-[#008577] hover:text-[#008577]">
-            <FiArrowLeft size={18} />
-          </Link>
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="truncate text-xl font-extrabold text-[#003B3B] sm:text-2xl">{product.name || "Unnamed Product"}</h1>
-              <span className={`rounded-full px-2.5 py-1 text-[10px] font-bold uppercase ${product.status === "Active" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{product.status || "Unknown"}</span>
-            </div>
-            <p className="mt-1 text-sm text-slate-500">{product.product_code || `Product ID ${product.id}`} · {product.category || "Uncategorized"}</p>
-          </div>
+    <main className="space-y-5 pb-8 text-[#35443f]">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-xs font-medium text-[#78817c] sm:text-sm">
+          <Link to="/admin/products/all" className="hover:text-[#174a3f]">Products</Link>
+          <span>›</span>
+          <Link to="/admin/products/all" className="hover:text-[#174a3f]">All Products</Link>
+          <span>›</span>
+          <span className="font-semibold text-[#34443e]">Product Details</span>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <button type="button" onClick={refreshProduct} className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-600 hover:bg-slate-50" aria-label="Refresh product details">
-            <FiRefreshCw /> Refresh
-          </button>
-          <Link to={`/admin/products/edit/${id}`} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white transition hover:bg-[#008577]">
-            <FiEdit /> Edit Product
-          </Link>
-          <button type="button" onClick={handleDelete} disabled={deleting} className="inline-flex items-center justify-center gap-2 rounded-lg bg-rose-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-60">
-            <FiTrash2 /> {deleting ? "Deleting..." : "Delete"}
-          </button>
-        </div>
-      </header>
+        <Link to="/admin/products/all" className="inline-flex items-center gap-2 rounded-full border border-[#ece6da] bg-white px-4 py-2 text-xs font-semibold text-[#34443e] shadow-sm transition hover:border-[#174a3f]">
+          <FiArrowLeft /> Back to Products
+        </Link>
+      </div>
 
-      <section className="rounded-xl border border-emerald-100 bg-emerald-50 p-4">
-        <p className="text-xs font-bold uppercase tracking-wide text-emerald-800">Saved product price snapshot</p>
-        <p className="mt-1 text-sm font-semibold text-slate-800">
-          Applied rate {product.gold_rate_per_gram == null ? "—" : `${money(product.gold_rate_per_gram)} / g`}
-          {product.gold_rate_date && ` · ${formatRateDate(product.gold_rate_date)}`}
-          {product.gold_value != null && <> · Gold value {money(product.gold_value)}</>}
-          {product.final_selling_price != null && <> · Final price {money(product.final_selling_price)}</>}
-        </p>
-        {currentPurityRate && Number(currentPurityRate.rate_per_gram) !== Number(product.gold_rate_per_gram) && (
-          <p className="mt-2 text-xs font-semibold text-amber-800">
-            Current rate is {money(currentPurityRate.rate_per_gram)} / g. The saved price is updated when the rate batch is activated.
-          </p>
-        )}
-        {!currentPurityRate && <p className="mt-2 text-xs text-slate-600">{activeRateSet ? `No current rate is configured for ${product.purity}.` : "No active global rate is configured."}</p>}
-        {rateError && <p role="alert" className="mt-2 text-xs font-semibold text-rose-700">Could not refresh the active rate: {rateError}</p>}
-        <p className="mt-1 text-xs text-slate-600">Rate changes update stored product prices and do not alter historical invoices.</p>
-      </section>
-
-      <div className="grid gap-5 lg:grid-cols-12">
-        <section className="space-y-3 lg:col-span-5">
-          <div className="overflow-hidden rounded-2xl border border-slate-100 bg-white p-3 shadow-sm">
-            <div className="flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-slate-50">
-              {selectedImage ? (
-                <img src={assetUrl(selectedImage)} alt={product.name || "Product"} className="h-full w-full object-contain" />
-              ) : (
-                <div className="text-center text-sm font-medium text-slate-400"><FiPackage className="mx-auto mb-2 text-3xl" />No product images</div>
-              )}
-            </div>
+      <div className="grid gap-4 xl:grid-cols-12">
+        <section className="min-w-0 rounded-2xl border border-[#eee8dc] bg-white p-3 shadow-sm xl:col-span-4">
+          <div className="relative flex aspect-[1.08/1] items-center justify-center overflow-hidden rounded-xl bg-[#f8f6ef]">
+            {selectedImage ? (
+              <img src={assetUrl(selectedImage)} alt={product.name || "Product"} className="h-full w-full object-cover" />
+            ) : (
+              <div className="text-center text-sm font-medium text-slate-400"><FiPackage className="mx-auto mb-2 text-4xl" />No product images</div>
+            )}
+            {(product.best_seller || product.featured) && (
+              <span className="absolute left-3 top-3 rounded-full bg-[#f5c94d] px-3 py-1.5 text-xs font-bold text-[#49350d]">
+                {product.best_seller ? "Bestseller" : "Featured"}
+              </span>
+            )}
+            {images.length > 1 && (
+              <>
+                <button type="button" aria-label="Previous product image" onClick={() => setActiveImage((activeImage + images.length - 1) % images.length)} className="absolute left-3 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white/95 text-[#174a3f] shadow transition hover:bg-white">
+                  <FiChevronLeft size={20} />
+                </button>
+                <button type="button" aria-label="Next product image" onClick={() => setActiveImage((activeImage + 1) % images.length)} className="absolute right-3 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-white/95 text-[#174a3f] shadow transition hover:bg-white">
+                  <FiChevronRight size={20} />
+                </button>
+              </>
+            )}
           </div>
-          {displayImages.length > 1 && (
-            <div className="grid grid-cols-5 gap-2">
-              {displayImages.map((image, index) => (
-                <button key={`${image}-${index}`} type="button" onClick={() => setActiveImage(index)} aria-label={`Show product image ${index + 1}`} aria-pressed={activeImage === index} className={`aspect-square overflow-hidden rounded-lg border-2 bg-white ${activeImage === index ? "border-[#008577]" : "border-transparent"}`}>
+          {images.length > 0 && (
+            <div className="mt-2 grid grid-cols-5 gap-2">
+              {images.slice(0, 5).map((image, index) => (
+                <button key={`${image}-${index}`} type="button" onClick={() => setActiveImage(index)} aria-label={`Show product image ${index + 1}`} aria-pressed={activeImage === index} className={`aspect-square overflow-hidden rounded-lg border-2 bg-white transition ${activeImage === index ? "border-[#1c765d]" : "border-transparent hover:border-[#d6c59d]"}`}>
                   <img src={assetUrl(image)} alt="" className="h-full w-full object-cover" />
                 </button>
               ))}
             </div>
           )}
-          {product.video && (
-            <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-              <h2 className="mb-3 font-bold text-[#003B3B]">Product Video</h2>
-              <video src={assetUrl(product.video)} controls preload="metadata" className="max-h-80 w-full rounded-lg bg-black" />
-            </section>
-          )}
-          {documentFields.length > 0 && (
-            <section className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-              <h2 className="mb-3 font-bold text-[#003B3B]">Product Documents</h2>
-              <div className="flex flex-wrap gap-2">
-                {documentFields.map(([label, path]) => (
-                  <a key={label} href={assetUrl(path)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-[#008577] hover:bg-emerald-50">
-                    {label} <FiExternalLink />
-                  </a>
-                ))}
-              </div>
-            </section>
-          )}
         </section>
 
-        <section className="space-y-5 lg:col-span-7">
-          <div className="grid gap-3 sm:grid-cols-3">
-            {[
-              ["MRP", money(product.mrp)],
-              ["Offer Price", money(product.offer_price)],
-              ["Stock", `${Number(product.total_stock) || 0} units`]
-            ].map(([label, value]) => (
-              <article key={label} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
-                <p className="text-xs font-semibold text-slate-500">{label}</p>
-                <p className="mt-1 text-xl font-extrabold text-[#003B3B]">{value}</p>
-              </article>
-            ))}
+        <section className="flex min-w-0 flex-col rounded-2xl border border-[#eee8dc] bg-white p-4 shadow-sm sm:p-5 xl:col-span-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <span className="rounded-md bg-[#f5f3f5] px-2 py-1 text-[11px] font-semibold text-[#6c6571]">PRODUCT ID: #{product.product_code || product.id}</span>
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${stockStatus.toLowerCase().includes("stock") && !stockStatus.toLowerCase().includes("out") ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-700"}`}>
+              <span className="h-2 w-2 rounded-full bg-current" />{stockStatus}
+            </span>
+          </div>
+          <h1 className="mt-3 font-serif text-2xl font-bold leading-tight text-[#173f38] sm:text-3xl">{product.name || "Unnamed Product"}</h1>
+
+          <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-[#64716b]">
+            {product.rating != null && (
+              <span className="inline-flex items-center gap-1 font-semibold text-[#394741]">
+                <FiStar className="fill-[#f5a900] text-[#f5a900]" />
+                {Number(product.rating).toFixed(1)}
+                {product.total_reviews != null && <span>({product.total_reviews} reviews)</span>}
+              </span>
+            )}
+            {product.total_stock != null && <span>{Number(product.total_stock).toLocaleString("en-IN")} in stock</span>}
           </div>
 
           {(product.description || product.full_description) && (
-            <section className="space-y-3 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-              <h2 className="font-bold text-[#003B3B]">Description</h2>
-              {product.description && <p className="whitespace-pre-wrap text-sm leading-6 text-slate-600">{product.description}</p>}
-              {product.full_description && <p className="whitespace-pre-wrap text-sm leading-6 text-slate-600">{product.full_description}</p>}
-            </section>
+            <p className="mt-3 line-clamp-3 text-sm leading-6 text-[#59645e]">{product.description || product.full_description}</p>
           )}
-          <DetailSection title="Product Information" fields={productInfo} />
-          <DetailSection title="Gold & Material Details" fields={goldInfo} />
-          <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
-            <div className="border-b border-slate-100 bg-[#003B3B]/5 px-5 py-4">
-              <h2 className="font-bold text-[#003B3B]">Price History</h2>
-            </div>
-            {priceHistory.length === 0 ? (
-              <p className="p-5 text-sm text-slate-500">No price recalculation history yet.</p>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[700px] text-left text-sm">
-                  <thead className="bg-slate-50 text-xs uppercase text-slate-500">
-                    <tr>
-                      <th className="px-5 py-3">Changed</th>
-                      <th className="px-5 py-3">Previous Price</th>
-                      <th className="px-5 py-3">New Price</th>
-                      <th className="px-5 py-3">Rate / g</th>
-                      <th className="px-5 py-3">Reason</th>
-                      <th className="px-5 py-3">Changed By</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {priceHistory.map((entry) => (
-                      <tr key={entry.id}>
-                        <td className="px-5 py-3 text-slate-600">{dateText(entry.changed_at)}</td>
-                        <td className="px-5 py-3 text-slate-600">{entry.previous_price == null ? "—" : money(entry.previous_price)}</td>
-                        <td className="px-5 py-3 font-bold text-[#003B3B]">{money(entry.new_price)}</td>
-                        <td className="px-5 py-3 text-slate-600">{money(entry.rate_per_gram)}</td>
-                        <td className="px-5 py-3 text-slate-600">{entry.reason}</td>
-                        <td className="px-5 py-3 text-slate-600">{entry.changed_by_name || "System"}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </section>
-          <DetailSection title="Pricing & Charges" fields={pricing} />
-          <DetailSection title="Sizes & Measurements" fields={measurements} />
-          <DetailSection title="Inventory & Publishing" fields={inventory} />
-          <DetailSection title="Care & Warranty" fields={[
-            ["Care Instructions", product.care_instructions],
-            ["Wash Care", product.wash_care],
-            ["Warranty", product.warranty]
-          ]} columns="sm:grid-cols-1" />
-          {parseArray(product.highlights).length > 0 && (
-            <DetailSection title="Product Highlights" fields={parseArray(product.highlights).map((highlight, index) => [`Highlight ${index + 1}`, highlight])} />
-          )}
-          {product.specifications && (
-            <section className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-              <h2 className="mb-3 font-bold text-[#003B3B]">Specifications</h2>
-              <p className="whitespace-pre-wrap text-sm leading-6 text-slate-600">{product.specifications}</p>
-            </section>
-          )}
-          {variants.length > 0 && (
-            <section className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
-              <h2 className="mb-4 font-bold text-[#003B3B]">Variants & Size Stock</h2>
-              <div className="space-y-3">
-                {variants.map((variant, index) => {
-                  const stockBySize = variant.sizesStock && typeof variant.sizesStock === "object"
-                    ? Object.entries(variant.sizesStock)
-                    : [];
-                  const selectedSizes = parseArray(variant.selectedSizes);
-                  const variantStock = stockBySize.reduce((total, [, quantity]) => total + (Number(quantity) || 0), 0);
-                  return (
-                    <button key={`${variant.colorName || variant.color || "variant"}-${index}`} type="button" onClick={() => { setActiveVariant(index); setActiveImage(0); }} className={`w-full rounded-xl border p-4 text-left transition ${activeVariant === index ? "border-[#008577] bg-emerald-50/60" : "border-slate-100 bg-slate-50 hover:border-slate-300"}`}>
-                      <div className="flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          {variant.color && <span className="h-7 w-7 rounded-lg border border-slate-200" style={{ backgroundColor: variant.color }} />}
-                          <span className="font-semibold text-slate-800">{variant.colorName || variant.color || `Variant ${index + 1}`}</span>
-                        </div>
 
-                        <span className="text-xs font-semibold text-slate-500">{variantStock ? `${variantStock} units` : ""}</span>
-                      </div>
-                      {selectedSizes.length > 0 && <p className="mt-2 text-xs text-slate-500">Sizes: {selectedSizes.join(", ")}</p>}
-                      {stockBySize.length > 0 && <p className="mt-1 text-xs text-slate-500">{stockBySize.map(([size, quantity]) => `${size}: ${quantity}`).join(" · ")}</p>}
-                    </button>
-                  );
-                })}
-              </div>
-            </section>
-          )}
-          <section className="flex flex-col items-center gap-4 rounded-2xl border border-slate-100 bg-white p-5 shadow-sm sm:flex-row">
-            <div className="rounded-xl border border-slate-100 bg-white p-3"><QRCodeCanvas value={detailsLink} size={104} level="H" includeMargin /></div>
-            <div className="text-center sm:text-left">
-              <div className="flex items-center justify-center gap-2 text-[#003B3B] sm:justify-start"><BsQrCode /><h2 className="font-bold">Product Record QR</h2></div>
-              <p className="mt-1 text-xs text-slate-500">Scan to open this product record.</p>
-              <p className="mt-2 text-xs font-semibold text-slate-600">Added {dateText(product.created_at)} · Updated {dateText(product.updated_at)}</p>
-            </div>
-          </section>
+          <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <span className="text-3xl font-extrabold text-[#c12b19] sm:text-4xl">{money(product.final_selling_price ?? offerPrice)}</span>
+            {mrp > offerPrice && <span className="text-sm text-[#858b87] line-through">{money(mrp)}</span>}
+            {discount > 0 && <span className="rounded-full bg-[#fff0ee] px-3 py-1 text-xs font-bold text-[#d33627]">{discount.toFixed(0)}% OFF</span>}
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-[#737d77]">
+            {product.purity && <span>{product.metal_type || "Gold"} ({product.purity})</span>}
+            {product.gross_weight != null && <><span>|</span><span>Weight: {product.gross_weight} g</span></>}
+            {product.making_charge != null && <><span>|</span><span>Making Charges: {product.making_charge === 0 ? "Included" : "Available"}</span></>}
+          </div>
+
+          <div className="mt-5 grid grid-cols-1 gap-2 sm:grid-cols-3">
+            <Link to={`/admin/products/edit/${id}`} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#174a3f] px-3 py-3 text-sm font-bold text-white transition hover:bg-[#10382f]">
+              <FiEdit /> Edit Product
+            </Link>
+            <button type="button" onClick={refreshProduct} className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#ece7dd] bg-[#fbfaf7] px-3 py-3 text-sm font-semibold text-[#40514a] transition hover:bg-[#f3f0e8]">
+              <FiRefreshCw /> Refresh
+            </button>
+            <button type="button" onClick={handleDelete} disabled={deleting} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#fff0ee] px-3 py-3 text-sm font-bold text-[#d43125] transition hover:bg-[#ffe3df] disabled:cursor-not-allowed disabled:opacity-60">
+              <FiTrash2 /> {deleting ? "Deleting..." : "Delete"}
+            </button>
+          </div>
+          <div className="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+            <Link to={`/product/${id}`} target="_blank" className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#ece7dd] px-3 py-3 text-sm font-semibold text-[#40514a] transition hover:bg-[#fbfaf7]">
+              <FiExternalLink /> View on Website
+            </Link>
+            <button type="button" onClick={handleShare} className="inline-flex items-center justify-center gap-2 rounded-lg border border-[#ece7dd] px-3 py-3 text-sm font-semibold text-[#40514a] transition hover:bg-[#fbfaf7]">
+              <FiShare2 /> Share Product
+            </button>
+          </div>
+        </section>
+
+        <section className="flex flex-col items-center rounded-2xl border border-[#eee8dc] bg-white p-4 text-center shadow-sm sm:p-5 xl:col-span-3">
+          <h2 className="flex items-center gap-2 self-start font-semibold text-[#173f38]">
+            <FiGrid className="text-[#c99435]" />
+            Product QR Code
+          </h2>
+          <div className="mt-4 rounded-xl border border-[#f0ece4] bg-white p-2">
+            <QRCodeCanvas
+              ref={qrCodeRef}
+              value={`${window.location.origin}/product/${id}`}
+              size={160}
+              level="H"
+              includeMargin
+              title={`QR code for ${product.name || "product"}`}
+            />
+          </div>
+          <p className="mt-3 text-xs leading-5 text-[#737d77]">
+            Scan to view this product on your website.
+          </p>
+          <button
+            type="button"
+            onClick={downloadProductQr}
+            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[#ece7dd] px-3 py-2.5 text-xs font-semibold text-[#40514a] transition hover:bg-[#fbfaf7]"
+          >
+            <FiExternalLink /> Download QR Code
+          </button>
         </section>
       </div>
+
+      <nav aria-label="Product details sections" className="hide-scrollbar overflow-x-auto rounded-xl border border-[#eee8dc] bg-white shadow-sm">
+        <div className="flex min-w-max">
+          {tabs.map(({ id: tabId, label, icon: Icon }) => (
+            <button key={tabId} type="button" onClick={() => setActiveTab(tabId)} aria-current={activeTab === tabId ? "page" : undefined} className={`inline-flex items-center gap-2 border-b-2 px-4 py-3.5 text-xs font-semibold transition sm:px-5 ${activeTab === tabId ? "border-[#174a3f] bg-[#174a3f] text-white" : "border-transparent text-[#66726c] hover:bg-[#faf9f5] hover:text-[#174a3f]"}`}>
+              <Icon className="text-sm" />{label}
+            </button>
+          ))}
+        </div>
+      </nav>
+
+      {activeTab === "information" && (
+        <div className="grid items-start gap-3 lg:grid-cols-[1.35fr_0.9fr_0.9fr]">
+          <DetailCard title="Basic Information" icon={FiPackage} fields={productInfo} />
+          <DetailCard title="Pricing Information" icon={FiDollarSign} fields={pricingInfo} />
+          <DetailCard title="Additional Details" icon={FiBookmark} fields={additionalInfo} />
+        </div>
+      )}
+
+      {activeTab === "pricing" && (
+        <div className="grid items-start gap-3 lg:grid-cols-2">
+          <DetailCard title="Pricing Information" icon={FiDollarSign} fields={pricingInfo} />
+          <DetailCard title="Stock & Publishing" icon={FiPackage} fields={[
+            ["Stock Quantity", product.total_stock != null ? `${product.total_stock} units` : ""],
+            ["Stock Status", stockStatus],
+            ["Warehouse / Location", product.warehouse],
+            ["Product Status", product.status],
+            ["Featured Product", product.featured],
+            ["New Arrival", product.new_arrival],
+            ["Best Seller", product.best_seller]
+          ]} />
+        </div>
+      )}
+
+      {activeTab === "images" && (
+        <section className="rounded-xl border border-[#eee8dc] bg-white p-4 shadow-sm">
+          <h2 className="mb-4 flex items-center gap-2 font-semibold text-[#173f38]"><FiImage className="text-[#c99435]" />Product Images</h2>
+          {images.length ? (
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+              {images.map((image, index) => (
+                <button key={`${image}-${index}`} type="button" onClick={() => { setActiveImage(index); window.scrollTo({ top: 0, behavior: "smooth" }); }} className="aspect-square overflow-hidden rounded-lg border border-[#eee8dc] bg-[#f8f6ef]">
+                  <img src={assetUrl(image)} alt={`${product.name} ${index + 1}`} className="h-full w-full object-cover" />
+                </button>
+              ))}
+            </div>
+          ) : <p className="text-sm text-slate-500">No product images have been added.</p>}
+          {product.video && <video src={assetUrl(product.video)} controls preload="metadata" className="mt-5 max-h-96 w-full rounded-xl bg-black" />}
+          {product.certificate && <a href={assetUrl(product.certificate)} target="_blank" rel="noreferrer" className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#174a3f]"><FiExternalLink />View certificate</a>}
+        </section>
+      )}
+
+      {activeTab === "variants" && (
+        <section className="rounded-xl border border-[#eee8dc] bg-white p-4 shadow-sm">
+          <h2 className="mb-4 flex items-center gap-2 font-semibold text-[#173f38]"><FiGrid className="text-[#c99435]" />Variants & Size Stock</h2>
+          {variants.length ? (
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {variants.map((variant, index) => {
+                const sizes = variant.sizesStock && typeof variant.sizesStock === "object" ? Object.entries(variant.sizesStock) : [];
+                const selectedSizes = parseArray(variant.selectedSizes);
+                return (
+                  <article key={`${variant.colorName || variant.color || "variant"}-${index}`} className="rounded-xl border border-[#eee8dc] bg-[#fffdf8] p-4">
+                    <div className="flex items-center gap-2 font-semibold text-[#34443e]">
+                      {variant.color && <span className="h-5 w-5 rounded-full border border-slate-200" style={{ backgroundColor: variant.color }} />}
+                      {variant.colorName || variant.color || `Variant ${index + 1}`}
+                    </div>
+                    {selectedSizes.length > 0 && <p className="mt-2 text-xs text-[#69756f]">Sizes: {selectedSizes.join(", ")}</p>}
+                    {sizes.length > 0 && <p className="mt-1 text-xs text-[#69756f]">{sizes.map(([size, quantity]) => `${size}: ${quantity}`).join(" · ")}</p>}
+                    {parseArray(variant.images).length > 0 && <p className="mt-2 text-xs font-medium text-[#69756f]">{parseArray(variant.images).length} image(s)</p>}
+                  </article>
+                );
+              })}
+            </div>
+          ) : <p className="text-sm text-slate-500">No product variants have been added.</p>}
+        </section>
+      )}
+
+      {activeTab === "specifications" && (
+        <div className="grid items-start gap-3 lg:grid-cols-2">
+          <DetailCard title="Specifications" icon={FiLayers} fields={[
+            ["Product Size", product.product_size],
+            ["Available Sizes", parseArray(product.available_sizes)],
+            ["Length", product.length],
+            ["Width", product.width],
+            ["Height", product.height],
+            ["Ring Size", product.ring_size],
+            ["Bangle Size", product.bangle_size],
+            ["Chain Length", product.chain_length],
+            ["Saree Length", product.saree_length],
+            ["Blouse Length", product.blouse_length],
+            ["Top Length", product.top_length],
+            ["Bottom Length", product.bottom_length],
+            ["Dupatta Length", product.dupatta_length],
+            ["Gown Length", product.gown_length],
+            ["Sleeve Type", product.sleeve_type],
+            ["Neck Type", product.neck_type],
+            ["Fit Type", product.fit_type],
+            ["Zari Color", product.zari_color],
+            ["Age", product.age]
+          ]} />
+          <section className="rounded-xl border border-[#eee8dc] bg-white p-4 shadow-sm">
+            <h2 className="mb-3 flex items-center gap-2 font-semibold text-[#173f38]"><FiLayers className="text-[#c99435]" />Product Specifications</h2>
+            <p className="whitespace-pre-wrap text-sm leading-6 text-[#59645e]">{product.specifications || "No specifications have been added."}</p>
+          </section>
+        </div>
+      )}
+
+      {activeTab === "additional" && (
+        <div className="grid items-start gap-3 lg:grid-cols-2">
+          <DetailCard title="Additional Details" icon={FiBookmark} fields={additionalInfo} />
+          <DetailCard title="Product Description" icon={FiInfo} fields={[
+            ["Short Description", product.description],
+            ["Full Description", product.full_description],
+            ["Highlights", parseArray(product.highlights)]
+          ]} />
+          {(product.size_guide_chart || product.certificate) && (
+            <section className="rounded-xl border border-[#eee8dc] bg-white p-4 shadow-sm">
+              <h2 className="mb-3 font-semibold text-[#173f38]">Product Documents</h2>
+              <div className="flex flex-wrap gap-3">
+                {product.size_guide_chart && <a href={assetUrl(product.size_guide_chart)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold text-[#174a3f]"><FiExternalLink />Size guide</a>}
+                {product.certificate && <a href={assetUrl(product.certificate)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-sm font-semibold text-[#174a3f]"><FiExternalLink />Certificate</a>}
+              </div>
+            </section>
+          )}
+        </div>
+      )}
+
+      {activeTab === "reviews" && (
+        <DetailCard title="Customer Reviews" icon={FiStar} fields={[
+          ["Average Rating", product.rating != null ? `${Number(product.rating).toFixed(1)} / 5` : ""],
+          ["Total Reviews", product.total_reviews]
+        ]} />
+      )}
+
+      {activeTab === "activity" && (
+        <DetailCard title="Activity Log" icon={FiActivity} fields={[
+          ["Product Created", dateText(product.created_at)],
+          ["Last Updated", dateText(product.updated_at)],
+          ["Current Status", product.status],
+          ["Product ID", product.id]
+        ]} />
+      )}
     </main>
   );
 }

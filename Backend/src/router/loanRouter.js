@@ -1,5 +1,6 @@
 const express = require('express');
 const requireAdmin = require('../middleware/requireAdmin');
+const requireAuthenticatedUser = require('../middleware/requireAuthenticatedUser');
 const { uploadLoanGoldImage } = require('../middleware/loanGoldImageUpload');
 const { uploadLoanGoldReleaseDocument } = require('../middleware/loanGoldReleaseUpload');
 const {
@@ -15,6 +16,7 @@ const {
   getLoanRenewalDetails,
   getLoanRenewalHistoryList,
   getLoans,
+  getMyLoans,
   postLoan,
   postGoldRelease,
   postLoanRenewal,
@@ -25,7 +27,11 @@ const {
 
 const router = express.Router();
 
+// ── Self-service: authenticated customer routes (no admin required) ──
+router.get('/loans/my-loans', requireAuthenticatedUser, getMyLoans);
+
 router.use(requireAdmin);
+
 router.get('/customers', getCustomers);
 router.get('/customers/:id/loans', getCustomerLoans);
 router.get('/customers/:id', getCustomer);

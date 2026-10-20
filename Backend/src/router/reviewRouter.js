@@ -3,6 +3,7 @@ const requireAdmin = require('../middleware/requireAdmin');
 const {
   cleanFailedReviewUpload,
   getReviews,
+  getPublishedReviews,
   postReview,
   postReviewUpload,
   putReviewReply,
@@ -20,6 +21,9 @@ function receiveReviewImage(req, res, next) {
     return cleanFailedReviewUpload(req, res, next);
   });
 }
+
+// Public route — no auth required, only Published reviews for the homepage
+router.get('/public', getPublishedReviews);
 
 router.use(requireAdmin);
 router.get('/admin/all', getReviews);

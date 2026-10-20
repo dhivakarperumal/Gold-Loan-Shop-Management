@@ -10,11 +10,13 @@ const {
   listGoldReleaseEligible,
   listLoans,
   listLoansForCustomer,
+  listLoansForUser,
   renewLoan,
   releaseGold,
   setInterestType,
   updateLoan
 } = require('../modules/loanModule');
+
 const { findGoldRateForPurity, getCurrentGoldRates } = require('../modules/goldRateModule');
 const fs = require('node:fs');
 const {
@@ -220,6 +222,17 @@ async function getCustomerLoans(req, res, next) {
     return next(error);
   }
 }
+
+// Authenticated user — returns their own loans matched via loan_customers.user_id
+async function getMyLoans(req, res, next) {
+  try {
+    const loans = await listLoansForUser(req.authenticatedUser.user_id);
+    return res.json(loans);
+  } catch (error) {
+    return next(error);
+  }
+}
+
 
 async function getInterestTypes(req, res, next) {
   try {
@@ -600,6 +613,7 @@ module.exports = {
   getLoanGoldImage,
   getLoanGoldReleaseDocument,
   getLoans,
+  getMyLoans,
   calculateLoanAmount,
   calculateMetalValuation,
   normalizeLoan,
