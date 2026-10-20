@@ -712,20 +712,6 @@ export default function LoanRenewal() {
             </form>
           </section>
 
-          <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
-            <div className="border-b border-slate-100 px-4 py-3"><h2 className="font-bold text-slate-800">Renewal and payment history</h2></div>
-            {!renewalData.history?.length
-              ? <p className="p-4 text-xs text-slate-500">No renewals recorded for this loan.</p>
-              : <div className="max-h-72 overflow-auto">
-                {renewalData.history.map((item) => (
-                  <article key={item.id} className="space-y-1 border-b border-slate-100 p-4 last:border-0">
-                    <div className="flex justify-between gap-3 text-xs"><strong className="text-slate-800">{dateText(item.renewal_date)}</strong><span className="font-bold text-[#064A41]">{money(item.payment_amount)}</span></div>
-                    <p className="text-[11px] text-slate-500">Interest {money(Number(item.interest_paid) - Number(item.late_payment_fee || 0))} · Late fee {money(item.late_payment_fee)} · Principal {money(item.principal_paid)}</p>
-                    <p className="text-[11px] text-slate-500">Balance {money(item.principal_after)} · New maturity {dateText(item.new_maturity_date)}</p>
-                  </article>
-                ))}
-              </div>}
-          </section>
         </aside>
       </div>
     </main>
