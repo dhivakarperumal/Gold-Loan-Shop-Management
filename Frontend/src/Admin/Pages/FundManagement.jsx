@@ -68,6 +68,8 @@ function FundManagement() {
   const [refreshing, setRefreshing] = useState(false);
   const [fundAccountActionsOpen, setFundAccountActionsOpen] = useState(false);
   const [accountsVisible, setAccountsVisible] = useState(false);
+  const [accountSearch, setAccountSearch] = useState("");
+  const [accountTypeFilter, setAccountTypeFilter] = useState("");
 
   const fetchData = useCallback(async (quiet = false) => {
     if (!quiet) setLoading(true);
@@ -98,6 +100,20 @@ function FundManagement() {
   useEffect(() => { fetchData(); }, [fetchData]);
 
   const activeAccounts = useMemo(() => accounts.filter((account) => account.is_active), [accounts]);
+  const accountTypes = useMemo(
+    () => [...new Set(accounts.map((account) => account.account_type).filter(Boolean))].sort(),
+    [accounts]
+  );
+  const filteredAccounts = useMemo(() => {
+    const query = accountSearch.trim().toLowerCase();
+    return accounts.filter((account) => {
+      const matchesSearch = !query
+        || account.name.toLowerCase().includes(query)
+        || String(account.account_number || "").toLowerCase().includes(query);
+      const matchesType = !accountTypeFilter || account.account_type === accountTypeFilter;
+      return matchesSearch && matchesType;
+    });
+  }, [accountSearch, accountTypeFilter, accounts]);
   const pageCount = Math.max(1, Math.ceil(totalTransactions / 20));
   const selectedAccount = accounts.find((account) => String(account.id) === String(entry.account_id));
 
@@ -344,17 +360,50 @@ function FundManagement() {
           </div>
         </div>
         {accountsVisible && (
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            {accounts.map((account) => (
-              <article key={account.id} className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
-                <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{account.account_type}</p>
-                <h3 className="mt-1 truncate text-sm font-extrabold text-slate-900">{account.name}</h3>
-                {account.account_number && <p className="mt-1 text-xs text-slate-400">•••• {account.account_number.slice(-4)}</p>}
-                <p className="mt-3 text-lg font-black text-[#00695C]">{money(account.current_balance)}</p>
-                <div className="mt-2 flex justify-between gap-2 text-[11px] text-slate-500"><span>In {money(account.total_credit)}</span><span>Out {money(account.total_debit)}</span></div>
-              </article>
-            ))}
-            {!loading && accounts.length === 0 && <p className="text-sm text-slate-500">No fund accounts are available.</p>}
+          <div className="space-y-3">
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <label className="relative w-full sm:max-w-sm">
+                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="search"
+                  value={accountSearch}
+                  onChange={(event) => setAccountSearch(event.target.value)}
+                  placeholder="Search fund accounts..."
+                  aria-label="Search fund accounts"
+                  className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-sm text-slate-700 outline-none transition focus:border-[#00695C] focus:bg-white focus:ring-2 focus:ring-emerald-700/10"
+                />
+              </label>
+              <div className="flex items-center gap-2">
+                <select
+                  value={accountTypeFilter}
+                  onChange={(event) => setAccountTypeFilter(event.target.value)}
+                  aria-label="Filter fund accounts by type"
+                  className="min-h-10 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-600 outline-none focus:border-[#00695C] focus:ring-2 focus:ring-emerald-700/10"
+                >
+                  <option value="">All account types</option>
+                  {accountTypes.map((type) => <option key={type} value={type}>{type}</option>)}
+                </select>
+                <span className="whitespace-nowrap text-xs font-medium text-slate-500">
+                  {filteredAccounts.length} {filteredAccounts.length === 1 ? "account" : "accounts"}
+                </span>
+              </div>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+              {filteredAccounts.map((account) => (
+                <article key={account.id} className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">{account.account_type}</p>
+                  <h3 className="mt-1 truncate text-sm font-extrabold text-slate-900">{account.name}</h3>
+                  {account.account_number && <p className="mt-1 text-xs text-slate-400">•••• {account.account_number.slice(-4)}</p>}
+                  <p className="mt-3 text-lg font-black text-[#00695C]">{money(account.current_balance)}</p>
+                  <div className="mt-2 flex justify-between gap-2 text-[11px] text-slate-500"><span>In {money(account.total_credit)}</span><span>Out {money(account.total_debit)}</span></div>
+                </article>
+              ))}
+              {!loading && filteredAccounts.length === 0 && (
+                <p className="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500 sm:col-span-2 xl:col-span-5">
+                  {accounts.length === 0 ? "No fund accounts are available." : "No accounts match the selected filters."}
+                </p>
+              )}
+            </div>
           </div>
         )}
       </section>
@@ -387,8 +436,8 @@ function FundManagement() {
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[1100px] text-left text-xs">
-            <thead className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-500">
-              <tr><th className="px-4 py-3">ID / Date</th><th className="px-4 py-3">Type / Category</th><th className="px-4 py-3">Account</th><th className="px-4 py-3">Customer / Supplier</th><th className="px-4 py-3">Reference / Method</th><th className="px-4 py-3 text-right">Debit</th><th className="px-4 py-3 text-right">Credit</th><th className="px-4 py-3 text-right">Running Balance</th><th className="px-4 py-3">Status / Details</th></tr>
+            <thead className="bg-gradient-to-r from-[#07564B] via-[#064A41] to-[#043D37] text-[10px] uppercase tracking-wide text-white">
+              <tr><th className="rounded-tl-xl px-4 py-3">ID / Date</th><th className="px-4 py-3">Type / Category</th><th className="px-4 py-3">Account</th><th className="px-4 py-3">Customer / Supplier</th><th className="px-4 py-3">Reference / Method</th><th className="px-4 py-3 text-right">Debit</th><th className="px-4 py-3 text-right">Credit</th><th className="px-4 py-3 text-right">Running Balance</th><th className="rounded-tr-xl px-4 py-3">Status / Details</th></tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {transactions.map((transaction) => {
