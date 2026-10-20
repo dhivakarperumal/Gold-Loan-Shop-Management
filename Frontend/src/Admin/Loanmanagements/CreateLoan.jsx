@@ -372,7 +372,7 @@ export default function CreateLoan() {
     && loanRecord?.gold_purity === form.gold_purity;
   const appliedGoldRate = loanRecord && savedPurityUnchanged
     ? (loanRecord.gold_rate_per_gram == null ? null : Number(loanRecord.gold_rate_per_gram))
-    : activeGoldRate?.rate_per_gram;
+    : Number(activeGoldRate?.rate_per_unit ?? activeGoldRate?.rate_per_gram) || null;
   const appliedRateUnit = loanRecord && savedPurityUnchanged
     ? loanRecord.rate_unit || "gram"
     : activeGoldRate?.rate_unit || (form.metal_type === "Diamond" ? "carat" : "gram");
@@ -380,7 +380,9 @@ export default function CreateLoan() {
   const estimatedGoldValuation = loanRecord && savedPurityUnchanged && loanRecord.gold_rate_per_gram == null
     ? Number(form.gold_valuation) || 0
     : Math.max(0, Number(form.gross_weight || 0) - Number(form.stone_weight || 0)) * Number(appliedGoldRate || 0);
-  const calculatedLoanAmount = (Math.round(estimatedGoldValuation * 50) / 100).toFixed(2);
+  const calculatedLoanAmount = Number.isFinite(estimatedGoldValuation) && estimatedGoldValuation > 0
+    ? (Math.round(estimatedGoldValuation * 50) / 100).toFixed(2)
+    : "";
   const estimate = useMemo(
     () => calculateEstimate({
       ...form,
@@ -844,8 +846,16 @@ export default function CreateLoan() {
               </div>
               {loanAmountMode === "auto" ? (
                 <>
-                  <input className={`${fieldClass} bg-slate-50`} type="number" value={calculatedLoanAmount} readOnly aria-label="Automatically calculated loan amount" placeholder="Calculated from gold valuation" />
-                  <p className="mt-1 text-[11px] font-normal text-slate-400">Automatically calculated as 50% of the pledged gold valuation ({formatCurrency(estimatedGoldValuation)}).</p>
+                  <input className={`${fieldClass} bg-slate-50`} type="number" value={calculatedLoanAmount} readOnly aria-label="Available loan amount, automatically calculated as 50% of pledged value" placeholder="Enter weight and select an active metal rate" />
+                  <p className="mt-1 text-[11px] font-normal text-slate-500">
+                    {calculatedLoanAmount
+                      ? `Available loan amount: 50% of pledged metal value (${formatCurrency(estimatedGoldValuation)}).`
+                      : ratesLoading
+                        ? "Loading the active metal rate to calculate the available loan amount..."
+                        : appliedGoldRate > 0
+                          ? "Enter a valid gross weight to calculate the available loan amount."
+                          : "Select a purity with an active metal rate to calculate the available loan amount."}
+                  </p>
                 </>
               ) : (
                 <FormField label="Loan Amount (₹)" name="principal_amount" form={form} onChange={handleChange} type="number" min="0.01" step="0.01" required placeholder="Enter loan amount" help="Enter the loan amount to disburse." />
