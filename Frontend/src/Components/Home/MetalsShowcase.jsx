@@ -5,6 +5,7 @@ import {
   ArrowRight,
   Atom,
   Coins,
+  Flower2,
   Gem,
   Sparkles,
 } from "lucide-react";
@@ -109,7 +110,7 @@ export default function MetalsShowcase() {
 
   return (
     <section
-      className="bg-[#fbf7ed] px-3 py-4 sm:px-5 sm:py-6"
+      className="bg-[#fbf7ed] py-4 sm:py-6"
       aria-label="Explore our metal collections"
     >
       <PageContainer>
@@ -126,7 +127,7 @@ export default function MetalsShowcase() {
             No active metals are available.
           </p>
         ) : (
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-3">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 sm:gap-2">
             {metals.map((metal) => {
               const details = getMetalDetails(metal.name);
               const Icon = details?.Icon || Coins;
@@ -141,14 +142,12 @@ export default function MetalsShowcase() {
               return (
                 <article
                   key={metal.id}
-                  className="group relative grid min-h-[230px] grid-cols-[44%_56%] overflow-hidden rounded-xl border border-[#e6cf9c] bg-[#fffaf0] sm:min-h-[250px] lg:min-h-[270px]"
+                  className="group relative grid min-h-[265px] grid-cols-[46%_54%] overflow-hidden rounded-xl border border-[#e6cf9c] bg-[#fffaf0] shadow-[0_3px_12px_rgba(113,79,24,0.06)] sm:min-h-[285px] lg:min-h-[320px] xl:min-h-[350px]"
                 >
-                  {/* Jewellery image */}
                   <Link
                     to={exploreUrl}
                     aria-label={`Explore ${metal.name}`}
-                    className={`relative min-w-0 overflow-hidden bg-gradient-to-br ${details?.fallback || "from-[#f5e9ce] to-[#dfd0ad]"
-                      }`}
+                    className={`relative z-[1] min-w-0 overflow-hidden rounded-r-[46%_58%] border-r-[5px] border-[#e9c77f] bg-gradient-to-br ${details?.fallback || "from-[#f5e9ce] to-[#dfd0ad]"}`}
                   >
                     {metal.image ? (
                       <img
@@ -158,11 +157,11 @@ export default function MetalsShowcase() {
                         className="absolute inset-0 h-full w-full object-cover transition-transform duration-700 group-hover:scale-105"
                       />
                     ) : (
-                      <div className="flex h-full items-center justify-center">
+                      <div className="absolute inset-0 flex items-center justify-center">
                         <Icon
-                          size={60}
+                          size={76}
                           strokeWidth={1.1}
-                          className="text-[#a67b2e]"
+                          className="text-[#a67b2e]/80"
                           aria-hidden="true"
                         />
                       </div>
@@ -170,56 +169,52 @@ export default function MetalsShowcase() {
 
                     <div className="absolute inset-0 bg-gradient-to-t from-[#002d21]/25 via-transparent to-transparent" />
 
-                    {/* Metal symbol */}
-                    <span className="absolute bottom-4 left-3 flex h-11 w-11 items-center justify-center rounded-full border-2 border-[#d8a53b] bg-[#003c2b] font-serif text-lg font-bold text-[#f3d278] shadow-md sm:bottom-5 sm:left-4 sm:h-12 sm:w-12 sm:text-xl">
+                    <span className="absolute bottom-4 left-3 z-10 flex h-14 w-14 items-center justify-center rounded-full border-2 border-[#d8a53b] bg-[#003c2b] font-serif text-2xl font-bold text-[#f3d278] shadow-md sm:bottom-5 sm:left-5 sm:h-[72px] sm:w-[72px] sm:text-3xl">
                       {details?.symbol || <Gem size={24} />}
                     </span>
                   </Link>
 
-                  {/* Curved gold image divider */}
-                  <div
-                    aria-hidden="true"
-                    className="pointer-events-none absolute bottom-[-12%] left-[39%] top-[-12%] z-10 w-12 rounded-[50%] border-r-[5px] border-[#e9c77f] sm:w-14"
-                  />
+                  <div className="relative flex min-w-0 flex-col justify-center overflow-hidden px-3 py-5 pl-5 sm:px-5 sm:pl-7 lg:px-7 lg:pl-9">
+                    <Flower2
+                      size={104}
+                      strokeWidth={0.7}
+                      className="pointer-events-none absolute -right-7 top-4 h-20 w-20 text-[#d7b568]/20 sm:h-28 sm:w-28"
+                      aria-hidden="true"
+                    />
+                    <Flower2
+                      size={72}
+                      strokeWidth={0.7}
+                      className="pointer-events-none absolute -bottom-6 right-10 hidden text-[#d7b568]/15 sm:block"
+                      aria-hidden="true"
+                    />
+                    <span className="relative mb-3 h-[2px] w-10 bg-[#c48a22] sm:w-12" />
 
-                  {/* Content */}
-                  <div className="relative flex min-w-0 flex-col justify-center px-3 py-4 pl-5 sm:px-4 sm:pl-6 lg:px-6 lg:pl-8">
-                    <span className="mb-2 h-[2px] w-8 bg-[#c48a22] sm:w-10" />
-
-                    <h3 className="font-serif text-xl font-bold leading-tight text-[#073b2b] sm:text-2xl lg:text-3xl">
+                    <h3 className="relative font-serif text-2xl font-bold leading-tight text-[#073b2b] sm:text-3xl lg:text-4xl">
                       {metal.name}
                     </h3>
 
                     {purity && (
-                      <p className="mt-1.5 break-words text-[9px] font-bold uppercase leading-relaxed tracking-wide text-[#a36c12] sm:text-[10px] lg:text-xs">
+                      <p className="relative mt-2 break-words text-[10px] font-bold uppercase leading-relaxed tracking-wide text-[#a36c12] sm:text-xs lg:text-sm">
                         {purity}
                       </p>
                     )}
 
-                    <p className="mt-2 text-[11px] leading-relaxed text-[#68645c] sm:mt-3 sm:text-xs lg:text-sm">
+                    <p className="relative mt-3 text-xs leading-relaxed text-[#68645c] sm:text-sm lg:text-base">
                       {description ||
                         `Discover our beautiful ${metal.name.toLowerCase()} collection, selected for quality and timeless style.`}
                     </p>
 
                     <Link
                       to={exploreUrl}
-                      className="mt-3 inline-flex w-fit items-center gap-2 border-b border-[#d9a441] pb-1 text-[11px] font-bold text-[#073b2b] transition hover:text-[#a66b00] sm:mt-4 sm:text-sm"
+                      className="relative mt-4 inline-flex w-fit items-center gap-2 border-b border-[#d9a441] pb-1 text-xs font-bold text-[#073b2b] transition hover:text-[#a66b00] sm:mt-5 sm:text-sm"
                     >
                       Explore {metal.name}
                       <ArrowRight
-                        size={16}
+                        size={19}
                         className="text-[#a66b00] transition-transform group-hover:translate-x-1"
                         aria-hidden="true"
                       />
                     </Link>
-
-                    {/* Subtle decorative detail */}
-                    <Gem
-                      size={42}
-                      strokeWidth={0.6}
-                      className="pointer-events-none absolute bottom-2 right-2 hidden text-[#d7b568]/20 lg:block"
-                      aria-hidden="true"
-                    />
                   </div>
                 </article>
               );
