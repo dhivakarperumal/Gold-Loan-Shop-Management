@@ -15,6 +15,7 @@ import {
 import api from "../../api";
 import ProductCard from "../Home/ProductCard";
 import { getProductImageUrl } from "../Home/productDisplay";
+import { formatCurrency } from "../../utils/currency";
 
 const PAGE_SIZE = 100;
 const ROWS_PER_PAGE = 3;
@@ -36,7 +37,7 @@ const PRICE_RANGES = [
   { label: "₹ 5L+", minimum: 500_000, maximum: null },
 ];
 const PRICE_STEP = 1_000;
-const formatPriceLabel = (price) => `₹ ${Number(price).toLocaleString("en-IN")}`;
+const formatPriceLabel = formatCurrency;
 
 const getProductPrice = (product) =>
   Number(product.offer_price ?? product.final_selling_price ?? product.mrp ?? 0);

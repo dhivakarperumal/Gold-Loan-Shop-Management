@@ -15,6 +15,7 @@ import { toast } from "react-hot-toast";
 import api from "../../api";
 import DateRangeFilter from "../Components/DateRangeFilter";
 import { DATE_RANGE_OPTIONS, formatDateRange } from "../Components/dateRange";
+import { formatCurrency } from "../../utils/currency";
 
 const RANGE_OPTIONS = DATE_RANGE_OPTIONS.map(([value, label]) => ({ value, label }));
 
@@ -50,8 +51,6 @@ const STAT_CARDS = [
     accent: "#FDBA9A"
   }
 ];
-
-const formatCurrency = (value) => `₹${Number(value || 0).toLocaleString("en-IN")}`;
 
 const escapeXml = (value) => String(value ?? "").replace(/[<>&'"]/g, (character) => ({
   "<": "&lt;",

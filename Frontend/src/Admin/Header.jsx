@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 
 import { useAuth } from "../PrivateRouter/AuthContext";
+import { formatCurrency } from "../utils/currency";
 
 const backendUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
 
@@ -195,7 +196,7 @@ const Header = ({ onMenuClick }) => {
             id: p.id,
             title: p.name,
             subtitle: p.category || "Jewellery",
-            meta: `₹${Number(p.mrp || p.offer_price || 0).toLocaleString('en-IN')}`,
+            meta: formatCurrency(p.mrp || p.offer_price || 0),
             path: `/admin/products/${p.id}`
           }));
         }
@@ -206,7 +207,7 @@ const Header = ({ onMenuClick }) => {
             id: l.id,
             title: l.loan_number || `Loan #${l.id}`,
             subtitle: l.jewellery_type || "Gold Loan",
-            meta: `₹${Number(l.principal_amount || 0).toLocaleString('en-IN')}`,
+            meta: formatCurrency(l.principal_amount || 0),
             path: `/admin/loans/details/${l.id}`
           }));
         }
@@ -581,7 +582,7 @@ const Header = ({ onMenuClick }) => {
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center justify-between mb-0.5">
                                     <p className="text-sm font-black text-slate-800 tracking-tight">{loan.loan_number || `#GL-${loan.id}`}</p>
-                                    <p className="text-[12px] text-[#008577] font-black">₹{Number(loan.principal_amount || 0).toLocaleString('en-IN')}</p>
+                                    <p className="text-[12px] text-[#008577] font-black">{formatCurrency(loan.principal_amount || 0)}</p>
                                   </div>
                                   <div className="flex items-center justify-between">
                                     <p className="text-[10px] text-slate-500 font-bold truncate">
@@ -615,7 +616,7 @@ const Header = ({ onMenuClick }) => {
                                 <div className="flex-1 min-w-0">
                                   <div className="flex items-center justify-between mb-0.5">
                                     <p className="text-sm font-black text-slate-800 tracking-tight">{loan.loan_number || `#GL-${loan.id}`}</p>
-                                    <p className="text-[12px] text-slate-600 font-black">₹{Number(loan.principal_amount || 0).toLocaleString('en-IN')}</p>
+                                    <p className="text-[12px] text-slate-600 font-black">{formatCurrency(loan.principal_amount || 0)}</p>
                                   </div>
                                   <div className="flex items-center justify-between">
                                     <p className="text-[10px] text-slate-400 font-bold truncate">

@@ -1,6 +1,7 @@
 
 import React from 'react';
 import { Heart, ShoppingBag, ArrowRight, Plus } from 'lucide-react';
+import { formatCurrency } from "../../utils/currency";
 
 const products = [
   {
@@ -94,7 +95,7 @@ const Products = () => {
                   </p>
 
                   <p className="mt-1.5 font-serif text-lg font-bold text-[#85421e]">
-                    ₹ {product.price}
+                    {formatCurrency(product.price)}
                   </p>
 
                   <button

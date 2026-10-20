@@ -4,10 +4,7 @@ import { FiAlertCircle, FiCalendar, FiClock, FiEye, FiSearch, FiUsers } from "re
 import { toast } from "react-hot-toast";
 import api from "../../api";
 import { isLoanReviewDue } from "./loanPolicy";
-
-const money = (value) => new Intl.NumberFormat("en-IN", {
-  style: "currency", currency: "INR", maximumFractionDigits: 2
-}).format(Number(value || 0));
+import { formatCurrency as money } from "../../utils/currency";
 
 function dateText(value) {
   if (!value) return "—";

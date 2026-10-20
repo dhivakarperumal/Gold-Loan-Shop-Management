@@ -10,13 +10,13 @@ import { useAuth } from "../../PrivateRouter/AuthContext";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 import PageContainer from "../CommenComponents/PageContainer";
 import api from "../../api";
+import { formatCurrency, formatAmount } from "../../utils/currency";
 
 /* ── helpers ─────────────────────────────────── */
 const initials = (name = "") =>
   name.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
 
-const fmt = (n) =>
-  Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt = formatAmount;
 
 const fmtDate = (d) =>
   d ? new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—";
@@ -371,7 +371,7 @@ const UserProfile = () => {
                             <p className="mt-1 text-xs text-[#68736d]">
                               {[item.colorName, item.size].filter(Boolean).join(" · ") || "Jewellery"}
                             </p>
-                            {Number(item.price) > 0 && <p className="mt-2 font-bold text-[#174a3f]">₹{Number(item.price).toLocaleString("en-IN", { maximumFractionDigits: 2 })}</p>}
+                            {Number(item.price) > 0 && <p className="mt-2 font-bold text-[#174a3f]">{formatCurrency(item.price)}</p>}
                           </div>
                         </Link>
                         <div className="flex items-center justify-between border-t border-[#f0ece4] px-3 py-2">

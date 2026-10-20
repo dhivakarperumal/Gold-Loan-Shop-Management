@@ -12,6 +12,7 @@ import {
 import PageContainer from "../CommenComponents/PageContainer";
 import useGoldRates from "../../PrivateRouter/useGoldRates";
 import { formatRateDate } from "../../PrivateRouter/goldRateUtils";
+import { formatCurrency } from "../../utils/currency";
 
 const RATE_GROUPS = [
   {
@@ -80,13 +81,6 @@ const themeClasses = {
   }
 };
 
-const currency = new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2
-});
-
 function RateCard({ group, current }) {
   const Icon = group.icon;
   const theme = themeClasses[group.theme];
@@ -125,7 +119,7 @@ function RateCard({ group, current }) {
               </div>
               <div className="shrink-0 border-l border-[#e9b752] pl-3 text-right">
                 <p className="text-sm font-extrabold text-[#123c2d]">
-                  {rate ? currency.format(Number(rate.rate_per_unit ?? rate.rate_per_gram)) : "—"}
+                  {rate ? formatCurrency(Number(rate.rate_per_unit ?? rate.rate_per_gram)) : "—"}
                 </p>
                 <p className="mt-0.5 text-[11px] text-[#77736d]">per {unit}</p>
               </div>

@@ -23,6 +23,7 @@ import WishlistDrawer from "./WishlistDrawer";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 import api from "../../api";
+import { formatCurrency } from "../../utils/currency";
 
 const INFO_PAGES = [
   { label: "About Us", to: "/about" },
@@ -205,7 +206,7 @@ const Navbar = () => {
                   </span>
                 </span>
                 <span className="shrink-0 text-sm font-bold text-[#174a38]">
-                  ₹{Number(product.offer_price ?? product.final_selling_price ?? product.mrp ?? 0).toLocaleString("en-IN")}
+                  {formatCurrency(product.offer_price ?? product.final_selling_price ?? product.mrp ?? 0)}
                 </span>
               </button>
             );

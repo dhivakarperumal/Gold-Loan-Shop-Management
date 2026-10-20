@@ -21,6 +21,7 @@ import "swiper/css";
 import ProductCard from "../Home/ProductCard";
 import MetalProducts from "./MetalProducts";
 import CategoryProducts from "./CategoryProducts";
+import { formatCurrency } from "../../utils/currency";
 
 const backendUrl = (
   import.meta.env.VITE_BACKEND_URL ||
@@ -50,9 +51,7 @@ const assetUrl = (path) => {
   return `${backendUrl}${path.startsWith("/") ? path : `/${path}`}`;
 };
 
-const money = (value) => `₹${Number(value || 0).toLocaleString("en-IN", {
-  maximumFractionDigits: 2,
-})}`;
+const money = formatCurrency;
 
 const displayValue = (value) => {
   if (value == null || value === "") return "";

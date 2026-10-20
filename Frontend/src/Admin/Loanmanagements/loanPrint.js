@@ -1,6 +1,7 @@
 import { toast } from "react-hot-toast";
 import api, { getPrivateFile } from "../../api";
 import { loanReviewDate } from "./loanPolicy";
+import { formatCurrency as money } from "../../utils/currency";
 
 const SHOP_NAME = "Sri Golds";
 const SHOP_ADDRESS = "No.58 Vaitheeshwaran Nagar, Tirupattur - 635653";
@@ -12,12 +13,6 @@ const escapeHtml = (value) => String(value ?? "—")
   .replaceAll(">", "&gt;")
   .replaceAll('"', "&quot;")
   .replaceAll("'", "&#39;");
-
-const money = (value) => new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
-  maximumFractionDigits: 2
-}).format(Number(value || 0));
 
 const dateText = (value) => {
   if (!value) return "—";

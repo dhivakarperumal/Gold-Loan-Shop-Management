@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api";
+import { formatCurrency } from "../../utils/currency";
 import {
     FiPlus,
     FiEye,
@@ -105,7 +106,7 @@ const Billing = () => {
                     </div>
                     <div className="min-w-0">
                         <p className="text-sm font-bold text-slate-400 mb-1">Total Amount</p>
-                        <h2 className="text-2xl font-black leading-none text-slate-800">₹{totalAmount.toLocaleString("en-IN")}</h2>
+                        <h2 className="text-2xl font-black leading-none text-slate-800">{formatCurrency(totalAmount)}</h2>
                         <p className="text-xs text-slate-400 mt-2 font-medium">Shop orders only</p>
                     </div>
                 </div>
@@ -115,7 +116,7 @@ const Billing = () => {
                     </div>
                     <div className="min-w-0">
                         <p className="text-sm font-bold text-slate-400 mb-1">Today Amount</p>
-                        <h2 className="text-2xl font-black leading-none text-slate-800">₹{totalAmountToday.toLocaleString("en-IN")}</h2>
+                        <h2 className="text-2xl font-black leading-none text-slate-800">{formatCurrency(totalAmountToday)}</h2>
                         <p className="text-xs text-slate-400 mt-2 font-medium">Shop orders only</p>
                     </div>
                 </div>
@@ -227,7 +228,7 @@ const Billing = () => {
                                     </td>
                                     <td className="px-6 py-6 text-xs font-bold text-slate-800">{inv.id}</td>
                                     <td className="px-6 py-6 text-xs font-bold text-slate-700">{inv.customer}</td>
-                                    <td className="px-6 py-6 text-xs font-bold text-slate-800">₹{inv.amount.toFixed(2)}</td>
+                                    <td className="px-6 py-6 text-xs font-bold text-slate-800">{formatCurrency(inv.amount)}</td>
                                     <td className="px-6 py-6">
                                         <div className="flex items-center gap-2 text-[10px] font-bold text-gray-400">
                                             <FiCreditCard /> {inv.method}
@@ -290,7 +291,7 @@ const Billing = () => {
                                     </div>
                                     <div>
                                         <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider">Amount</p>
-                                        <p className="text-lg font-black text-slate-800 mt-0.5">₹{inv.amount.toFixed(2)}</p>
+                                        <p className="text-lg font-black text-slate-800 mt-0.5">{formatCurrency(inv.amount)}</p>
                                     </div>
                                 </div>
                                 <div className="flex justify-end gap-2 pt-3 border-t border-gray-100">

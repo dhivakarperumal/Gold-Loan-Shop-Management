@@ -2,6 +2,7 @@ import React, { useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiMinus, FiPlus, FiShoppingCart, FiTrash2, FiX } from "react-icons/fi";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
+import { formatCurrency } from "../../utils/currency";
 
 const CartDrawer = ({ isOpen, onClose }) => {
   const { cart, loadingCart, removeFromCart, updateCartQuantity } = useContext(StoreContext);
@@ -104,7 +105,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                           <FiTrash2 size={16} />
                         </button>
                       </div>
-                      <p className="mt-1 text-sm font-semibold text-primary">₹{Number(item.price || 0).toFixed(2)}</p>
+                      <p className="mt-1 text-sm font-semibold text-primary">{formatCurrency(item.price || 0)}</p>
                       <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-gray-500">
                         {item.colorName && (
                           <span className="flex items-center gap-1.5">
@@ -138,7 +139,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
                             <FiPlus size={14} />
                           </button>
                         </div>
-                        <span className="text-sm font-bold text-gray-800">₹{itemSubtotal.toFixed(2)}</span>
+                        <span className="text-sm font-bold text-gray-800">{formatCurrency(itemSubtotal)}</span>
                       </div>
                     </div>
                   </div>
@@ -156,7 +157,7 @@ const CartDrawer = ({ isOpen, onClose }) => {
             </div>
             <div className="mb-4 flex justify-between text-lg font-bold text-gray-800">
               <span>Total Amount</span>
-              <span className="text-primary">₹{totalAmount.toFixed(2)}</span>
+              <span className="text-primary">{formatCurrency(totalAmount)}</span>
             </div>
             <button
               type="button"

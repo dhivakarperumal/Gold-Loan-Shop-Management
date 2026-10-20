@@ -3,9 +3,9 @@ import { Link } from "react-router-dom";
 import { BadgeCheck, CircleCheck, CircleX, Heart, Star, Weight } from "lucide-react";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 import { getProductImageUrl } from "./productDisplay";
+import { formatCurrency } from "../../utils/currency";
 
-const formatPrice = (value) =>
-  `₹${Number(value || 0).toLocaleString("en-IN", { maximumFractionDigits: 2 })}`;
+const formatPrice = formatCurrency;
 
 const ProductCard = ({ product }) => {
   const { wishlist, toggleWishlist } = useContext(StoreContext);

@@ -4,6 +4,7 @@ import { toast } from "react-hot-toast";
 import api from "../../api";
 import { formatRateDate } from "../../PrivateRouter/goldRateUtils";
 import useGoldRates from "../../PrivateRouter/useGoldRates";
+import { formatCurrency as currency } from "../../utils/currency";
 
 const RATE_FIELDS = [
   { key: "gold_999", label: "Gold 24K (999)", metal: "Gold", purity: "999", unit: "gram" },
@@ -74,10 +75,6 @@ function formFromBatch(batch) {
     }))
   };
 }
-
-const currency = (value) => new Intl.NumberFormat("en-IN", {
-  style: "currency", currency: "INR", maximumFractionDigits: 2
-}).format(Number(value) || 0);
 
 function TablePagination({ page, pageSize, total, onPageChange }) {
   const pageCount = Math.max(1, Math.ceil(total / pageSize));

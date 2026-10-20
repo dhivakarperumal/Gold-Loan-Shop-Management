@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api";
+import { formatCurrency } from "../../utils/currency";
 import "./ChatBot.css";
 
 // ─── Intent Detection ────────────────────────────────────────────────────────
@@ -66,7 +67,7 @@ function formatDate(dateStr) {
 }
 
 function formatAmount(amount) {
-  return `₹${parseFloat(amount || 0).toFixed(2)}`;
+  return formatCurrency(parseFloat(amount || 0));
 }
 
 function getOrderStatusColor(status) {
@@ -671,8 +672,8 @@ const MessageBubble = ({ msg, onProductClick, onOrderClick, onActionClick, onSen
                       {product.brand && <div className="product-brand-chat">{product.brand}</div>}
                       <div className="product-category-chat">{product.category}</div>
                       <div className="product-price-row">
-                        <span className="product-price-chat">₹{parseFloat(price || 0).toFixed(2)}</span>
-                        {originalPrice && <span className="product-original-chat">₹{parseFloat(originalPrice).toFixed(2)}</span>}
+                        <span className="product-price-chat">{formatCurrency(parseFloat(price || 0))}</span>
+                        {originalPrice && <span className="product-original-chat">{formatCurrency(parseFloat(originalPrice))}</span>}
                       </div>
                       {product.stock_quantity !== undefined && (
                         <div className={`stock-status ${product.stock_quantity > 0 ? "in-stock" : "out-stock"}`}>

@@ -4,6 +4,7 @@ import { formatRateDate } from "../PrivateRouter/goldRateUtils";
 import useGoldRates from "../PrivateRouter/useGoldRates";
 import api from "../api";
 import DateRangeFilter from "./Components/DateRangeFilter";
+import { formatCurrency } from "../utils/currency";
 import { Toaster } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import {
@@ -313,7 +314,7 @@ const Dashboard = () => {
             const idx = items[0]?.dataIndex;
             return revenueTrends[idx]?.date || items[0]?.label || "";
           },
-          label: (context) => `● ₹ ${context.parsed.y.toLocaleString('en-IN')}`
+          label: (context) => `● ${formatCurrency(context.parsed.y)}`
         }
       }
     },
@@ -563,7 +564,7 @@ const Dashboard = () => {
                   })[rate.purity] || rate.purity : rate.purity}
                 </span>
                 <p className="mt-1.5 text-base font-extrabold tabular-nums text-white">
-                  ₹{Number(rate.rate_per_unit ?? rate.rate_per_gram).toLocaleString("en-IN")}
+                  {formatCurrency(rate.rate_per_unit ?? rate.rate_per_gram)}
                   <span className="ml-1 text-xs font-semibold text-emerald-100/70">/{rate.rate_unit === "carat" ? "ct" : "g"}</span>
                 </p>
               </div>
@@ -573,11 +574,11 @@ const Dashboard = () => {
           <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-amber-200/15 bg-white/[0.08] px-3.5 py-3">
               <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-amber-100/80">Gold 22K (916)</span>
-              <p className="mt-1.5 text-base font-extrabold text-white">₹6,850/g</p>
+              <p className="mt-1.5 text-base font-extrabold text-white">₹6,850.00/g</p>
             </div>
             <div className="rounded-xl border border-amber-200/15 bg-white/[0.08] px-3.5 py-3">
               <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-amber-100/80">Gold 24K</span>
-              <p className="mt-1.5 text-base font-extrabold text-white">₹7,472/g</p>
+              <p className="mt-1.5 text-base font-extrabold text-white">₹7,472.00/g</p>
             </div>
             <div className="rounded-xl border border-white/10 bg-white/[0.08] px-3.5 py-3">
               <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-emerald-50/70">Silver 999</span>
@@ -704,7 +705,7 @@ const Dashboard = () => {
                         </span>
                       </div>
                     </td>
-                    <td className="py-3.5 font-extrabold text-slate-800">{loan.amount}</td>
+                    <td className="py-3.5 font-extrabold text-slate-800">{formatCurrency(loan.amount)}</td>
                     <td className="py-3.5">
                       <span className={`px-2.5 py-1 rounded-md text-[10px] ${getStatusBadge(loan.status)}`}>
                         {loan.status}
@@ -767,7 +768,7 @@ const Dashboard = () => {
                 </div>
                 <div className="text-right shrink-0">
                   <span className="text-xs sm:text-sm font-extrabold text-slate-800">
-                    {prod.price == null ? "—" : `₹ ${Number(prod.price).toLocaleString('en-IN')}`}
+                    {formatCurrency(prod.price)}
                   </span>
                 </div>
               </div>

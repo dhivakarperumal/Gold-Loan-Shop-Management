@@ -6,10 +6,8 @@ import api from "../../api";
 import { printLoanAgreement } from "./loanPrint";
 import DateRangeFilter from "../Components/DateRangeFilter";
 import { isLoanReviewDue } from "./loanPolicy";
+import { formatCurrency } from "../../utils/currency";
 
-const money = (value) => new Intl.NumberFormat("en-IN", {
-  style: "currency", currency: "INR", maximumFractionDigits: 2
-}).format(Number(value || 0));
 const rateText = (value) => {
   if (value == null || value === "") return "—";
   const rate = Number(value);
@@ -213,7 +211,7 @@ export default function AllLoans() {
                         <td className="whitespace-nowrap px-4 py-4 pl-5 text-xs font-medium tabular-nums text-slate-400">{index + 1}</td>
                         <td className="whitespace-nowrap px-4 py-4 font-bold text-[#064A41]">{loan.loan_number}</td>
                         <td className="px-4 py-4"><div className="flex min-w-[145px] items-center gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-xs font-bold uppercase text-[#087263] ring-1 ring-inset ring-emerald-800/5">{String(loan.customer_name || "?").trim().charAt(0)}</span><span className="min-w-0"><span className="block truncate font-semibold text-slate-800">{loan.customer_name || "—"}</span><span className="mt-0.5 block text-xs text-slate-400">{loan.customer_code || "—"}</span></span></div></td>
-                        <td className="whitespace-nowrap px-4 py-4 font-bold tabular-nums text-slate-800" title={`Original loan amount: ${money(loan.principal_amount)}`}>{money(loan.outstanding_principal ?? loan.principal_amount)}</td>
+                        <td className="whitespace-nowrap px-4 py-4 font-bold tabular-nums text-slate-800" title={`Original loan amount: ${formatCurrency(loan.principal_amount)}`}>{formatCurrency(loan.outstanding_principal ?? loan.principal_amount)}</td>
                         <td className="whitespace-nowrap px-4 py-4 text-slate-600"><span className="font-semibold text-slate-800">{rateText(loan.interest_rate)}%</span></td>
                         <td className="whitespace-nowrap px-4 py-4">
                           <span className={isOverdueActiveLoan(loan, todayUtc) ? "font-bold text-rose-700" : "text-slate-600"}>{dateText(loan.maturity_date)}</span>
@@ -250,7 +248,7 @@ export default function AllLoans() {
                     <div className="flex items-center gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-xs font-bold uppercase text-[#087263]">{String(loan.customer_name || "?").trim().charAt(0)}</span><div className="min-w-0"><p className="truncate font-semibold text-slate-800">{loan.customer_name || "—"}</p><p className="mt-0.5 text-xs text-slate-400">{loan.customer_code || "—"}</p></div></div>
                     <p className="mt-2 text-xs text-slate-500">{loan.customer_mobile || "Mobile number unavailable"}</p>
                     <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-                      <div><dt className="text-xs font-medium text-slate-400">Outstanding Balance</dt><dd className="mt-1 font-bold text-[#064A41]">{money(loan.outstanding_principal ?? loan.principal_amount)}</dd></div>
+                      <div><dt className="text-xs font-medium text-slate-400">Outstanding Balance</dt><dd className="mt-1 font-bold text-[#064A41]">{formatCurrency(loan.outstanding_principal ?? loan.principal_amount)}</dd></div>
                       <div><dt className="text-xs text-slate-500">Maturity</dt><dd className={`mt-1 font-semibold ${isOverdueActiveLoan(loan, todayUtc) ? "text-rose-700" : "text-slate-700"}`}>{dateText(loan.maturity_date)}{isOverdueActiveLoan(loan, todayUtc) && <span className="ml-2 text-[10px] font-bold uppercase text-rose-700">Overdue</span>}{isLoanReviewDue(loan, todayUtc) && <span className="ml-2 text-[10px] font-bold uppercase text-amber-800">Review</span>}</dd></div>
                       <div><dt className="text-xs font-medium text-slate-400">Interest</dt><dd className="mt-1 font-semibold text-slate-700">{rateText(loan.interest_rate)}%</dd></div>
                     </dl>

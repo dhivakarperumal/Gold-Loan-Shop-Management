@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { FiArrowLeft, FiCalendar, FiChevronRight, FiCreditCard, FiDollarSign, FiEdit2, FiEye, FiGrid, FiImage, FiList, FiPlus, FiPrinter, FiRepeat, FiSave, FiSearch, FiTrash2, FiX } from "react-icons/fi";
+import { FiArrowLeft, FiCalendar, FiChevronDown, FiChevronRight, FiCreditCard, FiDollarSign, FiEdit2, FiEye, FiGrid, FiImage, FiList, FiPlus, FiPrinter, FiRepeat, FiSave, FiSearch, FiTrash2, FiX } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api from "../../api";
 import DateRangeFilter from "../Components/DateRangeFilter";
 import useGoldRates from "../../PrivateRouter/useGoldRates";
 import { getReceiptSettings } from "./receiptSettings";
+import { formatCurrency as currency } from "../../utils/currency";
 
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
 const EMPTY_CUSTOMER = { name: "", phone: "", email: "", address: "" };
@@ -25,11 +26,6 @@ const EMPTY_EXCHANGE = { product_name: "", category: "", category_is_other: fals
 const PURITY_LABELS = { "999": "24K", "916": "22K", "833": "20K", "750": "18K", "585": "14K" };
 const inputClass = "mt-1 block w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm text-slate-800 outline-none focus:border-[#008577] focus:ring-2 focus:ring-emerald-100";
 const labelClass = "block text-xs font-semibold text-slate-600";
-
-const currency = (value) => `₹${Number(value || 0).toLocaleString("en-IN", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2
-})}`;
 
 function decodeArray(value) {
   if (Array.isArray(value)) return value;
@@ -237,9 +233,51 @@ function ItemFields({ item, onChange, onCategorySelect, onMetalSelect, categorie
   );
 }
 
+function CatalogProductOption({ product, selected, onClick }) {
+  const image = getProductImage(product);
+  const price = Number(product.final_selling_price) > 0
+    ? Number(product.final_selling_price)
+    : Number(product.offer_price) > 0
+      ? Number(product.offer_price)
+      : Number(product.mrp || 0);
+
+  return (
+    <button
+      type="button"
+      role="option"
+      aria-selected={selected}
+      onClick={onClick}
+      className={`flex w-full items-center gap-3 border-b border-slate-100 px-3 py-2.5 text-left last:border-b-0 hover:bg-emerald-50 ${selected ? "bg-emerald-50 text-[#00695C]" : "text-slate-700"}`}
+    >
+      <span className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-slate-200 bg-slate-50 text-slate-300">
+        <FiImage size={18} aria-hidden="true" />
+        {image && (
+          <img
+            src={image}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover"
+            onError={(event) => { event.currentTarget.style.display = "none"; }}
+          />
+        )}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-sm font-semibold">{product.name}</span>
+        <span className="mt-0.5 block truncate text-xs text-slate-500">
+          {product.category || "Uncategorized"} · {product.purity || "Purity not set"}
+        </span>
+        <span className="mt-0.5 block text-xs font-semibold text-[#00695C]">{currency(price)}</span>
+      </span>
+    </button>
+  );
+}
+
 function CatalogProductFields({ product, catalogProducts, loading, onSelect, selectionId }) {
   const [selectionMode, setSelectionMode] = useState("select");
   const [searchTerm, setSearchTerm] = useState("");
+  const [catalogOpen, setCatalogOpen] = useState(false);
+  const selectedProduct = catalogProducts.find(
+    (catalogProduct) => String(catalogProduct.id) === product.product_id
+  );
   const filteredProducts = catalogProducts.filter((catalogProduct) =>
     [catalogProduct.name, catalogProduct.category, catalogProduct.purity, catalogProduct.product_code]
       .some((value) => String(value || "").toLowerCase().includes(searchTerm.trim().toLowerCase()))
@@ -269,29 +307,79 @@ function CatalogProductFields({ product, catalogProducts, loading, onSelect, sel
         </div>
       </div>
       {selectionMode === "select" ? (
-        <label className={labelClass}>
-          Select from catalog
-          <select
-            className={inputClass}
-            value={product.product_id}
-            onChange={(event) => onSelect(event.target.value)}
+        <div>
+          <span className={labelClass}>Select from catalog</span>
+          <button
+            type="button"
+            className={`${inputClass} flex items-center gap-3 text-left`}
+            aria-haspopup="listbox"
+            aria-expanded={catalogOpen}
+            aria-controls={`catalog-options-${selectionId}`}
             disabled={loading}
+            onClick={() => setCatalogOpen((open) => !open)}
           >
-            <option value="">{loading ? "Loading products..." : "Choose a catalog product"}</option>
-            {catalogProducts.map((catalogProduct) => {
-              const price = Number(catalogProduct.final_selling_price) > 0
-                ? Number(catalogProduct.final_selling_price)
-                : Number(catalogProduct.offer_price) > 0
-                  ? Number(catalogProduct.offer_price)
-                  : Number(catalogProduct.mrp || 0);
-              return (
-                <option key={catalogProduct.id} value={catalogProduct.id}>
-                  {catalogProduct.name} · {catalogProduct.category} · {catalogProduct.purity || "Purity not set"} · {currency(price)}
-                </option>
-              );
-            })}
-          </select>
-        </label>
+            {selectedProduct ? (
+              <>
+                <span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-slate-50 text-slate-300">
+                  <FiImage size={16} aria-hidden="true" />
+                  {getProductImage(selectedProduct) && (
+                    <img
+                      src={getProductImage(selectedProduct)}
+                      alt=""
+                      className="absolute inset-0 h-full w-full object-cover"
+                      onError={(event) => { event.currentTarget.style.display = "none"; }}
+                    />
+                  )}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-semibold">{selectedProduct.name}</span>
+                  <span className="block truncate text-xs font-normal text-slate-500">
+                    {selectedProduct.category || "Uncategorized"} · {selectedProduct.purity || "Purity not set"}
+                  </span>
+                </span>
+              </>
+            ) : (
+              <span className="min-w-0 flex-1 font-normal text-slate-500">
+                {loading ? "Loading products..." : "Choose a catalog product"}
+              </span>
+            )}
+            <FiChevronDown className={`shrink-0 transition-transform ${catalogOpen ? "rotate-180" : ""}`} aria-hidden="true" />
+          </button>
+          {catalogOpen && (
+            <div className="mt-2 overflow-hidden rounded-lg border border-slate-200 bg-white shadow-lg">
+              <label className="relative block border-b border-slate-100 p-2">
+                <FiSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+                <span className="sr-only">Search catalog products</span>
+                <input
+                  className={`${inputClass} mt-0 pl-9`}
+                  type="search"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Search products..."
+                  autoComplete="off"
+                />
+              </label>
+              <div id={`catalog-options-${selectionId}`} className="max-h-64 overflow-y-auto" role="listbox" aria-label="Catalog products">
+                {filteredProducts.length > 0 ? filteredProducts.map((catalogProduct) => (
+                  <CatalogProductOption
+                    key={catalogProduct.id}
+                    product={catalogProduct}
+                    selected={String(catalogProduct.id) === product.product_id}
+                    onClick={() => {
+                      onSelect(String(catalogProduct.id));
+                      setSearchTerm("");
+                      setCatalogOpen(false);
+                    }}
+                  />
+                )) : (
+                  <p className="px-3 py-4 text-sm text-slate-500" role="status">
+                    {loading ? "Loading products..." : "No catalog products found."}
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       ) : (
         <div>
           <label className={labelClass} htmlFor={`product-search-${selectionId}`}>
@@ -312,32 +400,17 @@ function CatalogProductFields({ product, catalogProducts, loading, onSelect, sel
           </label>
           {searchTerm.trim() && (
             <div className="mt-2 max-h-56 overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-sm" role="listbox" aria-label="Matching catalog products">
-              {filteredProducts.length > 0 ? filteredProducts.map((catalogProduct) => {
-                const price = Number(catalogProduct.final_selling_price) > 0
-                  ? Number(catalogProduct.final_selling_price)
-                  : Number(catalogProduct.offer_price) > 0
-                    ? Number(catalogProduct.offer_price)
-                    : Number(catalogProduct.mrp || 0);
-                const selected = String(catalogProduct.id) === product.product_id;
-                return (
-                  <button
-                    key={catalogProduct.id}
-                    type="button"
-                    role="option"
-                    aria-selected={selected}
-                    onClick={() => {
-                      onSelect(String(catalogProduct.id));
-                      setSearchTerm("");
-                    }}
-                    className={`block w-full border-b border-slate-100 px-3 py-2.5 text-left text-sm last:border-b-0 hover:bg-emerald-50 ${selected ? "bg-emerald-50 text-[#00695C]" : "text-slate-700"}`}
-                  >
-                    <span className="block font-semibold">{catalogProduct.name}</span>
-                    <span className="mt-0.5 block text-xs text-slate-500">
-                      {catalogProduct.category} · {catalogProduct.purity || "Purity not set"} · {currency(price)}
-                    </span>
-                  </button>
-                );
-              }) : (
+              {filteredProducts.length > 0 ? filteredProducts.map((catalogProduct) => (
+                <CatalogProductOption
+                  key={catalogProduct.id}
+                  product={catalogProduct}
+                  selected={String(catalogProduct.id) === product.product_id}
+                  onClick={() => {
+                    onSelect(String(catalogProduct.id));
+                    setSearchTerm("");
+                  }}
+                />
+              )) : (
                 <p className="px-3 py-3 text-sm text-slate-500" role="status">No matching catalog products.</p>
               )}
             </div>

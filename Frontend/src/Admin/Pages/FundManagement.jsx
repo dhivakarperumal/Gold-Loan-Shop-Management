@@ -6,6 +6,7 @@ import {
 import toast from "react-hot-toast";
 import api from "../../api";
 import DateRangeFilter from "../Components/DateRangeFilter";
+import { formatCurrency } from "../../utils/currency";
 
 const CATEGORIES = {
   FUND_ADDED: ["Cash", "Bank Account", "UPI", "Owner Investment", "Business Capital", "Other"],
@@ -21,7 +22,6 @@ const CATEGORIES = {
 };
 const PAYMENT_METHODS = ["Cash", "UPI", "Card", "Bank Transfer", "Cheque", "Other"];
 const TYPE_LABELS = { FUND_ADDED: "Fund Added", DEBIT: "Debit", CREDIT: "Credit", TRANSFER_IN: "Transfer", TRANSFER_OUT: "Transfer" };
-const INR = new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 });
 const today = () => new Date().toLocaleDateString("en-CA");
 
 const emptyEntry = () => ({
@@ -30,7 +30,7 @@ const emptyEntry = () => ({
 });
 
 function money(value) {
-  return INR.format(Number(value || 0));
+  return formatCurrency(Number(value || 0));
 }
 
 function displayDate(value) {

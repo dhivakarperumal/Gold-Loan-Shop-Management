@@ -6,6 +6,7 @@ import api, { getPrivateFile } from "../../api";
 import { formatRateDate, getRateForPurity } from "../../PrivateRouter/goldRateUtils";
 import useGoldRates from "../../PrivateRouter/useGoldRates";
 import { printLoanAgreement, printLoanDraft } from "./loanPrint";
+import { formatCurrency } from "../../utils/currency";
 
 const INTEREST_FREQUENCIES = [
   ["daily", "Daily"], ["weekly", "Weekly"], ["monthly", "Monthly"],
@@ -103,12 +104,6 @@ function initialLoan() {
     loan_status: "Active",
     notes: ""
   };
-}
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency", currency: "INR", maximumFractionDigits: 2
-  }).format(Number.isFinite(value) ? value : 0);
 }
 
 function elapsedDays(from, to, convention) {

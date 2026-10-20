@@ -7,13 +7,11 @@ import {
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import api from "../../api";
+import { formatCurrency as currency } from "../../utils/currency";
 
 const TEAL = "#003B3B";
 const PURITIES = ["999", "916", "833", "750", "585"];
 const today = () => new Date().toISOString().slice(0, 10);
-const currency = (value) => new Intl.NumberFormat("en-IN", {
-  style: "currency", currency: "INR", maximumFractionDigits: 2
-}).format(Number(value || 0));
 const initialDealer = {
   name: "", contact_person: "", email: "", phone: "", alternate_phone: "",
   category_id: "", gstin: "", pan: "", billing_address_line1: "", billing_city: "",
