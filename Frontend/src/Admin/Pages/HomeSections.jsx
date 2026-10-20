@@ -100,6 +100,7 @@ const HomeSections = () => {
                 </p>
               </div>
               <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-slate-600">Hide</span>
                 <button
                   type="button"
                   onClick={() => toggleSection(section.key)}
@@ -117,7 +118,7 @@ const HomeSections = () => {
                     }`}
                   />
                 </button>
-                <span className="w-9 text-xs font-bold text-slate-600">{section.visible ? "Hide" : "Show"}</span>
+                <span className="text-xs font-bold text-slate-600">Show</span>
                 <button
                   type="button"
                   onClick={() => moveSection(index, -1)}
