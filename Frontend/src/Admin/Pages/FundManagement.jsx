@@ -283,11 +283,6 @@ function FundManagement() {
       </div>
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-col justify-between gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:p-5">
-          <div>
-            <h2 className="text-lg font-black text-slate-900">Transaction History</h2>
-          </div>
-        </div>
         {transactionView === "table" ? (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1100px] text-left text-xs">
