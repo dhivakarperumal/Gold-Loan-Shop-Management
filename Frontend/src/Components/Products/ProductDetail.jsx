@@ -311,7 +311,7 @@ const ProductDetail = () => {
           </Link>
         </div> */}
 
-        <div className="grid gap-4 lg:grid-cols-2 mt-4">
+        <div className={`mt-4 grid gap-4 ${images.length > 1 ? "lg:grid-cols-[minmax(0,calc(50%_+_2.6875rem))_minmax(0,calc(50%_-_3.6875rem))]" : "lg:grid-cols-2"}`}>
           <section className="min-w-0 rounded-2xl border border-[#eee8dc] bg-white p-2.5 shadow-sm sm:p-3">
             <div className="flex min-w-0 items-start gap-2 sm:gap-3">
               {images.length > 1 && (
