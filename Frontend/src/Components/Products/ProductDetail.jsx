@@ -4,8 +4,6 @@ import {
   FaArrowLeft,
   FaArrowRight,
   FaCheckCircle,
-  FaChevronLeft,
-  FaChevronRight,
   FaGem,
   FaHeart,
   FaPlayCircle,
@@ -306,9 +304,9 @@ const ProductDetail = () => {
 
         <div className={`mt-4 grid gap-4 ${images.length > 1 ? "lg:grid-cols-[minmax(0,calc(50%_+_2.6875rem))_minmax(0,calc(50%_-_3.6875rem))]" : "lg:grid-cols-2"}`}>
           <section className="min-w-0 rounded-2xl border border-[#eee8dc] bg-white p-2.5 shadow-sm sm:p-3">
-            <div className="flex min-w-0 items-start gap-2 sm:gap-3">
+            <div className="flex min-w-0 flex-col-reverse gap-2 sm:flex-row sm:items-start sm:gap-3">
               {images.length > 1 && (
-                <div className="flex max-h-[calc(100vw-2rem)] w-12 shrink-0 flex-col gap-2 overflow-y-auto sm:max-h-[min(42vw,560px)] sm:w-16">
+                <div className="flex w-full shrink-0 flex-row gap-2 overflow-x-auto pb-1 sm:max-h-[min(42vw,560px)] sm:w-16 sm:flex-col sm:overflow-x-hidden sm:overflow-y-auto sm:pb-0">
                   {images.slice(0, 5).map((image, index) => (
                     <button
                       key={`${image}-${index}`}
@@ -316,7 +314,7 @@ const ProductDetail = () => {
                       onClick={() => setActiveImage(index)}
                       aria-label={`View product image ${index + 1}`}
                       aria-pressed={activeImage === index}
-                      className={`aspect-square w-full shrink-0 overflow-hidden rounded-lg border-2 bg-white transition ${activeImage === index ? "border-[#1c765d]" : "border-transparent hover:border-[#d8b46c]"}`}
+                      className={`aspect-square w-12 shrink-0 overflow-hidden rounded-lg border-2 bg-white transition sm:w-full ${activeImage === index ? "border-[#1c765d]" : "border-transparent hover:border-[#d8b66c]"}`}
                     >
                       <img src={assetUrl(image)} alt="" className="h-full w-full object-cover" loading="lazy" />
                     </button>
@@ -346,23 +344,23 @@ const ProductDetail = () => {
               )}
               {selectedImage && (
                 <>
-                  <div className="absolute right-3 top-3 z-20 flex items-center gap-1 rounded-full border border-white/80 bg-white/95 p-1 text-sm font-semibold text-[#34443e] shadow-md">
+                  <div className="absolute right-2 top-2 z-20 flex items-center gap-0.5 rounded-full border border-white/80 bg-white/95 p-0.5 text-sm font-semibold text-[#34443e] shadow-md sm:right-3 sm:top-3 sm:gap-1 sm:p-1">
                     <button
                       type="button"
                       onClick={() => setZoom((current) => Math.max(1, current - 0.5))}
                       disabled={zoom <= 1}
                       aria-label="Decrease image zoom"
-                      className="grid h-8 w-8 place-items-center rounded-full transition hover:bg-[#f4f0e7] disabled:cursor-not-allowed disabled:opacity-40"
+                      className="grid h-7 w-7 place-items-center rounded-full transition hover:bg-[#f4f0e7] disabled:cursor-not-allowed disabled:opacity-40 sm:h-8 sm:w-8"
                     >
                       <span aria-hidden="true">−</span>
                     </button>
-                    <span className="min-w-10 text-center text-xs">{zoom}x</span>
+                    <span className="min-w-8 text-center text-xs sm:min-w-10">{zoom}x</span>
                     <button
                       type="button"
                       onClick={() => setZoom((current) => Math.min(4, current + 0.5))}
                       disabled={zoom >= 4}
                       aria-label="Increase image zoom"
-                      className="grid h-8 w-8 place-items-center rounded-full transition hover:bg-[#f4f0e7] disabled:cursor-not-allowed disabled:opacity-40"
+                      className="grid h-7 w-7 place-items-center rounded-full transition hover:bg-[#f4f0e7] disabled:cursor-not-allowed disabled:opacity-40 sm:h-8 sm:w-8"
                     >
                       <span aria-hidden="true">+</span>
                     </button>
@@ -384,28 +382,9 @@ const ProductDetail = () => {
                 </>
               )}
               {(product.best_seller || product.featured) && (
-                <span className="absolute left-3 top-3 rounded-full bg-[#f4c84a] px-3 py-1.5 text-xs font-bold text-[#4e390f]">
+                <span className="absolute left-2 top-2 rounded-full bg-[#f4c84a] px-2.5 py-1 text-[11px] font-bold text-[#4e390f] sm:left-3 sm:top-3 sm:px-3 sm:py-1.5 sm:text-xs">
                   {product.best_seller ? "Bestseller" : "Featured"}
                 </span>
-              )}
-              <button
-                type="button"
-                onClick={() => toggleWishlist(product, currentVariant, "")}
-                aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
-                aria-pressed={isFavorite}
-                className={`absolute right-3 top-14 z-20 grid h-10 w-10 place-items-center rounded-full bg-white/95 shadow transition hover:text-rose-600 ${isFavorite ? "text-rose-600" : "text-[#40514a]"}`}
-              >
-                <FaHeart className={isFavorite ? "text-lg" : "text-lg"} />
-              </button>
-              {images.length > 1 && (
-                <>
-                  <button type="button" aria-label="Previous product image" onClick={() => setActiveImage((activeImage + images.length - 1) % images.length)} className="absolute left-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/95 text-[#174a38] shadow transition hover:bg-white">
-                    <FaChevronLeft />
-                  </button>
-                  <button type="button" aria-label="Next product image" onClick={() => setActiveImage((activeImage + 1) % images.length)} className="absolute right-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/95 text-[#174a38] shadow transition hover:bg-white">
-                    <FaChevronRight />
-                  </button>
-                </>
               )}
               </div>
               </div>
