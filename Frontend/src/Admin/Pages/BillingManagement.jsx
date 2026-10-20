@@ -1142,7 +1142,7 @@ export default function BillingManagement() {
             ) : (
               <div className="w-full overflow-x-auto rounded-lg border border-slate-200">
                 <table className="w-full min-w-[900px] border-collapse text-left">
-                  <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                  <thead className="bg-gradient-to-r from-[#07564B] via-[#064A41] to-[#043D37] text-xs uppercase tracking-wide text-white">
                     <tr>
                       <th className="px-4 py-3 font-semibold">Product</th>
                       <th className="px-4 py-3 font-semibold">Category</th>
