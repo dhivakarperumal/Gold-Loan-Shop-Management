@@ -1,6 +1,7 @@
 const express = require('express');
 const requireAdmin = require('../middleware/requireAdmin');
 const requireAuthenticatedUser = require('../middleware/requireAuthenticatedUser');
+const { requireAuthenticatedUserOrAdmin } = requireAuthenticatedUser;
 const { uploadLoanGoldImage } = require('../middleware/loanGoldImageUpload');
 const { uploadLoanGoldReleaseDocument } = require('../middleware/loanGoldReleaseUpload');
 const {
@@ -30,11 +31,11 @@ const router = express.Router();
 
 // ── Self-service: authenticated customer routes (no admin required) ──
 router.get('/loans/my-loans', requireAuthenticatedUser, getMyLoans);
+router.get('/customers/:id/loans', requireAuthenticatedUserOrAdmin, getCustomerLoans);
 
 router.use(requireAdmin);
 
 router.get('/customers', getCustomers);
-router.get('/customers/:id/loans', getCustomerLoans);
 router.get('/customers/:id', getCustomer);
 router.get('/loans/interest-types', getInterestTypes);
 router.patch('/loans/interest-types/:typeKey', updateInterestType);

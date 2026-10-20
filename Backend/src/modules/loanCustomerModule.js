@@ -173,6 +173,14 @@ async function getLoanCustomerById(id) {
   return rows[0] || null;
 }
 
+async function getLoanCustomerByUserId(userId) {
+  const [rows] = await pool.execute(
+    `SELECT ${CUSTOMER_COLUMNS} FROM loan_customers WHERE user_id = ?`,
+    [userId]
+  );
+  return rows[0] || null;
+}
+
 async function createLoanCustomer(customer, username, password = customer.mobile) {
   const connection = await pool.getConnection();
   let id;
@@ -312,6 +320,7 @@ module.exports = {
   getLoanCustomerDocumentById,
   getLoanCustomerDocumentByRef,
   getLoanCustomerById,
+  getLoanCustomerByUserId,
   initializeLoanCustomerModule,
   listLoanCustomerDocuments,
   listLoanCustomers,
