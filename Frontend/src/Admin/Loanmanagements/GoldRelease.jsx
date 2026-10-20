@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
-import { FiArrowLeft, FiCalendar, FiCheckCircle, FiDownload, FiFileText, FiGrid, FiList, FiPrinter, FiSearch, FiShield, FiUpload, FiUsers, FiX } from "react-icons/fi";
+import { FiArrowLeft, FiCalendar, FiCheckCircle, FiDownload, FiEye, FiFileText, FiGrid, FiList, FiPrinter, FiSearch, FiShield, FiUpload, FiUsers, FiX } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api, { getPrivateFile } from "../../api";
 import { printLoanAgreement } from "./loanPrint";
@@ -433,9 +433,10 @@ export default function GoldRelease() {
                       <td className="whitespace-nowrap px-3 py-4 text-slate-600">{dateText(loan.maturity_date)}</td>
                       {completionPage && <td className="whitespace-nowrap px-3 py-4"><span className={`rounded-full px-2.5 py-1.5 text-xs font-bold ${completed ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-800"}`}>{completed ? "Completed" : "Awaiting Gold Release"}</span></td>}
                       <td className="whitespace-nowrap px-3 py-4 pr-4">
-                        {completed
-                          ? <Link to={`${pagePath}/${loan.id}`} onClick={(event) => event.stopPropagation()} className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">View record</Link>
-                          : <button type="button" onClick={(event) => { event.stopPropagation(); setReleaseModalLoan(loan); }} className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">{completionPage ? "Complete loan" : "Prepare release form"}</button>}
+                        <div className="flex items-center gap-2">
+                          <Link to={`${pagePath}/${loan.id}`} onClick={(event) => event.stopPropagation()} aria-label={`View gold release record for ${loan.loan_number}`} title="View record" className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-2.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200"><FiEye size={14} /> View</Link>
+                          {!completed && <button type="button" onClick={(event) => { event.stopPropagation(); setReleaseModalLoan(loan); }} className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">{completionPage ? "Complete loan" : "Prepare release form"}</button>}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -458,8 +459,9 @@ export default function GoldRelease() {
                     <Info label="Pledge Number" value={loan.gold_pledge_number} /><Info label="Outstanding" value={money(loan.outstanding_principal ?? loan.principal_amount)} />
                     <Info label="Maturity" value={dateText(loan.maturity_date)} /><Info label="Customer ID" value={loan.customer_code} />
                   </dl>
-                  <div className="mt-4 flex justify-end border-t border-slate-100 pt-4">
-                    <Link to={`${pagePath}/${loan.id}`} className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">{completionPage ? completed ? "View record" : "Complete loan" : "Prepare release form"}</Link>
+                  <div className="mt-4 flex justify-end gap-2 border-t border-slate-100 pt-4">
+                    <Link to={`${pagePath}/${loan.id}`} aria-label={`View gold release record for ${loan.loan_number}`} className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-2 text-xs font-bold text-slate-700 hover:bg-slate-200"><FiEye size={14} /> View</Link>
+                    {!completed && <button type="button" onClick={() => setReleaseModalLoan(loan)} className="rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">{completionPage ? "Complete loan" : "Prepare release form"}</button>}
                   </div>
                 </article>;
               })}
