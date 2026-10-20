@@ -311,7 +311,7 @@ const ProductDetail = () => {
           </Link>
         </div> */}
 
-        <div className="grid gap-4 lg:grid-cols-[1fr_1.15fr] mt-4">
+        <div className="grid gap-4 lg:grid-cols-2 mt-4">
           <section className="min-w-0 rounded-2xl border border-[#eee8dc] bg-white p-3 shadow-sm">
             <div
               ref={imageViewportRef}
