@@ -61,7 +61,9 @@ const Explore = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [sortBy, setSortBy] = useState("newest");
-  const [filtersOpen, setFiltersOpen] = useState(true);
+  const [filtersOpen, setFiltersOpen] = useState(
+    () => typeof window !== "undefined" && window.innerWidth >= 1024
+  );
   const [openFilters, setOpenFilters] = useState({
     category: true,
     metal: true,
@@ -358,7 +360,7 @@ const Explore = () => {
             </button>
           </div>
           {topSearchProducts.length ? (
-            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+            <div className="mt-2 flex snap-x snap-mandatory gap-2 overflow-x-auto pb-2 sm:grid sm:grid-cols-4 sm:overflow-visible sm:pb-0 lg:grid-cols-8">
               {topSearchProducts.map((product) => {
                 const productId = product.id ?? product.product_id ?? product.product_code ?? product.name;
                 const image = getProductImageUrl(product);
@@ -368,7 +370,7 @@ const Explore = () => {
                   type="button"
                   onClick={() => setSearchFilter(searchQuery === product.name ? "" : product.name)}
                   title={product.name}
-                  className={`flex min-w-0 items-center gap-2 rounded-lg border px-2 py-2 text-left text-[10px] font-medium transition sm:text-[11px] ${searchQuery === product.name ? "border-[#174a38] bg-[#edf5ef] text-[#174a38]" : "border-[#eee5d6] bg-white text-[#514638] hover:border-[#d8b46c] hover:bg-[#fffaf0]"}`}
+                  className={`flex w-[min(72vw,220px)] shrink-0 snap-start items-center gap-2 rounded-lg border px-2 py-2 text-left text-[10px] font-medium transition sm:w-auto sm:min-w-0 sm:text-[11px] ${searchQuery === product.name ? "border-[#174a38] bg-[#edf5ef] text-[#174a38]" : "border-[#eee5d6] bg-white text-[#514638] hover:border-[#d8b46c] hover:bg-[#fffaf0]"}`}
                 >
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-[#f8f2e8]">
                     {image
