@@ -26,7 +26,8 @@ import {
   Clock3,
   Coins,
   CheckCircle2,
-  Wallet
+  Wallet,
+  MessageCircle
 } from "lucide-react";
 
 /* ================= NAV ITEMS ================= */
@@ -40,6 +41,14 @@ const navItems = [
  
 
   { path: "/admin/billings", label: "Billing", icon: Files },
+  {
+    label: "Enquiries",
+    icon: MessageCircle,
+    children: [
+      { path: "/admin/enquiries", label: "All Enquiries", icon: List, activePaths: ["/admin/enquiries/new"] },
+      { path: "/admin/enquiries/new", label: "Add Enquiry", icon: PlusCircle }
+    ]
+  },
   {
     label: "Loan Management",
     icon: HandCoins,

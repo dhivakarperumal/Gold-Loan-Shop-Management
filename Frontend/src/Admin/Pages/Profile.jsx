@@ -227,9 +227,7 @@ const Profile = () => {
         <h1 className="text-2xl font-black tracking-tight text-slate-900">Profile</h1>
         <p className="mt-1 text-sm text-slate-500">Manage your account details, security and preferences.</p>
       </div>
-      <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs font-medium text-slate-500">
-        <span aria-hidden="true">⌂</span><ChevronRight size={14} /><span className="text-slate-700">Profile</span>
-      </nav>
+      
     </header>
 
     <section className="grid gap-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm md:grid-cols-[1.15fr_1fr_auto] md:items-center md:px-5">
