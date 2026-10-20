@@ -3,7 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const multer = require('multer');
 
-const imageDirectory = path.resolve(__dirname, '../../private_uploads/loan-gold');
+const imageDirectory = path.resolve(__dirname, '../../uploads/.private/loan-gold');
 fs.mkdirSync(imageDirectory, { recursive: true });
 
 const extensions = { 'image/jpeg': '.jpg', 'image/png': '.png' };

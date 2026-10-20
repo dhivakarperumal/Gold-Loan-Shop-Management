@@ -1,3 +1,4 @@
+const { randomUUID } = require('node:crypto');
 const { getLoanCustomerById, listLoanCustomers } = require('../modules/loanCustomerModule');
 const {
   createLoan,
@@ -479,6 +480,13 @@ async function postLoan(req, res, next) {
     if (cleanupStatus) return res.status(cleanupStatus).json({ message: error });
     return;
   }
+  const idempotencyKey = req.body?.idempotency_key ?? randomUUID();
+  if (typeof idempotencyKey !== 'string'
+    || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(idempotencyKey)) {
+    const cleanupStatus = await rejectUploadedImage(req, next, 400);
+    if (cleanupStatus) return res.status(cleanupStatus).json({ message: 'Loan request key is invalid. Please submit the loan again.' });
+    return;
+  }
   if (loan.loan_status === 'Completed') {
     const cleanupStatus = await rejectUploadedImage(req, next, 409);
     if (cleanupStatus) return res.status(cleanupStatus).json({ message: 'A loan can only be marked completed after its gold has been released.' });
@@ -503,7 +511,7 @@ async function postLoan(req, res, next) {
       gold_rate_date: activeRateSet.rate_date,
       gold_image_url: req.file ? `/api/loans/gold-images/${req.file.filename}` : null,
       created_by: req.adminUser.user_id
-    });
+    }, { idempotencyKey });
     return res.status(201).json(createdLoan);
   } catch (createError) {
     try {
@@ -513,6 +521,13 @@ async function postLoan(req, res, next) {
     }
     if (createError.code === 'CUSTOMER_NOT_FOUND') return res.status(404).json({ message: createError.message });
     if (createError.code === 'INTEREST_TYPE_UNAVAILABLE') return res.status(400).json({ message: createError.message });
+    if (createError.code === 'INVALID_LOAN_AMOUNT') return res.status(400).json({ message: createError.message });
+    if (createError.code === 'INSUFFICIENT_FUNDS') {
+      return res.status(409).json({
+        message: createError.message,
+        available_balance: createError.available_balance
+      });
+    }
     return next(createError);
   }
 }

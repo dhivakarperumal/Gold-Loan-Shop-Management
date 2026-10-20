@@ -16,7 +16,9 @@ import Loader from "./Components/CommenComponents/Loader.jsx";
 const Home = React.lazy(() => import("./Components/Home/Home.jsx"));
 const StoreProductDetail = React.lazy(() => import("./Components/Products/ProductDetail.jsx"));
 const Explore = React.lazy(() => import("./Components/Products/Explore.jsx"));
-const InfoPage = React.lazy(() => import("./Components/Pages/InfoPage.jsx"));
+const AboutPage = React.lazy(() => import("./Components/Pages/AboutPage.jsx"));
+const ContactPage = React.lazy(() => import("./Components/Pages/ContactPage.jsx"));
+const PrivacyPage = React.lazy(() => import("./Components/Pages/InfoPage.jsx"));
 
 const Login = React.lazy(() => import("./Components/Auth/Login.jsx"));
 const Register = React.lazy(() => import("./Components/Auth/Register.jsx"));
@@ -45,6 +47,7 @@ const BannerManagement = React.lazy(() => import("./Admin/Marketing/BannerManage
 const VideoManagement = React.lazy(() => import("./Admin/Marketing/VideoManagement.jsx"));
 const Reviews = React.lazy(() => import("./Admin/Pages/Reviews.jsx"));
 const Settings = React.lazy(() => import("./Admin/Pages/Settings.jsx"));
+const FundManagement = React.lazy(() => import("./Admin/Pages/FundManagement.jsx"));
 const DailyGoldRate = React.lazy(() => import("./Admin/Pages/DailyGoldRate.jsx"));
 const ReceiptSettings = React.lazy(() => import("./Admin/Pages/ReceiptSettings.jsx"));
 const HomeSections = React.lazy(() => import("./Admin/Pages/HomeSections.jsx"));
@@ -67,9 +70,9 @@ const router = createBrowserRouter([
       { path: "/", element: <Home /> },
       { path: "explore", element: <Explore /> },
       { path: "product/:id", element: <StoreProductDetail /> },
-      { path: "about", element: <InfoPage page="about" /> },
-      { path: "contactus", element: <InfoPage page="contact" /> },
-      { path: "privacy-policy", element: <InfoPage page="privacy" /> },
+      { path: "about", element: <AboutPage /> },
+      { path: "contactus", element: <ContactPage /> },
+      { path: "privacy-policy", element: <PrivacyPage /> },
       {
         path: "/account/kyc",
         element: (
@@ -134,6 +137,7 @@ const router = createBrowserRouter([
       { path: "reports", element: <Reports /> },
       { path: "dealers/*", element: <Dealers /> },
       { path: "settings", element: <Settings /> },
+      { path: "funds", element: <FundManagement /> },
       { path: "settings/daily-gold-rate", element: <DailyGoldRate /> },
       { path: "settings/receipt", element: <ReceiptSettings /> },
       { path: "settings/home-sections", element: <HomeSections /> },

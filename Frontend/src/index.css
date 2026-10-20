@@ -1,7 +1,10 @@
+/* @import url('https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&display=swap'); */
 @import "tailwindcss";
 
 /* body {
-  font-family: 'Josefin Sans', sans-serif;
+  font-family: "EB Garamond", serif;
+  font-optical-sizing: auto;
+  font-weight: 700;
 } */
 
 
@@ -35,6 +38,24 @@
   --color-surface: #FFFFFF;
   --color-border: #E2E8E5;
   --color-muted: #64748B;
+}
+
+:root {
+  --dropdown-background: #064A41;
+  --dropdown-interaction: #7B2CBF;
+}
+
+option,
+optgroup {
+  color: #FFFFFF;
+  background-color: var(--dropdown-background);
+}
+
+select option:hover,
+select option:focus,
+select option:checked {
+  color: #240046 !important;
+  background: #FFFFFF !important;
 }
 
 
@@ -147,8 +168,15 @@
 }
 
 @keyframes gradient-x {
-  0%, 100% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
+
+  0%,
+  100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 .animate-gradient-x {
