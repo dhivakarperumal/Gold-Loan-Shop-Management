@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   FaArrowLeft,
+  FaArrowRight,
   FaCheckCircle,
   FaChevronLeft,
   FaChevronRight,
@@ -14,6 +15,12 @@ import {
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 import PageContainer from "../CommenComponents/PageContainer";
 import api from "../../api";
+import { Autoplay } from "swiper/modules";
+import { Swiper, SwiperSlide } from "swiper/react";
+import "swiper/css";
+import ProductCard from "../Home/ProductCard";
+import MetalProducts from "./MetalProducts";
+import CategoryProducts from "./CategoryProducts";
 
 const backendUrl = (
   import.meta.env.VITE_BACKEND_URL ||
@@ -528,6 +535,18 @@ const ProductDetail = () => {
           )}
         </div>
       </PageContainer>
+
+      {/* Metal Products — same metal type (e.g. Gold) */}
+      <MetalProducts
+        currentProductId={productId}
+        metalType={product.metal_type}
+      />
+
+      {/* Category Products — same category (e.g. Chain) */}
+      <CategoryProducts
+        currentProductId={productId}
+        category={product.category}
+      />
     </main>
   );
 };

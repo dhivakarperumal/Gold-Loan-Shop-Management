@@ -18,6 +18,7 @@ import { getProductImageUrl } from "../Home/productDisplay";
 
 const PAGE_SIZE = 100;
 const ROWS_PER_PAGE = 3;
+const MOBILE_PRODUCTS_PER_PAGE = 8;
 const SORT_OPTIONS = [
   { value: "newest", label: "Newest First" },
   { value: "oldest", label: "Oldest First" },
@@ -240,7 +241,9 @@ const Explore = () => {
     subcategoryFilter,
   ]);
 
-  const productsPerPage = gridColumns * ROWS_PER_PAGE;
+  const productsPerPage = gridColumns === 1
+    ? MOBILE_PRODUCTS_PER_PAGE
+    : gridColumns * ROWS_PER_PAGE;
   const totalPages = Math.ceil(filteredProducts.length / productsPerPage);
   const activePage = Math.min(currentPage, Math.max(totalPages, 1));
   const pageStart = (activePage - 1) * productsPerPage;
@@ -343,8 +346,8 @@ const Explore = () => {
         </div>
       </div>
 
-      <div className="mx-auto grid max-w-[1700px] items-start gap-x-4 px-4 pt-4 sm:px-6 lg:grid-cols-[220px_minmax(0,1fr)] lg:px-8 xl:grid-cols-[235px_minmax(0,1fr)]">
-        <section className="relative isolate min-h-[180px] overflow-hidden rounded-xl border border-[#d8b46c]/60 bg-[#f8e4b4] sm:min-h-[210px] lg:col-start-2 lg:row-start-1 lg:min-h-[155px]">
+      <div className={`mx-auto grid max-w-[1700px] items-start gap-x-4 px-4 pt-4 sm:px-6 lg:px-8 ${filtersOpen ? "lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[235px_minmax(0,1fr)]" : "lg:grid-cols-1"}`}>
+        <section className={`relative isolate min-h-[180px] overflow-hidden rounded-xl border border-[#d8b46c]/60 bg-[#f8e4b4] sm:min-h-[210px] lg:row-start-1 lg:min-h-[155px] ${filtersOpen ? "lg:col-start-2" : "lg:col-start-1"}`}>
           <img
             src="/images/Hero/hero.png"
             alt=""
@@ -369,10 +372,21 @@ const Explore = () => {
           </div>
         </section>
 
-        <section className="mt-4 lg:col-start-2 lg:row-start-2 lg:mt-3" aria-labelledby="top-searches-title">
-          <h2 id="top-searches-title" className="flex items-center gap-2 font-serif text-base font-bold text-[#29231c]">
-            <FaSearch className="text-xs text-[#a77525]" /> Top Searches
-          </h2>
+        <section className={`mt-4 lg:row-start-2 lg:mt-3 ${filtersOpen ? "lg:col-start-2" : "lg:col-start-1"}`} aria-labelledby="top-searches-title">
+          <div className="flex items-center justify-between gap-3">
+            <h2 id="top-searches-title" className="flex items-center gap-2 font-serif text-base font-bold text-[#29231c]">
+              <FaSearch className="text-xs text-[#a77525]" /> Top Searches
+            </h2>
+            <button
+              type="button"
+              onClick={() => setFiltersOpen((open) => !open)}
+              aria-expanded={filtersOpen}
+              aria-controls="explore-filters"
+              className="flex cursor-pointer shrink-0 items-center gap-2 rounded-lg border border-[#e8dfd1] bg-white px-3 py-2 text-xs font-semibold text-[#174a38] transition hover:border-[#d8b46c] hover:bg-[#fffaf0]"
+            >
+              <FaSlidersH /> {filtersOpen ? "Hide Filters" : "Show Filters"}
+            </button>
+          </div>
           {topSearchProducts.length ? (
             <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
               {topSearchProducts.map((product) => {
@@ -402,7 +416,7 @@ const Explore = () => {
         </section>
 
         <div id="explore-products" className="mt-4 grid scroll-mt-24 gap-5 lg:contents">
-          <aside className={`${filtersOpen ? "block" : "hidden"} h-fit rounded-xl border border-[#eee7dc] bg-white p-4 shadow-sm lg:sticky lg:top-4 lg:col-start-1 lg:row-start-1 lg:row-span-3 lg:block lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto`}>
+          <aside id="explore-filters" className={`${filtersOpen ? "block" : "hidden"} h-fit rounded-xl border border-[#eee7dc] bg-white p-4 shadow-sm lg:sticky lg:top-4 lg:col-start-1 lg:row-start-1 lg:row-span-3 lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto`}>
             <div className="mb-3 flex items-center justify-between">
               <h2 className="flex items-center gap-2 font-serif text-lg font-bold text-[#29231c]"><FaSlidersH className="text-sm text-[#174a38]" /> Filters</h2>
               <button type="button" onClick={clearFilters} className="text-[11px] font-semibold text-[#a77525] hover:underline">Clear All</button>
@@ -558,17 +572,10 @@ const Explore = () => {
             ))}
           </aside>
 
-          <section className="min-w-0 lg:col-start-2 lg:row-start-3">
+          <section className={`min-w-0 lg:row-start-3 ${filtersOpen ? "lg:col-start-2" : "lg:col-start-1"}`}>
             <div className="mb-3 flex flex-wrap items-end justify-between gap-3">
               <div>
                 <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setFiltersOpen((open) => !open)}
-                    className="flex items-center gap-2 rounded-lg border border-[#e8dfd1] bg-white px-3 py-2 text-xs font-semibold text-[#174a38] lg:hidden"
-                  >
-                    <FaSlidersH /> Filters
-                  </button>
                   <h2 className="font-serif text-xl font-bold text-[#29231c] sm:text-2xl">
                     {searchQuery ? `Results for “${searchQuery}”` : "All Products"}
                   </h2>
