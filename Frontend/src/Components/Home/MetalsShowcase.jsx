@@ -114,6 +114,7 @@ export default function MetalsShowcase() {
                 metal.name
               )}`;
               const metalKey = getMetalKey(metal.name);
+                const isSilver = metalKey === "silver";
               const background = METAL_BACKGROUNDS[metalKey];
               const textColors = METAL_TEXT_COLORS[metalKey] || DEFAULT_TEXT_COLORS;
 
@@ -123,6 +124,12 @@ export default function MetalsShowcase() {
                   className="group relative flex min-h-[170px] flex-col justify-center overflow-hidden rounded-xl border border-[#d8b66c] bg-[#f7e8c8] bg-cover bg-center px-5 py-5 shadow-[0_3px_12px_rgba(113,79,24,0.12)] transition-shadow hover:shadow-[0_8px_24px_rgba(31,53,39,0.2)] sm:min-h-[190px] sm:px-8 sm:py-6 lg:min-h-[205px]"
                   style={background ? { backgroundImage: `url('${background}')` } : undefined}
                 >
+                  {isSilver && (
+                    <div
+                      className="pointer-events-none absolute inset-y-0 left-0 z-0 w-[68%] bg-gradient-to-r from-[#f4f4ed]/80 via-[#f4f4ed]/50 to-transparent"
+                      aria-hidden="true"
+                    />
+                  )}
 
                   <div className="relative z-[1] w-full max-w-[68%] sm:max-w-[62%]">
                     <h3
