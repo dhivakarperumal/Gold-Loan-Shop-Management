@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { FiArrowDown, FiArrowUp, FiEye, FiEyeOff, FiSave } from "react-icons/fi";
+import { FiArrowDown, FiArrowUp, FiSave } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api from "../../api";
 
@@ -103,11 +103,19 @@ const HomeSections = () => {
                 <button
                   type="button"
                   onClick={() => toggleSection(section.key)}
-                  aria-pressed={section.visible}
-                  className="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700 transition hover:bg-slate-50"
+                  role="switch"
+                  aria-checked={section.visible}
+                  aria-label={`Display ${section.label} on home page`}
+                  className={`relative inline-flex h-7 w-12 shrink-0 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#087568] focus-visible:ring-offset-2 ${
+                    section.visible ? "bg-[#087568]" : "bg-slate-300"
+                  }`}
                 >
-                  {section.visible ? <FiEyeOff aria-hidden="true" /> : <FiEye aria-hidden="true" />}
-                  {section.visible ? "Hide" : "Show"}
+                  <span
+                    aria-hidden="true"
+                    className={`inline-block h-5 w-5 transform rounded-full bg-white shadow transition-transform ${
+                      section.visible ? "translate-x-6" : "translate-x-1"
+                    }`}
+                  />
                 </button>
                 <button
                   type="button"
