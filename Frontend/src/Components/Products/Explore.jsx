@@ -89,6 +89,12 @@ const Explore = () => {
   const selectedCategories = searchParams.getAll("category");
   const selectedMetals = searchParams.getAll("metal");
   const subcategoryFilter = searchParams.get("subcategory")?.trim().toLowerCase() || "";
+  const exploreBreadcrumbs = [
+    "Explore",
+    ...selectedCategories.map((category) => `Category: ${category}`),
+    ...selectedMetals.map((metal) => `Metal: ${metal}`),
+    ...(subcategoryFilter ? [`Subcategory: ${searchParams.get("subcategory").trim()}`] : []),
+  ];
   const priceSliderMaximum = useMemo(() => {
     const highestProductPrice = products.reduce(
       (highest, product) => Math.max(highest, getProductPrice(product)),
@@ -334,7 +340,7 @@ const Explore = () => {
 
   return (
     <main className="min-h-screen bg-[#fffdf8] pb-12">
-      <PageHeader title="Explore" />
+      <PageHeader title="Explore" breadcrumbs={exploreBreadcrumbs} />
 
       <div className={`mx-auto grid max-w-[1700px] items-start gap-x-4 px-4 pt-4 sm:px-6 lg:px-8 ${filtersOpen ? "lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[235px_minmax(0,1fr)]" : "lg:grid-cols-1"}`}>
         <section className={`mt-4 lg:row-start-1 lg:mt-3 ${filtersOpen ? "lg:col-start-2" : "lg:col-start-1"}`} aria-labelledby="top-searches-title">
@@ -581,7 +587,12 @@ const Explore = () => {
               <>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5">
                   {paginatedProducts.map((product) => (
-                  <ProductCard key={product.id ?? product.product_id ?? product.product_code} product={product} variant="explore" />
+                  <ProductCard
+                    key={product.id ?? product.product_id ?? product.product_code}
+                    product={product}
+                    variant="explore"
+                    queryString={searchParams.toString()}
+                  />
                   ))}
                 </div>
                 {totalPages > 1 && (

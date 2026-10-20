@@ -1,4 +1,6 @@
-const PageHeader = ({ title, background }) => {
+import { Link } from "react-router-dom";
+
+const PageHeader = ({ title, background, breadcrumbs = [] }) => {
   const subtitles = {
     "About Us": "OUR STORY  •  OUR VALUES  •  YOUR TRUST",
     "Contact Us": "HERE TO HELP  •  HERE TO LISTEN",
@@ -9,6 +11,7 @@ const PageHeader = ({ title, background }) => {
   const words = title.trim().split(/\s+/);
   const accentWord = words.pop();
   const bgImage = background || "/images/banner/pageheader.png";
+  const breadcrumbLabels = breadcrumbs.length ? breadcrumbs : [title];
 
   return (
     <div
@@ -33,11 +36,20 @@ const PageHeader = ({ title, background }) => {
           <p className="mt-3 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#35483f] sm:mt-4 sm:text-xs md:text-sm md:tracking-[0.28em]">
             {subtitles[title] || "SRI GOLDS  •  TIMELESS ELEGANCE"}
           </p>
-          <div className="mx-auto mt-3 flex max-w-[250px] items-center justify-center gap-3 text-[#c58a22] sm:mt-4">
-            <span className="h-px flex-1 bg-[#c58a22]/70" />
-            <span className="h-2.5 w-2.5 rotate-45 border border-[#c58a22]" aria-hidden="true" />
-            <span className="h-px flex-1 bg-[#c58a22]/70" />
-          </div>
+          <nav aria-label="Breadcrumb" className="mt-3 flex flex-wrap items-center justify-center gap-1.5 text-[10px] font-medium text-[#35483f] sm:mt-4 sm:text-xs">
+            <Link to="/" className="transition hover:text-[#bd801c]">Home</Link>
+            {breadcrumbLabels.map((crumb, index) => (
+              <span key={`${crumb}-${index}`} className="contents">
+                <span aria-hidden="true">/</span>
+                <span
+                  aria-current={index === breadcrumbLabels.length - 1 ? "page" : undefined}
+                  className={`max-w-[220px] truncate ${index === breadcrumbLabels.length - 1 ? "font-bold" : ""}`}
+                >
+                  {crumb}
+                </span>
+              </span>
+            ))}
+          </nav>
         </div>
       </div>
     </div>

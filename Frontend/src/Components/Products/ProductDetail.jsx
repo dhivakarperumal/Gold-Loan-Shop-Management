@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   FaArrowLeft,
   FaArrowRight,
@@ -99,6 +99,7 @@ const tabs = [
 
 const ProductDetail = () => {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const { wishlist, toggleWishlist, addToCart } = useContext(StoreContext);
   const [product, setProduct] = useState(null);
   const [loadedProductId, setLoadedProductId] = useState(null);
@@ -106,6 +107,11 @@ const ProductDetail = () => {
   const [activeImage, setActiveImage] = useState(0);
   const [activeVariantIndex, setActiveVariantIndex] = useState(0);
   const [activeTab, setActiveTab] = useState("information");
+  const productBreadcrumbs = [
+    "Explore",
+    ...searchParams.getAll("category").map((category) => `Category: ${category}`),
+    ...searchParams.getAll("metal").map((metal) => `Metal: ${metal}`),
+  ];
 
   useEffect(() => {
     const controller = new AbortController();
@@ -169,7 +175,7 @@ const ProductDetail = () => {
   if (loading) {
     return (
       <main className="bg-[#fffdf8]" role="status">
-        <PageHeader title="Product Details" />
+        <PageHeader title="Product Details" breadcrumbs={productBreadcrumbs} />
         <PageContainer className="py-20 text-center text-sm font-semibold text-[#746b5d]">
           Loading product details...
         </PageContainer>
@@ -180,7 +186,7 @@ const ProductDetail = () => {
   if (!product) {
     return (
       <main className="bg-[#fffdf8]">
-        <PageHeader title="Product Details" />
+        <PageHeader title="Product Details" breadcrumbs={productBreadcrumbs} />
         <PageContainer className="py-20 text-center">
           <div className="mx-auto max-w-2xl rounded-3xl border border-[#eadfce] bg-white p-8 shadow-sm">
             <FaGem className="mx-auto text-3xl text-[#bd913e]" />
@@ -277,22 +283,15 @@ const ProductDetail = () => {
 
   return (
     <main className="min-h-screen bg-[#fffdf8]">
-      <PageHeader title="Product Details" />
+      <PageHeader title={product.name || "Product Details"} breadcrumbs={productBreadcrumbs} />
       <PageContainer className="py-6">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs font-medium text-[#78817c] sm:text-sm">
-            <Link to="/explore" className="hover:text-[#174a38]">Products</Link>
-            <span>›</span>
-            <Link to="/explore" className="hover:text-[#174a38]">All Products</Link>
-            <span>›</span>
-            <span className="font-semibold text-[#34443e]">Product Details</span>
-          </div>
+        {/* <div className="mb-4 flex justify-end">
           <Link to="/explore" className="inline-flex items-center gap-2 rounded-full border border-[#ece6da] bg-white px-4 py-2 text-xs font-semibold text-[#34443e] shadow-sm transition hover:border-[#174a38]">
             <FaArrowLeft /> Back to Products
           </Link>
-        </div>
+        </div> */}
 
-        <div className="grid gap-4 lg:grid-cols-[1fr_1.15fr]">
+        <div className="grid gap-4 lg:grid-cols-[1fr_1.15fr] mt-4">
           <section className="min-w-0 rounded-2xl border border-[#eee8dc] bg-white p-3 shadow-sm">
             <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-[#f8f6ef]">
               {images.length ? (
@@ -397,9 +396,9 @@ const ProductDetail = () => {
             )}
 
             <div className="mt-5 grid gap-2 sm:grid-cols-2">
-              <button type="button" disabled={!inStock} onClick={() => addToCart(product, currentVariant, activeSize)} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#174a3f] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#10382f] disabled:cursor-not-allowed disabled:bg-slate-300">
+              {/* <button type="button" disabled={!inStock} onClick={() => addToCart(product, currentVariant, activeSize)} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#174a3f] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#10382f] disabled:cursor-not-allowed disabled:bg-slate-300">
                 <FaShoppingBag /> {inStock ? "Add to Cart" : "Out of Stock"}
-              </button>
+              </button> */}
               <button type="button" onClick={() => toggleWishlist(product, currentVariant, activeSize)} className={`inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-semibold transition ${isFavorite ? "border-rose-200 bg-rose-50 text-rose-700" : "border-[#e8e1d5] text-[#40514a] hover:bg-[#fbfaf7]"}`}>
                 <FaHeart /> {isFavorite ? "Saved to Wishlist" : "Add to Wishlist"}
               </button>
