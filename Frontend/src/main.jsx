@@ -16,7 +16,9 @@ import Loader from "./Components/CommenComponents/Loader.jsx";
 const Home = React.lazy(() => import("./Components/Home/Home.jsx"));
 const StoreProductDetail = React.lazy(() => import("./Components/Products/ProductDetail.jsx"));
 const Explore = React.lazy(() => import("./Components/Products/Explore.jsx"));
-const InfoPage = React.lazy(() => import("./Components/Pages/InfoPage.jsx"));
+const AboutPage = React.lazy(() => import("./Components/Pages/AboutPage.jsx"));
+const ContactPage = React.lazy(() => import("./Components/Pages/ContactPage.jsx"));
+const PrivacyPage = React.lazy(() => import("./Components/Pages/InfoPage.jsx"));
 
 const Login = React.lazy(() => import("./Components/Auth/Login.jsx"));
 const Register = React.lazy(() => import("./Components/Auth/Register.jsx"));
@@ -68,9 +70,9 @@ const router = createBrowserRouter([
       { path: "/", element: <Home /> },
       { path: "explore", element: <Explore /> },
       { path: "product/:id", element: <StoreProductDetail /> },
-      { path: "about", element: <InfoPage page="about" /> },
-      { path: "contactus", element: <InfoPage page="contact" /> },
-      { path: "privacy-policy", element: <InfoPage page="privacy" /> },
+      { path: "about", element: <AboutPage /> },
+      { path: "contactus", element: <ContactPage /> },
+      { path: "privacy-policy", element: <PrivacyPage /> },
       {
         path: "/account/kyc",
         element: (
