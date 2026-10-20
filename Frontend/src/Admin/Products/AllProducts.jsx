@@ -7,7 +7,6 @@ import { toast, Toaster } from "react-hot-toast";
 import { FaRupeeSign } from "react-icons/fa";
 import useGoldRates from "../../PrivateRouter/useGoldRates";
 import { formatCurrency } from "../../utils/currency";
-import DateRangeFilter from "../Components/DateRangeFilter";
 import {
     FiPlus,
     FiSearch,
@@ -31,7 +30,6 @@ const AllProducts = () => {
     const [purityFilter, setPurityFilter] = useState("");
     const [stockFilter, setStockFilter] = useState("");
     const [lastPriceUpdateFilter, setLastPriceUpdateFilter] = useState("");
-    const [dateRange, setDateRange] = useState({ preset: "all", startDate: "", endDate: "" });
     const [sortBy, setSortBy] = useState("created_at");
     const [sortOrder, setSortOrder] = useState("desc");
     const [currentPage, setCurrentPage] = useState(1);
@@ -46,8 +44,6 @@ const AllProducts = () => {
         purity: purityFilter,
         stockStatus: stockFilter,
         lastPriceUpdate: lastPriceUpdateFilter,
-        startDate: dateRange.startDate,
-        endDate: dateRange.endDate,
         sortBy,
         sortOrder
     });
@@ -118,8 +114,6 @@ const AllProducts = () => {
             purity: purityFilter,
             stockStatus: stockFilter,
             lastPriceUpdate: lastPriceUpdateFilter,
-            startDate: dateRange.startDate,
-            endDate: dateRange.endDate,
             sortBy,
             sortOrder
         };
@@ -152,7 +146,7 @@ const AllProducts = () => {
         } finally {
             setLoading(false);
         }
-    }, [currentPage, itemsPerPage, searchTerm, categoryFilter, purityFilter, stockFilter, lastPriceUpdateFilter, dateRange.startDate, dateRange.endDate, sortBy, sortOrder, setProductsCached]);
+    }, [currentPage, itemsPerPage, searchTerm, categoryFilter, purityFilter, stockFilter, lastPriceUpdateFilter, sortBy, sortOrder, setProductsCached]);
 
     useEffect(() => {
         const timeout = setTimeout(() => {
@@ -331,10 +325,6 @@ const AllProducts = () => {
 
                     {/* Filter Bar */}
                     <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex flex-wrap gap-3 items-center">
-                        <DateRangeFilter onApply={(range) => {
-                            setCurrentPage(1);
-                            setDateRange(range);
-                        }} />
                         <div className="relative flex-1 min-w-[220px]">
                             <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={15} />
                             <input

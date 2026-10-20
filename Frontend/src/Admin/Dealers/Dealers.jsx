@@ -482,7 +482,6 @@ const Dealers = () => {
   const tabs = [
     ["dealers", "Dealer Master", "/admin/dealers"],
     ["purchases", "Purchases & Payables", "/admin/dealers/purchases"],
-    ["jobs", "Goldsmith Job Work", "/admin/dealers/jobs"],
     ["refining", "Old Gold & Refining", "/admin/dealers/refining"]
   ];
 
