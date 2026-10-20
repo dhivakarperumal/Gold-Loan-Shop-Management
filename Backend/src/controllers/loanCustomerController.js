@@ -6,7 +6,6 @@ const {
   getLoanCustomerDocumentById,
   getLoanCustomerDocumentByRef,
   getLoanCustomerById,
-  getLoanCustomerByUserId,
   listLoanCustomerDocuments,
   listLoanCustomers,
   updateLoanCustomer
@@ -131,16 +130,6 @@ async function getCustomerById(req, res, next) {
   try {
     const customer = await getLoanCustomerById(req.params.id);
     if (!customer) return res.status(404).json({ message: 'Customer not found' });
-    return res.json(customer);
-  } catch (error) {
-    return next(error);
-  }
-}
-
-async function getMyCustomer(req, res, next) {
-  try {
-    const customer = await getLoanCustomerByUserId(req.authenticatedUser.user_id);
-    if (!customer) return res.status(404).json({ message: 'No customer record is linked to this account' });
     return res.json(customer);
   } catch (error) {
     return next(error);
@@ -344,7 +333,7 @@ async function removeCustomer(req, res, next) {
 
 module.exports = {
   getCustomerById,
-  getMyCustomer,
+  getCustomerById,
   getCustomerDocument,
   getCustomerDocuments,
   getCustomerPhoto,

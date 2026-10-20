@@ -219,14 +219,7 @@ async function getCustomer(req, res, next) {
 async function getCustomerLoans(req, res, next) {
   if (!validId(req.params.id)) return res.status(400).json({ message: 'Customer ID is invalid' });
   try {
-    const customer = await getLoanCustomerById(req.params.id);
-    if (!customer) return res.status(404).json({ message: 'Customer not found' });
-    if (
-      req.authenticatedUser.role !== 'admin'
-      && String(customer.user_id) !== String(req.authenticatedUser.user_id)
-    ) {
-      return res.status(403).json({ message: 'You can only view loans linked to your account' });
-    }
+    if (!await getLoanCustomerById(req.params.id)) return res.status(404).json({ message: 'Customer not found' });
     return res.json(await listLoansForCustomer(req.params.id));
   } catch (error) {
     return next(error);
