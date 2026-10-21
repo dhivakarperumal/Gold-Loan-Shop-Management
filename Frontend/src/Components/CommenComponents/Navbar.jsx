@@ -49,9 +49,19 @@ const Navbar = () => {
   const [accountOpen, setAccountOpen] = useState(false);
   const [wishlistOpen, setWishlistOpen] = useState(false);
   const [addEnquiryOpen, setAddEnquiryOpen] = useState(false);
+  const [enquiryProduct, setEnquiryProduct] = useState(null);
   const [categories, setCategories] = useState([]);
   const [metals, setMetals] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
+
+  useEffect(() => {
+    const handleProductEnquiry = (event) => {
+      setEnquiryProduct(event.detail);
+      setAddEnquiryOpen(true);
+    };
+    window.addEventListener("open-product-enquiry", handleProductEnquiry);
+    return () => window.removeEventListener("open-product-enquiry", handleProductEnquiry);
+  }, []);
 
   const wishlistCount = wishlist.length;
   const cartCount = cart.length;
@@ -938,7 +948,15 @@ const Navbar = () => {
     </header>
     {addEnquiryOpen && (
       <React.Suspense fallback={<div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/50 text-sm text-white" role="status">Loading enquiry form…</div>}>
-        <EnquiriesPopup isPopup onClose={() => setAddEnquiryOpen(false)} />
+        <EnquiriesPopup
+          isPopup
+          initialProduct={enquiryProduct}
+          isPublicEnquiry={Boolean(enquiryProduct)}
+          onClose={() => {
+            setAddEnquiryOpen(false);
+            setEnquiryProduct(null);
+          }}
+        />
       </React.Suspense>
     )}
     <WishlistDrawer isOpen={wishlistOpen} onClose={() => setWishlistOpen(false)} />

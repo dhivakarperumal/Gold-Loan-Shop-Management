@@ -117,6 +117,25 @@ async function postEnquiry(req, res, next) {
   }
 }
 
+async function postPublicEnquiry(req, res, next) {
+  const { enquiry, error } = normalizeEnquiry(req.body || {});
+  if (error) return res.status(400).json({ message: error });
+  try {
+    await createEnquiry({
+      ...enquiry,
+      status: 'New Enquiry',
+      priority: 'Medium',
+      assigned_to: null,
+      source: 'Website',
+      follow_up_date: null,
+      follow_up_time: null
+    });
+    return res.status(201).json({ message: 'Enquiry submitted successfully' });
+  } catch (requestError) {
+    return next(requestError);
+  }
+}
+
 async function getAdminEnquiry(req, res, next) {
   if (!validId(req.params.id)) return res.status(400).json({ message: 'Enquiry ID is invalid' });
   try {
@@ -163,4 +182,4 @@ async function removeEnquiry(req, res, next) {
   }
 }
 
-module.exports = { getAdminEnquiry, getEnquiries, postEnquiry, putEnquiry, putEnquiryStatus, removeEnquiry, normalizeEnquiry };
+module.exports = { getAdminEnquiry, getEnquiries, postEnquiry, postPublicEnquiry, putEnquiry, putEnquiryStatus, removeEnquiry, normalizeEnquiry };

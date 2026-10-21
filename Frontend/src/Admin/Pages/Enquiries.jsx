@@ -17,10 +17,33 @@ const OTHER_CATEGORY = "__other_category__";
 const EMPTY_FORM = {
   customer_name: "", phone: "", alternate_phone: "", email: "", address: "",
   city: "", state: "", pincode: "", enquiry_type: "Gold Jewellery",
-  product_category: "", product_id: "", product_name: "", metal_type: "Gold", purity: "", quantity: "", weight: "",
+  product_category: "", product_id: "", product_name: "", metal_type: "Gold", purity: "", quantity: "1", weight: "",
   approx_budget: "", preferred_design: "", message: "", status: "New Enquiry",
   follow_up_date: "", follow_up_time: "", assigned_to: "", source: "",
   priority: "Medium", whatsapp_confirmation: true
+};
+
+const formForProduct = (product) => {
+  const category = product.category || "";
+  const categoryName = category.toLowerCase();
+  const enquiryType = categoryName.includes("coin") || categoryName.includes("bar")
+    ? "Gold Coin / Bar"
+    : categoryName.includes("loan")
+      ? "Gold Loan"
+      : categoryName.includes("exchange")
+        ? "Old Gold Exchange"
+        : "Gold Jewellery";
+  return {
+    ...EMPTY_FORM,
+    enquiry_type: enquiryType,
+    product_category: category,
+    product_id: String(product.id ?? product.product_id ?? ""),
+    product_name: product.name || "",
+    metal_type: product.metal_type || "Gold",
+    purity: product.purity || "",
+    weight: product.gross_weight == null ? "" : String(product.gross_weight),
+    approx_budget: String(product.offer_price ?? product.final_selling_price ?? product.mrp ?? "")
+  };
 };
 
 const statusStyle = {
@@ -68,7 +91,7 @@ const Field = ({ label, children, className = "" }) => (
   </label>
 );
 
-const Enquiries = ({ isPopup = false, onClose }) => {
+const Enquiries = ({ isPopup = false, onClose, initialProduct = null, isPublicEnquiry = false }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { id: editId } = useParams();
@@ -91,7 +114,7 @@ const Enquiries = ({ isPopup = false, onClose }) => {
   const [loadedEditId, setLoadedEditId] = useState(null);
   const editLoading = Boolean(editId && loadedEditId !== editId);
   const [saving, setSaving] = useState(false);
-  const [form, setForm] = useState(EMPTY_FORM);
+  const [form, setForm] = useState(() => initialProduct ? formForProduct(initialProduct) : EMPTY_FORM);
   const [customCategory, setCustomCategory] = useState(false);
   const [selected, setSelected] = useState(null);
 
@@ -256,8 +279,8 @@ const Enquiries = ({ isPopup = false, onClose }) => {
         await api.put(`/enquiries/admin/${editId}`, enquiryData);
         toast.success("Enquiry updated successfully.");
       } else {
-        await api.post("/enquiries", enquiryData);
-        toast.success("Enquiry saved successfully.");
+        await api.post(isPublicEnquiry ? "/enquiries/public" : "/enquiries", enquiryData);
+        toast.success(isPublicEnquiry ? "Your enquiry was sent successfully." : "Enquiry saved successfully.");
       }
       if (addAnother) {
         setForm(EMPTY_FORM);
@@ -325,8 +348,8 @@ const Enquiries = ({ isPopup = false, onClose }) => {
       <header className={`flex w-full flex-wrap items-end justify-between gap-3 ${isPopup ? "w-[calc(100%+2rem)] -mx-4 -mt-4 mb-5 rounded-t-2xl bg-white px-4 pb-2 pt-3 pr-16 shadow-sm sm:w-[calc(100%+3rem)] sm:-mx-6 sm:-mt-6 sm:px-6 sm:pb-3 sm:pt-4 sm:pr-16" : ""}`}>
         <div className={isPopup ? "mt-1" : ""}>
          
-          <h1 id={isPopup ? "enquiry-form-title" : undefined} className="mt-0 text-2xl font-black tracking-tight text-slate-900">{isEditing ? "Edit Gold Enquiry" : "Add Gold Enquiry"}</h1>
-          <p className="mt-1 text-sm text-slate-500">{isEditing ? "Update customer and product enquiry details." : isPopup ? "Enter customer and product details below." : "Add a new customer enquiry for gold jewellery, coins, or other products."}</p>
+          <h1 id={isPopup ? "enquiry-form-title" : undefined} className="mt-0 text-2xl font-black tracking-tight text-slate-900">{isEditing ? "Edit Gold Enquiry" : isPublicEnquiry ? "Enquire About This Product" : "Add Gold Enquiry"}</h1>
+          <p className="mt-1 text-sm text-slate-500">{isEditing ? "Update customer and product enquiry details." : isPublicEnquiry ? "Share your contact details and we’ll get back to you." : isPopup ? "Enter customer and product details below." : "Add a new customer enquiry for gold jewellery, coins, or other products."}</p>
         </div>
         {isPopup
           ? <button type="button" onClick={onClose} aria-label="Close add enquiry dialog" className="absolute right-4 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-100 hover:text-slate-900 sm:right-6 sm:top-6"><X size={18} /></button>
@@ -334,7 +357,7 @@ const Enquiries = ({ isPopup = false, onClose }) => {
       </header>
 
       {editLoading ? <section className="rounded-2xl border border-slate-100 bg-white p-10 text-center text-sm text-slate-500 shadow-sm">Loading enquiry details…</section> :
-      <form onSubmit={(event) => void submitEnquiry(event)} className="grid items-start gap-3 xl:grid-cols-[minmax(0,1fr)_280px]">
+      <form onSubmit={(event) => void submitEnquiry(event)} className={`grid items-start gap-3 ${isPublicEnquiry ? "" : "xl:grid-cols-[minmax(0,1fr)_280px]"}`}>
         <div className="space-y-3">
           <section className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
             <div className="mb-4 flex items-center gap-2.5"><span className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 text-amber-700"><UserRound size={17} /></span><span><h2 className="text-xs font-extrabold text-slate-900">Customer Information</h2><p className="text-[10px] text-slate-500">Enter customer personal details.</p></span></div>
@@ -380,16 +403,16 @@ const Enquiries = ({ isPopup = false, onClose }) => {
               <Field label="Enquiry Message" className="sm:col-span-2 xl:col-span-4"><textarea maxLength={5000} value={form.message} onChange={(event) => setField("message", event.target.value)} placeholder="Enter customer requirements or special notes..." className={`${inputClass} min-h-[70px] resize-y`} /></Field>
             </div>
             <div className="mt-4 flex flex-wrap justify-between gap-2 border-t border-slate-100 pt-3">
-              <button type="button" onClick={() => setForm(EMPTY_FORM)} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600"><RotateCcw size={14} />Reset</button>
+              {!isPublicEnquiry && <button type="button" onClick={() => setForm(EMPTY_FORM)} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600"><RotateCcw size={14} />Reset</button>}
               <div className="flex flex-wrap gap-2">
-                {!isEditing && <button type="button" disabled={saving} onClick={(event) => void submitEnquiry(event, true)} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-amber-500 px-3 py-2 text-xs font-bold text-amber-800 disabled:opacity-50"><Plus size={14} />Save & Add Another</button>}
-                <button type="submit" disabled={saving} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-[#00796B] px-4 py-2 text-xs font-bold text-white disabled:opacity-50"><CheckCircle2 size={14} />{saving ? (isEditing ? "Updating…" : "Saving…") : (isEditing ? "Update Enquiry" : "Save Enquiry")}</button>
+                {!isEditing && !isPublicEnquiry && <button type="button" disabled={saving} onClick={(event) => void submitEnquiry(event, true)} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-amber-500 px-3 py-2 text-xs font-bold text-amber-800 disabled:opacity-50"><Plus size={14} />Save & Add Another</button>}
+                <button type="submit" disabled={saving} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-[#00796B] px-4 py-2 text-xs font-bold text-white disabled:opacity-50"><CheckCircle2 size={14} />{saving ? (isEditing ? "Updating…" : isPublicEnquiry ? "Sending…" : "Saving…") : (isEditing ? "Update Enquiry" : isPublicEnquiry ? "Send Enquiry" : "Save Enquiry")}</button>
               </div>
             </div>
           </section>
         </div>
 
-        <aside className="space-y-3">
+        {!isPublicEnquiry && <aside className="space-y-3">
           <section className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
             <h2 className="flex items-center gap-2 text-xs font-extrabold text-slate-900"><MessageCircle size={16} className="text-[#008577]" />Enquiry Status</h2>
             <div className="mt-3 space-y-1">
@@ -412,7 +435,7 @@ const Enquiries = ({ isPopup = false, onClose }) => {
             </div>
             <label className="mt-4 flex items-center justify-between gap-3 text-[11px] font-semibold text-slate-700"><span className="flex items-center gap-2"><MessageCircle size={14} />Send WhatsApp Confirmation</span><input type="checkbox" checked={form.whatsapp_confirmation} onChange={(event) => setField("whatsapp_confirmation", event.target.checked)} className="h-4 w-4 accent-amber-600" /></label>
           </section>
-        </aside>
+        </aside>}
       </form>}
       </div>
     </main>;

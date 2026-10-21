@@ -1,6 +1,6 @@
 import React, { useContext } from "react";
 import { Link } from "react-router-dom";
-import { BadgeCheck, CircleCheck, CircleX, Heart, Star, Weight } from "lucide-react";
+import { BadgeCheck, CircleCheck, CircleX, Heart, MessageCircle, Star, Weight } from "lucide-react";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 import { getProductImageUrl } from "./productDisplay";
 import { formatCurrency } from "../../utils/currency";
@@ -30,6 +30,9 @@ const ProductCard = ({ product, queryString = "" }) => {
   const rating = Number(product.rating) || 0;
   const totalReviews = Number(product.total_reviews) || 0;
   const inStock = Number(product.total_stock ?? product.stock ?? 0) > 0;
+  const openEnquiry = () => {
+    window.dispatchEvent(new CustomEvent("open-product-enquiry", { detail: product }));
+  };
 
   return (
     <article className="group flex h-full flex-col overflow-hidden rounded-[14px] border border-[#eadfce] bg-white shadow-sm transition-all duration-300 hover:border-[#d8b46c] hover:shadow-lg">
@@ -136,6 +139,16 @@ const ProductCard = ({ product, queryString = "" }) => {
           </div>
         </div>
       </dl>
+      <div className="border-t border-[#e8e7e3] px-3 py-2.5 sm:px-4">
+        <button
+          type="button"
+          onClick={openEnquiry}
+          className="inline-flex min-h-9 w-full items-center justify-center gap-2 rounded-lg bg-[#064638] px-3 py-2 text-xs font-semibold text-white transition hover:bg-[#04382d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#d8b46c] focus-visible:ring-offset-2"
+        >
+          <MessageCircle size={15} aria-hidden="true" />
+          Enquire Now
+        </button>
+      </div>
     </article>
   );
 };

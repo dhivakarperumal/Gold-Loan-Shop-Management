@@ -4,12 +4,14 @@ const {
   getAdminEnquiry,
   getEnquiries,
   postEnquiry,
+  postPublicEnquiry,
   putEnquiry,
   putEnquiryStatus,
   removeEnquiry
 } = require('../controllers/enquiryController');
 
 const router = express.Router();
+router.post('/public', postPublicEnquiry);
 router.use(requireAdmin);
 router.get('/admin/all', getEnquiries);
 router.get('/admin/:id', getAdminEnquiry);
