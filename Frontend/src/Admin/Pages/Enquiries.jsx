@@ -480,7 +480,6 @@ const Enquiries = () => {
           <button type="button" aria-label="Previous page" disabled={page <= 1 || loading} onClick={() => setPage((current) => current - 1)} className="rounded-lg border border-slate-200 p-2 disabled:opacity-40"><ChevronLeft size={14} /></button>
           {Array.from({ length: pagination.totalPages }, (_, index) => index + 1).slice(Math.max(0, page - 3), Math.max(5, page + 2)).map((pageNumber) => <button key={pageNumber} type="button" onClick={() => setPage(pageNumber)} className={`min-w-7 rounded-lg border px-2 py-1.5 text-xs ${pageNumber === page ? "border-[#00796B] bg-[#00796B] text-white" : "border-slate-200"}`}>{pageNumber}</button>)}
           <button type="button" aria-label="Next page" disabled={page >= pagination.totalPages || loading} onClick={() => setPage((current) => current + 1)} className="rounded-lg border border-slate-200 p-2 disabled:opacity-40"><ChevronRight size={14} /></button>
-          <button type="button" onClick={() => void fetchEnquiries()} className="ml-1 rounded-lg border border-slate-200 p-2" aria-label="Refresh enquiries"><RotateCcw size={14} /></button>
         </div>
       </footer>
     </section>
