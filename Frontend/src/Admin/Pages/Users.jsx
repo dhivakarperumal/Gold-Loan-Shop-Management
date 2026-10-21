@@ -21,6 +21,7 @@ import {
 } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import { Link } from "react-router-dom";
+import DateRangeFilter from "../Components/DateRangeFilter";
 
 const PAGE_SIZE = 8;
 
@@ -48,6 +49,7 @@ const Users = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
+    const [dateRange, setDateRange] = useState({ preset: "all", startDate: "", endDate: "" });
     const [currentPage, setCurrentPage] = useState(1);
     const [selectedUserId, setSelectedUserId] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -66,7 +68,9 @@ const Users = () => {
     const fetchUsers = useCallback(async () => {
         setLoading(true);
         try {
-            const response = await api.get("/auth/users");
+            const response = await api.get("/auth/users", {
+                params: { startDate: dateRange.startDate, endDate: dateRange.endDate }
+            });
             const data = response.data;
             const records = Array.isArray(data)
                 ? data
@@ -101,7 +105,7 @@ const Users = () => {
         } finally {
             setLoading(false);
         }
-    }, []);
+    }, [dateRange.startDate, dateRange.endDate]);
 
     useEffect(() => {
         fetchUsers();
@@ -226,13 +230,20 @@ const Users = () => {
                             <FiChevronLeft size={16} /> Back to Settings
                         </Link>
                     </div>
-                    <button
-                        type="button"
-                        onClick={openAddModal}
-                        className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#00695C] px-4 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-[#008577]"
-                    >
-                        <FiPlus /> Add Customer
-                    </button>
+                    <div className="flex flex-wrap items-center gap-3">
+                        <DateRangeFilter onApply={(range) => {
+                            setLoading(true);
+                            setCurrentPage(1);
+                            setDateRange(range);
+                        }} />
+                        <button
+                            type="button"
+                            onClick={openAddModal}
+                            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#00695C] px-4 py-2.5 text-sm font-bold text-white shadow-md transition hover:bg-[#008577]"
+                        >
+                            <FiPlus /> Add Customer
+                        </button>
+                    </div>
                 </header>
 
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">

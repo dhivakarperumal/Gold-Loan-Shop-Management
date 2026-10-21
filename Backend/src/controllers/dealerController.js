@@ -29,6 +29,7 @@ const {
   reversePayment,
   updateDealer
 } = require('../modules/dealerModule');
+const { parseDateRange } = require('../utils/dateRange');
 const { removeDealerDocument, validateDealerDocument } = require('../middleware/dealerDocumentUpload');
 const path = require('node:path');
 
@@ -286,7 +287,9 @@ const getOldGoldReceipts = asyncHandler(async (req, res) => {
   const limit = Math.min(100, Math.max(1, Math.floor(Number(req.query.limit) || 25)));
   const dealerId = req.query.dealer_id ? numeric(req.query.dealer_id, { min: 1, decimals: 0 }) : null;
   if (req.query.dealer_id && !dealerId) return res.status(400).json({ message: 'Dealer ID is invalid' });
-  return res.json(await listOldGoldReceipts({ dealerId, page, limit }));
+  const dateRange = parseDateRange(req.query);
+  if (dateRange.error) return res.status(400).json({ message: dateRange.error });
+  return res.json(await listOldGoldReceipts({ dealerId, page, limit, dateRange }));
 });
 const getSummary = asyncHandler(async (req, res) => res.json(await getDealerSummary()));
 const getDealers = asyncHandler(async (req, res) => {
@@ -296,7 +299,9 @@ const getDealers = asyncHandler(async (req, res) => {
   if (status && !DEALER_STATUSES.has(status)) return res.status(400).json({ message: 'Dealer status filter is invalid' });
   const categoryId = req.query.category_id ? numeric(req.query.category_id, { min: 1, decimals: 0 }) : null;
   if (req.query.category_id && !categoryId) return res.status(400).json({ message: 'Dealer category filter is invalid' });
-  return res.json(await listDealers({ page, limit, search: String(req.query.search || '').trim().slice(0, 100), status, categoryId }));
+  const dateRange = parseDateRange(req.query);
+  if (dateRange.error) return res.status(400).json({ message: dateRange.error });
+  return res.json(await listDealers({ page, limit, search: String(req.query.search || '').trim().slice(0, 100), status, categoryId, dateRange }));
 });
 const postDealer = asyncHandler(async (req, res) => {
   const { dealer, error } = normalizeDealer(req.body || {}, { creating: true });
@@ -339,7 +344,9 @@ const getPurchases = asyncHandler(async (req, res) => {
   const limit = Math.min(100, Math.max(1, Math.floor(Number(req.query.limit) || 25)));
   const dealerId = req.query.dealer_id ? numeric(req.query.dealer_id, { min: 1, decimals: 0 }) : null;
   if (req.query.dealer_id && !dealerId) return res.status(400).json({ message: 'Dealer ID is invalid' });
-  return res.json(await listPurchases({ dealerId, page, limit, search: String(req.query.search || '').trim().slice(0, 100), overdue: req.query.overdue === 'true' }));
+  const dateRange = parseDateRange(req.query);
+  if (dateRange.error) return res.status(400).json({ message: dateRange.error });
+  return res.json(await listPurchases({ dealerId, page, limit, search: String(req.query.search || '').trim().slice(0, 100), overdue: req.query.overdue === 'true', dateRange }));
 });
 const getJobs = asyncHandler(async (req, res) => {
   const page = Math.max(1, Math.floor(Number(req.query.page) || 1));
@@ -349,7 +356,9 @@ const getJobs = asyncHandler(async (req, res) => {
   const statuses = new Set(['Open','Issued','Partially Received','Received','Reconciled','Cancelled']);
   if (req.query.dealer_id && !dealerId) return res.status(400).json({ message: 'Dealer ID is invalid' });
   if (status && !statuses.has(status)) return res.status(400).json({ message: 'Job status filter is invalid' });
-  return res.json(await listJobs({ dealerId, status, page, limit }));
+  const dateRange = parseDateRange(req.query);
+  if (dateRange.error) return res.status(400).json({ message: dateRange.error });
+  return res.json(await listJobs({ dealerId, status, page, limit, dateRange }));
 });
 const postPurchase = asyncHandler(async (req, res) => {
   const { purchase, error } = normalizePurchase(req.body || {});

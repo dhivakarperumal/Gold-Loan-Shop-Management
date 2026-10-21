@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FiX, FiTrash2, FiShoppingBag } from "react-icons/fi";
 import { FaHeart, FaStar } from "react-icons/fa";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
+import { formatCurrency } from "../../utils/currency";
 import api from "../../api";
 
 const resolveImageUrl = (image) => {
@@ -318,12 +319,12 @@ const WishlistDrawer = ({ isOpen, onClose }) => {
                           {offerPrice > 0 && (
                             <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
                               <p className="text-sm font-bold" style={{ color: "#004D40" }}>
-                                ₹{offerPrice.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                                {formatCurrency(offerPrice)}
                               </p>
                               {discount > 0 && (
                                 <>
                                   <p className="text-xs text-gray-400 line-through">
-                                    ₹{mrp.toLocaleString("en-IN", { minimumFractionDigits: 2 })}
+                                    {formatCurrency(mrp)}
                                   </p>
                                   <span className="rounded bg-[#087452] px-1.5 py-0.5 text-[10px] font-bold text-white">
                                     {discount}% OFF

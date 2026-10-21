@@ -22,6 +22,7 @@ import {
   FiTrash2
 } from "react-icons/fi";
 import api from "../../api";
+import { formatCurrency } from "../../utils/currency";
 
 const BACKEND_URL = (
   import.meta.env.VITE_BACKEND_URL ||
@@ -29,11 +30,7 @@ const BACKEND_URL = (
   "http://localhost:5000"
 ).replace(/\/$/, "");
 
-const money = (value) => new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
-  maximumFractionDigits: 2
-}).format(Number(value) || 0);
+const money = formatCurrency;
 
 const parseArray = (value) => {
   if (Array.isArray(value)) return value;

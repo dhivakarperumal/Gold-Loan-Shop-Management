@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { FiAlertCircle, FiCalendar, FiClock, FiEye, FiSearch, FiUsers } from "react-icons/fi";
+import { FiAlertCircle, FiCalendar, FiClock, FiCreditCard, FiEye, FiGrid, FiList, FiSearch, FiUsers } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api from "../../api";
-
-const money = (value) => new Intl.NumberFormat("en-IN", {
-  style: "currency", currency: "INR", maximumFractionDigits: 2
-}).format(Number(value || 0));
+import { isLoanReviewDue } from "./loanPolicy";
+import { formatCurrency as money } from "../../utils/currency";
+import DateRangeFilter from "../Components/DateRangeFilter";
+import { LoanPaymentModal } from "./LoanRenewal";
 
 function dateText(value) {
   if (!value) return "—";
@@ -37,11 +37,16 @@ function Detail({ label, value }) {
 export default function OverdueLoans() {
   const [loans, setLoans] = useState([]);
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
+  const [viewMode, setViewMode] = useState("table");
+  const [paymentLoan, setPaymentLoan] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [dateRange, setDateRange] = useState({ preset: "all", startDate: "", endDate: "" });
 
   useEffect(() => {
     let active = true;
-    api.get("/loans")
+    setLoading(true);
+    api.get("/loans", { params: { startDate: dateRange.startDate, endDate: dateRange.endDate } })
       .then(({ data }) => {
         if (!Array.isArray(data)) throw new Error("The server returned an invalid loan list.");
         if (active) setLoans(data);
@@ -52,7 +57,7 @@ export default function OverdueLoans() {
       })
       .finally(() => { if (active) setLoading(false); });
     return () => { active = false; };
-  }, []);
+  }, [dateRange.startDate, dateRange.endDate]);
 
   const today = useMemo(() => {
     const now = new Date();
@@ -61,7 +66,7 @@ export default function OverdueLoans() {
 
   const overdueLoans = useMemo(() => loans
     .filter((loan) =>
-      String(loan.loan_status || "").toLowerCase() === "active"
+      ["active", "suspended"].includes(String(loan.loan_status || "").toLowerCase())
       && loan.release_status !== "Released"
       && Number(loan.outstanding_principal ?? loan.principal_amount) > 0
       && overdueDays(loan, today) > 0
@@ -71,30 +76,27 @@ export default function OverdueLoans() {
 
   const filteredLoans = overdueLoans.filter((loan) => {
     const query = search.trim().toLowerCase();
-    return !query || [
+    const matchesStatus = statusFilter === "All"
+      || String(loan.loan_status || "").toLowerCase() === statusFilter.toLowerCase();
+    const matchesSearch = !query || [
       loan.loan_number, loan.gold_pledge_number, loan.customer_code, loan.customer_name,
       loan.customer_mobile, loan.customer_alternate_mobile, loan.customer_email,
       loan.customer_address, loan.customer_city, loan.customer_district,
       loan.customer_occupation, loan.guarantor_name, loan.guarantor_mobile, loan.guarantor_email
     ].some((value) => String(value || "").toLowerCase().includes(query));
+    return matchesStatus && matchesSearch;
   });
   const outstandingTotal = overdueLoans.reduce(
     (total, loan) => total + Number(loan.outstanding_principal ?? loan.principal_amount), 0
   );
   const customerCount = new Set(overdueLoans.map((loan) => loan.customer_id)).size;
+  const reviewRequiredCount = overdueLoans.filter((loan) => isLoanReviewDue(loan, today)).length;
 
   return (
-    <main className="space-y-6 p-4 sm:p-6">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <p className="text-xs font-bold uppercase tracking-[0.2em] text-[#008577]">Loan Management</p>
-          <h1 className="mt-1 text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">Overdue Loans</h1>
-          <p className="mt-1 text-sm text-slate-500">Active loans past their maturity date and grace period, with customer contact details.</p>
-        </div>
-        <span className="text-xs font-semibold text-slate-400">{loading ? "Loading..." : `${overdueLoans.length} overdue ${overdueLoans.length === 1 ? "loan" : "loans"}`}</span>
-      </header>
+    <main className="space-y-6 p-2 sm:p-2">
+      
 
-      <section aria-label="Overdue loan summary" className="grid gap-4 sm:grid-cols-3">
+      <section aria-label="Overdue loan summary" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <article className="flex items-center justify-between rounded-2xl border border-rose-100 bg-white p-5 shadow-sm">
           <div><p className="text-sm font-semibold text-slate-500">Overdue Loans</p><p className="mt-2 text-2xl font-extrabold text-rose-700">{loading ? "—" : overdueLoans.length}</p></div>
           <span className="rounded-xl bg-rose-50 p-3 text-rose-700"><FiAlertCircle size={21} /></span>
@@ -107,46 +109,123 @@ export default function OverdueLoans() {
           <div><p className="text-sm font-semibold text-slate-500">Total Outstanding Principal</p><p className="mt-2 text-2xl font-extrabold text-[#064A41]">{loading ? "—" : money(outstandingTotal)}</p></div>
           <span className="rounded-xl bg-emerald-50 p-3 text-[#087263]"><FiClock size={21} /></span>
         </article>
+        <article className="flex items-center justify-between rounded-2xl border border-amber-100 bg-white p-5 shadow-sm">
+          <div><p className="text-sm font-semibold text-slate-500">15-Month Reviews</p><p className="mt-2 text-2xl font-extrabold text-amber-700">{loading ? "—" : reviewRequiredCount}</p><p className="mt-1 text-xs text-slate-500">Authorized manual review only</p></div>
+          <span className="rounded-xl bg-amber-50 p-3 text-amber-700"><FiAlertCircle size={21} /></span>
+        </article>
       </section>
 
-      <label className="relative block max-w-xl">
-        <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true" />
-        <span className="sr-only">Search overdue loans and customers</span>
-        <input value={search} onChange={(event) => setSearch(event.target.value)} type="search" placeholder="Search loan, customer, mobile, address, guarantor..." className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none focus:border-[#008577] focus:ring-4 focus:ring-emerald-700/10" />
-      </label>
-
-      <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
-        <div className="border-b border-slate-100 px-5 py-4">
-          <h2 className="font-bold text-slate-800">Overdue customer register</h2>
-          <p className="mt-0.5 text-xs text-slate-500">Overdue is calculated after the maturity date plus any configured grace-period days.</p>
+      <section aria-label="Overdue loan filters" className="flex flex-col gap-3 rounded-2xl border border-slate-200/80 bg-white p-3 sm:flex-row sm:items-center sm:p-4">
+        <label className="relative block min-w-0 flex-1">
+          <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true" />
+          <span className="sr-only">Search overdue loans and customers</span>
+          <input value={search} onChange={(event) => setSearch(event.target.value)} type="search" placeholder="Search loan, customer, mobile, address, guarantor..." className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none focus:border-[#008577] focus:ring-4 focus:ring-emerald-700/10" />
+        </label>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <DateRangeFilter onApply={(range) => { setLoading(true); setDateRange(range); }} />
+          <select
+            aria-label="Filter overdue loans by status"
+            value={statusFilter}
+            onChange={(event) => setStatusFilter(event.target.value)}
+            className="min-w-[150px] rounded-xl border border-slate-200 bg-slate-50/80 px-4 py-3 text-sm font-semibold text-slate-600 outline-none transition hover:border-slate-300 focus:border-[#008577] focus:ring-4 focus:ring-emerald-700/10"
+          >
+            <option value="All">Select Status</option>
+            <option value="Active">Active</option>
+            <option value="Suspended">Suspended</option>
+          </select>
+          <div className="flex self-start rounded-xl border border-slate-200 bg-slate-100/80 p-1 sm:self-auto">
+            <button type="button" onClick={() => setViewMode("table")} aria-label="Table view" aria-pressed={viewMode === "table"} className={`rounded-lg p-2.5 transition-all ${viewMode === "table" ? "bg-[#064A41] text-white shadow-sm" : "text-slate-400 hover:text-slate-700"}`}><FiList size={17} /></button>
+            <button type="button" onClick={() => setViewMode("card")} aria-label="Card view" aria-pressed={viewMode === "card"} className={`rounded-lg p-2.5 transition-all ${viewMode === "card" ? "bg-[#064A41] text-white shadow-sm" : "text-slate-400 hover:text-slate-700"}`}><FiGrid size={17} /></button>
+          </div>
         </div>
+      </section>
+
+      {viewMode === "table" ? <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1320px] border-separate border-spacing-0 text-left">
-            <thead><tr className="bg-[#064A41] text-[10px] font-bold uppercase tracking-wide text-emerald-50/90">
-              {["Loan / Pledge", "Customer", "Contact & Address", "Guarantor", "Loan Amount", "Outstanding", "Maturity", "Overdue", "View"].map((heading) => <th key={heading} className="whitespace-nowrap px-4 py-3 first:pl-5">{heading}</th>)}
-            </tr></thead>
+          <table className="w-full min-w-[900px] table-fixed border-collapse text-left">
+            <colgroup>
+              <col className="[width:4%]" />
+              <col className="[width:16%]" />
+              <col className="[width:12%]" />
+              <col className="[width:12%]" />
+              <col className="[width:14%]" />
+              <col className="[width:15%]" />
+              <col className="[width:12%]" />
+              <col className="[width:15%]" />
+            </colgroup>
+            <thead>
+              <tr className="bg-[#064A41] text-[11px] font-bold uppercase tracking-wide text-emerald-50/90">
+                {["S No", "Loan / Pledge", "Customer", "Loan Amount", "Outstanding", "Maturity", "Overdue", "Actions"].map((heading) => (
+                  <th key={heading} scope="col" className="whitespace-nowrap px-2 py-3 first:pl-3 last:pr-3">{heading}</th>
+                ))}
+              </tr>
+            </thead>
             <tbody className="divide-y divide-slate-100">
               {loading
-                ? <tr><td colSpan="9" className="px-4 py-14 text-center text-sm text-slate-400">Loading overdue loans...</td></tr>
+                ? <tr><td colSpan="8" className="px-4 py-14 text-center text-sm text-slate-400">Loading overdue loans...</td></tr>
                 : !filteredLoans.length
-                  ? <tr><td colSpan="9" className="px-4 py-14 text-center text-sm text-slate-400">{overdueLoans.length ? "No overdue loans match your search." : "There are no overdue active loans."}</td></tr>
-                  : filteredLoans.map((loan) => (
-                    <tr key={loan.id} className="align-top text-sm transition-colors hover:bg-rose-50/30">
-                      <td className="whitespace-nowrap px-4 py-4 pl-5"><span className="block font-bold text-[#064A41]">{loan.loan_number}</span><span className="mt-1 block text-xs text-slate-500">Pledge: {loan.gold_pledge_number || "—"}</span></td>
-                      <td className="px-4 py-4"><dl className="space-y-2"><Detail label="Customer" value={loan.customer_name} /><Detail label="Customer ID" value={loan.customer_code} /><Detail label="Date of birth" value={dateText(loan.customer_date_of_birth)} /><Detail label="Gender / occupation" value={[loan.customer_gender, loan.customer_occupation].filter(Boolean).join(" · ")} /><Detail label="KYC" value={loan.customer_kyc_status} /></dl></td>
-                      <td className="px-4 py-4"><dl className="space-y-2"><Detail label="Mobile" value={loan.customer_mobile} /><Detail label="Alternate mobile" value={loan.customer_alternate_mobile} /><Detail label="Email" value={loan.customer_email} /><Detail label="Address" value={[loan.customer_address, loan.customer_city, loan.customer_district, loan.customer_state, loan.customer_pincode].filter(Boolean).join(", ")} /></dl></td>
-                      <td className="px-4 py-4"><dl className="space-y-2"><Detail label="Name" value={loan.guarantor_name} /><Detail label="Mobile" value={loan.guarantor_mobile} /><Detail label="Email" value={loan.guarantor_email} /><Detail label="Relationship" value={loan.guarantor_relationship} /><Detail label="Address" value={loan.guarantor_address} /></dl></td>
-                      <td className="whitespace-nowrap px-4 py-4 font-medium text-slate-700">{money(loan.principal_amount)}<span className="mt-1 block text-xs text-slate-500">{Number(loan.interest_rate || 0).toFixed(2)}% interest</span></td>
-                      <td className="whitespace-nowrap px-4 py-4 font-bold text-rose-700">{money(loan.outstanding_principal ?? loan.principal_amount)}</td>
-                      <td className="whitespace-nowrap px-4 py-4 text-slate-600"><span className="inline-flex items-center gap-1.5"><FiCalendar />{dateText(loan.maturity_date)}</span><span className="mt-1 block text-xs text-slate-400">Grace: {Number(loan.grace_period_days) || 0} days</span></td>
-                      <td className="whitespace-nowrap px-4 py-4"><span className="rounded-full bg-rose-50 px-2.5 py-1.5 text-xs font-bold text-rose-700">{loan.overdue_days} {loan.overdue_days === 1 ? "day" : "days"}</span></td>
-                      <td className="px-4 py-4 pr-5"><Link to={`/admin/loans/details/${loan.id}`} aria-label={`View loan ${loan.loan_number}`} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100"><FiEye /> View</Link></td>
+                  ? <tr><td colSpan="8" className="px-4 py-14 text-center text-sm text-slate-400">{overdueLoans.length ? "No overdue loans match your search." : "There are no overdue active loans."}</td></tr>
+                  : filteredLoans.map((loan, index) => (
+                    <tr key={loan.id} className="text-sm transition-colors hover:bg-rose-50/30">
+                      <td className="px-2 py-3 pl-3 align-top text-slate-500">{index + 1}</td>
+                      <td className="break-words px-2 py-3 align-top leading-snug"><span className="block font-bold text-[#064A41]">{loan.loan_number}</span>{isLoanReviewDue(loan, today) && <span className="mt-1 inline-flex rounded-full bg-amber-50 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-amber-800">15-month review</span>}</td>
+                      <td className="break-words px-2 py-3 align-top leading-snug"><span className="block font-semibold text-slate-800">{loan.customer_name || "—"}</span><span className="mt-1 block text-[11px] text-slate-500">{loan.customer_mobile || "Mobile number unavailable"}</span></td>
+                      <td className="whitespace-nowrap px-2 py-3 align-top font-medium text-slate-700"><span className="block">{money(loan.principal_amount)}</span><span className="mt-1 block text-[11px] text-slate-500">{Number(loan.interest_rate || 0).toFixed(2)}% interest</span></td>
+                      <td className="whitespace-nowrap px-2 py-3 align-top font-bold text-rose-700">{money(loan.outstanding_principal ?? loan.principal_amount)}</td>
+                      <td className="whitespace-nowrap px-2 py-3 align-top text-slate-600"><span className="inline-flex items-center gap-1"><FiCalendar size={12} />{dateText(loan.maturity_date)}</span><span className="mt-1 block text-[11px] text-slate-400">Grace: {Number(loan.grace_period_days) || 0} days</span></td>
+                      <td className="px-2 py-3 align-top"><span className="inline-flex whitespace-nowrap rounded-full bg-rose-50 px-2 py-1 text-[11px] font-bold text-rose-700">{loan.overdue_days} {loan.overdue_days === 1 ? "day" : "days"}</span></td>
+                      <td className="px-2 py-3 pr-3 align-top">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <button type="button" onClick={() => setPaymentLoan(loan)} aria-label={`Pay or renew loan ${loan.loan_number}`} className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg bg-[#064A41] px-2 py-1.5 text-[11px] font-bold text-white hover:bg-[#087263]"><FiCreditCard size={12} /> Pay</button>
+                          <Link to={`/admin/loans/details/${loan.id}`} aria-label={`View loan ${loan.loan_number}`} className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg bg-emerald-50 px-2 py-1.5 text-[11px] font-bold text-emerald-800 hover:bg-emerald-100"><FiEye size={12} /> View</Link>
+                        </div>
+                      </td>
                     </tr>
                   ))}
             </tbody>
           </table>
         </div>
-      </section>
+      </section> : loading
+        ? <section className="rounded-2xl border border-slate-200 bg-white px-4 py-14 text-center text-sm text-slate-400">Loading overdue loans...</section>
+        : !filteredLoans.length
+          ? <section className="rounded-2xl border border-slate-200 bg-white px-4 py-14 text-center text-sm text-slate-400">{overdueLoans.length ? "No overdue loans match your filters." : "There are no overdue active loans."}</section>
+          : <section aria-label="Overdue loans in card view" className="grid grid-cols-1 gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+            {filteredLoans.map((loan) => (
+              <article key={loan.id} className="min-w-0 rounded-2xl border border-slate-200/80 bg-white p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Loan / Pledge</p>
+                    <h2 className="mt-1 break-words font-bold text-[#064A41]">{loan.loan_number}</h2>
+                  </div>
+                  <span className="inline-flex shrink-0 rounded-full bg-rose-50 px-2.5 py-1.5 text-xs font-bold text-rose-700">{loan.overdue_days} {loan.overdue_days === 1 ? "day" : "days"} overdue</span>
+                </div>
+                {isLoanReviewDue(loan, today) && <span className="mt-3 inline-flex rounded-full bg-amber-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-amber-800">15-month review</span>}
+                <div className="mt-4 grid gap-4 border-t border-slate-100 pt-4 sm:grid-cols-2">
+                  <dl className="space-y-2">
+                    <Detail label="Customer" value={<>{loan.customer_name || "—"}<span className="mt-1 block text-[10px] text-slate-500">{loan.customer_mobile || "Mobile number unavailable"}</span></>} />
+                    <Detail label="Customer ID" value={loan.customer_code} />
+                    <Detail label="Date of birth" value={dateText(loan.customer_date_of_birth)} />
+                    <Detail label="Gender / occupation" value={[loan.customer_gender, loan.customer_occupation].filter(Boolean).join(" · ")} />
+                    <Detail label="KYC" value={loan.customer_kyc_status} />
+                  </dl>
+                </div>
+                <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-4">
+                  <Detail label="Loan amount" value={<>{money(loan.principal_amount)}<span className="mt-1 block text-[10px] text-slate-500">{Number(loan.interest_rate || 0).toFixed(2)}% interest</span></>} />
+                  <Detail label="Outstanding" value={<span className="font-bold text-rose-700">{money(loan.outstanding_principal ?? loan.principal_amount)}</span>} />
+                  <Detail label="Maturity" value={<>{dateText(loan.maturity_date)}<span className="mt-1 block text-[10px] text-slate-500">Grace: {Number(loan.grace_period_days) || 0} days</span></>} />
+                </dl>
+                <div className="mt-4 flex justify-end gap-2 border-t border-slate-100 pt-4">
+                  <button type="button" onClick={() => setPaymentLoan(loan)} aria-label={`Pay or renew loan ${loan.loan_number}`} className="inline-flex items-center gap-1.5 rounded-lg bg-[#064A41] px-3 py-2 text-xs font-bold text-white hover:bg-[#087263]"><FiCreditCard /> Pay</button>
+                  <Link to={`/admin/loans/details/${loan.id}`} aria-label={`View loan ${loan.loan_number}`} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100"><FiEye /> View Loan</Link>
+                </div>
+              </article>
+            ))}
+          </section>}
+      {paymentLoan && <LoanPaymentModal
+        loan={paymentLoan}
+        onClose={() => setPaymentLoan(null)}
+        onLoanUpdated={(updatedLoan) => setLoans((current) => current.map((loan) => loan.id === updatedLoan.id ? { ...loan, ...updatedLoan } : loan))}
+      />}
     </main>
   );
 }

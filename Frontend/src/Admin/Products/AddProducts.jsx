@@ -13,6 +13,7 @@ import {
 import api from "../../api";
 import { formatRateDate, getRateForPurity } from "../../PrivateRouter/goldRateUtils";
 import useGoldRates from "../../PrivateRouter/useGoldRates";
+import { formatCurrency } from "../../utils/currency";
 
 const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
 const GOLD_SHOP = "Sri Gold";
@@ -520,7 +521,7 @@ const AddProducts = () => {
             )}
             {goldValue > 0 && (
               <div className="mt-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-950">
-                <p className="mt-1 text-xs">Metal ₹{estimatedPrice.metalValue.toFixed(2)} + making ₹{estimatedPrice.makingCharge.toFixed(2)} + wastage ₹{estimatedPrice.wastageCharge.toFixed(2)} + stones ₹{estimatedPrice.stoneCharges.toFixed(2)} + applicable tax ₹{estimatedPrice.tax.toFixed(2)}{formData.price_includes_gst ? " (included)" : ""}.</p>
+                <p className="mt-1 text-xs">Metal {formatCurrency(estimatedPrice.metalValue)} + making {formatCurrency(estimatedPrice.makingCharge)} + wastage {formatCurrency(estimatedPrice.wastageCharge)} + stones {formatCurrency(estimatedPrice.stoneCharges)} + applicable tax {formatCurrency(estimatedPrice.tax)}{formData.price_includes_gst ? " (included)" : ""}.</p>
                 <p className="mt-1 text-xs">
                   {formData.mrp === ""
                     ? "MRP is estimated automatically. Enter a value in the MRP field to override it."
@@ -589,7 +590,7 @@ const AddProducts = () => {
                   />
                 </div>
                 <p className="mt-1 text-[11px] font-medium text-gray-500">
-                  Estimated jewellery price: ₹{estimatedPrice.total.toLocaleString("en-IN", { maximumFractionDigits: 2 })}. Edit the value above to set a different MRP.
+                  Estimated jewellery price: {formatCurrency(estimatedPrice.total)}. Edit the value above to set a different MRP.
                 </p>
               </div>
               <label className={labelClass}>Offer Type
@@ -724,7 +725,7 @@ const AddProducts = () => {
             <p className="mt-1 text-xs text-gray-500">{formData.product_code || "SKU"} · {formData.purity}</p>
             <div className="mt-4 flex items-baseline justify-between border-t border-gray-100 pt-4">
               <span className="text-xs font-semibold text-gray-500">Final selling price</span>
-              <span className="font-black text-[#003B3B]">₹{pricing.finalPrice.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</span>
+              <span className="font-black text-[#003B3B]">{formatCurrency(pricing.finalPrice)}</span>
             </div>
             <p className="mt-2 text-xs text-gray-500">Stock: {formData.total_stock || 0} · {formData.stock_status}</p>
           </div>

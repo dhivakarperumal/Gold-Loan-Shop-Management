@@ -19,6 +19,7 @@ import {
 } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api, { getPrivateFile } from "../../api";
+import DateRangeFilter from "../Components/DateRangeFilter";
 
 const EMPTY_CUSTOMER = {
   customer_type: "Individual",
@@ -148,6 +149,7 @@ export default function LoanCustomerManagement() {
   const [loading, setLoading] = useState(true);
   const [verifyingCustomerId, setVerifyingCustomerId] = useState(null);
   const [search, setSearch] = useState("");
+  const [dateRange, setDateRange] = useState({ preset: "all", startDate: "", endDate: "" });
   const [kycFilter, setKycFilter] = useState("All");
   const [viewMode, setViewMode] = useState("table");
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -171,7 +173,9 @@ export default function LoanCustomerManagement() {
   const loadCustomers = useCallback(async () => {
     setLoading(true);
     try {
-      const response = await api.get("/loan-customers");
+      const response = await api.get("/loan-customers", {
+        params: { startDate: dateRange.startDate, endDate: dateRange.endDate }
+      });
       if (!Array.isArray(response.data)) throw new Error("The server returned an invalid customer list.");
       setCustomers(response.data);
     } catch (error) {
@@ -180,7 +184,7 @@ export default function LoanCustomerManagement() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [dateRange.startDate, dateRange.endDate]);
 
   useEffect(() => { loadCustomers(); }, [loadCustomers]);
 
@@ -575,6 +579,7 @@ export default function LoanCustomerManagement() {
             />
           </label>
           <div className="flex flex-wrap items-center gap-3 sm:ml-auto sm:justify-end">
+            <DateRangeFilter onApply={setDateRange} />
             <label className="relative">
               <FiFilter className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <select className={`${inputClass} mt-0 pl-9`} value={kycFilter} onChange={(event) => setKycFilter(event.target.value)}>

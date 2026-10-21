@@ -1,4 +1,5 @@
 const { pool } = require('../config/db');
+const { addDateRangeCondition } = require('../utils/dateRange');
 
 async function initializeFundModule() {
   await pool.query(`
@@ -225,13 +226,12 @@ async function getFundTransaction(id) {
 async function listFundTransactions(filters) {
   const conditions = [];
   const values = [];
+  addDateRangeCondition(conditions, values, 't.transaction_date', filters.dateRange || { startDate: filters.from, endDate: filters.to });
   if (filters.account_id) { conditions.push('t.account_id = ?'); values.push(filters.account_id); }
   if (filters.transaction_type && filters.transaction_type !== 'ALL') {
     conditions.push('t.transaction_type = ?'); values.push(filters.transaction_type);
   }
   if (filters.category) { conditions.push('t.category = ?'); values.push(filters.category); }
-  if (filters.from) { conditions.push('t.transaction_date >= ?'); values.push(`${filters.from} 00:00:00`); }
-  if (filters.to) { conditions.push('t.transaction_date <= ?'); values.push(`${filters.to} 23:59:59`); }
   if (filters.search) {
     conditions.push('(t.party_name LIKE ? OR t.reference_number LIKE ? OR t.related_reference LIKE ? OR t.description LIKE ?)');
     values.push(...Array(4).fill(`%${filters.search}%`));
@@ -263,8 +263,12 @@ async function listFundTransactions(filters) {
   return { transactions: rows, total: Number(countRows[0].total), page, page_size: pageSize };
 }
 
-async function getFundSummary(from, to) {
+async function getFundSummary(dateRange = {}) {
   const accounts = await listFundAccounts();
+  const conditions = [];
+  const values = [];
+  addDateRangeCondition(conditions, values, 'transaction_date', dateRange);
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   const [rows] = await pool.execute(
     `SELECT
       COALESCE(SUM(CASE WHEN transaction_type = 'FUND_ADDED' AND status = 'POSTED' THEN amount ELSE 0 END), 0) AS fund_added,
@@ -272,26 +276,37 @@ async function getFundSummary(from, to) {
       COALESCE(SUM(CASE WHEN transaction_type = 'CREDIT' AND status = 'POSTED' THEN amount ELSE 0 END), 0) AS total_credit,
       COALESCE(SUM(CASE WHEN category = 'Customer Gold Loan Disbursement' AND status = 'POSTED' THEN amount ELSE 0 END), 0) AS loan_disbursed,
       COALESCE(SUM(CASE WHEN category = 'Customer Loan Repayment' AND status = 'POSTED' THEN amount ELSE 0 END), 0) AS loan_repayment_received,
-      COALESCE(SUM(CASE WHEN category = 'Gold Sales Billing Collection' AND status = 'POSTED' THEN amount ELSE 0 END), 0) AS billing_collection
-     FROM fund_transactions
-     WHERE transaction_date >= ? AND transaction_date <= ?`,
-    [`${from} 00:00:00`, `${to} 23:59:59`]
+      COALESCE(SUM(CASE WHEN category = 'Gold Sales Billing Collection' AND status = 'POSTED' THEN amount ELSE 0 END), 0) AS billing_collection,
+      COALESCE(SUM(CASE
+        WHEN status = 'POSTED' AND transaction_type IN ('FUND_ADDED', 'CREDIT', 'TRANSFER_IN') THEN amount
+        WHEN status = 'POSTED' AND transaction_type IN ('DEBIT', 'TRANSFER_OUT') THEN -amount
+        ELSE 0
+      END), 0) AS net_change
+     FROM fund_transactions ${where}`,
+    values
   );
-  const [priorRows] = await pool.execute(
-    `SELECT COALESCE(SUM(CASE
-       WHEN transaction_type IN ('FUND_ADDED', 'CREDIT', 'TRANSFER_IN') THEN amount
-       WHEN transaction_type IN ('DEBIT', 'TRANSFER_OUT') THEN -amount ELSE 0 END), 0) AS prior_net
-     FROM fund_transactions WHERE status = 'POSTED' AND transaction_date < ?`,
-    [`${from} 00:00:00`]
-  );
+  const [priorRows] = dateRange.startDate
+    ? await pool.execute(
+      `SELECT COALESCE(SUM(CASE
+         WHEN transaction_type IN ('FUND_ADDED', 'CREDIT', 'TRANSFER_IN') THEN amount
+         WHEN transaction_type IN ('DEBIT', 'TRANSFER_OUT') THEN -amount ELSE 0 END), 0) AS prior_net
+       FROM fund_transactions WHERE status = 'POSTED' AND transaction_date < ?`,
+      [`${dateRange.startDate} 00:00:00`]
+    )
+    : [[{ prior_net: 0 }]];
   const openingBalance = accounts.reduce((sum, account) => sum + Number(account.opening_balance), 0)
     + Number(priorRows[0].prior_net);
   const currentBalance = accounts.reduce((sum, account) => sum + Number(account.current_balance), 0);
   return {
-    ...rows[0],
+    fund_added: rows[0].fund_added,
+    total_debit: rows[0].total_debit,
+    total_credit: rows[0].total_credit,
+    loan_disbursed: rows[0].loan_disbursed,
+    loan_repayment_received: rows[0].loan_repayment_received,
+    billing_collection: rows[0].billing_collection,
     opening_balance: openingBalance,
     current_balance: currentBalance,
-    closing_balance: openingBalance + Number(rows[0].fund_added) + Number(rows[0].total_credit) - Number(rows[0].total_debit)
+    closing_balance: openingBalance + Number(rows[0].net_change)
   };
 }
 

@@ -5,27 +5,11 @@ const {
   listEnquiries,
   updateEnquiryStatus
 } = require('../modules/enquiryModule');
-const { getCurrentGoldRates } = require('../modules/goldRateModule');
 
 const ENQUIRY_STATUSES = new Set(['New Enquiry', 'In Progress', 'Quotation Sent', 'Converted', 'Closed', 'Not Interested']);
 const ENQUIRY_TYPES = new Set(['Gold Jewellery', 'Gold Coin / Bar', 'Gold Loan', 'Old Gold Exchange', 'Other']);
 const PRIORITIES = new Set(['Low', 'Medium', 'High']);
-const METAL_TYPES = new Set(['Gold', 'Silver', 'Platinum', 'Diamond']);
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const GOLD_KARAT_PURITIES = new Map([
-  ['24k', '999'],
-  ['22k', '916'],
-  ['20k', '833'],
-  ['18k', '750'],
-  ['14k', '585']
-]);
-
-function purityForRate(purity, metalType) {
-  const normalized = String(purity || '').trim();
-  return metalType === 'Gold'
-    ? GOLD_KARAT_PURITIES.get(normalized.toLowerCase()) || normalized
-    : normalized;
-}
 
 function validId(value) {
   return /^\d+$/.test(String(value)) && BigInt(value) > 0n;
@@ -53,9 +37,6 @@ function normalizeEnquiry(body) {
   const priority = body.priority || 'Medium';
   if (!ENQUIRY_STATUSES.has(status)) return { error: 'Enquiry status is invalid' };
   if (!PRIORITIES.has(priority)) return { error: 'Enquiry priority is invalid' };
-  if (body.whatsapp_confirmation != null && typeof body.whatsapp_confirmation !== 'boolean') {
-    return { error: 'WhatsApp confirmation must be true or false' };
-  }
   const values = {};
   const textFields = {
     alternate_phone: 32, address: 2000, city: 100, state: 100, pincode: 20,
@@ -78,15 +59,9 @@ function normalizeEnquiry(body) {
   }
   const productId = body.product_id == null || body.product_id === '' ? null : Number(body.product_id);
   if (productId !== null && (!Number.isSafeInteger(productId) || productId < 1)) return { error: 'Product is invalid' };
-  const metalType = body.metal_type == null || body.metal_type === '' ? null : String(body.metal_type);
-  if (metalType && !METAL_TYPES.has(metalType)) return { error: 'Metal type is invalid' };
-  if (values.purity && !metalType) return { error: 'Select a metal type for the selected purity' };
   const followUpDate = body.follow_up_date || null;
-  if (followUpDate) {
-    const date = new Date(`${followUpDate}T00:00:00.000Z`);
-    if (!DATE_PATTERN.test(followUpDate) || Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== followUpDate) {
-      return { error: 'Follow up date is invalid' };
-    }
+  if (followUpDate && (!DATE_PATTERN.test(followUpDate) || Number.isNaN(Date.parse(`${followUpDate}T00:00:00`)))) {
+    return { error: 'Follow up date is invalid' };
   }
   if (values.follow_up_time && !/^(?:[01]\d|2[0-3]):[0-5]\d(?::[0-5]\d)?$/.test(values.follow_up_time)) {
     return { error: 'Follow up time is invalid' };
@@ -99,10 +74,6 @@ function normalizeEnquiry(body) {
       email: email.value,
       enquiry_type: type,
       product_id: productId,
-      metal_type: metalType,
-      daily_rate: null,
-      rate_unit: null,
-      rate_date: null,
       status,
       priority,
       follow_up_date: followUpDate,
@@ -139,18 +110,6 @@ async function postEnquiry(req, res, next) {
   const { enquiry, error } = normalizeEnquiry(req.body || {});
   if (error) return res.status(400).json({ message: error });
   try {
-    if (enquiry.purity) {
-      const activeRates = await getCurrentGoldRates();
-      const configuredPurity = purityForRate(enquiry.purity, enquiry.metal_type);
-      const selectedRate = activeRates?.rates?.find((rate) => (
-        rate.metal_type === enquiry.metal_type && rate.purity === configuredPurity
-      ));
-      if (!selectedRate) return res.status(400).json({ message: 'No active daily rate is available for this metal and purity' });
-      enquiry.purity = selectedRate.purity;
-      enquiry.daily_rate = Number(selectedRate.rate_per_unit ?? selectedRate.rate_per_gram);
-      enquiry.rate_unit = selectedRate.rate_unit || 'gram';
-      enquiry.rate_date = activeRates.rate_date;
-    }
     return res.status(201).json({ enquiry: await createEnquiry(enquiry) });
   } catch (requestError) {
     return next(requestError);
@@ -180,4 +139,4 @@ async function removeEnquiry(req, res, next) {
   }
 }
 
-module.exports = { getEnquiries, postEnquiry, putEnquiryStatus, removeEnquiry, normalizeEnquiry, purityForRate };
+module.exports = { getEnquiries, postEnquiry, putEnquiryStatus, removeEnquiry, normalizeEnquiry };

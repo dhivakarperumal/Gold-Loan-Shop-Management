@@ -3,10 +3,19 @@ const {
   createUser,
   deleteUser,
   findUserForLogin,
+  getOwnProfile,
+  getPasswordHash,
+  hashPassword,
   listUsers,
+  updateNotificationPreferences,
+  updateOwnProfile,
+  updateOwnProfileImage,
+  updatePasswordHash,
   updateUser,
   verifyPassword
 } = require('../modules/authModule');
+const { isValidProfileImage, removeProfileImage } = require('../middleware/profileImageUpload');
+const { parseDateRange } = require('../utils/dateRange');
 
 const VALID_STATUSES = new Set(['Active', 'Inactive']);
 
@@ -68,9 +77,122 @@ async function login(req, res, next) {
   }
 }
 
-async function getUsers(req, res, next) {
+async function getMyProfile(req, res, next) {
   try {
-    return res.json(await listUsers());
+    const user = await getOwnProfile(req.storeUser.user_id);
+    if (!user) return res.status(404).json({ message: 'Profile not found' });
+    return res.json({ user });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function updateMyProfile(req, res, next) {
+  const body = req.body || {};
+  const username = String(body.username || '').trim();
+  const name = String(body.name || '').trim();
+  const email = String(body.email || '').trim().toLowerCase();
+  const phone = String(body.phone || '').trim();
+  const address = String(body.address || '').trim();
+  if (!username || !name || !email) {
+    return res.status(400).json({ message: 'Username, full name, and email are required' });
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ message: 'Enter a valid email address' });
+  }
+  if (username.length > 150 || name.length > 150 || email.length > 254 || phone.length > 32 || address.length > 5000) {
+    return res.status(400).json({ message: 'One or more profile fields exceed the allowed length' });
+  }
+
+  try {
+    const user = await updateOwnProfile(req.storeUser.user_id, {
+      username, name, email, phone, address
+    });
+    if (!user) return res.status(404).json({ message: 'Profile not found' });
+    return res.json({ message: 'Profile updated successfully', user });
+  } catch (error) {
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ message: 'Email or phone number is already registered' });
+    }
+    return next(error);
+  }
+}
+
+async function changeMyPassword(req, res, next) {
+  const currentPassword = req.body.currentPassword;
+  const newPassword = req.body.newPassword;
+  if (typeof currentPassword !== 'string' || !currentPassword
+    || typeof newPassword !== 'string' || newPassword.length < 8) {
+    return res.status(400).json({ message: 'Current password and a new password of at least 8 characters are required' });
+  }
+
+  try {
+    const passwordHash = await getPasswordHash(req.storeUser.user_id);
+    if (!passwordHash || !(await verifyPassword(currentPassword, passwordHash))) {
+      return res.status(400).json({ message: 'Current password is incorrect' });
+    }
+    await updatePasswordHash(req.storeUser.user_id, await hashPassword(newPassword));
+    return res.json({ message: 'Password changed successfully' });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function saveMyNotificationPreferences(req, res, next) {
+  const { email, orders } = req.body || {};
+  if (typeof email !== 'boolean' || typeof orders !== 'boolean') {
+    return res.status(400).json({ message: 'Email and order notification preferences must be boolean values' });
+  }
+  try {
+    const user = await updateNotificationPreferences(req.storeUser.user_id, { email, orders });
+    if (!user) return res.status(404).json({ message: 'Profile not found' });
+    return res.json({ message: 'Notification preferences saved', user });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function saveMyProfileImage(req, res, next) {
+  if (!req.file) return res.status(400).json({ message: 'Choose an image to upload' });
+  const imageUrl = `/uploads/profiles/${req.file.filename}`;
+  let currentProfile;
+  let user;
+  try {
+    if (!isValidProfileImage(req.file.path, req.file.mimetype)) {
+      await removeProfileImage(imageUrl);
+      return res.status(400).json({ message: 'The uploaded file is not a valid image' });
+    }
+    currentProfile = await getOwnProfile(req.storeUser.user_id);
+    if (!currentProfile) {
+      await removeProfileImage(imageUrl);
+      return res.status(404).json({ message: 'Profile not found' });
+    }
+    user = await updateOwnProfileImage(req.storeUser.user_id, imageUrl);
+  } catch (error) {
+    await removeProfileImage(imageUrl);
+    return next(error);
+  }
+  await removeProfileImage(currentProfile.profile_image);
+  return res.json({ message: 'Profile photo updated', user });
+}
+
+async function removeMyProfileImage(req, res, next) {
+  try {
+    const currentProfile = await getOwnProfile(req.storeUser.user_id);
+    if (!currentProfile) return res.status(404).json({ message: 'Profile not found' });
+    const user = await updateOwnProfileImage(req.storeUser.user_id, null);
+    await removeProfileImage(currentProfile.profile_image);
+    return res.json({ message: 'Profile photo removed', user });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function getUsers(req, res, next) {
+  const dateRange = parseDateRange(req.query);
+  if (dateRange.error) return res.status(400).json({ message: dateRange.error });
+  try {
+    return res.json(await listUsers(dateRange));
   } catch (error) {
     return next(error);
   }
@@ -157,9 +279,15 @@ async function removeManagedUser(req, res, next) {
 
 module.exports = {
   createManagedUser,
+  changeMyPassword,
   getUsers,
+  getMyProfile,
   login,
   register,
   removeManagedUser,
+  removeMyProfileImage,
+  saveMyProfileImage,
+  saveMyNotificationPreferences,
+  updateMyProfile,
   updateManagedUser
 };

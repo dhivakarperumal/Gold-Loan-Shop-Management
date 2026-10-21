@@ -1,9 +1,62 @@
 import { toast } from "react-hot-toast";
 import api, { getPrivateFile } from "../../api";
+import { loanReviewDate } from "./loanPolicy";
+import { formatCurrency as money } from "../../utils/currency";
 
 const SHOP_NAME = "Sri Golds";
 const SHOP_ADDRESS = "No.58 Vaitheeshwaran Nagar, Tirupattur - 635653";
 const SHOP_PHONE = "9659133504";
+const TAMIL_LABELS = {
+  "Fixed Interest Amount": "நிலையான வட்டி தொகை",
+  "Custom Interest Period": "தனிப்பயன் வட்டி காலம்",
+  "Compounding Frequency": "கூட்டு வட்டி இடைவெளி",
+  "Grace Period": "சலுகைக் காலம்",
+  "Interest-Free Period": "வட்டியில்லா காலம்",
+  "Late Payment Rate": "தாமதக் கட்டண வட்டி விகிதம்",
+  "Minimum Interest": "குறைந்தபட்ச வட்டி",
+  "Maximum Interest": "அதிகபட்ச வட்டி",
+  "Customer name": "வாடிக்கையாளர் பெயர்",
+  "Customer ID": "வாடிக்கையாளர் எண்",
+  "Mobile number": "கைபேசி எண்",
+  "Alternate mobile": "மாற்று கைபேசி எண்",
+  Email: "மின்னஞ்சல்",
+  "Date of birth": "பிறந்த தேதி",
+  Gender: "பாலினம்",
+  Occupation: "தொழில்",
+  "KYC status": "KYC நிலை",
+  Address: "முகவரி",
+  "Guarantor name": "உத்தரவாததாரர் பெயர்",
+  "Guarantor mobile": "உத்தரவாததாரர் கைபேசி எண்",
+  "Guarantor email": "உத்தரவாததாரர் மின்னஞ்சல்",
+  "Guarantor relationship": "உத்தரவாததாரருடனான உறவு",
+  "Guarantor address": "உத்தரவாததாரர் முகவரி",
+  "Jewellery type": "நகை வகை",
+  Metal: "உலோகம்",
+  "Purity / quality": "தூய்மை / தரம்",
+  "Gross weight": "மொத்த எடை",
+  "Stone weight": "கல் எடை",
+  "Net weight": "நிகர எடை",
+  "Rate snapshot": "பதிவு செய்யப்பட்ட விலை",
+  "Rate effective date": "விலை அமலான தேதி",
+  "Pledged metal valuation": "அடகு உலோக மதிப்பு",
+  "Pledged gold image": "அடகு நகை படம்",
+  "Pledged photo": "அடகு நகை படம்",
+  "Principal amount": "கடன் அசல் தொகை",
+  "Interest method": "வட்டி முறை",
+  "Interest rate": "வட்டி விகிதம்",
+  "Calculation start date": "கணக்கீடு தொடங்கும் தேதி",
+  "Day-count convention": "நாள் கணக்கீட்டு முறை",
+  "Payment frequency": "செலுத்தும் இடைவெளி",
+  "Initial loan term": "ஆரம்ப கடன் காலம்",
+  "Loan date": "கடன் தேதி",
+  "Maturity date": "முதிர்வு தேதி",
+  "Processing fee": "செயலாக்கக் கட்டணம்",
+  "Other authorized charges": "பிற அங்கீகரிக்கப்பட்ட கட்டணங்கள்",
+  Notes: "குறிப்புகள்",
+  "Late-payment terms": "தாமதக் கட்டண விதிமுறைகள்",
+  "15-month review date": "15 மாத மதிப்பாய்வு தேதி",
+  "Review process": "மதிப்பாய்வு நடைமுறை"
+};
 
 const escapeHtml = (value) => String(value ?? "—")
   .replaceAll("&", "&amp;")
@@ -11,12 +64,6 @@ const escapeHtml = (value) => String(value ?? "—")
   .replaceAll(">", "&gt;")
   .replaceAll('"', "&quot;")
   .replaceAll("'", "&#39;");
-
-const money = (value) => new Intl.NumberFormat("en-IN", {
-  style: "currency",
-  currency: "INR",
-  maximumFractionDigits: 2
-}).format(Number(value || 0));
 
 const dateText = (value) => {
   if (!value) return "—";
@@ -31,14 +78,40 @@ const titleCase = (value) => String(value || "—")
   .replaceAll("_", " ")
   .replace(/\b\w/g, (character) => character.toUpperCase());
 
+const tamilFrequency = (value) => ({
+  daily: "தினசரி",
+  weekly: "வாரந்தோறும்",
+  monthly: "மாதந்தோறும்",
+  quarterly: "காலாண்டுக்கு ஒருமுறை",
+  half_yearly: "அரையாண்டுக்கு ஒருமுறை",
+  yearly: "ஆண்டுதோறும்",
+  custom_period: "தனிப்பயன் காலம்",
+  bullet: "முதிர்வில் ஒருமுறை"
+}[String(value || "").toLowerCase()] || titleCase(value));
+
+const tamilLoanStatus = (value) => ({
+  active: "செயலில்",
+  inactive: "செயலற்றது",
+  suspended: "இடைநிறுத்தப்பட்டது",
+  completed: "முடிக்கப்பட்டது"
+}[String(value || "").toLowerCase()] || titleCase(value));
+
 const rateText = (value) => {
   if (value == null || value === "") return "—";
   const rate = Number(value);
   return Number.isFinite(rate) ? rate.toFixed(2) : "—";
 };
 
-function detail(label, value) {
-  return `<div class="detail"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></div>`;
+function detail(label, value, tamilValue) {
+  const tamilLabel = TAMIL_LABELS[label] || label;
+  const valueMarkup = tamilValue == null
+    ? escapeHtml(value)
+    : `<span class="translation-en">${escapeHtml(value)}</span><span class="translation-ta">${escapeHtml(tamilValue)}</span>`;
+  return `<div class="detail"><span class="detail-label"><span class="translation-en">${escapeHtml(label)}</span><span class="translation-ta">${escapeHtml(tamilLabel)}</span></span><strong>${valueMarkup}</strong></div>`;
+}
+
+function translated(english, tamil) {
+  return `<span class="translation-en">${escapeHtml(english)}</span><span class="translation-ta">${escapeHtml(tamil)}</span>`;
 }
 
 function readAsDataUrl(blob) {
@@ -78,18 +151,26 @@ function createDocument(loan) {
   const rateSnapshot = loan.gold_rate_per_gram == null
     ? "Not recorded"
     : `${money(loan.gold_rate_per_gram)} / ${unit}`;
+  const rateSnapshotTamil = loan.gold_rate_per_gram == null ? "பதிவு செய்யப்படவில்லை" : rateSnapshot;
   const fixedInterest = loan.fixed_interest_amount == null
     ? "—"
     : money(loan.fixed_interest_amount);
+  const latePaymentTerms = loan.late_payment_interest_rate == null
+    ? "No late-payment rate is configured for this loan."
+    : `${rateText(loan.late_payment_interest_rate)}% of outstanding principal per ${titleCase(loan.interest_frequency)} period, applied as a simple, non-compounding charge from the day after maturity.`;
+  const latePaymentTermsTamil = loan.late_payment_interest_rate == null
+    ? "இந்தக் கடனுக்கு தாமதக் கட்டண வட்டி விகிதம் அமைக்கப்படவில்லை."
+    : `நிலுவையில் உள்ள அசல் தொகைக்கு ${titleCase(loan.interest_frequency)} காலத்திற்கு ${rateText(loan.late_payment_interest_rate)}% எளிய, கூட்டு சேராத தாமதக் கட்டணம் முதிர்வு தேதிக்கு அடுத்த நாளிலிருந்து விதிக்கப்படும்.`;
+  const reviewDate = loanReviewDate(loan);
   const optionalTerms = [
-    ["Fixed Interest Amount", fixedInterest],
-    ["Custom Interest Period", loan.custom_period_days == null ? "—" : `${loan.custom_period_days} days`],
-    ["Compounding Frequency", loan.compounding_frequency ? titleCase(loan.compounding_frequency) : "—"],
-    ["Grace Period", `${loan.grace_period_days || 0} days`],
-    ["Interest-Free Period", `${loan.interest_free_days || 0} days`],
-    ["Late Payment Rate", loan.late_payment_interest_rate == null ? "Not set" : `${rateText(loan.late_payment_interest_rate)}%`],
-    ["Minimum Interest", loan.minimum_interest_amount == null ? "—" : money(loan.minimum_interest_amount)],
-    ["Maximum Interest", loan.maximum_interest_amount == null ? "—" : money(loan.maximum_interest_amount)]
+    ["Fixed Interest Amount", fixedInterest, fixedInterest],
+    ["Custom Interest Period", loan.custom_period_days == null ? "—" : `${loan.custom_period_days} days`, loan.custom_period_days == null ? "—" : `${loan.custom_period_days} நாட்கள்`],
+    ["Compounding Frequency", loan.compounding_frequency ? titleCase(loan.compounding_frequency) : "—", loan.compounding_frequency ? tamilFrequency(loan.compounding_frequency) : "—"],
+    ["Grace Period", `${loan.grace_period_days || 0} days`, `${loan.grace_period_days || 0} நாட்கள்`],
+    ["Interest-Free Period", `${loan.interest_free_days || 0} days`, `${loan.interest_free_days || 0} நாட்கள்`],
+    ["Late Payment Rate", loan.late_payment_interest_rate == null ? "Not set" : `${rateText(loan.late_payment_interest_rate)}% per ${titleCase(loan.interest_frequency)} period`, loan.late_payment_interest_rate == null ? "அமைக்கப்படவில்லை" : `${rateText(loan.late_payment_interest_rate)}% · ${tamilFrequency(loan.interest_frequency)} காலத்திற்கு`],
+    ["Minimum Interest", loan.minimum_interest_amount == null ? "—" : money(loan.minimum_interest_amount), loan.minimum_interest_amount == null ? "—" : money(loan.minimum_interest_amount)],
+    ["Maximum Interest", loan.maximum_interest_amount == null ? "—" : money(loan.maximum_interest_amount), loan.maximum_interest_amount == null ? "—" : money(loan.maximum_interest_amount)]
   ];
   const isDraft = !loan.id;
 
@@ -105,6 +186,18 @@ function createDocument(loan) {
     .toolbar { display: flex; justify-content: center; gap: 10px; margin: 0 auto 18px; }
     .toolbar button { border: 0; border-radius: 8px; padding: 11px 18px; background: #07564b; color: white; font-weight: 700; cursor: pointer; }
     .toolbar button.secondary { background: #52625e; }
+    .toolbar select { border: 1px solid #cbd5d1; border-radius: 8px; padding: 0 12px; background: white; color: #172b28; font: inherit; }
+    .translation-ta { display: none; }
+    body.tamil .translation-en { display: none !important; }
+    body.tamil .translation-ta { display: initial; }
+    .detail-label .translation-en { display: block; }
+    .detail-label .translation-ta { display: none; }
+    body.tamil .detail-label .translation-ta { display: block; }
+    .detail strong .translation-en { display: block; }
+    .detail strong .translation-ta { display: none; }
+    body.tamil .detail strong .translation-en { display: none !important; }
+    body.tamil .detail strong .translation-ta { display: block; }
+    body.tamil { font-family: "Nirmala UI", "Latha", "Noto Sans Tamil", "Arial Unicode MS", sans-serif; }
     .page { width: 100%; max-width: 850px; margin: auto; padding: 38px; background: white; box-shadow: 0 8px 32px #12352b18; }
     .shop { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; padding-bottom: 20px; border-bottom: 2px solid #087263; }
     .brand { margin: 0; color: #07564b; font: 700 28px Georgia, serif; }
@@ -130,34 +223,37 @@ function createDocument(loan) {
     .signature strong { display: block; }
     .signature span { display: block; margin-top: 3px; color: #71817c; font-size: 10px; }
     .footer { margin-top: 28px; padding-top: 10px; border-top: 1px solid #e3ebe7; color: #71817c; text-align: center; font-size: 10px; }
-    @page { size: A4; margin: 6mm; }
+    @page { size: A4 portrait; margin: 5mm 7mm; }
     @media print {
-      body { padding: 0; background: white; font-size: 10px; line-height: 1.22; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+      body { padding: 0; background: white; font-size: 12px; line-height: 1.25; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
       .toolbar { display: none !important; }
-      .page { width: 100%; max-width: none; padding: 0; box-shadow: none; }
-      .shop { padding-bottom: 4px; gap: 12px; }
-      .brand { font-size: 22px; }
-      .shop p, .meta p { margin-top: 2px; font-size: 9px; }
-      .doc-title h2 { font-size: 15px; }
+      .page { display: flex; width: 100%; max-width: none; flex-direction: column; justify-content: space-between; padding: 0; box-shadow: none; break-after: avoid-page; page-break-after: avoid; }
+      .shop { padding-bottom: 8px; gap: 14px; }
+      .brand { font-size: 28px; }
+      .shop p, .meta p { margin-top: 3px; font-size: 11px; }
+      .doc-title h2 { font-size: 18px; }
       .doc-title p { margin-top: 4px; }
-      .meta { margin: 4px 0; padding: 4px 7px; }
-      .section { margin-top: 6px; }
-      .section h3 { margin-bottom: 3px; padding-bottom: 3px; font-size: 10px; }
-      .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px 8px; }
-      .detail { padding: 0; }
-      .detail span { margin-bottom: 1px; font-size: 8px; }
-      .detail strong { font-size: 9px; line-height: 1.18; }
+      .meta { margin: 7px 0; padding: 7px 9px; }
+      .section { flex: 0 0 auto; margin-top: 8px; break-inside: avoid; page-break-inside: avoid; }
+      .section h3 { margin-bottom: 4px; padding-bottom: 3px; font-size: 12px; }
+      .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px 10px; }
+      .detail { padding: 1px 0; }
+      .detail span { margin-bottom: 2px; font-size: 10px; }
+      .detail strong { font-size: 12px; line-height: 1.22; }
       .pledged-image-detail { grid-column: span 2; }
-      .pledged-image { max-height: 58px; max-width: 140px; margin-top: 2px; border-radius: 4px; }
+      .pledged-image { max-height: 70px; max-width: 150px; margin-top: 3px; border-radius: 4px; }
       .notes { min-height: 0; }
-      .acknowledgment { margin-top: 6px; padding: 5px 7px; font-size: 9px; line-height: 1.2; }
-      .signatures { gap: 12px 24px; margin-top: 12px; }
-      .signature { padding-top: 3px; }
-      .signature strong { font-size: 9px; }
-      .signature span, .footer { font-size: 8px; }
+      .acknowledgment { margin-top: 8px; padding: 7px 9px; font-size: 11px; line-height: 1.25; }
+      .signatures { gap: 14px 24px; margin-top: 14px; }
+      .signature { padding-top: 4px; }
+      .signature strong { font-size: 12px; }
+      .signature span, .footer { font-size: 10px; }
       .signature span { margin-top: 2px; }
-      .footer { margin-top: 6px; padding-top: 4px; }
+      .footer { margin-top: 10px; padding-top: 6px; }
       .acknowledgment, .signatures, .footer { break-inside: avoid; page-break-inside: avoid; }
+      body.tamil .detail-label, body.tamil .section h3 { letter-spacing: 0; text-transform: none; }
+      body.tamil .detail span { font-size: 11px; }
+      body.tamil .detail strong { font-size: 12px; line-height: 1.25; }
     }
     @media (max-width: 650px) {
       body { padding: 10px; }
@@ -173,7 +269,12 @@ function createDocument(loan) {
 </head>
 <body>
   <div class="toolbar">
-    <button type="button" onclick="window.print()">Print / Download PDF</button>
+    <label for="print-language">Language / மொழி</label>
+    <select id="print-language" aria-label="Print language" onchange="document.body.classList.toggle('tamil', this.value === 'ta'); document.documentElement.lang = this.value === 'ta' ? 'ta' : 'en'">
+      <option value="en">English</option>
+      <option value="ta">தமிழ்</option>
+    </select>
+    <button type="button" onclick="printAgreementPage()">Print / Download PDF</button>
     <button type="button" class="secondary" onclick="window.close()">Close</button>
   </div>
   <article class="page">
@@ -181,21 +282,21 @@ function createDocument(loan) {
       <div>
         <h1 class="brand">${SHOP_NAME}</h1>
         <p>${SHOP_ADDRESS}</p>
-        <p>Phone: ${SHOP_PHONE}</p>
+        <p>${translated("Phone:", "தொலைபேசி:")} ${SHOP_PHONE}</p>
       </div>
       <div class="doc-title">
-        <h2>${isDraft ? "Gold Loan Agreement · Draft" : "Gold Loan Agreement"}</h2>
+        <h2>${isDraft ? translated("Gold Loan Agreement · Draft", "தங்கக் கடன் ஒப்பந்தம் · வரைவு") : translated("Gold Loan Agreement", "தங்கக் கடன் ஒப்பந்தம்")}</h2>
         <p>${escapeHtml(loan.loan_number || "Number assigned after saving")}</p>
       </div>
     </div>
-    ${isDraft ? '<p class="draft">DRAFT — This document is not a saved loan agreement.</p>' : ""}
+    ${isDraft ? `<p class="draft">${translated("DRAFT — This document is not a saved loan agreement.", "வரைவு — இது சேமிக்கப்பட்ட கடன் ஒப்பந்தம் அல்ல.")}</p>` : ""}
     <div class="meta">
-      <p><strong>Agreement date:</strong> ${dateText(loan.loan_date)}</p>
-      <p><strong>Loan status:</strong> ${escapeHtml(titleCase(loan.loan_status))}</p>
-      <p><strong>Pledge number:</strong> ${escapeHtml(loan.gold_pledge_number)}</p>
+      <p><strong>${translated("Agreement date:", "ஒப்பந்த தேதி:")}</strong> ${dateText(loan.loan_date)}</p>
+      <p><strong>${translated("Loan status:", "கடன் நிலை:")}</strong> ${translated(titleCase(loan.loan_status), tamilLoanStatus(loan.loan_status))}</p>
+      <p><strong>${translated("Pledge number:", "அடகு எண்:")}</strong> ${escapeHtml(loan.gold_pledge_number)}</p>
     </div>
     <section class="section">
-      <h3>Borrower details</h3>
+      <h3>${translated("Borrower details", "கடன் பெறுபவர் விவரங்கள்")}</h3>
       <div class="grid">
         ${detail("Customer name", loan.customer_name)}
         ${detail("Customer ID", loan.customer_code || loan.customer_id)}
@@ -215,7 +316,7 @@ function createDocument(loan) {
       </div>
     </section>
     <section class="section">
-      <h3>Pledged jewellery and valuation</h3>
+      <h3>${translated("Pledged jewellery and valuation", "அடகு நகை மற்றும் மதிப்பீடு")}</h3>
       <div class="grid">
         ${detail("Jewellery type", loan.jewellery_type)}
         ${detail("Metal", loan.metal_type || "Gold")}
@@ -223,40 +324,92 @@ function createDocument(loan) {
         ${detail("Gross weight", `${loan.gross_weight} ${unit}`)}
         ${detail("Stone weight", `${loan.stone_weight || 0} ${unit}`)}
         ${detail("Net weight", `${loan.net_gold_weight} ${unit}`)}
-        ${detail("Rate snapshot", rateSnapshot)}
+        ${detail("Rate snapshot", rateSnapshot, rateSnapshotTamil)}
         ${detail("Rate effective date", dateText(loan.gold_rate_date))}
         ${detail("Pledged metal valuation", money(loan.gold_valuation))}
         ${loan.gold_image_data_url
-          ? `<div class="detail pledged-image-detail"><span>Pledged gold image</span><img class="pledged-image" src="${escapeHtml(loan.gold_image_data_url)}" alt="Pledged gold item"></div>`
-          : detail("Pledged photo", "No image attached")}
+          ? `<div class="detail pledged-image-detail"><span class="detail-label">${translated("Pledged gold image", "அடகு நகை படம்")}</span><img class="pledged-image" src="${escapeHtml(loan.gold_image_data_url)}" alt="Pledged gold item"></div>`
+          : detail("Pledged photo", "No image attached", "படம் இணைக்கப்படவில்லை")}
       </div>
     </section>
     <section class="section">
-      <h3>Loan and repayment terms</h3>
+      <h3>${translated("Loan and repayment terms", "கடன் மற்றும் திருப்பிச் செலுத்தும் விதிமுறைகள்")}</h3>
       <div class="grid">
         ${detail("Principal amount", money(loan.principal_amount))}
-        ${detail("Interest method", titleCase(loan.interest_type))}
-        ${detail("Interest rate", `${rateText(loan.interest_rate)}% per ${titleCase(loan.interest_frequency)}`)}
+        ${detail("Interest method", titleCase(loan.interest_type), ({
+          simple: "எளிய வட்டி",
+          compound: "கூட்டு வட்டி",
+          fixed: "நிலையான வட்டி",
+          flat: "நிலையான வட்டி முறை",
+          reducing_balance: "குறையும் இருப்பு முறை",
+          slab_based: "தொகுப்பு அடிப்படையிலான முறை",
+          custom: "தனிப்பயன் முறை"
+        }[String(loan.interest_type || "").toLowerCase()] || titleCase(loan.interest_type)))}
+        ${detail("Interest rate", `${rateText(loan.interest_rate)}% per ${titleCase(loan.interest_frequency)}`, `${rateText(loan.interest_rate)}% · ${tamilFrequency(loan.interest_frequency)}`)}
         ${detail("Calculation start date", dateText(loan.interest_calculation_start_date))}
         ${detail("Day-count convention", titleCase(loan.day_count_convention))}
-        ${detail("Payment frequency", titleCase(loan.payment_frequency))}
+        ${detail("Payment frequency", titleCase(loan.payment_frequency), tamilFrequency(loan.payment_frequency))}
+        ${detail("Initial loan term", "11 months; renewals set a new 11-month term from the recorded renewal date", "ஆரம்ப கடன் காலம் 11 மாதங்கள்; புதுப்பித்தால் பதிவு செய்யப்பட்ட புதுப்பிப்பு தேதியிலிருந்து புதிய 11 மாத காலம் தொடங்கும்")}
         ${detail("Loan date", dateText(loan.loan_date))}
         ${detail("Maturity date", dateText(loan.maturity_date))}
         ${detail("Processing fee", money(loan.processing_fee))}
         ${detail("Other authorized charges", money(loan.other_charges))}
-        ${optionalTerms.map(([label, value]) => detail(label, value)).join("")}
+        ${optionalTerms.map(([label, value, tamilValue]) => detail(label, value, tamilValue)).join("")}
       </div>
-      ${loan.notes ? `<div class="detail notes"><span>Notes</span><strong>${escapeHtml(loan.notes)}</strong></div>` : ""}
+      ${loan.notes ? `<div class="detail notes"><span class="detail-label"><span class="translation-en">Notes</span><span class="translation-ta">குறிப்புகள்</span></span><strong>${escapeHtml(loan.notes)}</strong></div>` : ""}
     </section>
-    <p class="acknowledgment">The borrower confirms that the customer and pledged-item details above are correct and acknowledges the loan amount, interest method, repayment frequency, charges, and maturity date. The borrower and authorized shop representative should review and sign this document. Keep a signed copy for both parties.</p>
+    <section class="section">
+      <h3>${translated("Late payment and account review", "தாமதக் கட்டணம் மற்றும் கணக்கு மதிப்பாய்வு")}</h3>
+      <div class="grid">
+        <div class="wide">${detail("Late-payment terms", latePaymentTerms, latePaymentTermsTamil)}</div>
+        ${detail("15-month review date", dateText(reviewDate))}
+        <div class="wide">${detail("Review process", "If a balance remains after maturity, the account is flagged for authorized manual review 15 months after the original loan date. This does not authorize automatic seizure or forfeiture. Any collateral handling must follow the signed agreement, applicable law, required notice, and authorized review.", "முதிர்வுக்குப் பிறகும் நிலுவை இருந்தால், அசல் கடன் தேதியிலிருந்து 15 மாதங்களில் கணக்கு அங்கீகரிக்கப்பட்ட கைமுறை மதிப்பாய்வுக்காக குறிக்கப்படும். இதனால் தானாகப் பறிமுதல் செய்யவோ உரிமை இழக்கச் செய்யவோ அனுமதி கிடையாது. அடகு பொருள் தொடர்பான நடவடிக்கைகள் கையொப்பமிட்ட ஒப்பந்தம், பொருந்தும் சட்டம், தேவையான அறிவிப்பு மற்றும் அங்கீகரிக்கப்பட்ட மதிப்பாய்வின்படி மட்டுமே நடைபெறும்.")}</div>
+      </div>
+    </section>
+    <p class="acknowledgment">${translated("The borrower confirms these customer and pledged-item details and accepts the loan amount, interest and repayment terms, charges, maturity date, late-payment terms, and review process. Both parties should review and sign this agreement and keep a signed copy.", "வாடிக்கையாளர் மற்றும் அடகு நகை விவரங்கள் சரியானவை என்றும், கடன் தொகை, வட்டி மற்றும் திருப்பிச் செலுத்தும் விதிமுறைகள், கட்டணங்கள், முதிர்வு தேதி, தாமதக் கட்டண விதிமுறைகள் மற்றும் மதிப்பாய்வு நடைமுறை ஆகியவற்றை ஏற்றுக்கொள்வதாகவும் கடன் பெறுபவர் உறுதிப்படுத்துகிறார். இரு தரப்பினரும் இந்த ஒப்பந்தத்தைச் சரிபார்த்துக் கையொப்பமிட்டு, கையொப்பமிட்ட பிரதியை வைத்திருக்க வேண்டும்.")}</p>
     <div class="signatures">
-      <div class="signature"><strong>${escapeHtml(loan.customer_name)}</strong><span>Borrower signature / thumb impression</span><span>Date: ____________________</span></div>
-      <div class="signature"><strong>${SHOP_NAME}</strong><span>Authorized shop representative signature</span><span>Date: ____________________</span></div>
-      <div class="signature"><strong>Witness 1</strong><span>Name and signature</span></div>
-      <div class="signature"><strong>Witness 2</strong><span>Name and signature</span></div>
+      <div class="signature"><strong>${escapeHtml(loan.customer_name)}</strong><span>${translated("Borrower signature / thumb impression", "கடன் பெறுபவர் கையொப்பம் / விரல் ரேகை")}</span><span>${translated("Date:", "தேதி:")} ____________________</span></div>
+      <div class="signature"><strong>${SHOP_NAME}</strong><span>${translated("Authorized shop representative signature", "அங்கீகரிக்கப்பட்ட கடை பிரதிநிதி கையொப்பம்")}</span><span>${translated("Date:", "தேதி:")} ____________________</span></div>
+      <div class="signature"><strong>${translated("Witness 1", "சாட்சி 1")}</strong><span>${translated("Name and signature", "பெயர் மற்றும் கையொப்பம்")}</span></div>
+      <div class="signature"><strong>${translated("Witness 2", "சாட்சி 2")}</strong><span>${translated("Name and signature", "பெயர் மற்றும் கையொப்பம்")}</span></div>
     </div>
-    <div class="footer">Generated from the loan record on ${new Date().toLocaleString("en-IN")}. This document reflects the saved loan terms.</div>
+    <div class="footer">${translated(`Generated from the loan record on ${new Date().toLocaleString("en-IN")}. This document reflects the saved loan terms.`, `${new Date().toLocaleString("ta-IN")} அன்று கடன் பதிவிலிருந்து உருவாக்கப்பட்டது. இந்த ஆவணம் சேமிக்கப்பட்ட கடன் விதிமுறைகளைக் காட்டுகிறது.`)}</div>
   </article>
+  <script>
+    function preparePrintLayout() {
+      const page = document.querySelector(".page");
+      if (!page) return;
+
+      page.style.zoom = "1";
+      page.style.width = "100%";
+      page.style.height = "auto";
+      page.style.minHeight = "0";
+      page.style.justifyContent = "flex-start";
+
+      const naturalHeight = page.scrollHeight;
+      const printableHeight = 287 * 96 / 25.4;
+      const scale = Math.min(1, printableHeight / naturalHeight);
+      page.style.zoom = String(scale);
+      page.style.width = (100 / scale) + "%";
+      page.style.minHeight = (287 / scale) + "mm";
+      page.style.justifyContent = "space-between";
+    }
+
+    function printAgreementPage() {
+      window.print();
+    }
+
+    window.addEventListener("beforeprint", preparePrintLayout);
+    window.addEventListener("afterprint", () => {
+      const page = document.querySelector(".page");
+      if (!page) return;
+      page.style.removeProperty("zoom");
+      page.style.removeProperty("width");
+      page.style.removeProperty("height");
+      page.style.removeProperty("min-height");
+      page.style.removeProperty("justify-content");
+    });
+  </script>
 </body>
 </html>`;
 }

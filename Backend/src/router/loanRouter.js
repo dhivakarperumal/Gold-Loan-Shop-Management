@@ -20,6 +20,7 @@ const {
   postLoan,
   postGoldRelease,
   postLoanRenewal,
+  postLoanReviewAction,
   putLoan,
   removeLoan,
   updateInterestType
@@ -52,6 +53,7 @@ router.post('/loans/:id/gold-release', (req, res, next) => {
 router.get('/loans/:id/renewal', getLoanRenewalDetails);
 router.get('/loans/:id/renewals', getLoanRenewalHistoryList);
 router.post('/loans/:id/renewal', postLoanRenewal);
+router.post('/loans/:id/review-action', postLoanReviewAction);
 router.get('/loans/:id', getLoan);
 router.post('/loans', (req, res, next) => {
   uploadLoanGoldImage.single('gold_image')(req, res, (error) => {

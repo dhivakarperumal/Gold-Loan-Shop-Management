@@ -6,6 +6,7 @@ import api from "../../api";
 import { toast, Toaster } from "react-hot-toast";
 import { FaRupeeSign } from "react-icons/fa";
 import useGoldRates from "../../PrivateRouter/useGoldRates";
+import { formatCurrency } from "../../utils/currency";
 import {
     FiPlus,
     FiSearch,
@@ -247,9 +248,7 @@ const AllProducts = () => {
         }
     };
 
-    const formatMoney = (value) => value == null || value === ""
-        ? "—"
-        : new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(Number(value));
+    const formatMoney = formatCurrency;
     const formatDate = (value) => {
         if (!value) return "Not updated";
         const date = new Date(value);
@@ -560,7 +559,7 @@ const AllProducts = () => {
                                         <h4 className="text-sm font-bold text-slate-800 truncate mt-0.5">{product.name}</h4>
                                         <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-50">
                                             <div>
-                                                <p className="text-base font-black text-slate-800">₹{parseFloat(product.offer_price || product.mrp || 0).toLocaleString('en-IN')}</p>
+                                                <p className="text-base font-black text-slate-800">{formatCurrency(product.offer_price || product.mrp || 0)}</p>
                                                 <p className="text-[10px] text-gray-400">Stock: {product.total_stock ?? 0}</p>
                                             </div>
                                             <Link to={`/admin/products/${product.id}`} className="px-3 py-1.5 bg-[#003B3B]/10 text-[#003B3B] rounded-lg text-xs font-bold hover:bg-[#003B3B] hover:text-white transition-all">

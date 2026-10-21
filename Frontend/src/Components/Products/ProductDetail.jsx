@@ -1,10 +1,9 @@
-import React, { useContext, useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   FaArrowLeft,
+  FaArrowRight,
   FaCheckCircle,
-  FaChevronLeft,
-  FaChevronRight,
   FaGem,
   FaHeart,
   FaPlayCircle,
@@ -13,7 +12,15 @@ import {
 } from "react-icons/fa";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 import PageContainer from "../CommenComponents/PageContainer";
+import PageHeader from "../CommenComponents/PageHeader";
 import api from "../../api";
+import { Autoplay } from "swiper/modules";
+import { Swiper, SwiperSlide } from "swiper/react";
+import "swiper/css";
+import ProductCard from "../Home/ProductCard";
+import MetalProducts from "./MetalProducts";
+import CategoryProducts from "./CategoryProducts";
+import { formatCurrency } from "../../utils/currency";
 
 const backendUrl = (
   import.meta.env.VITE_BACKEND_URL ||
@@ -43,9 +50,7 @@ const assetUrl = (path) => {
   return `${backendUrl}${path.startsWith("/") ? path : `/${path}`}`;
 };
 
-const money = (value) => `₹${Number(value || 0).toLocaleString("en-IN", {
-  maximumFractionDigits: 2,
-})}`;
+const money = formatCurrency;
 
 const displayValue = (value) => {
   if (value == null || value === "") return "";
@@ -63,11 +68,11 @@ const DetailGroup = ({ title, entries }) => {
   if (!visibleEntries.length) return null;
 
   return (
-    <section className="overflow-hidden rounded-2xl border border-[#eadfce] bg-white shadow-sm">
+    <section className="flex h-full min-w-0 flex-col overflow-hidden rounded-2xl border border-[#eadfce] bg-white shadow-sm">
       <h2 className="border-b border-[#efe5d4] bg-[#fffaf0] px-5 py-4 font-serif text-lg font-bold text-[#174a38]">
         {title}
       </h2>
-      <dl className="divide-y divide-[#f3eee5] px-5">
+      <dl className="flex-1 divide-y divide-[#f3eee5] px-5">
         {visibleEntries.map(([label, value]) => (
           <div key={label} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] gap-4 py-3">
             <dt className="text-xs text-[#887c69]">{label}</dt>
@@ -91,6 +96,7 @@ const tabs = [
 
 const ProductDetail = () => {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const { wishlist, toggleWishlist, addToCart } = useContext(StoreContext);
   const [product, setProduct] = useState(null);
   const [loadedProductId, setLoadedProductId] = useState(null);
@@ -98,6 +104,10 @@ const ProductDetail = () => {
   const [activeImage, setActiveImage] = useState(0);
   const [activeVariantIndex, setActiveVariantIndex] = useState(0);
   const [activeTab, setActiveTab] = useState("information");
+  const [zoom, setZoom] = useState(2.5);
+  const [imagePointer, setImagePointer] = useState({ x: 0.5, y: 0.5 });
+  const [isImageHovered, setIsImageHovered] = useState(false);
+  const imageViewportRef = useRef(null);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -140,11 +150,6 @@ const ProductDetail = () => {
       ...parseArray(product?.available_sizes)
     ])
   ];
-  const [selectedSize, setSelectedSize] = useState("");
-  const activeSize = availableVariantSizes.includes(selectedSize)
-    ? selectedSize
-    : availableVariantSizes[0] || "";
-
   const images = useMemo(() => {
     if (!product) return [];
     const variantImages = variants.flatMap((variant) => parseArray(variant.images));
@@ -156,11 +161,26 @@ const ProductDetail = () => {
   }, [product, variants]);
 
   const selectedImage = images[activeImage] || images[0];
+  const updateImagePointer = (event) => {
+    if (event.pointerType === "touch" || !imageViewportRef.current) return;
+    const bounds = imageViewportRef.current.getBoundingClientRect();
+    setImagePointer({
+      x: Math.max(0, Math.min(1, (event.clientX - bounds.left) / bounds.width)),
+      y: Math.max(0, Math.min(1, (event.clientY - bounds.top) / bounds.height))
+    });
+  };
+  const lensSize = 0.34;
+  const lensPosition = (point) => `${Math.max(0, Math.min(1 - lensSize, point - lensSize / 2)) * 100}%`;
+  const lensBackgroundPosition = (point) => {
+    const cropStart = Math.max(0, Math.min(1 - lensSize / zoom, point - lensSize / (2 * zoom)));
+    return `${(cropStart * zoom / (zoom - lensSize)) * 100}%`;
+  };
   const loading = loadedProductId !== id;
 
   if (loading) {
     return (
       <main className="bg-[#fffdf8]" role="status">
+        <PageHeader title="Product Details" breadcrumbs={["Explore"]} />
         <PageContainer className="py-20 text-center text-sm font-semibold text-[#746b5d]">
           Loading product details...
         </PageContainer>
@@ -171,6 +191,7 @@ const ProductDetail = () => {
   if (!product) {
     return (
       <main className="bg-[#fffdf8]">
+        <PageHeader title="Product Details" breadcrumbs={["Explore"]} />
         <PageContainer className="py-20 text-center">
           <div className="mx-auto max-w-2xl rounded-3xl border border-[#eadfce] bg-white p-8 shadow-sm">
             <FaGem className="mx-auto text-3xl text-[#bd913e]" />
@@ -199,8 +220,7 @@ const ProductDetail = () => {
   const isFavorite = wishlist.some(
     (item) => String(item.product_id ?? item.productId ?? item.id) === String(productId)
   );
-  const selectedVariantStock = currentVariant?.sizesStock?.[activeSize]
-    ?? currentVariant?.total_stock
+  const selectedVariantStock = currentVariant?.total_stock
     ?? currentVariant?.stock;
   const stock = Number(selectedVariantStock ?? product.total_stock ?? 0);
   const inStock = stock > 0;
@@ -264,68 +284,110 @@ const ProductDetail = () => {
   const specsEntries = specs.map((item, index) => (
     Array.isArray(item) ? item : [`Specification ${index + 1}`, item]
   ));
+  const quickFacts = [
+    ["Metal", product.metal_type],
+    ["Purity", product.purity],
+    ["Weight", product.gross_weight != null ? `${product.gross_weight} g` : ""],
+    ["Collection", product.category],
+    ["Product type", product.product_type],
+  ].filter(([, value]) => displayValue(value));
 
   return (
     <main className="min-h-screen bg-[#fffdf8]">
+      <PageHeader title={product.name || "Product Details"} breadcrumbs={["Explore"]} />
       <PageContainer className="py-6">
-        <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center gap-2 text-xs font-medium text-[#78817c] sm:text-sm">
-            <Link to="/explore" className="hover:text-[#174a38]">Products</Link>
-            <span>›</span>
-            <Link to="/explore" className="hover:text-[#174a38]">All Products</Link>
-            <span>›</span>
-            <span className="font-semibold text-[#34443e]">Product Details</span>
-          </div>
-          <Link to="/explore" className="inline-flex items-center gap-2 rounded-full border border-[#ece6da] bg-white px-4 py-2 text-xs font-semibold text-[#34443e] shadow-sm transition hover:border-[#174a38]">
+        {/* <div className="mb-4 flex justify-end">
+          <Link to={searchParams.toString() ? `/explore?${searchParams.toString()}` : "/explore"} className="inline-flex items-center gap-2 rounded-full border border-[#ece6da] bg-white px-4 py-2 text-xs font-semibold text-[#34443e] shadow-sm transition hover:border-[#174a38]">
             <FaArrowLeft /> Back to Products
           </Link>
-        </div>
+        </div> */}
 
-        <div className="grid gap-4 lg:grid-cols-[1fr_1.15fr]">
-          <section className="min-w-0 rounded-2xl border border-[#eee8dc] bg-white p-3 shadow-sm">
-            <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-xl bg-[#f8f6ef]">
+        <div className={`mt-4 grid gap-4 ${images.length > 1 ? "lg:grid-cols-[minmax(0,calc(50%_+_2.6875rem))_minmax(0,calc(50%_-_3.6875rem))]" : "lg:grid-cols-2"}`}>
+          <section className="min-w-0 rounded-2xl border border-[#eee8dc] bg-white p-2.5 shadow-sm sm:p-3">
+            <div className="flex min-w-0 flex-col-reverse gap-2 sm:flex-row sm:items-start sm:gap-3">
+              {images.length > 1 && (
+                <div className="flex w-full shrink-0 flex-row gap-2 overflow-x-auto pb-1 sm:max-h-[min(42vw,560px)] sm:w-16 sm:flex-col sm:overflow-x-hidden sm:overflow-y-auto sm:pb-0">
+                  {images.slice(0, 5).map((image, index) => (
+                    <button
+                      key={`${image}-${index}`}
+                      type="button"
+                      onClick={() => setActiveImage(index)}
+                      aria-label={`View product image ${index + 1}`}
+                      aria-pressed={activeImage === index}
+                      className={`aspect-square w-12 shrink-0 overflow-hidden rounded-lg border-2 bg-white transition sm:w-full ${activeImage === index ? "border-[#1c765d]" : "border-transparent hover:border-[#d8b66c]"}`}
+                    >
+                      <img src={assetUrl(image)} alt="" className="h-full w-full object-cover" loading="lazy" />
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div
+                ref={imageViewportRef}
+                onPointerEnter={(event) => {
+                  if (event.pointerType !== "touch") setIsImageHovered(true);
+                }}
+                onPointerMove={updateImagePointer}
+                onPointerLeave={() => setIsImageHovered(false)}
+                className="relative aspect-square min-w-0 flex-1 overflow-hidden rounded-xl bg-[#f8f6ef]"
+              >
               {images.length ? (
-                <img src={assetUrl(selectedImage)} alt={product.name} className="h-full w-full object-cover" />
+                <img
+                  src={assetUrl(selectedImage)}
+                  alt={product.name}
+                  className="h-full w-full object-contain"
+                />
               ) : (
                 <div className="text-center text-sm text-[#887c69]">
                   <FaGem className="mx-auto mb-3 text-4xl text-[#bd913e]" />
                   Product image unavailable
                 </div>
               )}
+              {selectedImage && (
+                <>
+                  <div className="absolute right-2 top-2 z-20 flex items-center gap-0.5 rounded-full border border-white/80 bg-white/95 p-0.5 text-sm font-semibold text-[#34443e] shadow-md sm:right-3 sm:top-3 sm:gap-1 sm:p-1">
+                    <button
+                      type="button"
+                      onClick={() => setZoom((current) => Math.max(1, current - 0.5))}
+                      disabled={zoom <= 1}
+                      aria-label="Decrease image zoom"
+                      className="grid h-7 w-7 place-items-center rounded-full transition hover:bg-[#f4f0e7] disabled:cursor-not-allowed disabled:opacity-40 sm:h-8 sm:w-8"
+                    >
+                      <span aria-hidden="true">−</span>
+                    </button>
+                    <span className="min-w-8 text-center text-xs sm:min-w-10">{zoom}x</span>
+                    <button
+                      type="button"
+                      onClick={() => setZoom((current) => Math.min(4, current + 0.5))}
+                      disabled={zoom >= 4}
+                      aria-label="Increase image zoom"
+                      className="grid h-7 w-7 place-items-center rounded-full transition hover:bg-[#f4f0e7] disabled:cursor-not-allowed disabled:opacity-40 sm:h-8 sm:w-8"
+                    >
+                      <span aria-hidden="true">+</span>
+                    </button>
+                  </div>
+                  {isImageHovered && zoom > 1 && (
+                    <div
+                      aria-hidden="true"
+                      className="pointer-events-none absolute z-10 hidden aspect-square w-[34%] overflow-hidden rounded-xl border-2 border-white shadow-lg md:block"
+                      style={{
+                        left: lensPosition(imagePointer.x),
+                        top: lensPosition(imagePointer.y),
+                        backgroundImage: `url("${assetUrl(selectedImage)}")`,
+                        backgroundRepeat: "no-repeat",
+                        backgroundSize: `${(zoom / lensSize) * 100}% ${(zoom / lensSize) * 100}%`,
+                        backgroundPosition: `${lensBackgroundPosition(imagePointer.x)} ${lensBackgroundPosition(imagePointer.y)}`
+                      }}
+                    />
+                  )}
+                </>
+              )}
               {(product.best_seller || product.featured) && (
-                <span className="absolute left-3 top-3 rounded-full bg-[#f4c84a] px-3 py-1.5 text-xs font-bold text-[#4e390f]">
+                <span className="absolute left-2 top-2 rounded-full bg-[#f4c84a] px-2.5 py-1 text-[11px] font-bold text-[#4e390f] sm:left-3 sm:top-3 sm:px-3 sm:py-1.5 sm:text-xs">
                   {product.best_seller ? "Bestseller" : "Featured"}
                 </span>
               )}
-              <button
-                type="button"
-                onClick={() => toggleWishlist(product, currentVariant, activeSize)}
-                aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
-                aria-pressed={isFavorite}
-                className={`absolute right-3 top-3 grid h-10 w-10 place-items-center rounded-full bg-white/95 shadow transition hover:text-rose-600 ${isFavorite ? "text-rose-600" : "text-[#40514a]"}`}
-              >
-                <FaHeart className={isFavorite ? "text-lg" : "text-lg"} />
-              </button>
-              {images.length > 1 && (
-                <>
-                  <button type="button" aria-label="Previous product image" onClick={() => setActiveImage((activeImage + images.length - 1) % images.length)} className="absolute left-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/95 text-[#174a38] shadow transition hover:bg-white">
-                    <FaChevronLeft />
-                  </button>
-                  <button type="button" aria-label="Next product image" onClick={() => setActiveImage((activeImage + 1) % images.length)} className="absolute right-3 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full bg-white/95 text-[#174a38] shadow transition hover:bg-white">
-                    <FaChevronRight />
-                  </button>
-                </>
-              )}
-            </div>
-            {images.length > 1 && (
-              <div className="mt-2 grid grid-cols-5 gap-2">
-                {images.slice(0, 5).map((image, index) => (
-                  <button key={`${image}-${index}`} type="button" onClick={() => setActiveImage(index)} aria-label={`View product image ${index + 1}`} aria-pressed={activeImage === index} className={`aspect-square overflow-hidden rounded-lg border-2 bg-white transition ${activeImage === index ? "border-[#1c765d]" : "border-transparent hover:border-[#d8b46c]"}`}>
-                    <img src={assetUrl(image)} alt="" className="h-full w-full object-cover" loading="lazy" />
-                  </button>
-                ))}
               </div>
-            )}
+              </div>
           </section>
 
           <section className="flex min-w-0 flex-col rounded-2xl border border-[#eee8dc] bg-white p-4 shadow-sm sm:p-5">
@@ -363,33 +425,49 @@ const ProductDetail = () => {
             <p className="mt-1 text-xs text-[#887c69]">Inclusive of applicable taxes</p>
 
             {variants.length > 0 && (
-              <div className="mt-4 space-y-3">
-                <div>
-                  <p className="mb-2 text-xs font-semibold text-[#59645e]">Choose option</p>
-                  <div className="flex flex-wrap gap-2">
-                    {variants.map((variant, index) => (
-                      <button key={`${variant.colorName || variant.color || index}`} type="button" onClick={() => { setActiveVariantIndex(index); setActiveImage(0); }} aria-pressed={activeVariantIndex === index} className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${activeVariantIndex === index ? "border-[#174a38] bg-[#edf5ef] text-[#174a38]" : "border-[#e8e1d5] text-[#5d675f] hover:border-[#bd913e]"}`}>
-                        {variant.colorName || variant.color || `Option ${index + 1}`}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                {availableVariantSizes.length > 0 && (
-                  <label className="block max-w-xs text-xs font-semibold text-[#59645e]">
-                    Size
-                    <select value={activeSize} onChange={(event) => setSelectedSize(event.target.value)} className="mt-1.5 block w-full rounded-lg border border-[#e8e1d5] bg-white px-3 py-2.5 text-sm font-medium text-[#34443e] outline-none focus:border-[#174a38]">
-                      {availableVariantSizes.map((size) => <option key={size} value={size}>{size}</option>)}
-                    </select>
-                  </label>
+              <div className="mt-4 space-y-4">
+                {variants.some((variant) => variant.colorName || variant.color) && (
+                  <fieldset>
+                    <legend className="mb-2 text-xs font-semibold text-[#59645e]">Choose option</legend>
+                    <div className="flex flex-wrap gap-2">
+                      {variants.map((variant, index) => (
+                        <button
+                          key={`${variant.colorName || variant.color || index}`}
+                          type="button"
+                          onClick={() => {
+                            setActiveVariantIndex(index);
+                            setActiveImage(0);
+                          }}
+                          aria-pressed={activeVariantIndex === index}
+                          className={`rounded-lg border px-3 py-2 text-xs font-semibold transition ${activeVariantIndex === index ? "border-[#174a38] bg-[#edf5ef] text-[#174a38]" : "border-[#e8e1d5] text-[#5d675f] hover:border-[#bd913e]"}`}
+                        >
+                          {variant.colorName || variant.color || `Option ${index + 1}`}
+                        </button>
+                      ))}
+                    </div>
+                  </fieldset>
                 )}
               </div>
             )}
 
-            <div className="mt-5 grid gap-2 sm:grid-cols-2">
-              <button type="button" disabled={!inStock} onClick={() => addToCart(product, currentVariant, activeSize)} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#174a3f] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#10382f] disabled:cursor-not-allowed disabled:bg-slate-300">
+            {availableVariantSizes.length > 0 && (
+              <p className="mt-4 text-sm text-[#59645e]">
+                <span className="font-semibold">Available sizes:</span>{" "}
+                {availableVariantSizes.map(displayValue).join(", ")}
+              </p>
+            )}
+
+            <div className="mt-5">
+              {/* <button type="button" disabled={!inStock} onClick={() => addToCart(product, currentVariant, "")} className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#174a3f] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#10382f] disabled:cursor-not-allowed disabled:bg-slate-300">
                 <FaShoppingBag /> {inStock ? "Add to Cart" : "Out of Stock"}
-              </button>
-              <button type="button" onClick={() => toggleWishlist(product, currentVariant, activeSize)} className={`inline-flex items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-semibold transition ${isFavorite ? "border-rose-200 bg-rose-50 text-rose-700" : "border-[#e8e1d5] text-[#40514a] hover:bg-[#fbfaf7]"}`}>
+              </button> */}
+              <button
+                type="button"
+                onClick={() => toggleWishlist(product, currentVariant, "")}
+                aria-label={isFavorite ? "Remove from wishlist" : "Add to wishlist"}
+                aria-pressed={isFavorite}
+                className={`inline-flex w-full items-center justify-center gap-2 rounded-lg border px-4 py-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#174a38] ${isFavorite ? "border-rose-200 bg-rose-50 text-rose-700" : "border-[#e8e1d5] text-[#40514a] hover:bg-[#fbfaf7]"}`}
+              >
                 <FaHeart /> {isFavorite ? "Saved to Wishlist" : "Add to Wishlist"}
               </button>
             </div>
@@ -403,6 +481,20 @@ const ProductDetail = () => {
                   </li>
                 ))}
               </ul>
+            )}
+
+            {quickFacts.length > 0 && (
+              <section className="mt-5 rounded-xl border border-[#eee8dc] bg-[#fffdf8] p-3.5 sm:p-4" aria-label="Product at a glance">
+                <h2 className="font-serif text-base font-bold text-[#173f38]">Product at a glance</h2>
+                <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3">
+                  {quickFacts.map(([label, value]) => (
+                    <div key={label} className="min-w-0">
+                      <dt className="text-[10px] font-medium uppercase tracking-wide text-[#887c69]">{label}</dt>
+                      <dd className="mt-0.5 break-words text-xs font-semibold text-[#34443e]">{displayValue(value)}</dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
             )}
           </section>
         </div>
@@ -419,7 +511,7 @@ const ProductDetail = () => {
 
         <div className="mt-3">
           {activeTab === "information" && (
-            <div className="grid items-start gap-3 lg:grid-cols-[1.35fr_0.9fr_0.9fr]">
+            <div className="grid auto-rows-fr items-stretch gap-3 lg:grid-cols-[1.35fr_0.9fr_0.9fr]">
               <DetailGroup title="Basic Information" entries={productDetails} />
               <DetailGroup title="Pricing Information" entries={[
                 ["Gold Rate", product.gold_rate_per_gram != null ? `${money(product.gold_rate_per_gram)} / g` : ""],
@@ -445,7 +537,7 @@ const ProductDetail = () => {
           )}
 
           {activeTab === "pricing" && (
-            <div className="grid items-start gap-3 lg:grid-cols-2">
+            <div className="grid auto-rows-fr items-stretch gap-3 lg:grid-cols-2">
               <DetailGroup title="Pricing & Charges" entries={pricingDetails} />
               <DetailGroup title="Stock Information" entries={[
                 ["Stock Status", inStock ? "In Stock" : "Out of Stock"],
@@ -458,7 +550,7 @@ const ProductDetail = () => {
           )}
 
           {activeTab === "images" && (
-            <section className="rounded-xl border border-[#eee8dc] bg-white p-4 shadow-sm">
+            <section className="flex h-full flex-col rounded-xl border border-[#eee8dc] bg-white p-4 shadow-sm">
               <h2 className="mb-4 font-serif text-lg font-bold text-[#174a38]">Product Images</h2>
               {images.length > 0 ? (
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
@@ -473,7 +565,7 @@ const ProductDetail = () => {
           )}
 
           {activeTab === "variants" && (
-            <div className="grid items-start gap-3 lg:grid-cols-2">
+            <div className="grid auto-rows-fr items-stretch gap-3 lg:grid-cols-2">
               <DetailGroup title="Material & Measurements" entries={materialDetails} />
               <DetailGroup title="Available Options" entries={[
                 ["Available colors", [...new Set(variants.map((variant) => variant.colorName || variant.color).filter(Boolean))]],
@@ -481,21 +573,20 @@ const ProductDetail = () => {
                   ...parseArray(variant.selectedSizes),
                   ...parseArray(variant.available_sizes)
                 ]))]],
-                ["Selected color", currentVariant?.colorName || currentVariant?.color],
-                ["Selected size", activeSize]
+                ["Selected color", currentVariant?.colorName || currentVariant?.color]
               ]} />
             </div>
           )}
 
           {activeTab === "specifications" && (
-            <div className="grid items-start gap-3 lg:grid-cols-2">
+            <div className="grid auto-rows-fr items-stretch gap-3 lg:grid-cols-2">
               <DetailGroup title="Sizes & Measurements" entries={sizeDetails} />
               <DetailGroup title="Specifications" entries={specsEntries} />
             </div>
           )}
 
           {activeTab === "additional" && (
-            <div className="grid items-start gap-3 lg:grid-cols-2">
+            <div className="grid auto-rows-fr items-stretch gap-3 lg:grid-cols-2">
               <DetailGroup title="Additional Details" entries={additionalDetails} />
               <DetailGroup title="Description" entries={[
                 ["Description", product.description],
@@ -503,7 +594,7 @@ const ProductDetail = () => {
                 ["Highlights", highlights]
               ]} />
               {(sizeGuide || certificate) && (
-                <section className="rounded-xl border border-[#eee8dc] bg-white p-4 shadow-sm">
+                <section className="flex h-full flex-col rounded-xl border border-[#eee8dc] bg-white p-4 shadow-sm">
                   <h2 className="mb-3 font-serif text-lg font-bold text-[#174a38]">Product Documents</h2>
                   <div className="flex flex-wrap gap-3">
                     {sizeGuide && <a href={sizeGuide} target="_blank" rel="noreferrer" className="text-sm font-semibold text-[#174a38] hover:underline">View size guide</a>}
@@ -528,6 +619,18 @@ const ProductDetail = () => {
           )}
         </div>
       </PageContainer>
+
+      {/* Metal Products — same metal type (e.g. Gold) */}
+      <MetalProducts
+        currentProductId={productId}
+        metalType={product.metal_type}
+      />
+
+      {/* Category Products — same category (e.g. Chain) */}
+      <CategoryProducts
+        currentProductId={productId}
+        category={product.category}
+      />
     </main>
   );
 };

@@ -90,7 +90,7 @@ const Footer = () => {
     "group flex items-center gap-2.5 text-[14px] text-white/75 transition-all duration-300 hover:translate-x-1 hover:text-[#f5d994]";
 
   return (
-    <footer className="relative mt-24 overflow-hidden bg-[#003b30] text-white">
+    <footer className="relative overflow-hidden bg-[#003b30] text-white">
 
       {/* Luxury background decoration */}
       <div className="pointer-events-none absolute -left-28 top-20 h-72 w-72 rounded-full border border-[#d9b568]/10" />

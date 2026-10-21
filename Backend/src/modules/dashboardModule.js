@@ -1,21 +1,32 @@
 const { pool } = require('../config/db');
+const { addDateRangeCondition } = require('../utils/dateRange');
 
-async function getDashboardData(range = 'month') {
+async function getDashboardData(range = 'month', dateRange = null) {
   try {
+    const dateFilter = (column) => {
+      const conditions = [];
+      const values = [];
+      if (dateRange) addDateRangeCondition(conditions, values, column, dateRange);
+      return { where: conditions.length ? `WHERE ${conditions.join(' AND ')}` : '', values };
+    };
     // 1. Loans metrics
-    const [[loanCounts]] = await pool.query(`
-      SELECT 
-        COUNT(*) AS total_loans
-      FROM loans
-    `);
+    const loanDateFilter = dateFilter('l.loan_date');
+    const loanActivityDate = `CASE
+      WHEN l.loan_status = 'Completed' THEN COALESCE(l.gold_released_at, l.loan_date)
+      ELSE l.loan_date
+    END`;
+    const loanActivityDateFilter = dateFilter(loanActivityDate);
+    const [[loanCounts]] = await pool.execute(`
+      SELECT COUNT(*) AS total_loans FROM loans l ${loanDateFilter.where}
+    `, loanDateFilter.values);
 
-    const [statusRows] = await pool.query(`
-      SELECT loan_status, COUNT(*) AS count
-      FROM loans
-      GROUP BY loan_status
-    `);
+    const [statusRows] = await pool.execute(`
+      SELECT l.loan_status, COUNT(*) AS count
+      FROM loans l ${loanActivityDateFilter.where}
+      GROUP BY l.loan_status
+    `, loanActivityDateFilter.values);
 
-    const [recentLoanRows] = await pool.query(`
+    const [recentLoanRows] = await pool.execute(`
       SELECT 
         l.id,
         l.loan_number,
@@ -27,6 +38,7 @@ async function getDashboardData(range = 'month') {
         l.gold_valuation,
         l.loan_status,
         l.loan_date,
+        ${loanActivityDate} AS activity_date,
         l.created_at,
         c.id AS customer_id,
         c.full_name AS customer_name,
@@ -34,14 +46,16 @@ async function getDashboardData(range = 'month') {
         c.photo_url AS customer_photo
       FROM loans l
       LEFT JOIN loan_customers c ON l.customer_id = c.id
-      ORDER BY l.created_at DESC
+      ${loanActivityDateFilter.where}
+      ORDER BY activity_date DESC, l.id DESC
       LIMIT 10
-    `);
+    `, loanActivityDateFilter.values);
 
     // Match the Users page total: count every account in the users table.
-    const [[{ total_users }]] = await pool.query(`
-      SELECT COUNT(*) AS total_users FROM users
-    `);
+    const userDateFilter = dateFilter('created_at');
+    const [[{ total_users }]] = await pool.execute(`
+      SELECT COUNT(*) AS total_users FROM users ${userDateFilter.where}
+    `, userDateFilter.values);
     const totalCustomers = Number(total_users) || 0;
 
     // 3. Products metrics
@@ -50,23 +64,24 @@ async function getDashboardData(range = 'month') {
       FROM products
       WHERE total_stock > 0
     `);
-    const [[productCounts]] = await pool.query(`
+    const productDateFilter = dateFilter('created_at');
+    const [[productCounts]] = await pool.execute(`
       SELECT
         COUNT(*) AS total_products,
         SUM(CASE WHEN total_stock > 0 AND total_stock < 10 THEN 1 ELSE 0 END) AS low_stock_products
-      FROM products
-    `);
-    const [[{ total_categories }]] = await pool.query(`
-      SELECT COUNT(*) AS total_categories FROM categories
-    `);
+      FROM products ${productDateFilter.where}
+    `, productDateFilter.values);
+    const [[{ total_categories }]] = await pool.execute(`
+      SELECT COUNT(*) AS total_categories FROM categories ${productDateFilter.where}
+    `, productDateFilter.values);
 
-    const [productRows] = await pool.query(`
+    const [productRows] = await pool.execute(`
       SELECT 
         id, product_code, name, category, purity, mrp, offer_price, total_stock, images, rating
-      FROM products
+      FROM products ${productDateFilter.where}
       ORDER BY id DESC
       LIMIT 10
-    `);
+    `, productDateFilter.values);
 
     // 4. Active Gold Rates
     const [goldRateRows] = await pool.query(`
@@ -104,6 +119,7 @@ async function getDashboardData(range = 'month') {
       Processing: statusMap.Processing,
       Pending: statusMap.Pending,
       Overdue: statusMap.Overdue,
+      Completed: statusMap.Completed,
     };
 
     const formattedRecentLoans = recentLoanRows.map((l) => {
@@ -122,7 +138,7 @@ async function getDashboardData(range = 'month') {
         amount: `₹ ${Number(l.principal_amount || l.gold_valuation || 0).toLocaleString('en-IN')}`,
         rawAmount: Number(l.principal_amount || 0),
         status: l.loan_status || 'Active',
-        date: l.loan_date ? new Date(l.loan_date).toLocaleDateString('en-IN', { month: 'short', day: '2-digit', year: 'numeric' }) : '—',
+        date: l.activity_date ? new Date(l.activity_date).toLocaleDateString('en-IN', { month: 'short', day: '2-digit', year: 'numeric' }) : '—',
         img,
         rawId: l.id
       };
@@ -183,7 +199,33 @@ async function getDashboardData(range = 'month') {
         ORDER BY YEAR(created_at), MONTH(created_at)
       `
     };
-    const [revenueRows] = await pool.query(revenueQueries[salesRange]);
+    let revenueRows;
+    if (dateRange) {
+      const revenueFilter = dateFilter('created_at');
+      const trendGrouping = dateRange.startDate
+        ? {
+          key: "DATE_FORMAT(created_at, '%Y-%m-%d')",
+          label: "MIN(DATE_FORMAT(created_at, '%b %d, %Y'))",
+          group: "DATE(created_at)"
+        }
+        : {
+          key: "DATE_FORMAT(created_at, '%Y-%m-01')",
+          label: "MIN(DATE_FORMAT(created_at, '%b %Y'))",
+          group: "YEAR(created_at), MONTH(created_at)"
+        };
+      const [rows] = await pool.execute(`
+        SELECT ${trendGrouping.key} AS period_key,
+          ${trendGrouping.label} AS label,
+          ${trendGrouping.label} AS date,
+          SUM(total_amount) AS revenue
+        FROM billings ${revenueFilter.where}
+        GROUP BY ${trendGrouping.group}
+        ORDER BY ${trendGrouping.group}
+      `, revenueFilter.values);
+      revenueRows = rows;
+    } else {
+      [revenueRows] = await pool.query(revenueQueries[salesRange]);
+    }
     const revenueTrends = revenueRows.map((row) => ({
       label: row.label,
       date: row.date,

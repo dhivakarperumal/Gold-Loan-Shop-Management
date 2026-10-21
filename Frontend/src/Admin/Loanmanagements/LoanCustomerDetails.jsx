@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { FiArrowLeft, FiCalendar, FiDownload, FiEdit2, FiMapPin, FiUser } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api, { getPrivateFile } from "../../api";
+import { formatCurrency } from "../../utils/currency";
 
 const DOCUMENT_TYPE_LABELS = {
   aadhaar: "Aadhaar Card",
@@ -238,7 +239,7 @@ export default function LoanCustomerDetails() {
                   <tr key={loan.id} className="text-sm">
                     <td className="px-4 py-3 font-semibold text-[#008577]">{loan.loan_number}</td>
                     <td className="px-4 py-3">{loan.gold_pledge_number}</td>
-                    <td className="px-4 py-3">{new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(Number(loan.principal_amount))}</td>
+                    <td className="px-4 py-3">{formatCurrency(loan.principal_amount)}</td>
                     <td className="px-4 py-3"><span className="inline-flex items-center gap-1"><FiCalendar /> {formatDate(loan.maturity_date)}</span></td>
                     <td className="px-4 py-3">{loan.loan_status}</td>
                   </tr>

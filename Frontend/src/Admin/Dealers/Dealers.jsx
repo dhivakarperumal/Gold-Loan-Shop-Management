@@ -1,19 +1,18 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import {
-  AlertTriangle, ArrowDownToLine, ArrowLeft, ArrowRightLeft, Building2, Check,
-  ClipboardList, Coins, Download, FileText, LoaderCircle, Plus, Printer, RefreshCw,
-  Search, ShieldCheck, Truck, Wallet, X
+  AlertTriangle, ArrowLeft, ArrowRightLeft, Building2, Check, ChevronRight,
+  ClipboardList, Coins, Download, FileText, LoaderCircle, Plus, Printer,
+  LayoutGrid, List, Search, ShieldCheck, Truck, Wallet, X
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import api from "../../api";
+import { formatCurrency as currency } from "../../utils/currency";
+import DateRangeFilter from "../Components/DateRangeFilter";
 
 const TEAL = "#003B3B";
 const PURITIES = ["999", "916", "833", "750", "585"];
 const today = () => new Date().toISOString().slice(0, 10);
-const currency = (value) => new Intl.NumberFormat("en-IN", {
-  style: "currency", currency: "INR", maximumFractionDigits: 2
-}).format(Number(value || 0));
 const initialDealer = {
   name: "", contact_person: "", email: "", phone: "", alternate_phone: "",
   category_id: "", gstin: "", pan: "", billing_address_line1: "", billing_city: "",
@@ -56,7 +55,6 @@ function SelectField({ label, value, onChange, children, required = false }) {
 
 const Dealers = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const section = location.pathname.endsWith("/purchases") ? "purchases"
     : location.pathname.endsWith("/jobs") ? "jobs"
       : location.pathname.endsWith("/refining") ? "refining" : "dealers";
@@ -71,7 +69,8 @@ const Dealers = () => {
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
-  const [categoryFilter, setCategoryFilter] = useState("All");
+  const [viewMode, setViewMode] = useState("table");
+  const [dateRange, setDateRange] = useState({ preset: "all", startDate: "", endDate: "" });
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 1 });
   const [dialog, setDialog] = useState("");
@@ -99,11 +98,12 @@ const Dealers = () => {
     const response = await api.get("/dealers", { params: {
       page, limit: 25, search: search.trim(),
       status: statusFilter === "All" ? undefined : statusFilter,
-      category_id: categoryFilter === "All" ? undefined : categoryFilter
+      startDate: dateRange.startDate,
+      endDate: dateRange.endDate
     } });
     setDealers(response.data.dealers || []);
     setPagination(response.data.pagination || { total: 0, totalPages: 1 });
-  }, [page, search, statusFilter, categoryFilter]);
+  }, [page, search, statusFilter, dateRange.startDate, dateRange.endDate]);
 
   const fetchAll = useCallback(async () => {
     setError("");
@@ -116,17 +116,17 @@ const Dealers = () => {
       setSummary(summaryResult.data);
       if (section === "dealers") await fetchDealers();
       if (section === "purchases") {
-        const result = await api.get("/dealers/purchases", { params: { page: 1, limit: 50 } });
+        const result = await api.get("/dealers/purchases", { params: { page: 1, limit: 50, startDate: dateRange.startDate, endDate: dateRange.endDate } });
         setPurchases(result.data.purchases || []);
       }
       if (section === "jobs") {
-        const result = await api.get("/dealers/jobs", { params: { page: 1, limit: 50 } });
+        const result = await api.get("/dealers/jobs", { params: { page: 1, limit: 50, startDate: dateRange.startDate, endDate: dateRange.endDate } });
         setJobs(result.data.jobs || []);
       }
       if (section === "refining") {
         const [receiptsResult, jobResult] = await Promise.all([
-          api.get("/dealers/old-gold", { params: { page: 1, limit: 100 } }),
-          api.get("/dealers/jobs", { params: { page: 1, limit: 100 } })
+          api.get("/dealers/old-gold", { params: { page: 1, limit: 100, startDate: dateRange.startDate, endDate: dateRange.endDate } }),
+          api.get("/dealers/jobs", { params: { page: 1, limit: 100, startDate: dateRange.startDate, endDate: dateRange.endDate } })
         ]);
         setOldGoldReceipts(receiptsResult.data.receipts || []);
         setJobs(jobResult.data.jobs || []);
@@ -139,7 +139,7 @@ const Dealers = () => {
     } finally {
       setLoading(false);
     }
-  }, [fetchDealers, section]);
+  }, [fetchDealers, section, dateRange.startDate, dateRange.endDate]);
 
   useEffect(() => {
     const timeout = setTimeout(() => { void fetchAll(); }, 250);
@@ -476,78 +476,78 @@ const Dealers = () => {
   };
 
   const visibleDealers = useMemo(() => dealers, [dealers]);
+  const visiblePurchases = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    if (!query) return purchases;
+    return purchases.filter((purchase) => [
+      purchase.document_number,
+      purchase.dealer_name,
+      purchase.document_type,
+      purchase.supplier_invoice_number
+    ].some((value) => String(value || "").toLowerCase().includes(query)));
+  }, [purchases, search]);
   const openJobs = jobs.filter((job) => !["Reconciled", "Cancelled"].includes(job.status));
-  const tabs = [
-    ["dealers", "Dealer Master", "/admin/dealers"],
-    ["purchases", "Purchases & Payables", "/admin/dealers/purchases"],
-    ["jobs", "Goldsmith Job Work", "/admin/dealers/jobs"],
-    ["refining", "Old Gold & Refining", "/admin/dealers/refining"]
-  ];
 
   return <div className="space-y-6">
-    <div className="flex flex-wrap items-center justify-between gap-4">
-      <div>
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#008577]">Sri Vengateswara Gold Shop</p>
-        <h1 className="mt-1 text-2xl font-black text-slate-900">Dealer Management</h1>
-        <p className="mt-1 text-sm text-slate-500">Supplier accounts, metal custody, job work and settlements</p>
-      </div>
-      <div className="flex gap-2">
-        <button type="button" onClick={() => void refresh()} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"><RefreshCw size={16} /> Refresh</button>
-        {section === "dealers" && <button type="button" onClick={() => startDealerEdit()} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#008577]"><Plus size={17} /> Register Dealer</button>}
-        {section === "purchases" && <><button type="button" onClick={openPayment} className="inline-flex items-center gap-2 rounded-lg border border-[#003B3B] px-4 py-2.5 text-sm font-bold text-[#003B3B]"><Wallet size={16} /> Record Payment</button><button type="button" onClick={() => setDialog("purchase")} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#008577]"><Plus size={17} /> New Purchase</button></>}
-        {section === "jobs" && <button type="button" onClick={() => setDialog("job")} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#008577]"><Plus size={17} /> Create Job Order</button>}
-        {section === "refining" && <><button type="button" onClick={() => setDialog("oldGold")} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#008577]"><Plus size={17} /> Receive Old Gold</button><button type="button" onClick={() => setDialog("refining")} className="inline-flex items-center gap-2 rounded-lg border border-[#003B3B] px-4 py-2.5 text-sm font-bold text-[#003B3B]"><ArrowDownToLine size={16} /> Refining Receipt</button></>}
-      </div>
-    </div>
+    {!["dealers", "purchases"].includes(section) && <DateRangeFilter onApply={(range) => { setPage(1); setDateRange(range); }} />}
 
-    <nav className="flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1.5">
-      {tabs.map(([key, label, route]) => <button key={key} type="button" onClick={() => navigate(route)}
-        className={`whitespace-nowrap rounded-lg px-4 py-2.5 text-sm font-bold transition ${section === key ? "bg-[#003B3B] text-white" : "text-slate-500 hover:bg-slate-50 hover:text-[#003B3B]"}`}>{label}</button>)}
-    </nav>
-
-    <div className="grid grid-cols-2 gap-3 xl:grid-cols-6">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
       {[
-        ["Active dealers", summary?.dealers?.active ?? "—", Truck],
-        ["Supplier payables", summary ? currency(summary.payables) : "—", Wallet],
-        ["Dealer receivables", summary ? currency(summary.receivables) : "—", ArrowRightLeft],
-        ["Purchases this month", summary ? currency(summary.purchases_this_month) : "—", Coins],
-        ["Overdue invoices", summary ? `${summary.overdue.count} · ${currency(summary.overdue.amount)}` : "—", AlertTriangle],
-        ["Open job orders", summary?.pending_jobs ?? "—", ClipboardList]
-      ].map(([label, value, Icon]) => <div key={label} className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-        <div className="flex items-center justify-between gap-2"><span className="text-xs font-semibold text-slate-500">{label}</span><Icon size={17} className="text-[#008577]" /></div>
-        <p className="mt-2 truncate text-xl font-black text-slate-900">{value}</p>
-      </div>)}
+        { label: "Active dealers", value: summary?.dealers?.active ?? "—", note: "Currently active", Icon: Truck, theme: "border-emerald-700 bg-[#103d34]", accent: "text-emerald-300" },
+        { label: "Supplier payables", value: summary ? currency(summary.payables) : "—", note: "Outstanding balance", Icon: Wallet, theme: "border-amber-700 bg-[#40331b]", accent: "text-amber-300" },
+        { label: "Dealer receivables", value: summary ? currency(summary.receivables) : "—", note: "Amount to receive", Icon: ArrowRightLeft, theme: "border-sky-700 bg-[#15354b]", accent: "text-sky-300" },
+        { label: "Purchases this month", value: summary ? currency(summary.purchases_this_month) : "—", note: "Monthly total", Icon: Coins, theme: "border-orange-700 bg-[#4a2a22]", accent: "text-orange-300" },
+        { label: "Overdue invoices", value: summary ? `${summary.overdue.count} · ${currency(summary.overdue.amount)}` : "—", note: "Invoices past due", Icon: AlertTriangle, theme: "border-rose-700 bg-[#422333]", accent: "text-rose-300" },
+        { label: "Open job orders", value: summary?.pending_jobs ?? "—", note: "Awaiting completion", Icon: ClipboardList, theme: "border-teal-700 bg-[#173c46]", accent: "text-teal-300" }
+      ].map(({ label, value, note, Icon, theme, accent }) => <article key={label} className={`relative flex min-h-32 items-center gap-4 overflow-hidden rounded-2xl border-l-4 p-4 text-white shadow-md transition duration-200 hover:-translate-y-0.5 hover:shadow-lg ${theme}`}>
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-black/20 text-white shadow-inner">
+          <Icon size={24} aria-hidden="true" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs font-bold text-white/80">{label}</p>
+          <p className="mt-1 truncate text-xl font-black text-white">{value}</p>
+          <p className={`mt-1 truncate text-[11px] font-bold ${accent}`}>{note}</p>
+        </div>
+        <span aria-hidden="true" className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-white/60 text-slate-700">
+          <ChevronRight size={15} />
+        </span>
+        <span aria-hidden="true" className={`absolute bottom-3 right-4 flex h-7 items-end gap-1 opacity-70 ${accent}`}>
+          <i className="h-2 w-1.5 rounded-t-sm bg-current" />
+          <i className="h-4 w-1.5 rounded-t-sm bg-current" />
+          <i className="h-3 w-1.5 rounded-t-sm bg-current" />
+          <i className="h-6 w-1.5 rounded-t-sm bg-current" />
+        </span>
+      </article>)}
     </div>
-
-    {summary?.metal_outstanding?.length > 0 && <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-      <div className="mb-3 flex items-center gap-2 text-sm font-black text-amber-900"><Coins size={17} /> Metal outstanding by purity</div>
-      <div className="flex flex-wrap gap-2">{summary.metal_outstanding.map((metal) => <span key={`${metal.metal_type}-${metal.purity}`} className="rounded-full border border-amber-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700">
-        {metal.metal_type} {metal.purity}: {Number(metal.weight).toFixed(3)} g <span className="text-slate-400">({Number(metal.fine_gold_weight).toFixed(3)} fine g)</span>
-      </span>)}</div>
-    </div>}
 
     <ErrorBox message={error} retry={() => void fetchAll()} />
     {loading ? <div className="flex min-h-64 items-center justify-center gap-3 rounded-xl border border-slate-100 bg-white text-sm font-bold text-slate-500"><LoaderCircle className="animate-spin" /> Loading dealer records...</div> : <>
-      {section === "dealers" && <section className="overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-4">
-          <div className="relative w-full max-w-md"><Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={17} />
-            <input value={search} onChange={(event) => { setPage(1); setSearch(event.target.value); }} placeholder="Search dealer, code, contact, GSTIN..." className="w-full rounded-lg border border-slate-200 py-2.5 pl-10 pr-3 text-sm outline-none focus:border-[#008577]" /></div>
-          <div className="flex gap-2">
-            <select value={statusFilter} onChange={(event) => { setPage(1); setStatusFilter(event.target.value); }} className="rounded-lg border border-slate-200 px-3 py-2 text-sm"><option>All</option><option>Active</option><option>Inactive</option><option>On Hold</option></select>
-            <select value={categoryFilter} onChange={(event) => { setPage(1); setCategoryFilter(event.target.value); }} className="rounded-lg border border-slate-200 px-3 py-2 text-sm"><option value="All">All categories</option>{categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select>
-            <button type="button" onClick={async () => {
-              const name = window.prompt("New dealer category");
-              if (!name?.trim()) return;
-              try { await api.post("/dealers/categories", { name: name.trim() }); toast.success("Dealer category added"); await fetchAll(); }
-              catch (requestError) { toast.error(requestError.response?.data?.message || "Unable to add category"); }
-            }} className="rounded-lg border border-[#003B3B] px-3 py-2 text-xs font-bold text-[#003B3B]">Add category</button>
+      {section === "dealers" && <>
+        <section aria-label="Dealer filters and display options" className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:flex-row md:items-center">
+          <label className="relative min-w-0 flex-1 md:max-w-md">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <span className="sr-only">Search dealers</span>
+            <input value={search} onChange={(event) => { setPage(1); setSearch(event.target.value); }} placeholder="Search dealers by name, ID, contact..." className="w-full rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 pl-12 text-sm font-medium text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#008577] focus:bg-white" />
+          </label>
+          <div className="flex flex-wrap items-center gap-2 md:ml-auto">
+            <select aria-label="Filter dealers by status" value={statusFilter} onChange={(event) => { setPage(1); setStatusFilter(event.target.value); }} className="min-h-11 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-600 outline-none focus:border-[#008577]">
+              <option value="All">Select Status</option><option>Active</option><option>Inactive</option><option>On Hold</option>
+            </select>
+            <DateRangeFilter className="shrink-0" onApply={(range) => { setPage(1); setDateRange(range); }} />
+            <div role="group" aria-label="Dealer display mode" className="flex items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+              <button type="button" onClick={() => setViewMode("table")} aria-label="List view" aria-pressed={viewMode === "table"} className={`rounded-lg p-2.5 transition ${viewMode === "table" ? "bg-[#003B3B] text-white" : "text-slate-400 hover:text-slate-700"}`}><List size={18} /></button>
+              <button type="button" onClick={() => setViewMode("grid")} aria-label="Card view" aria-pressed={viewMode === "grid"} className={`rounded-lg p-2.5 transition ${viewMode === "grid" ? "bg-[#003B3B] text-white" : "text-slate-400 hover:text-slate-700"}`}><LayoutGrid size={18} /></button>
+            </div>
+            <button type="button" onClick={() => startDealerEdit()} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#008577]"><Plus size={17} /> Register Dealer</button>
           </div>
-        </div>
+        </section>
+        {viewMode === "table" ? <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
         <div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left">
           <thead><tr className="bg-gradient-to-r from-[#003B3B] to-[#008577] text-xs uppercase tracking-wide text-white">
-            <th className="px-4 py-3">Dealer</th><th className="px-4 py-3">Category / GSTIN</th><th className="px-4 py-3">Contact</th><th className="px-4 py-3 text-right">Payable</th><th className="px-4 py-3 text-right">Receivable</th><th className="px-4 py-3">Status</th><th className="px-4 py-3 text-right">Actions</th>
+            <th className="px-4 py-4">S No</th><th className="px-4 py-4">Dealer</th><th className="px-4 py-4">Category / GSTIN</th><th className="px-4 py-4">Contact</th><th className="px-4 py-4 text-right">Payable</th><th className="px-4 py-4 text-right">Receivable</th><th className="px-4 py-4">Status</th><th className="px-4 py-4 text-right">Actions</th>
           </tr></thead>
-          <tbody>{visibleDealers.length === 0 ? <tr><td colSpan="7" className="p-10 text-center text-sm text-slate-400">No dealer records match your search.</td></tr> : visibleDealers.map((dealer) => <tr key={dealer.id} className="border-b border-slate-100 hover:bg-emerald-50/30">
+          <tbody>{visibleDealers.length === 0 ? <tr><td colSpan="8" className="p-10 text-center text-sm text-slate-400">No dealer records match your search.</td></tr> : visibleDealers.map((dealer, index) => <tr key={dealer.id} className="border-b border-slate-100 hover:bg-emerald-50/30">
+            <td className="px-4 py-3 text-sm text-slate-500">{(page - 1) * 25 + index + 1}</td>
             <td className="px-4 py-3"><button type="button" onClick={() => void openDealerDocs(dealer)} className="text-left font-bold text-[#003B3B] hover:underline">{dealer.name}</button><p className="text-xs text-slate-400">{dealer.dealer_code}</p></td>
             <td className="px-4 py-3 text-sm text-slate-700">{dealer.category_name}<p className="text-xs text-slate-400">{dealer.gstin || "GSTIN not recorded"}</p></td>
             <td className="px-4 py-3 text-sm text-slate-700">{dealer.contact_person}<p className="text-xs text-slate-400">{dealer.phone} · {dealer.email || "No email"}</p></td>
@@ -560,15 +560,71 @@ const Dealers = () => {
         <div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-xs text-slate-500">
           <span>{pagination.total} dealer records</span><div className="flex items-center gap-2"><button type="button" disabled={page <= 1} onClick={() => setPage((current) => current - 1)} className="rounded border px-2 py-1 disabled:opacity-40">Previous</button><span>Page {page} of {pagination.totalPages}</span><button type="button" disabled={page >= pagination.totalPages} onClick={() => setPage((current) => current + 1)} className="rounded border px-2 py-1 disabled:opacity-40">Next</button></div>
         </div>
-      </section>}
+        </section> : <section aria-label="Dealers in card view" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {visibleDealers.length === 0
+            ? <div className="rounded-2xl border border-slate-100 bg-white p-10 text-center text-sm text-slate-400 sm:col-span-2 xl:col-span-3">No dealer records match your search.</div>
+            : visibleDealers.map((dealer) => <article key={dealer.id} className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <button type="button" onClick={() => void openDealerDocs(dealer)} className="break-words text-left font-bold text-[#003B3B] hover:underline">{dealer.name}</button>
+                  <p className="mt-1 text-xs text-slate-400">{dealer.dealer_code}</p>
+                </div>
+                <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black uppercase ${dealer.status === "Active" ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-500"}`}>{dealer.status}</span>
+              </div>
+              <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-4 text-sm">
+                <div><dt className="text-[10px] font-bold uppercase text-slate-400">Category / GSTIN</dt><dd className="mt-1 text-slate-700">{dealer.category_name || "—"}<span className="block text-xs text-slate-400">{dealer.gstin || "GSTIN not recorded"}</span></dd></div>
+                <div><dt className="text-[10px] font-bold uppercase text-slate-400">Contact</dt><dd className="mt-1 text-slate-700">{dealer.contact_person || "—"}<span className="block text-xs text-slate-400">{dealer.phone || "No phone"}</span></dd></div>
+                <div><dt className="text-[10px] font-bold uppercase text-slate-400">Payable</dt><dd className="mt-1 font-bold text-slate-800">{currency(dealer.payable_balance)}</dd></div>
+                <div><dt className="text-[10px] font-bold uppercase text-slate-400">Receivable</dt><dd className="mt-1 font-bold text-slate-800">{currency(dealer.receivable_balance)}</dd></div>
+              </dl>
+              <div className="mt-4 flex justify-end gap-2 border-t border-slate-100 pt-4">
+                <button type="button" onClick={() => void openStatement(dealer)} className="rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-700">Statement</button>
+                <button type="button" onClick={() => startDealerEdit(dealer)} className="rounded-lg bg-[#003B3B] px-3 py-2 text-xs font-bold text-white">Edit</button>
+              </div>
+            </article>)}
+          <div className="flex items-center justify-between rounded-xl border border-slate-100 bg-white px-4 py-3 text-xs text-slate-500 sm:col-span-2 xl:col-span-3">
+            <span>{pagination.total} dealer records</span><div className="flex items-center gap-2"><button type="button" disabled={page <= 1} onClick={() => setPage((current) => current - 1)} className="rounded border px-2 py-1 disabled:opacity-40">Previous</button><span>Page {page} of {pagination.totalPages}</span><button type="button" disabled={page >= pagination.totalPages} onClick={() => setPage((current) => current + 1)} className="rounded border px-2 py-1 disabled:opacity-40">Next</button></div>
+          </div>
+        </section>}
+      </>}
 
-      {section === "purchases" && <section className="overflow-hidden rounded-xl border border-slate-100 bg-white">
-        <div className="flex items-center justify-between border-b border-slate-100 p-4"><div><h2 className="font-black text-slate-800">Purchase documents & accounts payable</h2><p className="text-xs text-slate-500">Posted documents retain invoice-rate and tax snapshots.</p></div><button type="button" onClick={() => exportCsv([["Document","Dealer","Type","Date","Due date","Total","Paid","Outstanding"], ...purchases.map((row) => [row.document_number,row.dealer_name,row.document_type,row.document_date,row.due_date,row.total,row.paid_amount,row.outstanding])], "dealer-purchases.csv")} className="inline-flex items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold"><Download size={15} /> Export CSV</button></div>
-        <div className="overflow-x-auto"><table className="w-full min-w-[850px] text-left"><thead><tr className="bg-[#003B3B] text-xs uppercase text-white"><th className="p-3">Document</th><th className="p-3">Dealer</th><th className="p-3">Invoice ref</th><th className="p-3">Date / Due</th><th className="p-3 text-right">Amount</th><th className="p-3 text-right">Paid</th><th className="p-3 text-right">Outstanding</th></tr></thead><tbody>{purchases.length ? purchases.map((item) => <tr key={item.id} className="border-b text-sm"><td className="p-3 font-bold text-[#003B3B]">{item.document_number}<p className="text-[10px] font-normal uppercase text-slate-400">{item.document_type.replaceAll("_"," ")}</p></td><td className="p-3">{item.dealer_name}</td><td className="p-3">{item.supplier_invoice_number || "—"}</td><td className="p-3">{item.document_date}<p className="text-xs text-slate-400">Due {item.due_date || "—"}</p></td><td className="p-3 text-right">{currency(item.total)}</td><td className="p-3 text-right">{currency(item.paid_amount)}</td><td className="p-3 text-right font-bold">{currency(item.outstanding)}</td></tr>) : <tr><td colSpan="7" className="p-10 text-center text-slate-400">No purchase documents posted.</td></tr>}</tbody></table></div>
-      </section>}
+      {section === "purchases" && <>
+        <section aria-label="Purchase filters and display options" className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:flex-row md:items-center">
+          <label className="relative min-w-0 flex-1 md:max-w-md">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <span className="sr-only">Search purchase documents</span>
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search document, dealer, invoice..." className="w-full rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 pl-12 text-sm font-medium text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-[#008577] focus:bg-white" />
+          </label>
+          <div className="flex flex-wrap items-center justify-between gap-2 md:ml-auto md:justify-end">
+            <DateRangeFilter className="shrink-0" onApply={(range) => { setPage(1); setDateRange(range); }} />
+            <div role="group" aria-label="Purchase display mode" className="flex items-center rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+              <button type="button" onClick={() => setViewMode("table")} aria-label="List view" aria-pressed={viewMode === "table"} className={`rounded-lg p-2.5 transition ${viewMode === "table" ? "bg-[#003B3B] text-white" : "text-slate-400 hover:text-slate-700"}`}><List size={18} /></button>
+              <button type="button" onClick={() => setViewMode("grid")} aria-label="Card view" aria-pressed={viewMode === "grid"} className={`rounded-lg p-2.5 transition ${viewMode === "grid" ? "bg-[#003B3B] text-white" : "text-slate-400 hover:text-slate-700"}`}><LayoutGrid size={18} /></button>
+            </div>
+            <button type="button" onClick={openPayment} className="inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-xl border border-[#003B3B] px-3 py-2.5 text-xs font-bold text-[#003B3B] hover:bg-emerald-50"><Wallet size={16} /> Record Payment</button>
+            <button type="button" onClick={() => setDialog("purchase")} className="inline-flex min-h-11 items-center gap-2 whitespace-nowrap rounded-xl bg-[#003B3B] px-3 py-2.5 text-xs font-bold text-white hover:bg-[#008577]"><Plus size={17} /> New Purchase</button>
+            <button type="button" onClick={() => exportCsv([["Document","Dealer","Type","Date","Due date","Total","Paid","Outstanding"], ...visiblePurchases.map((row) => [row.document_number,row.dealer_name,row.document_type,row.document_date,row.due_date,row.total,row.paid_amount,row.outstanding])], "dealer-purchases.csv")} className="inline-flex shrink-0 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold"><Download size={15} /> Export CSV</button>
+          </div>
+        </section>
+        <section className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm">
+          {viewMode === "table" ? <div className="overflow-x-auto"><table className="w-full min-w-[950px] text-left">
+            <thead><tr className="bg-[#003B3B] text-xs uppercase text-white">
+              <th className="rounded-tl-xl px-4 py-4">S No</th><th className="px-4 py-4">Document</th><th className="px-4 py-4">Dealer</th><th className="px-4 py-4">Invoice ref</th><th className="px-4 py-4">Date / Due</th><th className="px-4 py-4 text-right">Amount</th><th className="px-4 py-4 text-right">Paid</th><th className="rounded-tr-xl px-4 py-4 text-right">Outstanding</th>
+            </tr></thead>
+            <tbody>{visiblePurchases.length ? visiblePurchases.map((item, index) => <tr key={item.id} className="border-b border-slate-100 text-sm hover:bg-emerald-50/30">
+              <td className="px-4 py-3 text-slate-500">{index + 1}</td><td className="px-4 py-3 font-bold text-[#003B3B]">{item.document_number}<p className="text-[10px] font-normal uppercase text-slate-400">{item.document_type.replaceAll("_", " ")}</p></td><td className="px-4 py-3">{item.dealer_name}</td><td className="px-4 py-3">{item.supplier_invoice_number || "—"}</td><td className="px-4 py-3">{item.document_date}<p className="text-xs text-slate-400">Due {item.due_date || "—"}</p></td><td className="px-4 py-3 text-right">{currency(item.total)}</td><td className="px-4 py-3 text-right">{currency(item.paid_amount)}</td><td className="px-4 py-3 text-right font-bold">{currency(item.outstanding)}</td>
+            </tr>) : <tr><td colSpan="8" className="p-10 text-center text-slate-400">{purchases.length ? "No purchase documents match your search." : "No purchase documents posted."}</td></tr>}</tbody>
+          </table></div> : <div className="grid gap-4 p-4 sm:grid-cols-2 xl:grid-cols-3">
+            {visiblePurchases.length ? visiblePurchases.map((item, index) => <article key={item.id} className="rounded-xl border border-slate-100 p-4">
+              <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-bold uppercase text-slate-400">S No {index + 1}</p><h3 className="mt-1 font-bold text-[#003B3B]">{item.document_number}</h3><p className="text-[10px] uppercase text-slate-400">{item.document_type.replaceAll("_", " ")}</p></div><span className="text-right text-xs font-bold text-slate-700">{currency(item.outstanding)}<span className="block font-normal text-slate-400">Outstanding</span></span></div>
+              <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-100 pt-3 text-sm"><div><dt className="text-[10px] font-bold uppercase text-slate-400">Dealer</dt><dd className="mt-1">{item.dealer_name || "—"}</dd></div><div><dt className="text-[10px] font-bold uppercase text-slate-400">Invoice ref</dt><dd className="mt-1">{item.supplier_invoice_number || "—"}</dd></div><div><dt className="text-[10px] font-bold uppercase text-slate-400">Date / Due</dt><dd className="mt-1">{item.document_date || "—"}<span className="block text-xs text-slate-400">Due {item.due_date || "—"}</span></dd></div><div><dt className="text-[10px] font-bold uppercase text-slate-400">Amount / Paid</dt><dd className="mt-1">{currency(item.total)}<span className="block text-xs text-slate-400">Paid {currency(item.paid_amount)}</span></dd></div></dl>
+            </article>) : <p className="p-8 text-center text-sm text-slate-400 sm:col-span-2 xl:col-span-3">{purchases.length ? "No purchase documents match your search." : "No purchase documents posted."}</p>}
+          </div>}
+        </section>
+      </>}
 
       {section === "jobs" && <section className="overflow-hidden rounded-xl border border-slate-100 bg-white">
-        <div className="border-b border-slate-100 p-4"><h2 className="font-black text-slate-800">Goldsmith issue, receipt & reconciliation</h2><p className="text-xs text-slate-500">Weights are tracked by purity and fine-gold equivalent. Unexplained variance requires approval reason.</p>{jobs.filter((job) => job.reconciliation_status === "Pending").map((job) => <div key={job.id} className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm"><span>{job.job_number} has a pending fine-gold variance of {Number(job.reconciliation_variance).toFixed(3)} g.</span><button type="button" onClick={() => void approveReconciliation(job)} className="rounded bg-amber-700 px-3 py-1.5 text-xs font-bold text-white">Approve with reason</button></div>)}</div>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-4"><div><h2 className="font-black text-slate-800">Goldsmith issue, receipt & reconciliation</h2><p className="text-xs text-slate-500">Weights are tracked by purity and fine-gold equivalent. Unexplained variance requires approval reason.</p></div><button type="button" onClick={() => setDialog("job")} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#008577]"><Plus size={17} /> Create Job Order</button>{jobs.filter((job) => job.reconciliation_status === "Pending").map((job) => <div key={job.id} className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm"><span>{job.job_number} has a pending fine-gold variance of {Number(job.reconciliation_variance).toFixed(3)} g.</span><button type="button" onClick={() => void approveReconciliation(job)} className="rounded bg-amber-700 px-3 py-1.5 text-xs font-bold text-white">Approve with reason</button></div>)}</div>
         <div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left"><thead><tr className="bg-[#003B3B] text-xs uppercase text-white"><th className="p-3">Job / Dealer</th><th className="p-3">Due</th><th className="p-3 text-right">Issued fine g</th><th className="p-3 text-right">Returned fine g</th><th className="p-3">Status / Variance</th><th className="p-3 text-right">Post movement</th></tr></thead><tbody>{jobs.length ? jobs.map((job) => <tr key={job.id} className="border-b text-sm"><td className="p-3 font-bold">{job.job_number}<p className="text-xs font-normal text-slate-500">{job.dealer_name}</p></td><td className="p-3">{job.due_date || "—"}</td><td className="p-3 text-right">{Number(job.issued_fine_weight).toFixed(3)}</td><td className="p-3 text-right">{Number(job.returned_fine_weight).toFixed(3)}</td><td className="p-3">{job.status}{job.reconciliation_variance != null && <p className="text-xs font-bold text-amber-700">Variance {Number(job.reconciliation_variance).toFixed(3)} fine g</p>}</td><td className="p-3"><div className="flex justify-end gap-1"><button type="button" disabled={!["Open","Issued"].includes(job.status)} onClick={() => { setMetalForm({ ...metalForm, job_id: String(job.id), weight: "" }); setDialog("issue"); }} className="rounded border px-2 py-1 text-[10px] font-bold disabled:opacity-40">Issue</button><button type="button" disabled={!["Issued","Partially Received"].includes(job.status)} onClick={() => { setMetalForm({ ...metalForm, job_id: String(job.id), weight: "" }); setDialog("receipt"); }} className="rounded border px-2 py-1 text-[10px] font-bold disabled:opacity-40">Receive</button><button type="button" disabled={["Reconciled","Cancelled"].includes(job.status)} onClick={() => { setReconcileForm({ job_id: job.id, approved_loss: "0", reason: "" }); setDialog("reconcile"); }} className="rounded bg-[#003B3B] px-2 py-1 text-[10px] font-bold text-white disabled:opacity-40">Reconcile</button></div></td></tr>) : <tr><td colSpan="6" className="p-10 text-center text-slate-400">No job orders recorded.</td></tr>}</tbody></table></div>
       </section>}
 
@@ -581,7 +637,7 @@ const Dealers = () => {
 
     {dialog === "dealer" && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4">
       <form onSubmit={submitDealer} className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
-        <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-6 py-4"><div><h2 className="text-xl font-black text-slate-900">{editingDealer ? "Update dealer profile" : "Register jewellery trade partner"}</h2><p className="text-xs text-slate-500">Financial and metal opening balances post once to separate ledgers.</p></div><button type="button" onClick={() => setDialog("")} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X /></button></div>
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4"><div><h2 className="text-xl font-black text-slate-900">{editingDealer ? "Update dealer profile" : "Register jewellery trade partner"}</h2><p className="text-xs text-slate-500">Financial and metal opening balances post once to separate ledgers.</p></div><button type="button" onClick={() => setDialog("")} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100"><X /></button></div>
         <div className="grid gap-5 p-6 md:grid-cols-3">
           <Field label="Dealer / firm name" required value={form.name} onChange={(e) => setDealerField("name", e.target.value)} />
           <SelectField label="Dealer category" required value={form.category_id} onChange={(e) => setDealerField("category_id", e.target.value)}><option value="">Choose category</option>{categories.filter((item) => item.active).map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</SelectField>
@@ -609,12 +665,12 @@ const Dealers = () => {
           {!editingDealer && <><SelectField label="Opening financial balance side" value={form.opening_balance_side} onChange={(e) => setDealerField("opening_balance_side", e.target.value)}><option value="payable">Payable to dealer</option><option value="receivable">Receivable from dealer</option></SelectField><Field label="Opening financial balance (₹)" type="number" min="0" step="0.01" value={form.opening_balance} onChange={(e) => setDealerField("opening_balance", e.target.value)} /><SelectField label="Opening metal type" value={form.opening_metal_type} onChange={(e) => setDealerField("opening_metal_type", e.target.value)}><option>Gold</option><option>Silver</option></SelectField><SelectField label="Opening metal purity" value={form.opening_metal_purity} onChange={(e) => setDealerField("opening_metal_purity", e.target.value)}>{PURITIES.map((purity) => <option key={purity}>{purity}</option>)}</SelectField><Field label="Opening metal weight (g, optional)" type="number" min="0.001" step="0.001" value={form.opening_metal_weight} onChange={(e) => setDealerField("opening_metal_weight", e.target.value)} /></>}
           <label className="block space-y-1.5 md:col-span-3"><span className="text-[11px] font-bold uppercase text-slate-500">Account notes</span><textarea value={form.notes} onChange={(e) => setDealerField("notes", e.target.value)} rows="3" className="w-full rounded-lg border border-slate-200 p-3 text-sm outline-none focus:border-[#008577]" /></label>
         </div>
-        <div className="flex justify-end gap-2 border-t bg-slate-50 p-4"><button type="button" onClick={() => setDialog("")} className="rounded-lg border bg-white px-4 py-2 text-sm font-bold">Cancel</button><button disabled={saving} className="rounded-lg bg-[#003B3B] px-5 py-2 text-sm font-bold text-white disabled:opacity-50">{saving ? "Saving…" : editingDealer ? "Save profile" : "Create dealer"}</button></div>
+        <div className="flex justify-end gap-2 border-t border-gray-200 bg-slate-50 p-4"><button type="button" onClick={() => setDialog("")} className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-bold">Cancel</button><button disabled={saving} className="rounded-lg border border-gray-200 bg-[#003B3B] px-5 py-2 text-sm font-bold text-white disabled:opacity-50">{saving ? "Saving…" : editingDealer ? "Save profile" : "Create dealer"}</button></div>
       </form>
     </div>}
 
     {dialog === "purchase" && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4"><form onSubmit={submitPurchase} className="max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
-      <div className="sticky top-0 z-10 flex items-center justify-between border-b bg-white px-6 py-4"><div><h2 className="text-xl font-black">Post supplier document</h2><p className="text-xs text-slate-500">Rates and taxes are captured on each line when posted.</p></div><button type="button" onClick={() => setDialog("")}><X /></button></div>
+      <div className="sticky top-0 z-10 flex items-center justify-between border-b border-gray-200 bg-white px-6 py-4"><div><h2 className="text-xl font-black">Post supplier document</h2><p className="text-xs text-slate-500">Rates and taxes are captured on each line when posted.</p></div><button type="button" onClick={() => setDialog("")}><X /></button></div>
       <div className="grid gap-4 p-6 md:grid-cols-3">
         <SelectField label="Dealer" required value={purchaseForm.dealer_id} onChange={(e) => setPurchaseForm({ ...purchaseForm, dealer_id: e.target.value, linked_document_id: "" })}><option value="">Select active dealer</option>{dealers.filter((item) => item.status === "Active").map((item) => <option key={item.id} value={item.id}>{item.dealer_code} — {item.name}</option>)}</SelectField>
         <SelectField label="Document type" value={purchaseForm.document_type} onChange={(e) => setPurchaseForm({ ...purchaseForm, document_type: e.target.value, linked_document_id: "" })}><option value="invoice">Supplier invoice</option><option value="purchase_return">Purchase return</option><option value="debit_note">Debit note (reduces payable)</option><option value="credit_note">Credit note (increases payable)</option></SelectField>
@@ -623,7 +679,7 @@ const Dealers = () => {
         <Field label="Due date" type="date" value={purchaseForm.due_date} onChange={(e) => setPurchaseForm({ ...purchaseForm, due_date: e.target.value })} />
         {purchaseForm.document_type !== "invoice" && <SelectField label="Original supplier invoice" required value={purchaseForm.linked_document_id || ""} onChange={(e) => setPurchaseForm({ ...purchaseForm, linked_document_id: e.target.value })}><option value="">Select original invoice</option>{linkedInvoices.map((item) => <option key={item.id} value={item.id}>{item.document_number} · {item.supplier_invoice_number} · {currency(item.total)}</option>)}</SelectField>}
       </div>
-      <div className="space-y-4 px-6 pb-5">{purchaseForm.lines.map((line, index) => <div key={index} className="rounded-xl border border-slate-200 p-4">
+      <div className="space-y-4 px-6 pb-5">{purchaseForm.lines.map((line, index) => <div key={index} className="rounded-xl border border-gray-200 p-4">
         <div className="mb-3 flex items-center justify-between"><p className="text-sm font-black text-[#003B3B]">Invoice line {index + 1}</p>{purchaseForm.lines.length > 1 && <button type="button" onClick={() => setPurchaseForm((current) => ({ ...current, lines: current.lines.filter((_, i) => i !== index) }))} className="text-xs font-bold text-rose-600">Remove line</button>}</div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Field label="Description" required value={line.description} onChange={(e) => setPurchaseLine(index, "description", e.target.value)} />
@@ -643,65 +699,65 @@ const Dealers = () => {
         <button type="button" onClick={() => setPurchaseForm((current) => ({ ...current, lines: [...current.lines, blankLine()] }))} className="rounded-lg border border-[#003B3B] px-3 py-2 text-xs font-bold text-[#003B3B]"><Plus size={14} className="mr-1 inline" /> Add line item</button>
         <Field label="Internal notes" value={purchaseForm.notes} onChange={(e) => setPurchaseForm({ ...purchaseForm, notes: e.target.value })} />
       </div>
-      <div className="flex justify-end gap-2 border-t bg-slate-50 p-4"><button type="button" onClick={() => setDialog("")} className="rounded-lg border bg-white px-4 py-2 text-sm font-bold">Cancel</button><button disabled={saving} className="rounded-lg bg-[#003B3B] px-5 py-2 text-sm font-bold text-white disabled:opacity-50">{saving ? "Posting…" : "Post document"}</button></div>
+      <div className="flex justify-end gap-2 border-t border-gray-200 bg-slate-50 p-4"><button type="button" onClick={() => setDialog("")} className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-bold">Cancel</button><button disabled={saving} className="rounded-lg border border-gray-200 bg-[#003B3B] px-5 py-2 text-sm font-bold text-white disabled:opacity-50">{saving ? "Posting…" : "Post document"}</button></div>
     </form></div>}
 
     {dialog === "payment" && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4"><form onSubmit={submitPayment} className="w-full max-w-xl space-y-4 rounded-2xl bg-white p-6 shadow-2xl">
-      <div className="flex justify-between"><div><h2 className="text-xl font-black">Record dealer payment</h2><p className="text-xs text-slate-500">Unallocated remainder is posted as dealer advance/receivable.</p></div><button type="button" onClick={() => setDialog("")}><X /></button></div>
+      <div className="flex justify-between border-b border-gray-200 pb-3"><div><h2 className="text-xl font-black">Record dealer payment</h2><p className="text-xs text-slate-500">Unallocated remainder is posted as dealer advance/receivable.</p></div><button type="button" onClick={() => setDialog("")}><X /></button></div>
       <SelectField label="Dealer" required value={paymentForm.dealer_id} onChange={(e) => setPaymentForm({ ...paymentForm, dealer_id: e.target.value, purchase_id: "", allocation: "" })}><option value="">Select dealer</option>{dealers.map((dealer) => <option key={dealer.id} value={dealer.id}>{dealer.name}</option>)}</SelectField>
       <div className="grid gap-3 sm:grid-cols-2"><Field label="Payment amount (₹)" type="number" min="0.01" step="0.01" required value={paymentForm.amount} onChange={(e) => setPaymentForm({ ...paymentForm, amount: e.target.value })} /><Field label="Payment date" type="date" required value={paymentForm.payment_date} onChange={(e) => setPaymentForm({ ...paymentForm, payment_date: e.target.value })} /><SelectField label="Method" value={paymentForm.method} onChange={(e) => setPaymentForm({ ...paymentForm, method: e.target.value })}><option>Bank</option><option>UPI</option><option>Cheque</option><option>Cash</option></SelectField><Field label="Payment reference" value={paymentForm.reference} onChange={(e) => setPaymentForm({ ...paymentForm, reference: e.target.value })} /></div>
       <SelectField label="Allocate to invoice (optional)" value={paymentForm.purchase_id} onChange={(e) => { const found = outstanding.find((item) => String(item.id) === e.target.value); setPaymentForm({ ...paymentForm, purchase_id: e.target.value, allocation: found ? String(found.outstanding) : "" }); }}><option value="">Keep as unallocated advance</option>{outstanding.filter((item) => String(item.dealer_id) === paymentForm.dealer_id).map((item) => <option key={item.id} value={item.id}>{item.document_number} · due {currency(item.outstanding)}</option>)}</SelectField>
       {paymentForm.purchase_id && <Field label="Allocation amount (₹)" type="number" min="0.01" step="0.01" value={paymentForm.allocation} onChange={(e) => setPaymentForm({ ...paymentForm, allocation: e.target.value })} />}
-      <div className="flex justify-end gap-2 border-t pt-4"><button type="button" onClick={() => setDialog("")} className="rounded-lg border px-4 py-2 text-sm font-bold">Cancel</button><button disabled={saving} className="rounded-lg bg-[#003B3B] px-5 py-2 text-sm font-bold text-white">{saving ? "Posting…" : "Post payment"}</button></div>
+      <div className="flex justify-end gap-2 border-t border-gray-200 pt-4"><button type="button" onClick={() => setDialog("")} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-bold">Cancel</button><button disabled={saving} className="rounded-lg border border-gray-200 bg-[#003B3B] px-5 py-2 text-sm font-bold text-white">{saving ? "Posting…" : "Post payment"}</button></div>
     </form></div>}
 
     {dialog === "job" && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4"><form onSubmit={submitJob} className="w-full max-w-xl space-y-4 rounded-2xl bg-white p-6 shadow-2xl">
-      <div className="flex justify-between"><h2 className="text-xl font-black">Create goldsmith job order</h2><button type="button" onClick={() => setDialog("")}><X /></button></div>
+      <div className="flex justify-between border-b border-gray-200 pb-3"><h2 className="text-xl font-black">Create goldsmith job order</h2><button type="button" onClick={() => setDialog("")}><X /></button></div>
       <SelectField label="Goldsmith / job worker" required value={jobForm.dealer_id} onChange={(e) => setJobForm({ ...jobForm, dealer_id: e.target.value })}><option value="">Select dealer</option>{dealers.map((dealer) => <option key={dealer.id} value={dealer.id}>{dealer.name}</option>)}</SelectField>
       <Field label="Work description" required value={jobForm.description} onChange={(e) => setJobForm({ ...jobForm, description: e.target.value })} />
       <div className="grid gap-3 sm:grid-cols-3"><Field label="Due date" type="date" value={jobForm.due_date} onChange={(e) => setJobForm({ ...jobForm, due_date: e.target.value })} /><Field label="Labour charge (₹)" type="number" min="0" step="0.01" value={jobForm.labour_charge} onChange={(e) => setJobForm({ ...jobForm, labour_charge: e.target.value })} /><Field label="Approved wastage (g)" type="number" min="0" step="0.001" value={jobForm.approved_wastage} onChange={(e) => setJobForm({ ...jobForm, approved_wastage: e.target.value })} /></div>
-      <div className="flex justify-end gap-2 border-t pt-4"><button type="button" onClick={() => setDialog("")} className="rounded-lg border px-4 py-2 text-sm font-bold">Cancel</button><button disabled={saving} className="rounded-lg bg-[#003B3B] px-5 py-2 text-sm font-bold text-white">{saving ? "Saving…" : "Create job order"}</button></div>
+      <div className="flex justify-end gap-2 border-t border-gray-200 pt-4"><button type="button" onClick={() => setDialog("")} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-bold">Cancel</button><button disabled={saving} className="rounded-lg border border-gray-200 bg-[#003B3B] px-5 py-2 text-sm font-bold text-white">{saving ? "Saving…" : "Create job order"}</button></div>
     </form></div>}
 
     {(dialog === "issue" || dialog === "receipt") && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4"><form onSubmit={submitMetal} className="w-full max-w-xl space-y-4 rounded-2xl bg-white p-6 shadow-2xl">
-      <div className="flex justify-between"><div><h2 className="text-xl font-black">{dialog === "issue" ? "Gold issue voucher" : "Finished goods / scrap receipt"}</h2><p className="text-xs text-slate-500">Fine metal equivalent is recorded against the job and dealer metal ledger.</p></div><button type="button" onClick={() => setDialog("")}><X /></button></div>
+      <div className="flex justify-between border-b border-gray-200 pb-3"><div><h2 className="text-xl font-black">{dialog === "issue" ? "Gold issue voucher" : "Finished goods / scrap receipt"}</h2><p className="text-xs text-slate-500">Fine metal equivalent is recorded against the job and dealer metal ledger.</p></div><button type="button" onClick={() => setDialog("")}><X /></button></div>
       <SelectField label="Job order" required value={metalForm.job_id} onChange={(e) => setMetalForm({ ...metalForm, job_id: e.target.value })}><option value="">Select job</option>{jobs.filter((job) => dialog === "issue" ? ["Open","Issued"].includes(job.status) : ["Issued","Partially Received"].includes(job.status)).map((job) => <option key={job.id} value={job.id}>{job.job_number} — {job.dealer_name}</option>)}</SelectField>
       {dialog === "receipt" && <SelectField label="Receipt type" value={metalForm.receipt_type} onChange={(e) => setMetalForm({ ...metalForm, receipt_type: e.target.value })}><option value="finished">Finished jewellery</option><option value="scrap">Recoverable scrap</option><option value="dust">Dust return</option></SelectField>}
       <div className="grid gap-3 sm:grid-cols-3"><SelectField label="Metal" value={metalForm.metal_type} onChange={(e) => setMetalForm({ ...metalForm, metal_type: e.target.value })}><option>Gold</option><option>Silver</option></SelectField><SelectField label="Purity" value={metalForm.purity} onChange={(e) => setMetalForm({ ...metalForm, purity: e.target.value })}>{(metalForm.metal_type === "Gold" ? PURITIES : ["999"]).map((purity) => <option key={purity}>{purity}</option>)}</SelectField><Field label="Weight (g)" type="number" min="0.001" step="0.001" required value={metalForm.weight} onChange={(e) => setMetalForm({ ...metalForm, weight: e.target.value })} /></div>
       {dialog === "receipt" && <Field label="Labour charge (₹)" type="number" min="0" step="0.01" value={metalForm.labour_charge} onChange={(e) => setMetalForm({ ...metalForm, labour_charge: e.target.value })} />}
-      <div className="flex justify-end gap-2 border-t pt-4"><button type="button" onClick={() => setDialog("")} className="rounded-lg border px-4 py-2 text-sm font-bold">Cancel</button><button disabled={saving} className="rounded-lg bg-[#003B3B] px-5 py-2 text-sm font-bold text-white">{saving ? "Posting…" : dialog === "issue" ? "Post issue voucher" : "Post receipt"}</button></div>
+      <div className="flex justify-end gap-2 border-t border-gray-200 pt-4"><button type="button" onClick={() => setDialog("")} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-bold">Cancel</button><button disabled={saving} className="rounded-lg border border-gray-200 bg-[#003B3B] px-5 py-2 text-sm font-bold text-white">{saving ? "Posting…" : dialog === "issue" ? "Post issue voucher" : "Post receipt"}</button></div>
     </form></div>}
 
     {dialog === "reconcile" && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4"><form onSubmit={submitReconciliation} className="w-full max-w-lg space-y-4 rounded-2xl bg-white p-6 shadow-2xl">
-      <div className="flex justify-between"><div><h2 className="text-xl font-black">Reconcile metal balance</h2><p className="text-xs text-slate-500">Review issued vs finished, scrap and dust fine-gold equivalent.</p></div><button type="button" onClick={() => setDialog("")}><X /></button></div>
+      <div className="flex justify-between border-b border-gray-200 pb-3"><div><h2 className="text-xl font-black">Reconcile metal balance</h2><p className="text-xs text-slate-500">Review issued vs finished, scrap and dust fine-gold equivalent.</p></div><button type="button" onClick={() => setDialog("")}><X /></button></div>
       <SelectField label="Job order" required value={reconcileForm.job_id} onChange={(e) => setReconcileForm({ ...reconcileForm, job_id: e.target.value })}><option value="">Select job</option>{openJobs.map((job) => <option key={job.id} value={job.id}>{job.job_number} — {job.dealer_name} (variance {((Number(job.issued_fine_weight) || 0) - (Number(job.returned_fine_weight) || 0)).toFixed(3)} fine g)</option>)}</SelectField>
       <Field label="Approved process loss (g)" type="number" min="0" step="0.001" value={reconcileForm.approved_loss} onChange={(e) => setReconcileForm({ ...reconcileForm, approved_loss: e.target.value })} />
       <label className="block space-y-1.5"><span className="text-[11px] font-bold uppercase text-slate-500">Approval reason (required for unexplained variance)</span><textarea value={reconcileForm.reason} onChange={(e) => setReconcileForm({ ...reconcileForm, reason: e.target.value })} rows="3" className="w-full rounded-lg border border-slate-200 p-3 text-sm outline-none focus:border-[#008577]" /></label>
-      <div className="flex justify-end gap-2 border-t pt-4"><button type="button" onClick={() => setDialog("")} className="rounded-lg border px-4 py-2 text-sm font-bold">Cancel</button><button disabled={saving} className="rounded-lg bg-[#003B3B] px-5 py-2 text-sm font-bold text-white">{saving ? "Reconciling…" : "Approve reconciliation"}</button></div>
+      <div className="flex justify-end gap-2 border-t border-gray-200 pt-4"><button type="button" onClick={() => setDialog("")} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-bold">Cancel</button><button disabled={saving} className="rounded-lg border border-gray-200 bg-[#003B3B] px-5 py-2 text-sm font-bold text-white">{saving ? "Reconciling…" : "Approve reconciliation"}</button></div>
     </form></div>}
 
     {dialog === "oldGold" && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4"><form onSubmit={submitOldGold} className="w-full max-w-xl space-y-4 rounded-2xl bg-white p-6 shadow-2xl">
-      <div className="flex justify-between"><div><h2 className="text-xl font-black">Old-gold receipt & settlement</h2><p className="text-xs text-slate-500">Fine gold is net tested weight × assay purity / 1000.</p></div><button type="button" onClick={() => setDialog("")}><X /></button></div>
+      <div className="flex justify-between border-b border-gray-200 pb-3"><div><h2 className="text-xl font-black">Old-gold receipt & settlement</h2><p className="text-xs text-slate-500">Fine gold is net tested weight × assay purity / 1000.</p></div><button type="button" onClick={() => setDialog("")}><X /></button></div>
       <SelectField label="Old-gold dealer" required value={oldGoldForm.dealer_id} onChange={(e) => setOldGoldForm({ ...oldGoldForm, dealer_id: e.target.value })}><option value="">Select dealer</option>{dealers.map((dealer) => <option key={dealer.id} value={dealer.id}>{dealer.name}</option>)}</SelectField>
       <div className="grid gap-3 sm:grid-cols-2"><Field label="Gross weight (g)" type="number" min="0.001" step="0.001" required value={oldGoldForm.gross_weight} onChange={(e) => setOldGoldForm({ ...oldGoldForm, gross_weight: e.target.value, net_weight: String(Math.max(0, Number(e.target.value || 0) - Number(oldGoldForm.stone_weight || 0))) })} /><Field label="Stone weight (g)" type="number" min="0" step="0.001" value={oldGoldForm.stone_weight} onChange={(e) => setOldGoldForm({ ...oldGoldForm, stone_weight: e.target.value, net_weight: String(Math.max(0, Number(oldGoldForm.gross_weight || 0) - Number(e.target.value || 0))) })} /><Field label="Net tested gold weight (g)" type="number" min="0.001" step="0.001" required value={oldGoldForm.net_weight} onChange={(e) => setOldGoldForm({ ...oldGoldForm, net_weight: e.target.value })} /><SelectField label="Tested purity" value={oldGoldForm.tested_purity} onChange={(e) => { const purity = e.target.value; setOldGoldForm({ ...oldGoldForm, tested_purity: purity, agreed_rate: "", rate_source: "Global" }); }}><option value="">Choose</option>{PURITIES.map((purity) => <option key={purity}>{purity}</option>)}</SelectField></div>
       <div className="grid gap-3 sm:grid-cols-2"><SelectField label="Rate source" value={oldGoldForm.rate_source} onChange={(e) => setOldGoldForm({ ...oldGoldForm, rate_source: e.target.value, agreed_rate: "" })}><option>Global</option><option>Negotiated</option></SelectField><div className="space-y-1.5"><span className="text-[11px] font-bold uppercase text-slate-500">Agreed rate (₹/tested g)</span><div className="flex gap-2"><input required={oldGoldForm.rate_source === "Negotiated"} readOnly={oldGoldForm.rate_source === "Global"} type="number" min="0.01" step="0.01" value={oldGoldForm.agreed_rate} onChange={(e) => setOldGoldForm({ ...oldGoldForm, agreed_rate: e.target.value })} className="w-full rounded-lg border px-3 py-2.5 text-sm read-only:bg-slate-100" /><button type="button" disabled={oldGoldForm.rate_source !== "Global"} onClick={() => void loadDealerRate("Gold", oldGoldForm.tested_purity, (value) => setOldGoldForm((current) => ({ ...current, agreed_rate: value })))} className="rounded border px-2 text-xs font-bold disabled:opacity-40">Current</button></div></div></div>
-      <div className="flex justify-end gap-2 border-t pt-4"><button type="button" onClick={() => setDialog("")} className="rounded-lg border px-4 py-2 text-sm font-bold">Cancel</button><button disabled={saving} className="rounded-lg bg-[#003B3B] px-5 py-2 text-sm font-bold text-white">{saving ? "Posting…" : "Post receipt & payable"}</button></div>
+      <div className="flex justify-end gap-2 border-t border-gray-200 pt-4"><button type="button" onClick={() => setDialog("")} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-bold">Cancel</button><button disabled={saving} className="rounded-lg border border-gray-200 bg-[#003B3B] px-5 py-2 text-sm font-bold text-white">{saving ? "Posting…" : "Post receipt & payable"}</button></div>
     </form></div>}
 
     {dialog === "refining" && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4"><form onSubmit={submitRefining} className="w-full max-w-xl space-y-4 rounded-2xl bg-white p-6 shadow-2xl">
-      <div className="flex justify-between"><div><h2 className="text-xl font-black">Refining recovery receipt</h2><p className="text-xs text-slate-500">Links recovered fine gold and refining charges to intake.</p></div><button type="button" onClick={() => setDialog("")}><X /></button></div>
+      <div className="flex justify-between border-b border-gray-200 pb-3"><div><h2 className="text-xl font-black">Refining recovery receipt</h2><p className="text-xs text-slate-500">Links recovered fine gold and refining charges to intake.</p></div><button type="button" onClick={() => setDialog("")}><X /></button></div>
       <SelectField label="Dealer" required value={refiningForm.dealer_id} onChange={(e) => setRefiningForm({ ...refiningForm, dealer_id: e.target.value, old_gold_receipt_id: "" })}><option value="">Select dealer</option>{dealers.map((dealer) => <option key={dealer.id} value={dealer.id}>{dealer.name}</option>)}</SelectField>
       <SelectField label="Source old-gold receipt" required value={refiningForm.old_gold_receipt_id} onChange={(e) => setRefiningForm({ ...refiningForm, old_gold_receipt_id: e.target.value })}><option value="">Select source receipt</option>{oldGoldReceipts.filter((item) => String(item.dealer_id) === refiningForm.dealer_id && Number(item.fine_gold_weight) - Number(item.recovered_fine_gold) > 0.005).map((item) => <option key={item.id} value={item.id}>{item.receipt_number} · remaining {(Number(item.fine_gold_weight) - Number(item.recovered_fine_gold)).toFixed(3)} fine g</option>)}</SelectField>
       <div className="grid gap-3 sm:grid-cols-3"><SelectField label="Recovered metal" value={refiningForm.recovered_metal_type} onChange={(e) => setRefiningForm({ ...refiningForm, recovered_metal_type: e.target.value })}><option>Gold</option><option>Silver</option></SelectField><SelectField label="Purity" value={refiningForm.recovered_purity} onChange={(e) => setRefiningForm({ ...refiningForm, recovered_purity: e.target.value })}>{(refiningForm.recovered_metal_type === "Gold" ? PURITIES : ["999"]).map((purity) => <option key={purity}>{purity}</option>)}</SelectField><Field label="Recovered weight (g)" type="number" min="0.001" step="0.001" value={refiningForm.recovered_weight} onChange={(e) => setRefiningForm({ ...refiningForm, recovered_weight: e.target.value })} /></div>
       <Field label="Refining charge (₹)" type="number" min="0" step="0.01" value={refiningForm.refining_charges} onChange={(e) => setRefiningForm({ ...refiningForm, refining_charges: e.target.value })} />
-      <div className="flex justify-end gap-2 border-t pt-4"><button type="button" onClick={() => setDialog("")} className="rounded-lg border px-4 py-2 text-sm font-bold">Cancel</button><button disabled={saving} className="rounded-lg bg-[#003B3B] px-5 py-2 text-sm font-bold text-white">{saving ? "Posting…" : "Post refining receipt"}</button></div>
+      <div className="flex justify-end gap-2 border-t border-gray-200 pt-4"><button type="button" onClick={() => setDialog("")} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-bold">Cancel</button><button disabled={saving} className="rounded-lg border border-gray-200 bg-[#003B3B] px-5 py-2 text-sm font-bold text-white">{saving ? "Posting…" : "Post refining receipt"}</button></div>
     </form></div>}
 
     {dialog === "profile" && selectedDealer && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4"><div className="max-h-[92vh] w-full max-w-4xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
-      <div className="sticky top-0 flex items-center justify-between border-b bg-white p-5"><div><h2 className="text-xl font-black">{selectedDealer.name}</h2><p className="text-xs text-slate-500">{selectedDealer.dealer_code} · {selectedDealer.category_name}</p></div><button type="button" onClick={() => setDialog("")}><X /></button></div>
+      <div className="sticky top-0 flex items-center justify-between border-b border-gray-200 bg-white p-5"><div><h2 className="text-xl font-black">{selectedDealer.name}</h2><p className="text-xs text-slate-500">{selectedDealer.dealer_code} · {selectedDealer.category_name}</p></div><button type="button" onClick={() => setDialog("")}><X /></button></div>
       <div className="grid gap-3 p-5 md:grid-cols-3"><div className="rounded-lg bg-slate-50 p-3"><span className="text-xs text-slate-500">Payable</span><p className="font-black">{currency(selectedDealer.payable_balance)}</p></div><div className="rounded-lg bg-slate-50 p-3"><span className="text-xs text-slate-500">Receivable</span><p className="font-black">{currency(selectedDealer.receivable_balance)}</p></div><div className="rounded-lg bg-slate-50 p-3"><span className="text-xs text-slate-500">Credit terms</span><p className="font-black">{selectedDealer.payment_terms_days} days · {currency(selectedDealer.credit_limit)}</p></div></div>
       <div className="space-y-5 p-5">
-        <form onSubmit={uploadDealerDocument} className="flex flex-wrap items-end gap-2 rounded-xl border border-slate-200 p-4"><SelectField label="Document type" value={documentForm.type} onChange={(e) => setDocumentForm({ ...documentForm, type: e.target.value })}><option>GST Certificate</option><option>PAN Card</option><option>Bank Proof</option><option>Agreement</option><option>Other</option></SelectField><label className="block flex-1 space-y-1.5"><span className="text-[11px] font-bold uppercase text-slate-500">Private PDF/image (max 10 MB)</span><input type="file" accept="application/pdf,image/png,image/jpeg,image/webp" required onChange={(e) => setDocumentForm({ ...documentForm, file: e.target.files?.[0] || null })} className="block w-full text-sm" /></label><button className="rounded-lg bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white">Upload</button></form>
+        <form onSubmit={uploadDealerDocument} className="flex flex-wrap items-end gap-2 rounded-xl border border-gray-200 p-4"><SelectField label="Document type" value={documentForm.type} onChange={(e) => setDocumentForm({ ...documentForm, type: e.target.value })}><option>GST Certificate</option><option>PAN Card</option><option>Bank Proof</option><option>Agreement</option><option>Other</option></SelectField><label className="block flex-1 space-y-1.5"><span className="text-[11px] font-bold uppercase text-slate-500">Private PDF/image (max 10 MB)</span><input type="file" accept="application/pdf,image/png,image/jpeg,image/webp" required onChange={(e) => setDocumentForm({ ...documentForm, file: e.target.files?.[0] || null })} className="block w-full text-sm" /></label><button className="rounded-lg bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white">Upload</button></form>
         <div><h3 className="mb-2 font-black">Private dealer documents</h3>{selectedDealer.documents?.length ? selectedDealer.documents.map((doc) => <div key={doc.id} className="flex items-center justify-between border-b py-2 text-sm"><span><FileText className="mr-2 inline text-[#008577]" />{doc.document_type}: {doc.original_name}</span><span className="flex gap-2"><button type="button" onClick={() => void downloadDealerDocument(doc)} className="text-xs font-bold text-[#003B3B]">Download</button><button type="button" onClick={() => void removeDealerDocument(doc)} className="text-xs font-bold text-rose-600">Delete</button></span></div>) : <p className="text-sm text-slate-400">No documents on file.</p>}</div>
         <div><h3 className="mb-2 font-black">Account audit history</h3>{selectedDealer.audit?.data?.length ? selectedDealer.audit.data.map((item) => <div key={item.id} className="border-b py-2 text-sm"><span className="font-bold">{item.action}</span> by {item.actor} · {new Date(item.created_at).toLocaleString()} {item.reason && <span>· {item.reason}</span>}</div>) : <p className="text-sm text-slate-400">No account changes recorded.</p>}</div>
         <button type="button" onClick={() => void openStatement(selectedDealer)} className="rounded-lg border border-[#003B3B] px-4 py-2 text-sm font-bold text-[#003B3B]">Open dealer statement</button>
@@ -709,7 +765,7 @@ const Dealers = () => {
     </div></div>}
 
     {dialog === "statement" && statement && selectedDealer && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4"><div className="max-h-[92vh] w-full max-w-6xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
-      <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-2 border-b bg-white p-5"><div><h2 className="text-xl font-black">Dealer statement — {selectedDealer.name}</h2><p className="text-xs text-slate-500">{selectedDealer.dealer_code} · money and metal ledgers are shown separately</p></div><div className="flex gap-2"><button type="button" onClick={printStatement} className="inline-flex items-center gap-1 rounded border px-3 py-2 text-xs font-bold"><Printer size={14} /> Print</button><button type="button" onClick={() => exportCsv([["Date","Entry","Type","Description","Payable delta","Receivable delta","Closing payable"], ...statement.financial.map((row) => [row.created_at,row.entry_number,row.entry_type,row.description,row.payable_delta,row.receivable_delta,row.payable_balance])], `${selectedDealer.dealer_code}-statement.csv`)} className="inline-flex items-center gap-1 rounded border px-3 py-2 text-xs font-bold"><Download size={14} /> CSV</button><button type="button" onClick={() => setDialog("")} className="rounded p-2"><X /></button></div></div>
+      <div className="sticky top-0 z-10 flex flex-wrap items-center justify-between gap-2 border-b border-gray-200 bg-white p-5"><div><h2 className="text-xl font-black">Dealer statement — {selectedDealer.name}</h2><p className="text-xs text-slate-500">{selectedDealer.dealer_code} · money and metal ledgers are shown separately</p></div><div className="flex gap-2"><button type="button" onClick={printStatement} className="inline-flex items-center gap-1 rounded border border-gray-200 px-3 py-2 text-xs font-bold"><Printer size={14} /> Print</button><button type="button" onClick={() => exportCsv([["Date","Entry","Type","Description","Payable delta","Receivable delta","Closing payable"], ...statement.financial.map((row) => [row.created_at,row.entry_number,row.entry_type,row.description,row.payable_delta,row.receivable_delta,row.payable_balance])], `${selectedDealer.dealer_code}-statement.csv`)} className="inline-flex items-center gap-1 rounded border border-gray-200 px-3 py-2 text-xs font-bold"><Download size={14} /> CSV</button><button type="button" onClick={() => setDialog("")} className="rounded border border-gray-200 p-2"><X /></button></div></div>
       <div className="p-5"><h3 className="mb-2 font-black text-[#003B3B]">Financial ledger (₹)</h3><div className="mb-6 overflow-x-auto"><table className="w-full min-w-[800px] text-left text-xs"><thead><tr className="bg-[#003B3B] text-white"><th className="p-2">Date</th><th className="p-2">Entry</th><th className="p-2">Description</th><th className="p-2 text-right">Payable Δ</th><th className="p-2 text-right">Receivable Δ</th><th className="p-2 text-right">Balance payable</th><th className="p-2 text-right">Actions</th></tr></thead><tbody>{statement.financial.map((row) => <tr key={row.id} className="border-b"><td className="p-2">{new Date(row.created_at).toLocaleDateString()}</td><td className="p-2">{row.entry_number}</td><td className="p-2">{row.description}</td><td className="p-2 text-right">{currency(row.payable_delta)}</td><td className="p-2 text-right">{currency(row.receivable_delta)}</td><td className="p-2 text-right font-bold">{currency(row.payable_balance)}</td><td className="p-2 text-right">{row.source_type === "payment" && !row.is_reversed && <button type="button" onClick={() => void reversePaymentEntry(row)} className="font-bold text-rose-700 hover:underline">Reverse</button>}{row.source_type === "payment" && row.is_reversed && <span className="text-slate-400">Reversed</span>}</td></tr>)}</tbody></table>{statement.financial.length === 0 && <p className="p-4 text-center text-sm text-slate-400">No financial ledger entries for this period.</p>}</div>
       <h3 className="mb-2 font-black text-[#003B3B]">Metal ledger (grams by purity)</h3><div className="overflow-x-auto"><table className="w-full min-w-[700px] text-left text-xs"><thead><tr className="bg-[#003B3B] text-white"><th className="p-2">Date</th><th className="p-2">Voucher</th><th className="p-2">Metal / purity</th><th className="p-2">Movement</th><th className="p-2 text-right">Weight Δ</th><th className="p-2 text-right">Fine-gold Δ</th><th className="p-2">Reconciliation</th><th className="p-2 text-right">Closing weight</th></tr></thead><tbody>{statement.metal.map((row) => <tr key={row.id} className="border-b"><td className="p-2">{new Date(row.created_at).toLocaleDateString()}</td><td className="p-2">{row.entry_number}</td><td className="p-2">{row.metal_type} {row.purity}</td><td className="p-2">{row.movement}</td><td className="p-2 text-right">{Number(row.weight_delta).toFixed(3)}</td><td className="p-2 text-right">{Number(row.fine_gold_delta).toFixed(3)}</td><td className="p-2">{row.reconciliation_status}</td><td className="p-2 text-right font-bold">{Number(row.closing_weight).toFixed(3)}</td></tr>)}</tbody></table>{statement.metal.length === 0 && <p className="p-4 text-center text-sm text-slate-400">No metal ledger entries for this period.</p>}</div></div>
     </div></div>}

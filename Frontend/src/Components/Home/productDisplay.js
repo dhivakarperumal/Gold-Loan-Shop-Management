@@ -1,3 +1,5 @@
+import { formatCurrency } from "../../utils/currency";
+
 const backendUrl = (
   import.meta.env.VITE_BACKEND_URL ||
   import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') ||
@@ -17,7 +19,7 @@ export const getProductImageUrl = (product) => {
 
 export const formatProductPrice = (product) => {
   const price = Number(product.offer_price ?? product.final_selling_price ?? product.mrp ?? 0)
-  return `₹ ${price.toLocaleString('en-IN')}`
+  return formatCurrency(price)
 }
 
 export const getProductDetails = (product) => {

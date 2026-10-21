@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { FiArrowLeft, FiPlus, FiTrash2, FiSave, FiUser, FiPackage, FiSearch, FiCheckCircle, FiUploadCloud } from "react-icons/fi";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import api from "../../api";
+import { formatCurrency } from "../../utils/currency";
 import { toast, Toaster } from "react-hot-toast";
 
 const AddInvoice = () => {
@@ -249,7 +250,7 @@ const AddInvoice = () => {
                                                     <div>
                                                         <p className="font-bold text-slate-800">{product.name}</p>
                                                         <p className="text-[10px] text-gray-400 uppercase font-black tracking-tight italic">
-                                                            ₹{parseFloat(product.offer_price || product.price || 0).toLocaleString()} • {product.product_code || "N/A"}
+                                                            {formatCurrency(product.offer_price || product.price || 0)} • {product.product_code || "N/A"}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -288,7 +289,7 @@ const AddInvoice = () => {
                                                             <p className="text-sm font-bold text-slate-800">{item.name}</p>
                                                         </td>
                                                         <td className="px-6 py-4">
-                                                            <p className="text-xs font-bold text-gray-400">₹{item.price.toLocaleString()}</p>
+                                                            <p className="text-xs font-bold text-gray-400">{formatCurrency(item.price)}</p>
                                                         </td>
                                                         <td className="px-6 py-4">
                                                             <input
@@ -300,7 +301,7 @@ const AddInvoice = () => {
                                                             />
                                                         </td>
                                                         <td className="px-6 py-4 text-right">
-                                                            <p className="text-sm font-black text-slate-800">₹{item.total.toLocaleString()}</p>
+                                                            <p className="text-sm font-black text-slate-800">{formatCurrency(item.total)}</p>
                                                         </td>
                                                         <td className="px-6 py-4 text-center text-red-300 hover:text-red-500 transition-colors cursor-pointer" onClick={() => handleRemoveItem(index)}>
                                                             <FiTrash2 size={16} />
@@ -366,17 +367,17 @@ const AddInvoice = () => {
                         <div className="space-y-4 border-b border-white/10 pb-6 mb-6">
                             <div className="flex justify-between text-sm opacity-60 font-bold">
                                 <span>Subtotal</span>
-                                <span>₹{formData.total_amount.toLocaleString()}</span>
+                                <span>{formatCurrency(formData.total_amount)}</span>
                             </div>
                             <div className="flex justify-between text-sm opacity-60 font-bold">
                                 <span>Tax (0%)</span>
-                                <span>₹0</span>
+                                <span>{formatCurrency(0)}</span>
                             </div>
                         </div>
 
                         <div className="mb-8">
                             <p className="text-[10px] font-black uppercase tracking-widest text-secondary-light mb-2">Grand Total</p>
-                            <h2 className="text-4xl font-black italic">₹{formData.total_amount.toLocaleString()}</h2>
+                            <h2 className="text-4xl font-black italic">{formatCurrency(formData.total_amount)}</h2>
                         </div>
 
                         <div className="space-y-4">

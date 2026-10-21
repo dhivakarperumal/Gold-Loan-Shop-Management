@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { useAdmin } from "../../PrivateRouter/AdminContext";
 import api from "../../api";
+import { formatCurrency } from "../../utils/currency";
 import { toast, Toaster } from "react-hot-toast";
 import {
     FiBox,
@@ -418,9 +419,9 @@ const StockDetails = () => {
                                                     </span>
                                                 </td>
                                                 <td className="px-4 py-4">
-                                                    <p className="text-sm font-bold text-slate-800">₹{parseFloat(product.offer_price || product.discount_price || product.mrp || 0).toLocaleString('en-IN')}</p>
+                                                    <p className="text-sm font-bold text-slate-800">{formatCurrency(product.offer_price || product.discount_price || product.mrp || 0)}</p>
                                                     {product.mrp && product.offer_price && parseFloat(product.mrp) > parseFloat(product.offer_price) && (
-                                                        <p className="text-[11px] text-gray-400 line-through">₹{parseFloat(product.mrp).toLocaleString('en-IN')}</p>
+                                                        <p className="text-[11px] text-gray-400 line-through">{formatCurrency(product.mrp)}</p>
                                                     )}
                                                 </td>
                                                 <td className="px-4 py-4">
@@ -490,7 +491,7 @@ const StockDetails = () => {
                                             <div className="grid grid-cols-2 gap-3 mt-4 pt-3 border-t border-gray-100">
                                                 <div>
                                                     <p className="text-[11px] text-gray-400 font-medium">Price</p>
-                                                    <p className="text-lg font-black text-slate-800 mt-0.5">₹{parseFloat(product.offer_price || product.discount_price || product.mrp || 0).toLocaleString('en-IN')}</p>
+                                                    <p className="text-lg font-black text-slate-800 mt-0.5">{formatCurrency(product.offer_price || product.discount_price || product.mrp || 0)}</p>
                                                 </div>
                                                 <div className="text-right">
                                                     <p className="text-[11px] text-gray-400 font-medium">Available Stock</p>

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   BarChart3,
-  CalendarDays,
   FileSpreadsheet,
   FileText,
   Gem,
@@ -14,12 +13,11 @@ import {
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import api from "../../api";
+import DateRangeFilter from "../Components/DateRangeFilter";
+import { DATE_RANGE_OPTIONS, formatDateRange } from "../Components/dateRange";
+import { formatCurrency } from "../../utils/currency";
 
-const RANGE_OPTIONS = [
-  { value: "week", label: "This week" },
-  { value: "month", label: "This month" },
-  { value: "year", label: "This year" }
-];
+const RANGE_OPTIONS = DATE_RANGE_OPTIONS.map(([value, label]) => ({ value, label }));
 
 const EMPTY_REVENUE_TRENDS = [];
 
@@ -54,8 +52,6 @@ const STAT_CARDS = [
   }
 ];
 
-const formatCurrency = (value) => `₹${Number(value || 0).toLocaleString("en-IN")}`;
-
 const escapeXml = (value) => String(value ?? "").replace(/[<>&'"]/g, (character) => ({
   "<": "&lt;",
   ">": "&gt;",
@@ -73,8 +69,8 @@ function getReportSheets(data, range) {
         ["Gold Shop Report", rangeLabel],
         ["Metric", "Value", "Details"],
         ...(data.stats || []).map((stat) => [stat.label, stat.value, stat.trend]),
-        ["Total loans", data.totalLoansCount ?? 0, "Current total"],
-        ...Object.entries(data.loanStatusCounts || {}).map(([status, count]) => [`${status} loans`, count, "Current count"])
+        ["Total loans", data.totalLoansCount ?? 0, "Filtered total"],
+        ...Object.entries(data.loanStatusCounts || {}).map(([status, count]) => [`${status} loans`, count, "Filtered count"])
       ]
     },
     {
@@ -145,8 +141,8 @@ function openPdfReport(data, range) {
   const sheets = getReportSheets(data, range);
   const summaryRows = [
     ...(data.stats || []).map((stat) => [stat.label, stat.value, stat.trend]),
-    ["Total loans", data.totalLoansCount ?? 0, "Current total"],
-    ...Object.entries(data.loanStatusCounts || {}).map(([status, count]) => [`${status} loans`, count, "Current count"])
+    ["Total loans", data.totalLoansCount ?? 0, "Filtered total"],
+    ...Object.entries(data.loanStatusCounts || {}).map(([status, count]) => [`${status} loans`, count, "Filtered count"])
   ];
   const rangeLabel = escapeXml(RANGE_OPTIONS.find((option) => option.value === range)?.label || range);
   const content = `
@@ -210,7 +206,7 @@ async function shareReport(data, range) {
 }
 
 const Reports = () => {
-  const [range, setRange] = useState("month");
+  const [dateRange, setDateRange] = useState({ preset: "all", startDate: "", endDate: "" });
   const [reportsData, setReportsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -225,7 +221,11 @@ const Reports = () => {
 
       try {
         const response = await api.get("/dashboard", {
-          params: { range },
+          params: {
+            datePreset: dateRange.preset,
+            startDate: dateRange.startDate,
+            endDate: dateRange.endDate
+          },
           signal: controller.signal
         });
         if (!response.data?.stats) {
@@ -244,7 +244,7 @@ const Reports = () => {
 
     fetchReports();
     return () => controller.abort();
-  }, [range, retryKey]);
+  }, [dateRange, retryKey]);
 
   const chartValues = reportsData?.revenueTrends || EMPTY_REVENUE_TRENDS;
   const chartMax = Math.max(...chartValues.map((item) => Number(item.revenue) || 0), 1);
@@ -256,7 +256,10 @@ const Reports = () => {
     () => new Map((reportsData?.stats || []).map((stat) => [stat.id, stat])),
     [reportsData]
   );
-  const selectedRange = RANGE_OPTIONS.find((option) => option.value === range)?.label;
+  const selectedRange = dateRange.preset === "custom"
+    ? formatDateRange(dateRange)
+    : RANGE_OPTIONS.find((option) => option.value === dateRange.preset)?.label || "All Time";
+  const exportRange = dateRange.preset;
   const loans = reportsData?.recentLoans || [];
   const products = reportsData?.topProducts || [];
   const loanStatuses = reportsData?.loanStatusCounts || {};
@@ -276,23 +279,11 @@ const Reports = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <label className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-600 shadow-sm focus-within:border-emerald-600">
-            <CalendarDays size={16} className="shrink-0 text-slate-500" />
-            <span className="sr-only">Report period</span>
-            <select
-              value={range}
-              onChange={(event) => setRange(event.target.value)}
-              className="max-w-[150px] cursor-pointer bg-transparent font-medium outline-none"
-            >
-              {RANGE_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>{option.label}</option>
-              ))}
-            </select>
-          </label>
+          <DateRangeFilter onApply={setDateRange} />
           <div className="flex flex-wrap items-center gap-2">
             <button
               type="button"
-              onClick={() => reportsData && downloadExcel(reportsData, range)}
+              onClick={() => reportsData && downloadExcel(reportsData, exportRange)}
               disabled={!reportsData || loading}
               className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-emerald-800 px-3 text-xs font-semibold text-white shadow-sm transition hover:bg-emerald-900 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 sm:text-sm"
             >
@@ -301,7 +292,7 @@ const Reports = () => {
             </button>
             <button
               type="button"
-              onClick={() => reportsData && openPdfReport(reportsData, range)}
+              onClick={() => reportsData && openPdfReport(reportsData, exportRange)}
               disabled={!reportsData || loading}
               className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-rose-700 px-3 text-xs font-semibold text-white shadow-sm transition hover:bg-rose-800 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 sm:text-sm"
             >
@@ -310,7 +301,7 @@ const Reports = () => {
             </button>
             <button
               type="button"
-              onClick={() => reportsData && shareReport(reportsData, range)}
+              onClick={() => reportsData && shareReport(reportsData, exportRange)}
               disabled={!reportsData || loading}
               className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50 sm:px-4 sm:text-sm"
             >

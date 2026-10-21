@@ -1,47 +1,56 @@
-import React from "react";
 import { Link } from "react-router-dom";
-import defaultBg from "/assets/purpleph.jpg";
 
-const PageHeader = ({ title, background }) => {
-
-  const bgImage = background || defaultBg;
+const PageHeader = ({ title, background, breadcrumbs = [], breadcrumbTitle = title }) => {
+  const subtitles = {
+    "About Us": "OUR STORY  •  OUR VALUES  •  YOUR TRUST",
+    "Contact Us": "HERE TO HELP  •  HERE TO LISTEN",
+    Explore: "TIMELESS DESIGNS  •  EVERYDAY ELEGANCE",
+    "My Profile": "YOUR ACCOUNT  •  YOUR COLLECTIONS  •  YOUR LOANS",
+    "Terms & Conditions": "A PROMISE OF TRANSPARENCY AND TRUST",
+  };
+  const words = title.trim().split(/\s+/);
+  const accentWord = words.pop();
+  const bgImage = background || "/images/banner/pageheader.png";
+  const breadcrumbLabels = [...breadcrumbs, breadcrumbTitle];
 
   return (
     <div
-      className="relative w-full h-[180px] sm:h-[200px] md:h-[210px] lg:h-[220px] flex items-center justify-center text-white"
+      className="relative flex h-[180px] w-full items-center overflow-hidden sm:h-[190px] lg:h-[220px]"
       style={{
         backgroundImage: `url(${bgImage})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
-        // backgroundRepeat: "no-repeat"
       }}
     >
-      {/* Overlay */}
-      <div className="absolute inset-0"></div>
-
-      {/* Content */}
-      <div className="relative text-center px-4">
-
-        <h1 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold mb-2 md:mb-3">
-          {title}
-        </h1>
-
-        {/* Breadcrumb */}
-        <div className="text-xs sm:text-sm md:text-base flex justify-center items-center gap-2">
-
-          <Link
-            to="/"
-            className=" hover:text-white/80 transition"
-          >
-            Home
-          </Link>
-
-          <span>/</span>
-
-          <span className="text-gray-200">{title}</span>
-
+      <div className="relative mx-auto w-full max-w-[1500px] px-6 sm:px-10 lg:px-14">
+        <div className="w-full max-w-[760px] text-center sm:w-[58%] sm:text-center">
+          <div className="mx-auto mb-3 flex max-w-[250px] items-center justify-center gap-3 text-[#c58a22] sm:mb-4">
+            <span className="h-px flex-1 bg-[#c58a22]/70" />
+            <span className="h-2.5 w-2.5 rotate-45 border border-[#c58a22]" aria-hidden="true" />
+            <span className="h-px flex-1 bg-[#c58a22]/70" />
+          </div>
+          <h1 className="font-serif text-3xl font-bold uppercase leading-none tracking-[0.04em] text-[#073b2e] sm:text-3xl md:text-4xl lg:text-5xl">
+            {words.length > 0 && <>{words.join(" ")} </>}
+            <span>{accentWord}</span>
+          </h1>
+          <p className="mt-3 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#35483f] sm:mt-4 sm:text-xs md:text-sm md:tracking-[0.28em]">
+            {subtitles[title] || "SRI GOLDS  •  TIMELESS ELEGANCE"}
+          </p>
+          <nav aria-label="Breadcrumb" className="mt-3 flex flex-wrap items-center justify-center gap-1.5 text-[10px] font-medium text-[#35483f] sm:mt-4 sm:text-xs">
+            <Link to="/" className="transition hover:text-[#bd801c]">Home</Link>
+            {breadcrumbLabels.map((crumb, index) => (
+              <span key={`${crumb}-${index}`} className="contents">
+                <span aria-hidden="true">/</span>
+                <span
+                  aria-current={index === breadcrumbLabels.length - 1 ? "page" : undefined}
+                  className={`max-w-[220px] truncate ${index === breadcrumbLabels.length - 1 ? "font-bold" : ""}`}
+                >
+                  {crumb}
+                </span>
+              </span>
+            ))}
+          </nav>
         </div>
-
       </div>
     </div>
   );

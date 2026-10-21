@@ -12,11 +12,13 @@ const {
   listLoans,
   listLoansForCustomer,
   listLoansForUser,
+  recordLoanReviewAction,
   renewLoan,
   releaseGold,
   setInterestType,
   updateLoan
 } = require('../modules/loanModule');
+const { parseDateRange } = require('../utils/dateRange');
 
 const { findGoldRateForPurity, getCurrentGoldRates } = require('../modules/goldRateModule');
 const fs = require('node:fs');
@@ -47,6 +49,7 @@ const INTEREST_TYPES = new Set([
   'simple', 'compound', 'flat', 'reducing_balance', 'daily', 'monthly',
   'annual', 'fixed', 'slab_based', 'custom'
 ]);
+const PAYMENT_METHODS = new Set(['Cash', 'UPI', 'Card', 'Bank Transfer', 'Cheque', 'Other']);
 const REQUIRED_TEXT = ['jewellery_type', 'gold_purity'];
 const MAXIMUM = 999999999999;
 
@@ -256,8 +259,10 @@ async function updateInterestType(req, res, next) {
 }
 
 async function getLoans(req, res, next) {
+  const range = parseDateRange(req.query);
+  if (range.error) return res.status(400).json({ message: range.error });
   try {
-    return res.json(await listLoans());
+    return res.json(await listLoans(range));
   } catch (error) {
     return next(error);
   }
@@ -289,19 +294,76 @@ async function postLoanRenewal(req, res, next) {
   if (!validId(req.params.id)) return res.status(400).json({ message: 'Loan ID is invalid' });
   const amount = parseAmount(req.body?.payment_amount, 'Payment amount', { min: 0.01 });
   if (amount.error) return res.status(400).json({ message: amount.error });
+  if (!validId(req.body?.account_id) || !PAYMENT_METHODS.has(req.body?.payment_method)) {
+    return res.status(400).json({ message: 'Select a valid fund account and payment method' });
+  }
+  const referenceNumber = req.body?.reference_number == null
+    ? ''
+    : String(req.body.reference_number).trim();
+  if (referenceNumber.length > 100) {
+    return res.status(400).json({ message: 'Reference number is invalid' });
+  }
+  const idempotencyKey = req.body?.idempotency_key == null
+    ? ''
+    : String(req.body.idempotency_key).trim();
+  if (idempotencyKey.length > 150) return res.status(400).json({ message: 'Payment retry key is invalid' });
   try {
-    return res.json(await renewLoan(req.params.id, amount.value, req.adminUser.user_id));
+    return res.json(await renewLoan(req.params.id, amount.value, req.adminUser.user_id, {
+      account_id: req.body.account_id,
+      payment_method: req.body.payment_method,
+      reference_number: referenceNumber,
+      idempotency_key: idempotencyKey
+    }));
   } catch (error) {
     if (error.code === 'LOAN_NOT_FOUND') return res.status(404).json({ message: error.message });
-    if (['LOAN_NOT_ACTIVE', 'LOAN_READY_FOR_GOLD_RELEASE'].includes(error.code)) {
+    if ([
+      'LOAN_NOT_ACTIVE',
+      'LOAN_READY_FOR_GOLD_RELEASE',
+      'FUND_ACCOUNT_NOT_FOUND',
+      'DUPLICATE_RENEWAL'
+    ].includes(error.code)) {
       return res.status(409).json({ message: error.message });
     }
+    if (error.code === 'FUND_ACCOUNT_NOT_FOUND') return res.status(400).json({ message: error.message });
     if ([
       'INVALID_RENEWAL_PAYMENT',
       'RENEWAL_PAYMENT_BELOW_INTEREST',
       'RENEWAL_PAYMENT_EXCEEDS_DUE'
     ].includes(error.code)) {
       return res.status(400).json({ message: error.message });
+    }
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ message: 'This renewal payment has already been recorded' });
+    }
+    return next(error);
+  }
+}
+
+async function postLoanReviewAction(req, res, next) {
+  if (!validId(req.params.id)) return res.status(400).json({ message: 'Loan ID is invalid' });
+  const action = String(req.body?.action || '').trim();
+  if (!['notice_sent', 'suspend', 'reinstate'].includes(action)) {
+    return res.status(400).json({ message: 'Choose a valid loan review action' });
+  }
+  try {
+    return res.json(await recordLoanReviewAction(
+      req.params.id,
+      action,
+      req.body,
+      req.adminUser.user_id
+    ));
+  } catch (error) {
+    if (error.code === 'LOAN_NOT_FOUND') return res.status(404).json({ message: error.message });
+    if (['INVALID_REVIEW_NOTES', 'INVALID_REVIEW_NOTICE', 'INVALID_REVIEW_ACTION'].includes(error.code)) {
+      return res.status(400).json({ message: error.message });
+    }
+    if ([
+      'LOAN_REVIEW_NOT_DUE',
+      'LOAN_NOT_ACTIVE',
+      'REVIEW_NOTICE_REQUIRED',
+      'LOAN_NOT_SUSPENDED'
+    ].includes(error.code)) {
+      return res.status(409).json({ message: error.message });
     }
     return next(error);
   }
@@ -636,6 +698,7 @@ module.exports = {
   postLoan,
   postGoldRelease,
   postLoanRenewal,
+  postLoanReviewAction,
   removeLoan,
   updateInterestType
 };

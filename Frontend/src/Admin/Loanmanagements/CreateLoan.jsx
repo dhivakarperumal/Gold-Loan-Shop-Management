@@ -6,6 +6,7 @@ import api, { getPrivateFile } from "../../api";
 import { formatRateDate, getRateForPurity } from "../../PrivateRouter/goldRateUtils";
 import useGoldRates from "../../PrivateRouter/useGoldRates";
 import { printLoanAgreement, printLoanDraft } from "./loanPrint";
+import { formatCurrency } from "../../utils/currency";
 
 const INTEREST_FREQUENCIES = [
   ["daily", "Daily"], ["weekly", "Weekly"], ["monthly", "Monthly"],
@@ -62,10 +63,18 @@ function formDate(value) {
   return Number.isNaN(parsed.valueOf()) ? "" : formDate(parsed);
 }
 
+function addMonthsToDate(value, months) {
+  const [year, month, day] = String(value || "").split("-").map(Number);
+  if (!year || !month || !day) return "";
+  const monthIndex = year * 12 + month - 1 + months;
+  const targetYear = Math.floor(monthIndex / 12);
+  const targetMonth = monthIndex % 12 + 1;
+  const lastDay = new Date(Date.UTC(targetYear, targetMonth, 0)).getUTCDate();
+  return `${targetYear}-${String(targetMonth).padStart(2, "0")}-${String(Math.min(day, lastDay)).padStart(2, "0")}`;
+}
+
 function initialLoan() {
   const today = localDate();
-  const maturity = new Date(`${today}T00:00:00`);
-  maturity.setMonth(maturity.getMonth() + 12);
   return {
     jewellery_type: "",
     metal_type: "Gold",
@@ -90,17 +99,11 @@ function initialLoan() {
     processing_fee: "0",
     other_charges: "0",
     loan_date: today,
-    maturity_date: localDate(maturity),
+    maturity_date: addMonthsToDate(today, 11),
     payment_frequency: "monthly",
     loan_status: "Active",
     notes: ""
   };
-}
-
-function formatCurrency(value) {
-  return new Intl.NumberFormat("en-IN", {
-    style: "currency", currency: "INR", maximumFractionDigits: 2
-  }).format(Number.isFinite(value) ? value : 0);
 }
 
 function elapsedDays(from, to, convention) {
@@ -457,10 +460,21 @@ export default function CreateLoan() {
 
   const handleChange = (event) => {
     const { name, value } = event.target;
-    if (name === "principal_amount") setLoanAmountError("");
-    setForm((current) => name === "metal_type"
-      ? { ...current, metal_type: value, gold_purity: "" }
-      : { ...current, [name]: value });
+    setForm((current) => {
+      if (name === "loan_date") {
+        return {
+          ...current,
+          loan_date: value,
+          maturity_date: addMonthsToDate(value, 11),
+          interest_calculation_start_date: current.interest_calculation_start_date === current.loan_date
+            ? value
+            : current.interest_calculation_start_date
+        };
+      }
+      return name === "metal_type"
+        ? { ...current, metal_type: value, gold_purity: "" }
+        : { ...current, [name]: value };
+    });
   };
 
   const handleLoanAmountModeChange = (mode) => {
@@ -667,7 +681,7 @@ export default function CreateLoan() {
         </div>
       </header>
 
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2 lg:gap-6">
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 items-start gap-5 lg:grid-cols-2 lg:items-stretch lg:gap-6">
         <div className="contents">
         <section className="order-1 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_2px_12px_rgba(15,23,42,0.04)] sm:p-6 lg:col-span-2">
           <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
@@ -778,7 +792,7 @@ export default function CreateLoan() {
           )}
         </section>
 
-        <section className="order-3 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_2px_12px_rgba(15,23,42,0.04)] sm:p-6 lg:col-start-1 lg:row-start-3">
+        <section className="order-3 h-full rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_2px_12px_rgba(15,23,42,0.04)] sm:p-6 lg:col-start-1 lg:row-start-3">
           <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-sky-50 text-sm font-black text-sky-700">03</span>
             <div>
@@ -794,6 +808,16 @@ export default function CreateLoan() {
             {form.interest_type === "fixed" && <FormField label="Fixed Interest Amount (₹/period)" name="fixed_interest_amount" form={form} onChange={handleChange} type="number" min="0.01" step="0.01" required />}
             {form.interest_type === "compound" && <FormSelect label="Compounding Frequency" name="compounding_frequency" form={form} onChange={handleChange} options={COMPOUND_FREQUENCIES} required />}
             <FormField label="Calculation Start Date" name="interest_calculation_start_date" form={form} onChange={handleChange} type="date" required />
+            <FormField
+              label={`Late Payment Rate (% / ${form.interest_frequency.replaceAll("_", " ")})`}
+              name="late_payment_interest_rate"
+              form={form}
+              onChange={handleChange}
+              type="number"
+              min="0"
+              step="0.0001"
+              help="Optional simple charge on outstanding principal, applied from the day after maturity. It is not compounded."
+            />
             <FormSelect label="Loan Status" name="loan_status" form={form} onChange={handleChange} options={(loanRecord ? ["Active", "Pending", "Inactive", "Completed"] : ["Active", "Pending"]).map((status) => [status, status])} required />
             <FormField label="Other Authorized Charges (₹)" name="other_charges" form={form} onChange={handleChange} type="number" min="0" step="0.01" />
           </div>
@@ -1023,7 +1047,7 @@ export default function CreateLoan() {
           </div>
         </section>
 
-        <section className="order-4 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_2px_12px_rgba(15,23,42,0.04)] sm:p-6 lg:col-start-2 lg:row-start-3">
+        <section className="order-4 h-full rounded-2xl border border-slate-200/80 bg-white p-5 shadow-[0_2px_12px_rgba(15,23,42,0.04)] sm:p-6 lg:col-start-2 lg:row-start-3">
           <div className="mb-5 flex items-center gap-3 border-b border-slate-100 pb-4">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-violet-50 text-sm font-black text-violet-700">04</span>
             <div>
@@ -1034,7 +1058,7 @@ export default function CreateLoan() {
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
             <label className={labelClass}>Loan Number<input className={`${fieldClass} bg-slate-50`} value={loanRecord?.loan_number || "Auto-generated on save"} readOnly placeholder="Auto-generated on save" /></label>
             <FormField label="Loan Date" name="loan_date" form={form} onChange={handleChange} type="date" required />
-            <FormField label="Maturity Date" name="maturity_date" form={form} onChange={handleChange} type="date" required />
+            <FormField label="Maturity Date" name="maturity_date" form={form} onChange={handleChange} type="date" required readOnly help="Automatically set to 11 months after the loan date." />
             <FormSelect label="Payment Frequency" name="payment_frequency" form={form} onChange={handleChange} options={PAYMENT_FREQUENCIES} required />
           </div>
           <label className={`${labelClass} mt-4`}>Notes<textarea className={fieldClass} name="notes" rows="3" maxLength="5000" value={form.notes} onChange={handleChange} placeholder="Enter any additional loan notes (optional)" /></label>

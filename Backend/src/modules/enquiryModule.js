@@ -16,11 +16,7 @@ async function initializeEnquiryModule() {
       product_category VARCHAR(100) NULL,
       product_id INT UNSIGNED NULL,
       product_name VARCHAR(200) NULL,
-      metal_type VARCHAR(32) NULL,
       purity VARCHAR(20) NULL,
-      daily_rate DECIMAL(14,2) NULL,
-      rate_unit VARCHAR(10) NULL,
-      rate_date DATE NULL,
       quantity DECIMAL(12,3) NULL,
       weight DECIMAL(12,3) NULL,
       approx_budget DECIMAL(14,2) NULL,
@@ -40,16 +36,6 @@ async function initializeEnquiryModule() {
       INDEX idx_enquiries_product (product_id)
     )
   `);
-  const [columns] = await pool.query('SHOW COLUMNS FROM enquiries');
-  const columnNames = new Set(columns.map((column) => column.Field));
-  for (const [name, definition] of [
-    ['metal_type', 'VARCHAR(32) NULL AFTER product_name'],
-    ['daily_rate', 'DECIMAL(14,2) NULL AFTER purity'],
-    ['rate_unit', 'VARCHAR(10) NULL AFTER daily_rate'],
-    ['rate_date', 'DATE NULL AFTER rate_unit']
-  ]) {
-    if (!columnNames.has(name)) await pool.query(`ALTER TABLE enquiries ADD COLUMN ${name} ${definition}`);
-  }
 }
 
 async function listEnquiries({ search, status, product, startDate, endDate, page, limit }) {
@@ -103,8 +89,7 @@ async function listEnquiries({ search, status, product, startDate, endDate, page
 async function createEnquiry(enquiry) {
   const fields = [
     'customer_name', 'phone', 'alternate_phone', 'email', 'address', 'city', 'state', 'pincode',
-    'enquiry_type', 'product_category', 'product_id', 'product_name', 'metal_type', 'purity', 'daily_rate',
-    'rate_unit', 'rate_date', 'quantity', 'weight',
+    'enquiry_type', 'product_category', 'product_id', 'product_name', 'purity', 'quantity', 'weight',
     'approx_budget', 'preferred_design', 'message', 'status', 'follow_up_date', 'follow_up_time',
     'assigned_to', 'source', 'priority', 'whatsapp_confirmation'
   ];

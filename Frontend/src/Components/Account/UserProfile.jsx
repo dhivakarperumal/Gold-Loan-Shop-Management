@@ -9,14 +9,15 @@ import { FaRegGem } from "react-icons/fa";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 import PageContainer from "../CommenComponents/PageContainer";
+import PageHeader from "../CommenComponents/PageHeader";
 import api from "../../api";
+import { formatCurrency, formatAmount } from "../../utils/currency";
 
 /* ── helpers ─────────────────────────────────── */
 const initials = (name = "") =>
   name.split(" ").slice(0, 2).map((w) => w[0]?.toUpperCase() ?? "").join("");
 
-const fmt = (n) =>
-  Number(n || 0).toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmt = formatAmount;
 
 const fmtDate = (d) =>
   d ? new Date(d).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—";
@@ -202,53 +203,29 @@ const UserProfile = () => {
 
   return (
     <div className="min-h-screen pb-16" style={{ background: "#f8f7f2" }}>
+      <PageHeader title="My Profile" />
 
-      {/* ── Hero banner ── */}
-      <div className="relative w-full py-10 sm:py-12"
-        style={{ background: "linear-gradient(135deg,#003D2E 0%,#004D40 60%,#1a5c42 100%)" }}>
-        <div className="absolute bottom-0 left-0 right-0 h-[3px]"
-          style={{ background: "linear-gradient(90deg,transparent,#D4A017 30%,#F5C45E 50%,#D4A017 70%,transparent)" }} />
-
-        <PageContainer>
-          <div className="flex flex-col items-center gap-5 text-center sm:flex-row sm:items-end sm:text-left">
-            {/* Avatar */}
+      <PageContainer className="pt-5">
+        <div className="mt-5 grid items-start gap-5 lg:grid-cols-[240px_minmax(0,1fr)]">
+        <aside className="min-w-0 overflow-hidden rounded-2xl border border-[#e9e3d7] bg-white p-2.5 shadow-sm">
+          <section className="flex flex-col items-center gap-3 px-3 py-4 text-center">
             <div className="relative shrink-0">
-              <div className="flex h-24 w-24 items-center justify-center rounded-full text-3xl font-black text-white shadow-xl ring-4 ring-white/20"
-                style={{ background: "linear-gradient(135deg,#D4A017,#F5C45E)" }}>
-                <span style={{ color: "#004D40" }}>{initials(name) || <FiUser />}</span>
+              <div className="flex h-16 w-16 items-center justify-center rounded-full text-2xl font-black shadow-sm"
+                style={{ background: "linear-gradient(135deg,#D4A017,#F5C45E)", color: "#004D40" }}>
+                {initials(name) || <FiUser />}
               </div>
-              <span className="absolute bottom-1 right-1 h-4 w-4 rounded-full border-2 border-white bg-green-400" />
+              <span className="absolute bottom-0.5 right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-green-400" />
             </div>
-
-            {/* Name & role */}
-            <div className="flex-1">
-              <p className="text-xs font-bold uppercase tracking-[0.25em]" style={{ color: "#F5C45E" }}>
+            <div className="min-w-0 w-full">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#a67b2e]">
                 {isAdmin ? "Administrator" : "Member Account"}
               </p>
-              <h1 className="mt-1 font-serif text-3xl font-bold text-white sm:text-4xl">{name}</h1>
-              <p className="mt-1 text-sm text-white/60">{email}</p>
+              <h2 className="mt-1 truncate font-serif text-lg font-bold text-[#201a13]">{name}</h2>
+              <p className="mt-0.5 truncate text-xs text-slate-500">{email}</p>
             </div>
+          </section>
 
-            {/* Actions */}
-            <div className="flex gap-3">
-              {isAdmin && (
-                <button type="button" onClick={() => navigate("/admin")}
-                  className="flex items-center gap-2 rounded-full px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-white transition hover:opacity-90"
-                  style={{ background: "rgba(255,255,255,0.15)", border: "1px solid rgba(255,255,255,0.3)" }}>
-                  <FiShield size={14} /> Admin Panel
-                </button>
-              )}
-              <button type="button" onClick={handleLogout}
-                className="flex items-center gap-2 rounded-full bg-red-500/90 px-5 py-2.5 text-xs font-bold uppercase tracking-widest text-white transition hover:bg-red-600">
-                <FiLogOut size={14} /> Logout
-              </button>
-            </div>
-          </div>
-        </PageContainer>
-      </div>
-
-      <PageContainer className="relative z-10 -mt-4">
-        <nav aria-label="Profile sections" className="hide-scrollbar flex overflow-x-auto rounded-xl border border-[#e9e3d7] bg-white p-1.5 shadow-sm">
+        <nav aria-label="Profile sections" className="flex min-w-0 flex-col border-y border-[#eee8dc] py-2">
           {[
             { id: "profile", label: "Profile Details", icon: FiUser },
             { id: "wishlist", label: "Wishlist Products", icon: FiHeart, count: wishlist.length },
@@ -262,7 +239,7 @@ const UserProfile = () => {
               aria-selected={activeTab === id}
               aria-controls={`profile-panel-${id}`}
               onClick={() => setActiveTab(id)}
-              className={`inline-flex min-w-max flex-1 items-center justify-center gap-2 rounded-lg px-4 py-3 text-xs font-bold transition sm:text-sm ${
+              className={`inline-flex w-full min-w-0 items-center justify-start gap-2 rounded-lg px-3 py-3 text-left text-xs font-bold transition sm:text-sm ${
                 activeTab === id
                   ? "bg-[#174a3f] text-white shadow-sm"
                   : "text-[#66726c] hover:bg-[#f5f7f3] hover:text-[#174a3f]"
@@ -278,12 +255,25 @@ const UserProfile = () => {
             </button>
           ))}
         </nav>
+          <div className="flex flex-col gap-2 px-2 py-3">
+            {isAdmin && (
+              <button type="button" onClick={() => navigate("/admin")}
+                className="flex items-center justify-center gap-2 rounded-full border border-[#174a3f]/20 px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider text-[#174a3f] transition hover:bg-[#f4f8f5]">
+                <FiShield size={14} /> Admin Panel
+              </button>
+            )}
+            <button type="button" onClick={handleLogout}
+              className="flex items-center justify-center gap-2 rounded-full bg-red-500/90 px-3 py-2.5 text-[10px] font-bold uppercase tracking-wider text-white transition hover:bg-red-600">
+              <FiLogOut size={14} /> Logout
+            </button>
+          </div>
+        </aside>
 
         <section
           role="tabpanel"
           id={`profile-panel-${activeTab}`}
           aria-labelledby={`profile-tab-${activeTab}`}
-          className="mt-5"
+          className="mt-0 min-w-0"
         >
           {activeTab === "profile" && (
             <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.7fr)_minmax(260px,0.8fr)]">
@@ -371,7 +361,7 @@ const UserProfile = () => {
                             <p className="mt-1 text-xs text-[#68736d]">
                               {[item.colorName, item.size].filter(Boolean).join(" · ") || "Jewellery"}
                             </p>
-                            {Number(item.price) > 0 && <p className="mt-2 font-bold text-[#174a3f]">₹{Number(item.price).toLocaleString("en-IN", { maximumFractionDigits: 2 })}</p>}
+                            {Number(item.price) > 0 && <p className="mt-2 font-bold text-[#174a3f]">{formatCurrency(item.price)}</p>}
                           </div>
                         </Link>
                         <div className="flex items-center justify-between border-t border-[#f0ece4] px-3 py-2">
@@ -440,6 +430,7 @@ const UserProfile = () => {
             </section>
           )}
         </section>
+        </div>
       </PageContainer>
     </div>
   );

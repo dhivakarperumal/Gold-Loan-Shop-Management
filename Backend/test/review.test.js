@@ -15,13 +15,25 @@ test('normalizes valid admin-created review input', () => {
 
   assert.equal(result.error, undefined);
   assert.deepEqual(result.review, {
-    product_id: 12,
+    product_id: null,
     user_name: 'Customer Name',
     user_email: null,
     rating: 5,
     comment: 'Excellent quality.',
     review_image: image
   });
+});
+
+test('allows admin-created reviews without a target product', () => {
+  const result = normalizeReview({
+    user_name: 'Customer',
+    rating: 5,
+    comment: 'Great service',
+    product_id: 'not-a-product'
+  });
+
+  assert.equal(result.error, undefined);
+  assert.equal(result.review.product_id, null);
 });
 
 test('rejects invalid product, customer, rating, comment, email, and image values', () => {
@@ -34,7 +46,6 @@ test('rejects invalid product, customer, rating, comment, email, and image value
     review_image: null
   };
   for (const [field, value] of Object.entries({
-    product_id: 0,
     user_name: ' ',
     user_email: 'not-an-email',
     rating: 6,

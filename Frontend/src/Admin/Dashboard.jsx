@@ -1,15 +1,15 @@
-import React, { useContext, useEffect, useState, useCallback } from "react";
-import { AuthContext } from "../PrivateRouter/AuthContext";
+import React, { useEffect, useState, useCallback } from "react";
 import { useAdmin } from "../PrivateRouter/AdminContext";
 import { formatRateDate } from "../PrivateRouter/goldRateUtils";
 import useGoldRates from "../PrivateRouter/useGoldRates";
 import api from "../api";
-import { toast, Toaster } from "react-hot-toast";
+import DateRangeFilter from "./Components/DateRangeFilter";
+import { formatCurrency } from "../utils/currency";
+import { Toaster } from "react-hot-toast";
 import { useNavigate } from "react-router-dom";
 import {
   FiUsers,
   FiBox,
-  FiChevronDown,
   FiArrowRight,
   FiMoreHorizontal,
   FiChevronRight,
@@ -134,7 +134,8 @@ const DEFAULT_DASHBOARD_DATA = {
     Active: 0,
     Processing: 0,
     Pending: 0,
-    Overdue: 0
+    Overdue: 0,
+    Completed: 0,
   },
   revenueTrends: [],
   topProducts: []
@@ -142,16 +143,21 @@ const DEFAULT_DASHBOARD_DATA = {
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { user } = useContext(AuthContext);
   const { dashboardData, setDashboardCached } = useAdmin();
   const { current: currentGoldRates, loading: goldRatesLoading } = useGoldRates();
-  const [salesRange, setSalesRange] = useState("month");
+  const [dateRange, setDateRange] = useState({ preset: "all", startDate: "", endDate: "" });
   const [metricsError, setMetricsError] = useState(false);
   const metricsLoading = !dashboardData?.stats && !metricsError;
 
-  const fetchDashboardData = useCallback(async (range = salesRange) => {
+  const fetchDashboardData = useCallback(async () => {
     try {
-      const response = await api.get('/dashboard', { params: { range } });
+      const response = await api.get('/dashboard', {
+        params: {
+          datePreset: dateRange.preset,
+          startDate: dateRange.startDate,
+          endDate: dateRange.endDate
+        }
+      });
       if (!response.data?.stats) throw new Error("Dashboard API returned no metrics");
       setDashboardCached(response.data);
       setMetricsError(false);
@@ -159,7 +165,7 @@ const Dashboard = () => {
       setMetricsError(true);
       console.error("Failed to refresh dashboard metrics:", error);
     }
-  }, [salesRange, setDashboardCached]);
+  }, [dateRange, setDashboardCached]);
 
   useEffect(() => {
     const initialRefresh = window.setTimeout(() => fetchDashboardData(), 0);
@@ -260,6 +266,8 @@ const Dashboard = () => {
       case "Active":
       case "Delivered":
         return "bg-emerald-50 text-emerald-600 font-semibold";
+      case "Completed":
+        return "bg-teal-50 text-teal-700 font-semibold";
       case "Processing":
         return "bg-amber-50 text-amber-600 font-semibold";
       case "Pending":
@@ -309,7 +317,7 @@ const Dashboard = () => {
             const idx = items[0]?.dataIndex;
             return revenueTrends[idx]?.date || items[0]?.label || "";
           },
-          label: (context) => `● ₹ ${context.parsed.y.toLocaleString('en-IN')}`
+          label: (context) => `● ${formatCurrency(context.parsed.y)}`
         }
       }
     },
@@ -336,13 +344,14 @@ const Dashboard = () => {
   };
 
   // ── Doughnut Chart: Loan Status ──────────────────────────────────
-  const loanStatusLabels = ['Active', 'Processing', 'Pending', 'Overdue'];
-  const loanStatusColors = ['#10B981', '#F59E0B', '#38BDF8', '#EF4444'];
+  const loanStatusLabels = ['Active', 'Processing', 'Pending', 'Overdue', 'Completed'];
+  const loanStatusColors = ['#10B981', '#F59E0B', '#38BDF8', '#EF4444', '#0F766E'];
   const loanStatusValues = [
     loanStatusCounts.Active ?? 0,
     loanStatusCounts.Processing ?? 0,
     loanStatusCounts.Pending ?? 0,
     loanStatusCounts.Overdue ?? 0,
+    loanStatusCounts.Completed ?? 0,
   ];
   const totalLoanStatusSum = loanStatusValues.reduce((a, b) => a + b, 0) || 1;
 
@@ -559,7 +568,7 @@ const Dashboard = () => {
                   })[rate.purity] || rate.purity : rate.purity}
                 </span>
                 <p className="mt-1.5 text-base font-extrabold tabular-nums text-white">
-                  ₹{Number(rate.rate_per_unit ?? rate.rate_per_gram).toLocaleString("en-IN")}
+                  {formatCurrency(rate.rate_per_unit ?? rate.rate_per_gram)}
                   <span className="ml-1 text-xs font-semibold text-emerald-100/70">/{rate.rate_unit === "carat" ? "ct" : "g"}</span>
                 </p>
               </div>
@@ -569,11 +578,11 @@ const Dashboard = () => {
           <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div className="rounded-xl border border-amber-200/15 bg-white/[0.08] px-3.5 py-3">
               <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-amber-100/80">Gold 22K (916)</span>
-              <p className="mt-1.5 text-base font-extrabold text-white">₹6,850/g</p>
+              <p className="mt-1.5 text-base font-extrabold text-white">₹6,850.00/g</p>
             </div>
             <div className="rounded-xl border border-amber-200/15 bg-white/[0.08] px-3.5 py-3">
               <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-amber-100/80">Gold 24K</span>
-              <p className="mt-1.5 text-base font-extrabold text-white">₹7,472/g</p>
+              <p className="mt-1.5 text-base font-extrabold text-white">₹7,472.00/g</p>
             </div>
             <div className="rounded-xl border border-white/10 bg-white/[0.08] px-3.5 py-3">
               <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-emerald-50/70">Silver 999</span>
@@ -592,21 +601,7 @@ const Dashboard = () => {
               <h3 className="text-base sm:text-lg font-bold text-slate-800">Sales Overview</h3>
               <p className="mt-0.5 text-[11px] text-slate-400">Live billing data · refreshes every 30 seconds</p>
             </div>
-            <div className="relative">
-              <select
-                value={salesRange}
-                onChange={(e) => {
-                  setSalesRange(e.target.value);
-                  fetchDashboardData(e.target.value);
-                }}
-                className="appearance-none bg-white border border-slate-200 rounded-lg px-3 py-1.5 pr-7 text-xs font-semibold text-slate-600 focus:outline-none focus:border-[#008577] cursor-pointer shadow-2xs"
-              >
-                <option value="month">This Month</option>
-                <option value="week">This Week</option>
-                <option value="year">This Year</option>
-              </select>
-              <FiChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-xs" />
-            </div>
+            <DateRangeFilter onApply={setDateRange} className="max-w-full sm:max-w-[360px]" />
           </div>
           <div className="relative h-[260px] sm:h-[280px] w-full pt-2">
             {metricsLoading
@@ -714,7 +709,7 @@ const Dashboard = () => {
                         </span>
                       </div>
                     </td>
-                    <td className="py-3.5 font-extrabold text-slate-800">{loan.amount}</td>
+                    <td className="py-3.5 font-extrabold text-slate-800">{formatCurrency(loan.amount)}</td>
                     <td className="py-3.5">
                       <span className={`px-2.5 py-1 rounded-md text-[10px] ${getStatusBadge(loan.status)}`}>
                         {loan.status}
@@ -777,7 +772,7 @@ const Dashboard = () => {
                 </div>
                 <div className="text-right shrink-0">
                   <span className="text-xs sm:text-sm font-extrabold text-slate-800">
-                    {prod.price == null ? "—" : `₹ ${Number(prod.price).toLocaleString('en-IN')}`}
+                    {formatCurrency(prod.price)}
                   </span>
                 </div>
               </div>

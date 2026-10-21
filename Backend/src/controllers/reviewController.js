@@ -3,7 +3,6 @@ const {
   deleteReview,
   getReviewById,
   listReviews,
-  productExists,
   reviewImageInUse,
   updateReviewReply,
   updateReviewStatus
@@ -17,13 +16,11 @@ function validId(value) {
 }
 
 function normalizeReview(body) {
-  const productId = Number(body.product_id);
   const userName = typeof body.user_name === 'string' ? body.user_name.trim() : '';
   const userEmail = typeof body.user_email === 'string' ? body.user_email.trim() : '';
   const comment = typeof body.comment === 'string' ? body.comment.trim() : '';
   const rating = Number(body.rating);
   const image = body.review_image == null || body.review_image === '' ? null : body.review_image;
-  if (!Number.isSafeInteger(productId) || productId < 1) return { error: 'Select a valid product' };
   if (!userName || userName.length > 150) return { error: 'Customer name is required and must be 150 characters or fewer' };
   if (userEmail && (userEmail.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(userEmail))) {
     return { error: 'Enter a valid customer email address' };
@@ -36,7 +33,7 @@ function normalizeReview(body) {
   }
   return {
     review: {
-      product_id: productId,
+      product_id: null,
       user_name: userName,
       user_email: userEmail || null,
       rating,
@@ -77,7 +74,6 @@ async function postReview(req, res, next) {
   const { review, error } = normalizeReview(req.body || {});
   if (error) return res.status(400).json({ message: error });
   try {
-    if (!await productExists(review.product_id)) return res.status(404).json({ message: 'Product not found' });
     return res.status(201).json(await createReview(review));
   } catch (createError) {
     return next(createError);
@@ -160,4 +156,3 @@ module.exports = {
   putReviewStatus,
   removeReview
 };
-
