@@ -2,14 +2,13 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   ArrowLeft, Bell, CalendarDays, Check, CheckCircle2, ChevronLeft,
-  ChevronRight, CircleDollarSign, Clock3, Eye, Filter, Mail, MapPin, MessageCircle,
+  ChevronRight, CircleDollarSign, Clock3, Eye, Mail, MapPin, MessageCircle,
   LayoutGrid, List, Package, Phone, Plus, RotateCcw, Search, Send, Trash2, UserRound, X
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import api from "../../api";
 import useGoldRates from "../../PrivateRouter/useGoldRates";
 import { formatRateDate, getRateForPurity } from "../../PrivateRouter/goldRateUtils";
-import DateRangeFilter from "../Components/DateRangeFilter";
 
 const STATUSES = ["New Enquiry", "In Progress", "Quotation Sent", "Converted", "Closed", "Not Interested"];
 const TYPES = ["Gold Jewellery", "Gold Coin / Bar", "Gold Loan", "Old Gold Exchange", "Other"];
@@ -84,8 +83,6 @@ const Enquiries = () => {
   const [productFilter, setProductFilter] = useState("");
   const [categories, setCategories] = useState([]);
   const [products, setProducts] = useState([]);
-  const [dateRange, setDateRange] = useState({ preset: "all", startDate: "", endDate: "" });
-  const [dateFilterKey, setDateFilterKey] = useState(0);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -100,9 +97,7 @@ const Enquiries = () => {
         limit: 8,
         search: search.trim(),
         status: statusFilter,
-        product: productFilter,
-        startDate: dateRange.startDate,
-        endDate: dateRange.endDate
+        product: productFilter
       };
       const response = await api.get("/enquiries/admin/all", { params });
       setEnquiries(response.data.enquiries || []);
@@ -113,7 +108,7 @@ const Enquiries = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusFilter, productFilter, dateRange]);
+  }, [page, search, statusFilter, productFilter]);
 
   useEffect(() => {
     if (!isCreate) void fetchEnquiries();
@@ -347,14 +342,7 @@ const Enquiries = () => {
   }
 
   return <main className="space-y-3 pb-5">
-    <header className="flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <nav className="mb-2 flex items-center gap-2 text-[11px] text-slate-500"><Link to="/admin" className="hover:text-[#00695C]">Home</Link><ChevronRight size={13} /><span className="text-slate-700">Enquiries</span></nav>
-        <h1 className="text-2xl font-black tracking-tight text-slate-900">Enquiries</h1>
-        <p className="mt-1 text-sm text-slate-500">Manage customer enquiries and respond quickly.</p>
-      </div>
-      <DateRangeFilter key={dateFilterKey} onApply={(range) => { setPage(1); setDateRange(range); }} />
-    </header>
+
 
     <section aria-label="Enquiry summary" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {filteredStats.map(({ label, value, note, icon: Icon, color }) => {
@@ -377,8 +365,6 @@ const Enquiries = () => {
         <div className="flex flex-wrap items-center gap-2 lg:ml-auto">
           <select aria-label="Filter by status" value={statusFilter} onChange={(event) => { setPage(1); setStatusFilter(event.target.value); }} className="min-h-9 rounded-lg border border-slate-200 px-3 text-xs text-slate-700"><option value="">All Status</option>{STATUSES.map((status) => <option key={status}>{status}</option>)}</select>
           <select aria-label="Filter by product" value={productFilter} onChange={(event) => { setPage(1); setProductFilter(event.target.value); }} className="min-h-9 rounded-lg border border-slate-200 px-3 text-xs text-slate-700"><option value="">All Products</option>{categories.map((category) => <option key={category.catId || category.id || category.name} value={category.name}>{category.name}</option>)}</select>
-          <button type="button" onClick={() => void fetchEnquiries()} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-[#00796B] px-3 py-2 text-xs font-bold text-white"><Filter size={14} />Filter</button>
-          <button type="button" onClick={() => { setSearch(""); setStatusFilter(""); setProductFilter(""); setPage(1); setDateRange({ preset: "all", startDate: "", endDate: "" }); setDateFilterKey((key) => key + 1); }} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600"><RotateCcw size={13} />Reset</button>
           <div role="group" aria-label="Enquiry view mode" className="inline-flex items-center rounded-lg border border-slate-200 bg-slate-50 p-1">
             <button type="button" onClick={() => setViewMode("table")} aria-label="Table mode" aria-pressed={viewMode === "table"} title="Table mode" className={`rounded-md p-1.5 transition ${viewMode === "table" ? "bg-white text-[#00796B] shadow-sm" : "text-slate-400 hover:text-slate-700"}`}><List size={16} /></button>
             <button type="button" onClick={() => setViewMode("card")} aria-label="Card mode" aria-pressed={viewMode === "card"} title="Card mode" className={`rounded-md p-1.5 transition ${viewMode === "card" ? "bg-white text-[#00796B] shadow-sm" : "text-slate-400 hover:text-slate-700"}`}><LayoutGrid size={16} /></button>
@@ -389,14 +375,13 @@ const Enquiries = () => {
 
       {viewMode === "table" ? <div className="overflow-x-auto">
         <table className="w-full min-w-[980px] text-left">
-          <thead><tr className="bg-slate-50 text-[10px] uppercase tracking-wide text-slate-600"><th className="px-3 py-3"><input aria-label="Select all visible enquiries" type="checkbox" className="accent-emerald-700" /></th><th className="px-3 py-3">#</th><th className="px-3 py-3">Customer</th><th className="px-3 py-3">Enquiry Details</th><th className="px-3 py-3">Product</th><th className="px-3 py-3">Date &amp; Time</th><th className="px-3 py-3">Status</th><th className="px-3 py-3 text-right">Action</th></tr></thead>
+          <thead><tr className="bg-gradient-to-r from-[#07564B] via-[#064A41] to-[#043D37] text-[10px] uppercase tracking-wide text-emerald-50/90"><th className="rounded-tl-2xl px-4 py-4">#</th><th className="px-4 py-4">Customer</th><th className="px-4 py-4">Enquiry Details</th><th className="px-4 py-4">Product</th><th className="px-4 py-4">Date &amp; Time</th><th className="px-4 py-4">Status</th><th className="rounded-tr-2xl px-4 py-4 text-right">Action</th></tr></thead>
           <tbody className="divide-y divide-slate-100">
             {loading
               ? <tr><td colSpan="8" className="p-10 text-center text-sm text-slate-500">Loading enquiries…</td></tr>
               : enquiries.length === 0
                 ? <tr><td colSpan="8" className="p-10 text-center text-sm text-slate-500">No enquiries found. Add one to get started.</td></tr>
-                : enquiries.map((enquiry, index) => <tr key={enquiry.id} className="hover:bg-slate-50/70">
-                  <td className="px-3 py-2.5"><input type="checkbox" aria-label={`Select enquiry ${enquiry.id}`} className="accent-emerald-700" /></td>
+                : enquiries.map((enquiry) => <tr key={enquiry.id} className="hover:bg-slate-50/70">
                   <td className="px-3 py-2.5 text-[11px] font-bold text-slate-700">#ENQ{String(enquiry.id).padStart(3, "0")}</td>
                   <td className="px-3 py-2.5"><div className="flex items-center gap-2.5"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-fuchsia-100 text-xs font-bold text-fuchsia-700">{enquiry.customer_name?.slice(0, 1)?.toUpperCase()}</span><span className="min-w-0"><strong className="block truncate text-[11px] text-slate-800">{enquiry.customer_name}</strong><a href={`tel:${enquiry.phone}`} className="block text-[10px] text-slate-500 hover:text-emerald-700">{enquiry.phone}</a><span className="block max-w-32 truncate text-[10px] text-slate-400">{enquiry.email || "No email"}</span></span></div></td>
                   <td className="max-w-40 px-3 py-2.5"><p className="line-clamp-2 text-[11px] text-slate-700">{enquiry.message || enquiry.enquiry_type}</p><span className="text-[10px] text-slate-400">{enquiry.enquiry_type}</span></td>
