@@ -364,12 +364,12 @@ const Enquiries = ({ isPopup = false, onClose, initialProduct = null, isPublicEn
       <header className={`flex w-full flex-wrap items-end justify-between gap-3 ${isPopup ? "w-[calc(100%+2rem)] -mx-4 -mt-4 mb-5 rounded-t-2xl bg-white px-4 pb-2 pt-3 pr-16 shadow-sm sm:w-[calc(100%+3rem)] sm:-mx-6 sm:-mt-6 sm:px-6 sm:pb-3 sm:pt-4 sm:pr-16" : ""}`}>
         <div className={isPopup ? "mt-1" : ""}>
          
-          <h1 id={isPopup ? "enquiry-form-title" : undefined} className="mt-0 text-2xl font-black tracking-tight text-slate-900">{isEditing ? "Edit Gold Enquiry" : isPublicEnquiry ? "Enquire About This Product" : "Add Gold Enquiry"}</h1>
-          <p className="mt-1 text-sm text-slate-500">{isEditing ? "Update customer and product enquiry details." : isPublicEnquiry ? "Share your contact details and we’ll get back to you." : isPopup ? "Enter customer and product details below." : "Add a new customer enquiry for gold jewellery, coins, or other products."}</p>
+          <h1 id={isPopup ? "enquiry-form-title" : undefined} className="mt-0  text-2xl font-black tracking-tight text-slate-900">{isEditing ? "Edit Gold Enquiry" : isPublicEnquiry ? "Enquire About This Product" : "Add Gold Enquiry"}</h1>
+          <p className="mt-1 mb-5 text-sm text-slate-500">{isEditing ? "Update customer and product enquiry details." : isPublicEnquiry ? "Share your contact details and we’ll get back to you." : isPopup ? "Enter customer and product details below." : "Add a new customer enquiry for gold jewellery, coins, or other products."}</p>
         </div>
         {isPopup
           ? <button type="button" onClick={onClose} aria-label="Close add enquiry dialog" className="absolute right-4 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-100 hover:text-slate-900 sm:right-6 sm:top-6"><X size={18} /></button>
-          : <Link to="/admin/enquiries" className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"><ArrowLeft size={15} />Back to Enquiries</Link>}
+          : <Link to="/admin/enquiries" className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 mb-5 text-xs font-bold text-slate-700 hover:bg-slate-50"><ArrowLeft size={15} />Back to Enquiries</Link>}
       </header>
 
       {editLoading ? <section className="rounded-2xl border border-slate-100 bg-white p-10 text-center text-sm text-slate-500 shadow-sm">Loading enquiry details…</section> :
