@@ -3,6 +3,7 @@ const {
   deleteEnquiry,
   getEnquiry,
   listEnquiries,
+  updateEnquiry,
   updateEnquiryStatus
 } = require('../modules/enquiryModule');
 
@@ -116,6 +117,48 @@ async function postEnquiry(req, res, next) {
   }
 }
 
+async function postPublicEnquiry(req, res, next) {
+  const { enquiry, error } = normalizeEnquiry(req.body || {});
+  if (error) return res.status(400).json({ message: error });
+  try {
+    await createEnquiry({
+      ...enquiry,
+      status: 'New Enquiry',
+      priority: 'Medium',
+      assigned_to: null,
+      source: 'Website',
+      follow_up_date: null,
+      follow_up_time: null
+    });
+    return res.status(201).json({ message: 'Enquiry submitted successfully' });
+  } catch (requestError) {
+    return next(requestError);
+  }
+}
+
+async function getAdminEnquiry(req, res, next) {
+  if (!validId(req.params.id)) return res.status(400).json({ message: 'Enquiry ID is invalid' });
+  try {
+    const enquiry = await getEnquiry(req.params.id);
+    if (!enquiry) return res.status(404).json({ message: 'Enquiry not found' });
+    return res.json({ enquiry });
+  } catch (error) {
+    return next(error);
+  }
+}
+
+async function putEnquiry(req, res, next) {
+  if (!validId(req.params.id)) return res.status(400).json({ message: 'Enquiry ID is invalid' });
+  const { enquiry, error } = normalizeEnquiry(req.body || {});
+  if (error) return res.status(400).json({ message: error });
+  try {
+    if (!await updateEnquiry(req.params.id, enquiry)) return res.status(404).json({ message: 'Enquiry not found' });
+    return res.json({ message: 'Enquiry updated successfully' });
+  } catch (requestError) {
+    return next(requestError);
+  }
+}
+
 async function putEnquiryStatus(req, res, next) {
   if (!validId(req.params.id)) return res.status(400).json({ message: 'Enquiry ID is invalid' });
   const status = req.body?.status;
@@ -139,4 +182,4 @@ async function removeEnquiry(req, res, next) {
   }
 }
 
-module.exports = { getEnquiries, postEnquiry, putEnquiryStatus, removeEnquiry, normalizeEnquiry };
+module.exports = { getAdminEnquiry, getEnquiries, postEnquiry, postPublicEnquiry, putEnquiry, putEnquiryStatus, removeEnquiry, normalizeEnquiry };
