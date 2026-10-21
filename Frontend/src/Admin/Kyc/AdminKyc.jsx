@@ -3,6 +3,7 @@ import { Search, ShieldCheck, Users, Clock3, CheckCircle2, XCircle, ChevronLeft,
 import toast from "react-hot-toast";
 import api from "../../api";
 import DateRangeFilter from "../Components/DateRangeFilter";
+import useAdminCachedList from "../useAdminCachedList";
 
 const statusLabels = {
   pending: "Pending",
@@ -28,15 +29,11 @@ const AdminKyc = () => {
   const [stats, setStats] = useState(null);
   const [statsError, setStatsError] = useState(false);
   const [allowedDocumentTypes, setAllowedDocumentTypes] = useState(null);
-  const [applications, setApplications] = useState([]);
   const [selected, setSelected] = useState(null);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
   const [dateRange, setDateRange] = useState({ preset: "all", startDate: "", endDate: "" });
   const [page, setPage] = useState(1);
-  const [pages, setPages] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [listError, setListError] = useState("");
   const [reason, setReason] = useState("");
   const [saving, setSaving] = useState(false);
   const [documentUrls, setDocumentUrls] = useState({});
@@ -56,8 +53,16 @@ const AdminKyc = () => {
     }
   }, [dateRange.startDate, dateRange.endDate]);
 
-  const loadApplications = useCallback(async () => {
-    try {
+  const listCacheKey = `admin:kyc:${JSON.stringify({
+    search, status, startDate: dateRange.startDate, endDate: dateRange.endDate, page, pageSize: 15
+  })}`;
+  const {
+    data: listData,
+    loading,
+    refreshing,
+    error: applicationError,
+    refresh: loadApplications
+  } = useAdminCachedList(listCacheKey, async () => {
       const response = await api.get("/kyc/admin/applications", {
         params: {
           search,
@@ -68,18 +73,24 @@ const AdminKyc = () => {
           pageSize: 15
         }
       });
-      setApplications(response.data.applications || []);
-      setPages(Math.max(1, response.data.pages || 1));
-      setListError("");
-      if (page > (response.data.pages || 1) && page > 1) setPage(response.data.pages || 1);
-    } catch (error) {
-      const message = error.response?.data?.message || "Unable to load KYC applications";
-      setListError(message);
-      toast.error(message);
-    } finally {
-      setLoading(false);
-    }
-  }, [dateRange.startDate, dateRange.endDate, page, search, status]);
+      return {
+        applications: response.data.applications || [],
+        pages: Math.max(1, response.data.pages || 1)
+      };
+  }, { applications: [], pages: 1 }, { enabled: false });
+
+  const applications = listData.applications;
+  const pages = listData.pages;
+
+  useEffect(() => {
+    if (page > pages && page > 1) setPage(pages);
+  }, [page, pages]);
+
+  useEffect(() => {
+    if (!applicationError) return;
+    const message = applicationError.response?.data?.message || "Unable to load KYC applications";
+    toast.error(message);
+  }, [applicationError]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -89,7 +100,9 @@ const AdminKyc = () => {
   }, [loadStats]);
 
   useEffect(() => {
-    const timer = window.setTimeout(loadApplications, search ? 250 : 0);
+    const timer = window.setTimeout(() => {
+      loadApplications().catch(() => {});
+    }, search ? 250 : 0);
     return () => window.clearTimeout(timer);
   }, [loadApplications, search]);
 
@@ -182,15 +195,14 @@ const AdminKyc = () => {
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-wrap items-center gap-3 border-b border-slate-200 p-4">
           <DateRangeFilter onApply={(range) => {
-            setLoading(true);
             setDateRange(range);
             setPage(1);
           }} />
           <label className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <input value={search} onChange={(event) => { setLoading(true); setSearch(event.target.value); setPage(1); }} placeholder="Search name, email, phone or ID" className="w-full rounded-xl border border-slate-300 py-2.5 pl-10 pr-3 text-sm outline-none focus:border-[#087568]" />
+            <input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Search name, email, phone or ID" className="w-full rounded-xl border border-slate-300 py-2.5 pl-10 pr-3 text-sm outline-none focus:border-[#087568]" />
           </label>
-          <select value={status} onChange={(event) => { setLoading(true); setStatus(event.target.value); setPage(1); }} className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm">
+          <select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }} className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm">
             <option value="all">All statuses</option>
             {Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
           </select>
@@ -204,8 +216,8 @@ const AdminKyc = () => {
             <tbody className="divide-y divide-slate-100">
               {loading ? (
                 <tr><td colSpan="5" className="px-5 py-10 text-center text-slate-500">Loading applications…</td></tr>
-              ) : listError ? (
-                <tr><td colSpan="5" className="px-5 py-10 text-center text-rose-700">{listError}</td></tr>
+              ) : applicationError && applications.length === 0 ? (
+                <tr><td colSpan="5" className="px-5 py-10 text-center text-rose-700">{applicationError.response?.data?.message || "Unable to load KYC applications"}</td></tr>
               ) : applications.length === 0 ? (
                 <tr>
                   <td colSpan="5" className="px-5 py-10 text-center">
@@ -229,7 +241,7 @@ const AdminKyc = () => {
                   <td className="px-5 py-4 text-slate-600">{application.applicant_email || "—"}<p className="mt-1 text-xs text-slate-400">{application.applicant_phone || "—"}</p></td>
                   <td className="px-5 py-4 text-slate-600">{dateLabel(application.created_at)}</td>
                   <td className="px-5 py-4"><span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">{statusLabels[application.status] || application.status}</span></td>
-                  <td className="px-5 py-4 text-right"><button type="button" onClick={() => openApplication(application.id)} className="rounded-lg bg-[#00675d] px-3 py-2 text-xs font-semibold text-white hover:bg-[#004d45]">Review</button></td>
+                  <td className="px-5 py-4 text-right"><button type="button" disabled={refreshing} onClick={() => openApplication(application.id)} className="rounded-lg bg-[#00675d] px-3 py-2 text-xs font-semibold text-white hover:bg-[#004d45] disabled:cursor-not-allowed disabled:opacity-50">Review</button></td>
                 </tr>
               ))}
             </tbody>
@@ -238,8 +250,8 @@ const AdminKyc = () => {
         <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3 text-sm text-slate-500">
           <span>Page {page} of {pages}</span>
           <div className="flex gap-2">
-            <button type="button" disabled={page <= 1 || loading} onClick={() => { setLoading(true); setPage((current) => current - 1); }} aria-label="Previous page" className="rounded-lg border border-slate-300 p-2 disabled:opacity-40"><ChevronLeft size={18} /></button>
-            <button type="button" disabled={page >= pages || loading} onClick={() => { setLoading(true); setPage((current) => current + 1); }} aria-label="Next page" className="rounded-lg border border-slate-300 p-2 disabled:opacity-40"><ChevronRight size={18} /></button>
+            <button type="button" disabled={page <= 1 || loading} onClick={() => setPage((current) => current - 1)} aria-label="Previous page" className="rounded-lg border border-slate-300 p-2 disabled:opacity-40"><ChevronLeft size={18} /></button>
+            <button type="button" disabled={page >= pages || loading} onClick={() => setPage((current) => current + 1)} aria-label="Next page" className="rounded-lg border border-slate-300 p-2 disabled:opacity-40"><ChevronRight size={18} /></button>
           </div>
         </div>
       </section>

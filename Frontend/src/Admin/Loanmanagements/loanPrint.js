@@ -114,15 +114,6 @@ function translated(english, tamil) {
   return `<span class="translation-en">${escapeHtml(english)}</span><span class="translation-ta">${escapeHtml(tamil)}</span>`;
 }
 
-function readAsDataUrl(blob) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(reader.error || new Error("Could not read the pledged gold image."));
-    reader.readAsDataURL(blob);
-  });
-}
-
 async function prepareLoanImage(loan) {
   if (!loan.gold_image_url) return loan;
   if (typeof loan.gold_image_url === "string" && loan.gold_image_url.startsWith("data:image/")) {
@@ -135,7 +126,11 @@ async function prepareLoanImage(loan) {
   if (!imageBlob.type.startsWith("image/")) {
     throw new Error("The pledged gold attachment is not a supported image.");
   }
-  return { ...loan, gold_image_data_url: await readAsDataUrl(imageBlob) };
+  return {
+    ...loan,
+    gold_image_data_url: URL.createObjectURL(imageBlob),
+    printImageObjectUrl: true
+  };
 }
 
 function createDocument(loan) {
@@ -211,6 +206,7 @@ function createDocument(loan) {
     .grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 16px; }
     .detail { min-width: 0; padding: 2px 0; }
     .wide { grid-column: span 2; }
+    .full-line { grid-column: 1 / -1; }
     .detail span { display: block; margin-bottom: 3px; color: #71817c; font-size: 10px; text-transform: uppercase; letter-spacing: .04em; }
     .detail strong { display: block; overflow-wrap: anywhere; color: #1e302b; font-size: 12px; }
     .pledged-image-detail { grid-column: 1 / -1; }
@@ -223,37 +219,36 @@ function createDocument(loan) {
     .signature strong { display: block; }
     .signature span { display: block; margin-top: 3px; color: #71817c; font-size: 10px; }
     .footer { margin-top: 28px; padding-top: 10px; border-top: 1px solid #e3ebe7; color: #71817c; text-align: center; font-size: 10px; }
-    @page { size: A4 portrait; margin: 5mm 7mm; }
+    @page { size: A4 portrait; margin: 4mm 6mm; }
     @media print {
       body { padding: 0; background: white; font-size: 12px; line-height: 1.25; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
       .toolbar { display: none !important; }
-      .page { display: flex; width: 100%; max-width: none; flex-direction: column; justify-content: space-between; padding: 0; box-shadow: none; break-after: avoid-page; page-break-after: avoid; }
-      .shop { padding-bottom: 8px; gap: 14px; }
+      .page { display: flex; width: 100%; max-width: none; min-height: 289mm; flex-direction: column; justify-content: space-between; padding: 0; box-shadow: none; break-after: avoid-page; page-break-after: avoid; }
+      .shop { padding-bottom: 6px; gap: 12px; }
       .brand { font-size: 28px; }
-      .shop p, .meta p { margin-top: 3px; font-size: 11px; }
-      .doc-title h2 { font-size: 18px; }
+      .shop p, .meta p { margin-top: 2px; font-size: 11px; }
+      .doc-title h2 { font-size: 17px; }
       .doc-title p { margin-top: 4px; }
-      .meta { margin: 7px 0; padding: 7px 9px; }
-      .section { flex: 0 0 auto; margin-top: 8px; break-inside: avoid; page-break-inside: avoid; }
-      .section h3 { margin-bottom: 4px; padding-bottom: 3px; font-size: 12px; }
-      .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px 10px; }
+      .meta { margin: 5px 0; padding: 5px 8px; }
+      .section { flex: 0 0 auto; margin-top: 4px; break-inside: avoid; page-break-inside: avoid; }
+      .section h3 { margin-bottom: 3px; padding-bottom: 2px; font-size: 12px; }
+      .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px 7px; }
+      .full-line { grid-column: 1 / -1; }
       .detail { padding: 1px 0; }
-      .detail span { margin-bottom: 2px; font-size: 10px; }
-      .detail strong { font-size: 12px; line-height: 1.22; }
+      .detail span { margin-bottom: 1px; font-size: 10px; }
+      .detail strong { font-size: 12px; line-height: 1.2; }
       .pledged-image-detail { grid-column: span 2; }
-      .pledged-image { max-height: 70px; max-width: 150px; margin-top: 3px; border-radius: 4px; }
+      .pledged-image { max-height: 56px; max-width: 120px; margin-top: 2px; border-radius: 3px; }
       .notes { min-height: 0; }
-      .acknowledgment { margin-top: 8px; padding: 7px 9px; font-size: 11px; line-height: 1.25; }
-      .signatures { gap: 14px 24px; margin-top: 14px; }
-      .signature { padding-top: 4px; }
-      .signature strong { font-size: 12px; }
-      .signature span, .footer { font-size: 10px; }
-      .signature span { margin-top: 2px; }
-      .footer { margin-top: 10px; padding-top: 6px; }
+      .acknowledgment { margin-top: 5px; padding: 5px 7px; font-size: 10px; line-height: 1.2; }
+      .signatures { gap: 10px 20px; margin-top: 7px; }
+      .signature { padding-top: 3px; }
+      .signature strong { font-size: 11px; }
+      .signature span, .footer { font-size: 9px; }
+      .signature span { margin-top: 1px; }
+      .footer { margin-top: 0; padding-top: 4px; }
       .acknowledgment, .signatures, .footer { break-inside: avoid; page-break-inside: avoid; }
       body.tamil .detail-label, body.tamil .section h3 { letter-spacing: 0; text-transform: none; }
-      body.tamil .detail span { font-size: 11px; }
-      body.tamil .detail strong { font-size: 12px; line-height: 1.25; }
     }
     @media (max-width: 650px) {
       body { padding: 10px; }
@@ -363,7 +358,7 @@ function createDocument(loan) {
       <div class="grid">
         <div class="wide">${detail("Late-payment terms", latePaymentTerms, latePaymentTermsTamil)}</div>
         ${detail("15-month review date", dateText(reviewDate))}
-        <div class="wide">${detail("Review process", "If a balance remains after maturity, the account is flagged for authorized manual review 15 months after the original loan date. This does not authorize automatic seizure or forfeiture. Any collateral handling must follow the signed agreement, applicable law, required notice, and authorized review.", "முதிர்வுக்குப் பிறகும் நிலுவை இருந்தால், அசல் கடன் தேதியிலிருந்து 15 மாதங்களில் கணக்கு அங்கீகரிக்கப்பட்ட கைமுறை மதிப்பாய்வுக்காக குறிக்கப்படும். இதனால் தானாகப் பறிமுதல் செய்யவோ உரிமை இழக்கச் செய்யவோ அனுமதி கிடையாது. அடகு பொருள் தொடர்பான நடவடிக்கைகள் கையொப்பமிட்ட ஒப்பந்தம், பொருந்தும் சட்டம், தேவையான அறிவிப்பு மற்றும் அங்கீகரிக்கப்பட்ட மதிப்பாய்வின்படி மட்டுமே நடைபெறும்.")}</div>
+        <div class="full-line">${detail("Review process", "If a balance remains after maturity, the account is flagged for authorized manual review 15 months after the original loan date. This does not authorize automatic seizure or forfeiture. Any collateral handling must follow the signed agreement, applicable law, required notice, and authorized review.", "முதிர்வுக்குப் பிறகும் நிலுவை இருந்தால், அசல் கடன் தேதியிலிருந்து 15 மாதங்களில் கணக்கு அங்கீகரிக்கப்பட்ட கைமுறை மதிப்பாய்வுக்காக குறிக்கப்படும். இதனால் தானாகப் பறிமுதல் செய்யவோ உரிமை இழக்கச் செய்யவோ அனுமதி கிடையாது. அடகு பொருள் தொடர்பான நடவடிக்கைகள் கையொப்பமிட்ட ஒப்பந்தம், பொருந்தும் சட்டம், தேவையான அறிவிப்பு மற்றும் அங்கீகரிக்கப்பட்ட மதிப்பாய்வின்படி மட்டுமே நடைபெறும்.")}</div>
       </div>
     </section>
     <p class="acknowledgment">${translated("The borrower confirms these customer and pledged-item details and accepts the loan amount, interest and repayment terms, charges, maturity date, late-payment terms, and review process. Both parties should review and sign this agreement and keep a signed copy.", "வாடிக்கையாளர் மற்றும் அடகு நகை விவரங்கள் சரியானவை என்றும், கடன் தொகை, வட்டி மற்றும் திருப்பிச் செலுத்தும் விதிமுறைகள், கட்டணங்கள், முதிர்வு தேதி, தாமதக் கட்டண விதிமுறைகள் மற்றும் மதிப்பாய்வு நடைமுறை ஆகியவற்றை ஏற்றுக்கொள்வதாகவும் கடன் பெறுபவர் உறுதிப்படுத்துகிறார். இரு தரப்பினரும் இந்த ஒப்பந்தத்தைச் சரிபார்த்துக் கையொப்பமிட்டு, கையொப்பமிட்ட பிரதியை வைத்திருக்க வேண்டும்.")}</p>
@@ -376,39 +371,9 @@ function createDocument(loan) {
     <div class="footer">${translated(`Generated from the loan record on ${new Date().toLocaleString("en-IN")}. This document reflects the saved loan terms.`, `${new Date().toLocaleString("ta-IN")} அன்று கடன் பதிவிலிருந்து உருவாக்கப்பட்டது. இந்த ஆவணம் சேமிக்கப்பட்ட கடன் விதிமுறைகளைக் காட்டுகிறது.`)}</div>
   </article>
   <script>
-    function preparePrintLayout() {
-      const page = document.querySelector(".page");
-      if (!page) return;
-
-      page.style.zoom = "1";
-      page.style.width = "100%";
-      page.style.height = "auto";
-      page.style.minHeight = "0";
-      page.style.justifyContent = "flex-start";
-
-      const naturalHeight = page.scrollHeight;
-      const printableHeight = 287 * 96 / 25.4;
-      const scale = Math.min(1, printableHeight / naturalHeight);
-      page.style.zoom = String(scale);
-      page.style.width = (100 / scale) + "%";
-      page.style.minHeight = (287 / scale) + "mm";
-      page.style.justifyContent = "space-between";
-    }
-
     function printAgreementPage() {
       window.print();
     }
-
-    window.addEventListener("beforeprint", preparePrintLayout);
-    window.addEventListener("afterprint", () => {
-      const page = document.querySelector(".page");
-      if (!page) return;
-      page.style.removeProperty("zoom");
-      page.style.removeProperty("width");
-      page.style.removeProperty("height");
-      page.style.removeProperty("min-height");
-      page.style.removeProperty("justify-content");
-    });
   </script>
 </body>
 </html>`;
@@ -441,6 +406,13 @@ function showLoading(printWindow) {
 
 function showPrintDocument(printWindow, loan) {
   if (printWindow.closed) return;
+  const releaseImageUrl = () => {
+    if (loan.printImageObjectUrl && loan.gold_image_data_url) {
+      URL.revokeObjectURL(loan.gold_image_data_url);
+    }
+  };
+  printWindow.addEventListener("afterprint", releaseImageUrl, { once: true });
+  printWindow.addEventListener("pagehide", releaseImageUrl, { once: true });
   printWindow.document.open();
   printWindow.document.write(createDocument(loan));
   printWindow.document.close();
@@ -463,6 +435,7 @@ function showPrintDocument(printWindow, loan) {
     image.addEventListener("error", () => reject(new Error("The pledged gold image could not be displayed.")), { once: true });
   }))).then(printWhenReady).catch((error) => {
     console.error("Failed to display pledged gold image:", error);
+    releaseImageUrl();
     printWindow.close();
     toast.error(error.message || "Could not display the pledged gold image.");
   });

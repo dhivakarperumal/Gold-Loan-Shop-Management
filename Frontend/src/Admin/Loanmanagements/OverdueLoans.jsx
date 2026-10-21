@@ -7,6 +7,7 @@ import { isLoanReviewDue } from "./loanPolicy";
 import { formatCurrency as money } from "../../utils/currency";
 import DateRangeFilter from "../Components/DateRangeFilter";
 import { LoanPaymentModal } from "./LoanRenewal";
+import useAdminCachedList from "../useAdminCachedList";
 
 function dateText(value) {
   if (!value) return "—";
@@ -35,29 +36,33 @@ function Detail({ label, value }) {
 }
 
 export default function OverdueLoans() {
-  const [loans, setLoans] = useState([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [viewMode, setViewMode] = useState("table");
   const [paymentLoan, setPaymentLoan] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState({ preset: "all", startDate: "", endDate: "" });
+  const {
+    data: loans,
+    setData: setLoans,
+    loading,
+    refreshing,
+    error
+  } = useAdminCachedList(
+    `admin:loans:${dateRange.startDate}:${dateRange.endDate}`,
+    async () => {
+      const { data } = await api.get("/loans", { params: { startDate: dateRange.startDate, endDate: dateRange.endDate } });
+      if (!Array.isArray(data)) throw new Error("The server returned an invalid loan list.");
+      return data;
+    },
+    []
+  );
 
   useEffect(() => {
-    let active = true;
-    setLoading(true);
-    api.get("/loans", { params: { startDate: dateRange.startDate, endDate: dateRange.endDate } })
-      .then(({ data }) => {
-        if (!Array.isArray(data)) throw new Error("The server returned an invalid loan list.");
-        if (active) setLoans(data);
-      })
-      .catch((error) => {
-        console.error("Failed to load overdue loans:", error);
-        if (active) toast.error(error.response?.data?.message || error.message || "Could not load overdue loans.");
-      })
-      .finally(() => { if (active) setLoading(false); });
-    return () => { active = false; };
-  }, [dateRange.startDate, dateRange.endDate]);
+    if (error) {
+      console.error("Failed to load overdue loans:", error);
+      toast.error(error.response?.data?.message || error.message || "Could not load overdue loans.");
+    }
+  }, [error]);
 
   const today = useMemo(() => {
     const now = new Date();
@@ -122,7 +127,7 @@ export default function OverdueLoans() {
           <input value={search} onChange={(event) => setSearch(event.target.value)} type="search" placeholder="Search loan, customer, mobile, address, guarantor..." className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm outline-none focus:border-[#008577] focus:ring-4 focus:ring-emerald-700/10" />
         </label>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-          <DateRangeFilter onApply={(range) => { setLoading(true); setDateRange(range); }} />
+          <DateRangeFilter onApply={setDateRange} />
           <select
             aria-label="Filter overdue loans by status"
             value={statusFilter}
@@ -176,7 +181,7 @@ export default function OverdueLoans() {
                       <td className="px-2 py-3 align-top"><span className="inline-flex whitespace-nowrap rounded-full bg-rose-50 px-2 py-1 text-[11px] font-bold text-rose-700">{loan.overdue_days} {loan.overdue_days === 1 ? "day" : "days"}</span></td>
                       <td className="px-2 py-3 pr-3 align-top">
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <button type="button" onClick={() => setPaymentLoan(loan)} aria-label={`Pay or renew loan ${loan.loan_number}`} className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg bg-[#064A41] px-2 py-1.5 text-[11px] font-bold text-white hover:bg-[#087263]"><FiCreditCard size={12} /> Pay</button>
+                          <button type="button" disabled={refreshing} onClick={() => setPaymentLoan(loan)} aria-label={`Pay or renew loan ${loan.loan_number}`} className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg bg-[#064A41] px-2 py-1.5 text-[11px] font-bold text-white hover:bg-[#087263] disabled:cursor-not-allowed disabled:opacity-50"><FiCreditCard size={12} /> Pay</button>
                           <Link to={`/admin/loans/details/${loan.id}`} aria-label={`View loan ${loan.loan_number}`} className="inline-flex items-center gap-1 whitespace-nowrap rounded-lg bg-emerald-50 px-2 py-1.5 text-[11px] font-bold text-emerald-800 hover:bg-emerald-100"><FiEye size={12} /> View</Link>
                         </div>
                       </td>
@@ -215,7 +220,7 @@ export default function OverdueLoans() {
                   <Detail label="Maturity" value={<>{dateText(loan.maturity_date)}<span className="mt-1 block text-[10px] text-slate-500">Grace: {Number(loan.grace_period_days) || 0} days</span></>} />
                 </dl>
                 <div className="mt-4 flex justify-end gap-2 border-t border-slate-100 pt-4">
-                  <button type="button" onClick={() => setPaymentLoan(loan)} aria-label={`Pay or renew loan ${loan.loan_number}`} className="inline-flex items-center gap-1.5 rounded-lg bg-[#064A41] px-3 py-2 text-xs font-bold text-white hover:bg-[#087263]"><FiCreditCard /> Pay</button>
+                  <button type="button" disabled={refreshing} onClick={() => setPaymentLoan(loan)} aria-label={`Pay or renew loan ${loan.loan_number}`} className="inline-flex items-center gap-1.5 rounded-lg bg-[#064A41] px-3 py-2 text-xs font-bold text-white hover:bg-[#087263] disabled:cursor-not-allowed disabled:opacity-50"><FiCreditCard /> Pay</button>
                   <Link to={`/admin/loans/details/${loan.id}`} aria-label={`View loan ${loan.loan_number}`} className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800 hover:bg-emerald-100"><FiEye /> View Loan</Link>
                 </div>
               </article>

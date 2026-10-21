@@ -24,35 +24,35 @@ import {
 import imageCompression from "browser-image-compression";
 import { toast, Toaster } from "react-hot-toast";
 import { useAuth } from "../../PrivateRouter/AuthContext";
+import useAdminCachedList from "../useAdminCachedList";
+import { resolveBackendImageUrl } from "../../Components/Home/productDisplay";
 
-const backendUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
-
-const getCategoryImageUrl = (image) => {
-    if (!image || /^(https?:|data:|blob:)/i.test(image)) return image || "";
-    return `${backendUrl}${image.startsWith("/") ? image : `/${image}`}`;
+const getCategoryImageUrl = (images) => {
+    let image = images;
+    if (typeof image === "string") {
+        try {
+            const parsed = JSON.parse(image);
+            image = Array.isArray(parsed) ? parsed[0] : image;
+        } catch {
+            // Category image paths may be stored as plain strings.
+        }
+    }
+    if (Array.isArray(image)) image = image[0];
+    return typeof image === "string" ? resolveBackendImageUrl(image) : "";
 };
 
 const Category = () => {
     const { user } = useAuth();
     // ---- Global State ----
-    const [categories, setCategories] = useState([]);
-    const [loading, setLoading] = useState(true);
-
-    useEffect(() => {
-        fetchCategories();
+    const {
+        data: categories,
+        setData: setCategories,
+        loading,
+        refreshing
+    } = useAdminCachedList("admin:categories", async () => {
+        const response = await api.get("/categories");
+        return response.data;
     }, []);
-
-    const fetchCategories = async () => {
-        try {
-            setLoading(true);
-            const response = await api.get("/categories");
-            setCategories(response.data);
-        } catch (error) {
-            console.error("Failed to fetch categories:", error);
-        } finally {
-            setLoading(false);
-        }
-    };
 
     // ---- View & Pagination State ----
     const [viewMode, setViewMode] = useState("table"); 
@@ -403,7 +403,7 @@ const Category = () => {
                                                 <div className="flex items-center gap-4">
                                                     <div className="w-12 h-12 rounded-xl overflow-hidden bg-gray-100 shrink-0 border border-gray-200">
                                                         {cat.images && cat.images.length > 0 ? (
-                                                            <img src={getCategoryImageUrl(Array.isArray(cat.images) ? cat.images[0] : cat.images)} alt={cat.name} className="w-full h-full object-cover" />
+                                                            <img src={getCategoryImageUrl(cat.images)} alt={cat.name} onError={(event) => { event.currentTarget.style.display = "none"; }} className="w-full h-full object-cover" />
                                                         ) : (
                                                             <div className="w-full h-full flex items-center justify-center"><FiImage className="text-gray-400" /></div>
                                                         )}
@@ -433,10 +433,10 @@ const Category = () => {
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="flex items-center justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                    <button onClick={() => openEditModal(cat)} className="w-8 h-8 flex items-center justify-center rounded-full bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors" title="Edit">
+                                                    <button disabled={refreshing} onClick={() => openEditModal(cat)} className="w-8 h-8 flex items-center justify-center rounded-full bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors disabled:cursor-not-allowed disabled:opacity-50" title="Edit">
                                                         <FiEdit2 size={14} />
                                                     </button>
-                                                    <button onClick={() => handleDeleteCategory(cat.catId)} className="w-8 h-8 flex items-center justify-center rounded-full bg-red-50 text-red-500 hover:bg-red-100 transition-colors" title="Delete">
+                                                    <button disabled={refreshing} onClick={() => handleDeleteCategory(cat.catId)} className="w-8 h-8 flex items-center justify-center rounded-full bg-red-50 text-red-500 hover:bg-red-100 transition-colors disabled:cursor-not-allowed disabled:opacity-50" title="Delete">
                                                         <FiTrash2 size={14} />
                                                     </button>
                                                 </div>
@@ -459,7 +459,7 @@ const Category = () => {
                                 <div className="flex items-start justify-between mb-4">
                                     <div className="w-14 h-14 rounded-xl overflow-hidden border border-gray-100 bg-gray-50 flex items-center justify-center shrink-0">
                                         {cat.images && cat.images.length > 0 ? (
-                                            <img src={getCategoryImageUrl(Array.isArray(cat.images) ? cat.images[0] : cat.images)} alt={cat.name} className="w-full h-full object-cover" />
+                                            <img src={getCategoryImageUrl(cat.images)} alt={cat.name} onError={(event) => { event.currentTarget.style.display = "none"; }} className="w-full h-full object-cover" />
                                         ) : (
                                             <FiImage className="text-gray-400 text-xl" />
                                         )}
@@ -492,10 +492,10 @@ const Category = () => {
                                 </div>
 
                                 <div className="mt-auto pt-4 border-t border-gray-50 flex items-center gap-2 shrink-0">
-                                    <button onClick={() => openEditModal(cat)} className="flex-1 py-1.5 flex items-center justify-center gap-1.5 rounded-lg border border-amber-200 text-amber-700 hover:bg-amber-50 transition-colors text-xs font-bold">
+                                    <button disabled={refreshing} onClick={() => openEditModal(cat)} className="flex-1 py-1.5 flex items-center justify-center gap-1.5 rounded-lg border border-amber-200 text-amber-700 hover:bg-amber-50 transition-colors text-xs font-bold disabled:cursor-not-allowed disabled:opacity-50">
                                         <FiEdit2 size={12} /> Edit
                                     </button>
-                                    <button onClick={() => handleDeleteCategory(cat.catId)} className="flex-1 py-1.5 flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 text-red-500 hover:bg-red-50 transition-colors text-xs font-bold">
+                                    <button disabled={refreshing} onClick={() => handleDeleteCategory(cat.catId)} className="flex-1 py-1.5 flex items-center justify-center gap-1.5 rounded-lg border border-gray-200 text-red-500 hover:bg-red-50 transition-colors text-xs font-bold disabled:cursor-not-allowed disabled:opacity-50">
                                         <FiTrash2 size={12} /> Delete
                                     </button>
                                 </div>

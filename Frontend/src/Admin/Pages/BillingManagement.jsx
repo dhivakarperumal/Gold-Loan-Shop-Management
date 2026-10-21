@@ -6,8 +6,8 @@ import DateRangeFilter from "../Components/DateRangeFilter";
 import useGoldRates from "../../PrivateRouter/useGoldRates";
 import { getReceiptSettings } from "./receiptSettings";
 import { formatCurrency as currency } from "../../utils/currency";
+import { resolveBackendImageUrl } from "../../Components/Home/productDisplay";
 
-const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
 const EMPTY_CUSTOMER = { name: "", phone: "", email: "", address: "" };
 const EMPTY_PRODUCT = {
   product_id: "",
@@ -44,8 +44,7 @@ function getProductImage(product) {
   const image = images.find((value) => typeof value === "string" && value.trim())
     || (typeof rawImages === "string" && !rawImages.trim().startsWith("[") ? rawImages : "");
   if (!image) return "";
-  if (/^(https?:|data:|blob:)/i.test(image)) return image;
-  return `${BACKEND_URL}${image.startsWith("/") ? image : `/${image}`}`;
+  return resolveBackendImageUrl(image);
 }
 
 function escapeHtml(value) {

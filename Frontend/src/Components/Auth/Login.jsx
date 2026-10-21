@@ -224,7 +224,7 @@ function Login() {
                 theme="outline"
                 size="large"
                 shape="rectangular"
-                width="100%"
+                width="320"
                 logo_alignment="center"
               />
             </div>

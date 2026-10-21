@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useAdmin } from "../../PrivateRouter/AdminContext";
 import {
@@ -32,6 +32,8 @@ const resolveReviewImage = (image) => {
 
 const Reviews = () => {
   const { reviewsCache, setReviewsCache } = useAdmin();
+  const reviewsCacheRef = useRef(reviewsCache);
+  reviewsCacheRef.current = reviewsCache;
   const [filter, setFilter] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedRating, setSelectedRating] = useState(null);
@@ -43,6 +45,7 @@ const Reviews = () => {
   const [reviews, setReviews] = useState(cachedData?.reviews || []);
   const [stats, setStats] = useState(cachedData?.stats || null);
   const [loading, setLoading] = useState(!cachedData);
+  const [refreshing, setRefreshing] = useState(true);
   const [replyText, setReplyText] = useState("");
   const [activeReplyId, setActiveReplyId] = useState(null);
 
@@ -58,7 +61,8 @@ const Reviews = () => {
 
   const fetchReviews = useCallback(async () => {
     try {
-      setLoading(true);
+      if (!reviewsCacheRef.current[currentCacheKey]) setLoading(true);
+      setRefreshing(true);
 
       const params = {};
       if (filter !== "All") params.status = filter;
@@ -75,6 +79,7 @@ const Reviews = () => {
       toast.error(err.response?.data?.message || "Failed to load reviews");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   }, [filter, selectedRating, searchQuery, currentCacheKey, setReviewsCache]);
 
@@ -84,6 +89,7 @@ const Reviews = () => {
   }, [fetchReviews, searchQuery]);
 
   const handleStatusUpdate = async (id, status) => {
+    if (refreshing) return;
     try {
       await api.put(`/reviews/admin/${id}/status`, { status });
       toast.success(`Review ${status.toLowerCase()} successfully`);
@@ -94,6 +100,7 @@ const Reviews = () => {
   };
 
   const handleDelete = async (id) => {
+    if (refreshing) return;
     if (!window.confirm("Are you sure you want to delete this review?")) return;
     try {
       await api.delete(`/reviews/admin/${id}`);
@@ -105,6 +112,7 @@ const Reviews = () => {
   };
 
   const handleReply = async (id) => {
+    if (refreshing) return;
     if (!replyText.trim()) return;
     try {
       await api.put(`/reviews/admin/${id}/reply`, { admin_reply: replyText });
@@ -300,7 +308,7 @@ const Reviews = () => {
           <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-x-auto">
             <table className="w-full text-left border-collapse whitespace-nowrap">
               <thead><tr className="bg-gradient-to-r from-[#003B3B] to-[#008577] text-white text-[11px] font-black uppercase tracking-wider"><th className="px-4 py-4 text-center">S No</th><th className="px-6 py-4">Reviewer</th><th className="px-6 py-4">Product</th><th className="px-6 py-4">Rating</th><th className="px-6 py-4">Status</th><th className="px-6 py-4 text-right">Actions</th></tr></thead>
-              <tbody>{reviews.map((item, index) => <tr key={item.id} className="border-b border-slate-50 hover:bg-emerald-50/40"><td className="px-4 py-4 text-center text-sm font-bold text-slate-400">{index + 1}</td><td className="px-6 py-4"><p className="font-bold text-slate-800">{item.user_name}</p><p className="text-xs text-slate-400">{new Date(item.created_at).toLocaleDateString()}</p></td><td className="px-6 py-4 text-sm font-semibold text-slate-600">{item.product_name || "Product Deleted"}</td><td className="px-6 py-4"><span className="inline-flex items-center gap-1 font-bold text-amber-500">{item.rating}<Star className="w-3.5 h-3.5 fill-current" /></span></td><td className="px-6 py-4"><span className={`px-2.5 py-1 rounded-lg border text-[10px] font-black uppercase ${getStatusColor(item.status)}`}>{item.status}</span></td><td className="px-6 py-4"><div className="flex justify-end gap-2"><button onClick={() => handleStatusUpdate(item.id, "Published")} className="px-3 py-2 rounded-lg bg-[#003B3B] text-white text-xs font-bold hover:bg-[#008577]">Approve</button><button onClick={() => setActiveReplyId(item.id)} className="px-3 py-2 rounded-lg bg-[#003B3B] text-white text-xs font-bold hover:bg-[#008577]">Reply</button><button onClick={() => handleDelete(item.id)} className="p-2 rounded-lg bg-[#003B3B] text-white hover:bg-[#008577]" aria-label="Delete review"><Trash2 className="w-4 h-4" /></button></div></td></tr>)}</tbody>
+              <tbody>{reviews.map((item, index) => <tr key={item.id} className="border-b border-slate-50 hover:bg-emerald-50/40"><td className="px-4 py-4 text-center text-sm font-bold text-slate-400">{index + 1}</td><td className="px-6 py-4"><p className="font-bold text-slate-800">{item.user_name}</p><p className="text-xs text-slate-400">{new Date(item.created_at).toLocaleDateString()}</p></td><td className="px-6 py-4 text-sm font-semibold text-slate-600">{item.product_name || "Product Deleted"}</td><td className="px-6 py-4"><span className="inline-flex items-center gap-1 font-bold text-amber-500">{item.rating}<Star className="w-3.5 h-3.5 fill-current" /></span></td><td className="px-6 py-4"><span className={`px-2.5 py-1 rounded-lg border text-[10px] font-black uppercase ${getStatusColor(item.status)}`}>{item.status}</span></td><td className="px-6 py-4"><div className="flex justify-end gap-2"><button disabled={refreshing} onClick={() => handleStatusUpdate(item.id, "Published")} className="px-3 py-2 rounded-lg bg-[#003B3B] text-white text-xs font-bold hover:bg-[#008577] disabled:opacity-50">Approve</button><button disabled={refreshing} onClick={() => setActiveReplyId(item.id)} className="px-3 py-2 rounded-lg bg-[#003B3B] text-white text-xs font-bold hover:bg-[#008577] disabled:opacity-50">Reply</button><button disabled={refreshing} onClick={() => handleDelete(item.id)} className="p-2 rounded-lg bg-[#003B3B] text-white hover:bg-[#008577] disabled:opacity-50" aria-label="Delete review"><Trash2 className="w-4 h-4" /></button></div></td></tr>)}</tbody>
             </table>
           </div>
         ) : (

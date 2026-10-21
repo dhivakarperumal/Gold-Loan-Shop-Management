@@ -462,6 +462,7 @@ async function getLoanGoldImage(req, res, next) {
   if (!imagePath) return res.status(400).json({ message: 'Gold image reference is invalid' });
   try {
     if (!fs.existsSync(imagePath)) return res.status(404).json({ message: 'Gold image not found' });
+    res.set('Cache-Control', 'private, max-age=86400, immutable');
     return res.sendFile(imagePath, (error) => {
       if (error && !res.headersSent) next(error);
     });

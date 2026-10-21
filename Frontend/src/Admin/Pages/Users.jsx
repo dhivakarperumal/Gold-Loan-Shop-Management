@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import api from "../../api";
 import {
     FiCalendar,
@@ -22,6 +22,7 @@ import {
 import { toast } from "react-hot-toast";
 import { Link } from "react-router-dom";
 import DateRangeFilter from "../Components/DateRangeFilter";
+import useAdminCachedList from "../useAdminCachedList";
 
 const PAGE_SIZE = 8;
 
@@ -45,8 +46,6 @@ const getInitials = (name) =>
         .join("");
 
 const Users = () => {
-    const [users, setUsers] = useState([]);
-    const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [dateRange, setDateRange] = useState({ preset: "all", startDate: "", endDate: "" });
@@ -65,9 +64,15 @@ const Users = () => {
         password: "",
     });
 
-    const fetchUsers = useCallback(async () => {
-        setLoading(true);
-        try {
+    const listCacheKey = `admin:users:${dateRange.startDate}:${dateRange.endDate}`;
+    const {
+        data: users,
+        setData: setUsers,
+        loading,
+        refreshing,
+        error,
+        refresh: fetchUsers
+    } = useAdminCachedList(listCacheKey, async () => {
             const response = await api.get("/auth/users", {
                 params: { startDate: dateRange.startDate, endDate: dateRange.endDate }
             });
@@ -93,23 +98,23 @@ const Users = () => {
                 role: String(user.role || "user").toLowerCase(),
                 status: getUserStatus(user),
             }));
-            setUsers(normalizedUsers);
-            setSelectedUserId((currentId) =>
-                normalizedUsers.some((user) => String(user.id) === String(currentId))
-                    ? currentId
-                    : normalizedUsers[0]?.id ?? null
-            );
-        } catch (error) {
-            console.error("Failed to fetch customers:", error);
-            toast.error(error.response?.data?.message || error.message || "Failed to load customers.");
-        } finally {
-            setLoading(false);
-        }
-    }, [dateRange.startDate, dateRange.endDate]);
+            return normalizedUsers;
+    }, []);
 
     useEffect(() => {
-        fetchUsers();
-    }, [fetchUsers]);
+        if (error) {
+            console.error("Failed to fetch customers:", error);
+            toast.error(error.response?.data?.message || error.message || "Failed to load customers.");
+        }
+    }, [error]);
+
+    useEffect(() => {
+        setSelectedUserId((currentId) =>
+            users.some((user) => String(user.id) === String(currentId))
+                ? currentId
+                : users[0]?.id ?? null
+        );
+    }, [users]);
 
     const todayCount = users.filter((user) => {
         if (!user.created_at) return false;
@@ -151,6 +156,7 @@ const Users = () => {
     };
 
     const openEditModal = (user) => {
+        if (refreshing) return;
         setFormData({
             username: user.username || user.name,
             name: user.name || "",
@@ -166,6 +172,7 @@ const Users = () => {
 
     const handleSaveUser = async (event) => {
         event.preventDefault();
+        if (refreshing) return;
         if (!formData.username.trim() || !formData.email.trim() || (!isEditing && !formData.password)) {
             toast.error("Please complete the required customer fields.");
             return;
@@ -200,6 +207,7 @@ const Users = () => {
     };
 
     const handleDeleteUser = async (user) => {
+        if (refreshing) return;
         if (!window.confirm(`Delete ${user.name} from the customer list? This cannot be undone.`)) return;
         try {
             await api.delete(`/auth/users/${user.id}`);
@@ -347,8 +355,8 @@ const Users = () => {
                                             <td className="px-3 py-3">
                                                 <div className="flex justify-end gap-1.5">
                                                     <button type="button" title="View customer" aria-label={`View ${user.name}`} onClick={(event) => { event.stopPropagation(); setSelectedUserId(user.id); }} className="rounded-md border border-slate-200 p-2 text-slate-600 hover:border-emerald-300 hover:text-[#008577]"><FiEye size={14} /></button>
-                                                    <button type="button" title="Edit customer" aria-label={`Edit ${user.name}`} onClick={(event) => { event.stopPropagation(); openEditModal(user); }} className="rounded-md border border-slate-200 p-2 text-slate-600 hover:border-amber-300 hover:text-amber-700"><FiEdit2 size={14} /></button>
-                                                    <button type="button" title="Delete customer" aria-label={`Delete ${user.name}`} onClick={(event) => { event.stopPropagation(); handleDeleteUser(user); }} className="rounded-md border border-rose-100 p-2 text-rose-500 hover:bg-rose-50"><FiTrash2 size={14} /></button>
+                                                    <button type="button" disabled={refreshing} title="Edit customer" aria-label={`Edit ${user.name}`} onClick={(event) => { event.stopPropagation(); openEditModal(user); }} className="rounded-md border border-slate-200 p-2 text-slate-600 hover:border-amber-300 hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-50"><FiEdit2 size={14} /></button>
+                                                    <button type="button" disabled={refreshing} title="Delete customer" aria-label={`Delete ${user.name}`} onClick={(event) => { event.stopPropagation(); handleDeleteUser(user); }} className="rounded-md border border-rose-100 p-2 text-rose-500 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"><FiTrash2 size={14} /></button>
                                                 </div>
                                             </td>
                                         </tr>

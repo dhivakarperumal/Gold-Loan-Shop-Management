@@ -1,51 +1,21 @@
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import { FaArrowRight } from "react-icons/fa";
 import { Autoplay } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
-import api from "../../api";
 import PageContainer from "../CommenComponents/PageContainer";
 import ProductCard from "./ProductCard";
 
 import "swiper/css";
 
-const Gold = () => {
-    const [products, setProducts] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(false);
-
-    useEffect(() => {
-        const controller = new AbortController();
-
-        const fetchProducts = async () => {
-            try {
-                const response = await api.get("/products", {
-                    params: { page: 1, limit: 100, search: "", status: "Active" },
-                    signal: controller.signal,
-                });
-                if (!Array.isArray(response.data?.products)) {
-                    throw new TypeError("The products response must contain a products array");
-                }
-                const isDiamondProduct = (product) =>
-                    [product.name, product.category, product.subcategory, product.metal_type]
-                        .some((value) => String(value || "").toLowerCase().includes("diamond"));
-                setProducts(response.data.products.filter(
-                    (product) => String(product.metal_type || "").toLowerCase().includes("gold")
-                        && !isDiamondProduct(product)
-                ));
-            } catch (fetchError) {
-                if (!controller.signal.aborted) {
-                    console.error("Failed to fetch gold products:", fetchError);
-                    setError(true);
-                }
-            } finally {
-                if (!controller.signal.aborted) setLoading(false);
-            }
-        };
-
-        fetchProducts();
-        return () => controller.abort();
-    }, []);
+const Gold = ({ products: catalogProducts, loading, error }) => {
+    const isDiamondProduct = (product) =>
+        [product.name, product.category, product.subcategory, product.metal_type]
+            .some((value) => String(value || "").toLowerCase().includes("diamond"));
+    const products = catalogProducts.filter(
+        (product) => String(product.metal_type || "").toLowerCase().includes("gold")
+            && !isDiamondProduct(product)
+    );
 
     return (
         <section className="w-full bg-[#fffdf8] py-4">

@@ -3,14 +3,9 @@ import React, { useEffect, useState } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay } from "swiper/modules";
 import api from "../../api";
+import { resolveBackendImageUrl } from "./productDisplay";
 
 import "swiper/css";
-
-const backendUrl = (
-  import.meta.env.VITE_BACKEND_URL ||
-  import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") ||
-  "http://localhost:5000"
-).replace(/\/$/, "");
 
 const Category = () => {
   const [categories, setCategories] = useState([]);
@@ -45,8 +40,7 @@ const Category = () => {
   }, []);
 
   const getImageUrl = (image) => {
-    if (!image || /^(https?:|data:|blob:)/i.test(image)) return image || "";
-    return `${backendUrl}${image.startsWith("/") ? image : `/${image}`}`;
+    return resolveBackendImageUrl(image);
   };
 
   return (
@@ -123,6 +117,7 @@ const Category = () => {
                             src={getImageUrl(image)}
                             alt={category.name}
                             loading="lazy"
+                            decoding="async"
                             className="h-full w-full rounded-full object-cover transition-transform duration-500 group-hover:scale-110"
                           />
                         )}

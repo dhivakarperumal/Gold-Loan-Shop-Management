@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import imageCompression from "browser-image-compression";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast, Toaster } from "react-hot-toast";
 import {
@@ -348,10 +349,19 @@ const AddProducts = () => {
       return;
     }
 
-    const payload = new FormData();
-    files.forEach((file) => payload.append(field, file));
     try {
       setUploading(true);
+      const uploadFiles = isImage
+        ? await Promise.all(files.map((file) => imageCompression(file, {
+            maxSizeMB: 0.5,
+            maxWidthOrHeight: 1400,
+            useWebWorker: true,
+            fileType: "image/webp",
+            initialQuality: 0.82
+          })))
+        : files;
+      const payload = new FormData();
+      uploadFiles.forEach((file) => payload.append(field, file));
       const response = await api.post("/products/upload-media", payload);
       if (isImage) {
         updateFormField("images", [...formData.images, ...(response.data.images || [])]);

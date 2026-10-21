@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import api from "../../api";
 import { toast } from "react-hot-toast";
+import useAdminCachedList from "../useAdminCachedList";
 import imageCompression from "browser-image-compression";
 import {
   FiAlertCircle,
@@ -17,18 +18,23 @@ import {
   FiUploadCloud,
   FiX
 } from "react-icons/fi";
+import { resolveBackendImageUrl } from "../../Components/Home/productDisplay";
 
 const EMPTY_FORM = { name: "", purity: "", description: "", image: "", status: "Active" };
-const backendUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
 
 const getMetalImageUrl = (image) => {
-  if (!image || /^(https?:|data:|blob:)/i.test(image)) return image || "";
-  return `${backendUrl}${image.startsWith("/") ? image : `/${image}`}`;
+  return typeof image === "string" ? resolveBackendImageUrl(image) : "";
 };
 
 const Metals = () => {
-  const [metals, setMetals] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const { data: metals, setData: setMetals, loading, refreshing } = useAdminCachedList(
+    "admin:metals",
+    async () => {
+      const response = await api.get("/metals");
+      return response.data;
+    },
+    []
+  );
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [viewMode, setViewMode] = useState("table");
@@ -36,25 +42,6 @@ const Metals = () => {
   const [editingMetal, setEditingMetal] = useState(null);
   const [formData, setFormData] = useState(EMPTY_FORM);
   const [saving, setSaving] = useState(false);
-
-  useEffect(() => {
-    let isMounted = true;
-    api.get("/metals")
-      .then((response) => {
-        if (isMounted) setMetals(response.data);
-      })
-      .catch((error) => {
-        console.error("Failed to fetch metals:", error);
-        if (isMounted) toast.error(error.response?.data?.message || "Failed to load metals.");
-      })
-      .finally(() => {
-        if (isMounted) setLoading(false);
-      });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
 
   const filteredMetals = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
@@ -319,10 +306,10 @@ const Metals = () => {
                   </td>
                   <td className="px-5 py-4">
                     <div className="flex justify-end gap-2">
-                      <button type="button" onClick={() => openEditModal(metal)} aria-label={`Edit ${metal.name}`} className="rounded-lg p-2 text-amber-700 transition hover:bg-amber-50">
+                      <button type="button" disabled={refreshing} onClick={() => openEditModal(metal)} aria-label={`Edit ${metal.name}`} className="rounded-lg p-2 text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50">
                         <FiEdit2 size={16} />
                       </button>
-                      <button type="button" onClick={() => handleDelete(metal)} aria-label={`Delete ${metal.name}`} className="rounded-lg p-2 text-red-500 transition hover:bg-red-50">
+                      <button type="button" disabled={refreshing} onClick={() => handleDelete(metal)} aria-label={`Delete ${metal.name}`} className="rounded-lg p-2 text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50">
                         <FiTrash2 size={16} />
                       </button>
                     </div>
@@ -374,10 +361,10 @@ const Metals = () => {
                 </div>
               </dl>
               <div className="mt-4 flex justify-end gap-2 border-t border-gray-100 pt-3">
-                <button type="button" onClick={() => openEditModal(metal)} aria-label={`Edit ${metal.name}`} className="rounded-lg p-2 text-amber-700 transition hover:bg-amber-50">
+                <button type="button" disabled={refreshing} onClick={() => openEditModal(metal)} aria-label={`Edit ${metal.name}`} className="rounded-lg p-2 text-amber-700 transition hover:bg-amber-50 disabled:cursor-not-allowed disabled:opacity-50">
                   <FiEdit2 size={16} />
                 </button>
-                <button type="button" onClick={() => handleDelete(metal)} aria-label={`Delete ${metal.name}`} className="rounded-lg p-2 text-red-500 transition hover:bg-red-50">
+                <button type="button" disabled={refreshing} onClick={() => handleDelete(metal)} aria-label={`Delete ${metal.name}`} className="rounded-lg p-2 text-red-500 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50">
                   <FiTrash2 size={16} />
                 </button>
               </div>

@@ -30,7 +30,20 @@ const uploadsDirectory = path.join(__dirname, 'uploads');
 app.use(cors());
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ limit: '1mb', extended: true }));
-app.use('/uploads', privateUploadGuard(uploadsDirectory), express.static(uploadsDirectory));
+app.use('/uploads', privateUploadGuard(uploadsDirectory), express.static(uploadsDirectory, {
+  setHeaders(res, filePath) {
+    const relativePath = path.relative(uploadsDirectory, filePath);
+    const [uploadType] = relativePath.split(path.sep);
+    const cacheableImageDirectories = new Set(['banners', 'categories', 'metals', 'products', 'reviews']);
+    if (
+      !relativePath.startsWith(`..${path.sep}`)
+      && cacheableImageDirectories.has(uploadType)
+      && /\.(?:jpe?g|png|webp)$/i.test(filePath)
+    ) {
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+    }
+  }
+}));
 
 app.get('/', (req, res) => {
   res.json({ message: 'Gold Shop Management Backend is running' });

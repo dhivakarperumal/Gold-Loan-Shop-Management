@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState } from "react";
 import { createPortal } from "react-dom";
-import { useAdmin } from "../../PrivateRouter/AdminContext";
 import api from "../../api";
+import useAdminCachedList from "../useAdminCachedList";
 import {
     FiPlus,
     FiSearch,
@@ -18,6 +18,7 @@ import {
 } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import { useAuth } from "../../PrivateRouter/AuthContext";
+import { resolveBackendImageUrl } from "../../Components/Home/productDisplay";
 
 const getYoutubeId = (value) => {
     if (!value) return "";
@@ -33,16 +34,22 @@ const getYoutubeId = (value) => {
 };
 
 const resolveMediaUrl = (url) => {
-    if (!url || /^(https?:|data:|blob:)/i.test(url)) return url;
-    const backendUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
-    return `${backendUrl}${url.startsWith("/") ? url : `/${url}`}`;
+    return resolveBackendImageUrl(url);
 };
 
 const VideoManagement = () => {
     const { user } = useAuth();
-    const { videosCache, setVideosCache } = useAdmin();
-    const [videos, setVideos] = useState(videosCache || []);
-    const [loading, setLoading] = useState(!videosCache);
+    const {
+        data: videos,
+        loading,
+        refreshing,
+        refresh: fetchVideos,
+        error: loadError
+    } = useAdminCachedList("admin:videos", async () => {
+        const response = await api.get("/videos");
+        if (!Array.isArray(response.data)) throw new Error("The server returned invalid video data.");
+        return response.data;
+    }, []);
     const [searchTerm, setSearchTerm] = useState("");
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentVideo, setCurrentVideo] = useState({ title: "", videoId: "", thumbnail: "", type: "youtube", active: true });
@@ -50,39 +57,15 @@ const VideoManagement = () => {
     const [uploading, setUploading] = useState(false);
     const [thumbUploading, setThumbUploading] = useState(false);
     const [saving, setSaving] = useState(false);
-    const [loadError, setLoadError] = useState("");
     const [viewMode, setViewMode] = useState("table");
 
-    const fetchVideos = useCallback(async () => {
-        setLoadError("");
-        setLoading(true);
-        try {
-            const response = await api.get("/videos");
-            if (!Array.isArray(response.data)) throw new Error("The server returned invalid video data.");
-            const data = response.data;
-            setVideos(data);
-            setVideosCache(data);
-            return true;
-        } catch (error) {
-            console.error("Error fetching videos:", error);
-            const message = error.response?.data?.message || error.message || "Failed to load videos.";
-            setLoadError(message);
-            toast.error(message);
-            return false;
-        } finally {
-            setLoading(false);
-        }
-    }, [setVideosCache]);
-
-    useEffect(() => {
-        void Promise.resolve().then(fetchVideos);
-    }, [fetchVideos]);
-
     const handleDelete = async (id) => {
+        if (refreshing) return;
         if (!window.confirm("Are you sure you want to delete this video?")) return;
         try {
             await api.delete(`/videos/${id}`);
-            if (await fetchVideos()) toast.success("Video deleted successfully");
+            await fetchVideos();
+            toast.success("Video deleted successfully");
         } catch (error) {
             console.error("Error deleting video:", error);
             toast.error(error.response?.data?.message || "Failed to delete video");
@@ -90,6 +73,7 @@ const VideoManagement = () => {
     };
 
     const handleOpenModal = (video = { title: "", videoId: "", thumbnail: "", type: "youtube", active: true }) => {
+        if (refreshing) return;
         setCurrentVideo({ active: true, ...video, videoId: video.videoId || video.video_id || "" });
         setIsEditing(!!video.id);
         setIsModalOpen(true);
@@ -157,6 +141,7 @@ const VideoManagement = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+        if (refreshing) return;
         setSaving(true);
         try {
             const videoPayload = {
@@ -170,9 +155,8 @@ const VideoManagement = () => {
                 await api.post("/videos", videoPayload);
             }
             setIsModalOpen(false);
-            if (await fetchVideos()) {
-                toast.success(isEditing ? "Video updated successfully" : "Video added successfully");
-            }
+            await fetchVideos();
+            toast.success(isEditing ? "Video updated successfully" : "Video added successfully");
         } catch (error) {
             console.error("Error saving video:", error);
             toast.error(error.response?.data?.message || "Failed to save video");
@@ -227,12 +211,12 @@ const VideoManagement = () => {
 
             {loadError && (
                 <div role="alert" className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800">
-                    <span>{loadError}</span>
+                    <span>{loadError.response?.data?.message || loadError.message || "Failed to load videos."}</span>
                     <button type="button" onClick={() => void fetchVideos()} className="rounded-lg bg-rose-700 px-3 py-2 text-xs font-bold text-white">Retry</button>
                 </div>
             )}
 
-            {loading ? (
+            {loading && videos.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm text-slate-800">
                     <div className="w-12 h-12 border-4 border-[#008577]/20 border-t-[#008577] rounded-full animate-spin mb-4"></div>
                     <p className="text-gray-500 font-bold">Loading videos...</p>
@@ -311,6 +295,7 @@ const VideoManagement = () => {
                                                     <span className="md:hidden text-[10px] font-black text-gray-400 uppercase tracking-widest">Actions</span>
                                                     <div className="flex items-center justify-end gap-2">
                                                         <button
+                                                            disabled={refreshing}
                                                             onClick={() => handleOpenModal(video)}
                                                             className="p-2 border border-[#003B3B] bg-[#003B3B] text-white rounded-lg hover:bg-[#008577] hover:border-[#008577] transition-all shadow-sm md:shadow-none"
                                                             title="Edit"
@@ -318,6 +303,7 @@ const VideoManagement = () => {
                                                             <FiEdit2 size={16} />
                                                         </button>
                                                         <button
+                                                            disabled={refreshing}
                                                             onClick={() => handleDelete(video.id)}
                                                             className="p-2 border border-[#003B3B] bg-[#003B3B] text-white rounded-lg hover:bg-[#008577] hover:border-[#008577] transition-all shadow-sm md:shadow-none"
                                                             title="Delete"
@@ -340,7 +326,7 @@ const VideoManagement = () => {
                         {filteredVideos.length === 0 ? <div className="col-span-full text-center py-16 text-gray-400 font-bold">No videos found.</div> : filteredVideos.map((video, index) => (
                             <article key={video.id} className="border border-gray-100 rounded-xl overflow-hidden bg-white shadow-sm hover:shadow-md transition-shadow">
                                 <div className="h-40 bg-gray-100 relative">{video.thumbnail ? <img src={resolveMediaUrl(video.thumbnail)} alt={video.title} className="w-full h-full object-cover" /> : video.type === "youtube" ? <img src={`https://img.youtube.com/vi/${getYoutubeId(video.videoId)}/hqdefault.jpg`} alt={video.title} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center text-gray-400"><FiVideo size={32} /></div>}<span className="absolute top-3 left-3 bg-white/90 text-[10px] px-2 py-1 rounded font-black text-[#003B3B]">S No. {index + 1}</span></div>
-                                <div className="p-4 space-y-3"><div><h3 className="font-black text-slate-800 truncate">{video.title || "Untitled Video"}</h3><p className="text-xs text-gray-400 truncate">{video.type === "youtube" ? video.videoId : "Uploaded File"}</p></div><div className="flex gap-2"><button onClick={() => handleOpenModal(video)} className="flex-1 py-2 rounded-lg bg-[#003B3B] text-white text-xs font-bold hover:bg-[#008577]"><FiEdit2 className="inline mr-1" />Edit</button><button onClick={() => handleDelete(video.id)} className="flex-1 py-2 rounded-lg bg-[#003B3B] text-white text-xs font-bold hover:bg-[#008577]"><FiTrash2 className="inline mr-1" />Delete</button></div></div>
+                                <div className="p-4 space-y-3"><div><h3 className="font-black text-slate-800 truncate">{video.title || "Untitled Video"}</h3><p className="text-xs text-gray-400 truncate">{video.type === "youtube" ? video.videoId : "Uploaded File"}</p></div><div className="flex gap-2"><button disabled={refreshing} onClick={() => handleOpenModal(video)} className="flex-1 py-2 rounded-lg bg-[#003B3B] text-white text-xs font-bold hover:bg-[#008577] disabled:cursor-not-allowed disabled:opacity-50"><FiEdit2 className="inline mr-1" />Edit</button><button disabled={refreshing} onClick={() => handleDelete(video.id)} className="flex-1 py-2 rounded-lg bg-[#003B3B] text-white text-xs font-bold hover:bg-[#008577] disabled:cursor-not-allowed disabled:opacity-50"><FiTrash2 className="inline mr-1" />Delete</button></div></div>
                             </article>
                         ))}
                     </div>}
