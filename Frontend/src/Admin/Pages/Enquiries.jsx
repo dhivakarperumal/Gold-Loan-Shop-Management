@@ -460,7 +460,7 @@ const Enquiries = ({ isPopup = false, onClose, initialProduct = null, isPublicEn
   return <main className="space-y-3 pb-5">
 
 
-    <section aria-label="Enquiry summary" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <section aria-label="Enquiry summary" className="grid gap-3 mb-7 sm:grid-cols-2 xl:grid-cols-4">
       {filteredStats.map(({ label, value, note, icon: Icon, color }) => {
         const colors = {
           emerald: {

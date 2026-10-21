@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Search, ShieldCheck, Users, Clock3, CheckCircle2, XCircle, ChevronLeft, ChevronRight, FileText, X } from "lucide-react";
+import { Search, ShieldCheck, Users, Clock3, CheckCircle2, XCircle, ChevronLeft, ChevronRight, FileText, X, LayoutGrid, List } from "lucide-react";
 import toast from "react-hot-toast";
 import api from "../../api";
 import DateRangeFilter from "../Components/DateRangeFilter";
 import useAdminCachedList from "../useAdminCachedList";
+
+const PAGE_SIZE = 15;
 
 const statusLabels = {
   pending: "Pending",
@@ -32,6 +34,7 @@ const AdminKyc = () => {
   const [selected, setSelected] = useState(null);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("all");
+  const [viewMode, setViewMode] = useState("table");
   const [dateRange, setDateRange] = useState({ preset: "all", startDate: "", endDate: "" });
   const [page, setPage] = useState(1);
   const [reason, setReason] = useState("");
@@ -54,7 +57,7 @@ const AdminKyc = () => {
   }, [dateRange.startDate, dateRange.endDate]);
 
   const listCacheKey = `admin:kyc:${JSON.stringify({
-    search, status, startDate: dateRange.startDate, endDate: dateRange.endDate, page, pageSize: 15
+    search, status, startDate: dateRange.startDate, endDate: dateRange.endDate, page, pageSize: PAGE_SIZE
   })}`;
   const {
     data: listData,
@@ -70,7 +73,7 @@ const AdminKyc = () => {
           dateFrom: dateRange.startDate,
           dateTo: dateRange.endDate,
           page,
-          pageSize: 15
+          pageSize: PAGE_SIZE
         }
       });
       return {
@@ -168,12 +171,6 @@ const AdminKyc = () => {
 
   return (
     <div className="min-h-[70vh] space-y-6">
-      <header>
-        <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#087568]">Administration</p>
-        <h1 className="mt-1 text-2xl font-bold text-slate-900 sm:text-3xl">Manual KYC review</h1>
-        <p className="mt-2 text-sm text-slate-500">Review customer-submitted documents and record an auditable decision.</p>
-      </header>
-
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="KYC application statistics">
         {statCards.map(({ label, value, icon: Icon, color }) => (
           <article key={label} className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
@@ -193,34 +190,44 @@ const AdminKyc = () => {
       )}
 
       <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-wrap items-center gap-3 border-b border-slate-200 p-4">
-          <DateRangeFilter onApply={(range) => {
-            setDateRange(range);
-            setPage(1);
-          }} />
-          <label className="relative">
+        <div className="flex flex-col gap-3 border-b border-slate-200 p-4 lg:flex-row lg:items-center lg:justify-between">
+          <label className="relative w-full min-w-0 lg:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <input value={search} onChange={(event) => { setSearch(event.target.value); setPage(1); }} placeholder="Search name, email, phone or ID" className="w-full rounded-xl border border-slate-300 py-2.5 pl-10 pr-3 text-sm outline-none focus:border-[#087568]" />
           </label>
-          <select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }} className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm">
-            <option value="all">All statuses</option>
-            {Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
+          <div className="flex flex-wrap items-center gap-3 lg:justify-end">
+            <DateRangeFilter onApply={(range) => {
+              setDateRange(range);
+              setPage(1);
+            }} />
+            <select value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }} className="rounded-xl border border-slate-300 px-3 py-2.5 text-sm">
+              <option value="all">All statuses</option>
+              {Object.entries(statusLabels).map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+            </select>
+            <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1" role="group" aria-label="KYC application view mode">
+              <button type="button" onClick={() => setViewMode("card")} aria-label="Card view" title="Card view" aria-pressed={viewMode === "card"} className={`inline-flex h-9 w-9 items-center justify-center rounded-md transition ${viewMode === "card" ? "bg-[#008577] text-white shadow-sm" : "text-slate-600 hover:bg-white"}`}>
+                <LayoutGrid size={16} />
+              </button>
+              <button type="button" onClick={() => setViewMode("table")} aria-label="Table view" title="Table view" aria-pressed={viewMode === "table"} className={`inline-flex h-9 w-9 items-center justify-center rounded-md transition ${viewMode === "table" ? "bg-[#008577] text-white shadow-sm" : "text-slate-600 hover:bg-white"}`}>
+                <List size={16} />
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[780px] text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-              <tr><th className="px-5 py-3">Applicant</th><th className="px-5 py-3">Contact</th><th className="px-5 py-3">Submitted</th><th className="px-5 py-3">Status</th><th className="px-5 py-3 text-right">Action</th></tr>
+        {viewMode === "table" ? <div className="overflow-x-auto">
+          <table className="w-full min-w-[820px] border-separate border-spacing-0 text-left text-sm">
+            <thead className="bg-gradient-to-r from-[#003B3B] to-[#008577] text-xs uppercase tracking-wide text-white">
+              <tr><th className="rounded-tl-xl px-4 py-4">S No</th><th className="px-4 py-4">Applicant</th><th className="px-4 py-4">Contact</th><th className="px-4 py-4">Submitted</th><th className="px-4 py-4">Status</th><th className="rounded-tr-xl px-4 py-4 text-right">Action</th></tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {loading ? (
-                <tr><td colSpan="5" className="px-5 py-10 text-center text-slate-500">Loading applications…</td></tr>
+                <tr><td colSpan="6" className="px-5 py-10 text-center text-slate-500">Loading applications…</td></tr>
               ) : applicationError && applications.length === 0 ? (
-                <tr><td colSpan="5" className="px-5 py-10 text-center text-rose-700">{applicationError.response?.data?.message || "Unable to load KYC applications"}</td></tr>
+                <tr><td colSpan="6" className="px-5 py-10 text-center text-rose-700">{applicationError.response?.data?.message || "Unable to load KYC applications"}</td></tr>
               ) : applications.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className="px-5 py-10 text-center">
+                  <td colSpan="6" className="px-5 py-10 text-center">
                     <p className="font-medium text-slate-700">
                       {search || status !== "all" || dateRange.startDate || dateRange.endDate
                         ? "No KYC applications match these filters."
@@ -235,8 +242,9 @@ const AdminKyc = () => {
                     )}
                   </td>
                 </tr>
-              ) : applications.map((application) => (
+              ) : applications.map((application, index) => (
                 <tr key={application.id} className="hover:bg-slate-50/70">
+                  <td className="px-4 py-4 text-slate-500">{(page - 1) * PAGE_SIZE + index + 1}</td>
                   <td className="px-5 py-4"><p className="font-semibold text-slate-900">{application.applicant_name}</p><p className="text-xs text-slate-500">Application #{application.id}</p></td>
                   <td className="px-5 py-4 text-slate-600">{application.applicant_email || "—"}<p className="mt-1 text-xs text-slate-400">{application.applicant_phone || "—"}</p></td>
                   <td className="px-5 py-4 text-slate-600">{dateLabel(application.created_at)}</td>
@@ -246,7 +254,52 @@ const AdminKyc = () => {
               ))}
             </tbody>
           </table>
-        </div>
+        </div> : (
+          <div className="p-4">
+            {loading ? (
+              <p className="py-10 text-center text-sm text-slate-500">Loading applications…</p>
+            ) : applicationError && applications.length === 0 ? (
+              <p className="py-10 text-center text-sm text-rose-700">{applicationError.response?.data?.message || "Unable to load KYC applications"}</p>
+            ) : applications.length === 0 ? (
+              <div className="py-10 text-center">
+                <p className="font-medium text-slate-700">
+                  {search || status !== "all" || dateRange.startDate || dateRange.endDate
+                    ? "No KYC applications match these filters."
+                    : "No KYC applications have been submitted yet."}
+                </p>
+                {!search && status === "all" && !dateRange.startDate && !dateRange.endDate && (
+                  <p className="mt-2 text-sm text-slate-500">
+                    {allowedDocumentTypes?.length === 0
+                      ? "Configure approved document types before asking customers to submit."
+                      : "Ask a customer to sign in with a customer account, open KYC Verification, and submit documents. Their application will appear here."}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2 2xl:grid-cols-3">
+                {applications.map((application, index) => (
+                  <article key={application.id} className="rounded-xl border border-slate-200 bg-white p-4 transition hover:border-emerald-200 hover:shadow-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-slate-900">{application.applicant_name}</p>
+                        <p className="mt-0.5 text-xs text-slate-500">S No {(page - 1) * PAGE_SIZE + index + 1} · Application #{application.id}</p>
+                      </div>
+                      <span className="shrink-0 rounded-full bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700">{statusLabels[application.status] || application.status}</span>
+                    </div>
+                    <div className="mt-3 space-y-1 border-t border-slate-100 pt-3 text-xs text-slate-600">
+                      <p className="break-all">{application.applicant_email || "Email not provided"}</p>
+                      <p>{application.applicant_phone || "Phone not provided"}</p>
+                      <p className="text-slate-500">Submitted {dateLabel(application.created_at)}</p>
+                    </div>
+                    <div className="mt-3 flex justify-end border-t border-slate-100 pt-3">
+                      <button type="button" disabled={refreshing} onClick={() => openApplication(application.id)} className="rounded-lg bg-[#00675d] px-3 py-2 text-xs font-semibold text-white hover:bg-[#004d45] disabled:cursor-not-allowed disabled:opacity-50">Review</button>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
         <div className="flex items-center justify-between border-t border-slate-200 px-4 py-3 text-sm text-slate-500">
           <span>Page {page} of {pages}</span>
           <div className="flex gap-2">
