@@ -320,7 +320,7 @@ function ProductDetail() {
           )}
         </section>
 
-        <section className="flex min-w-0 flex-col rounded-2xl border border-[#eee8dc] bg-white p-4 shadow-sm sm:p-5 xl:col-span-5">
+        <section className="flex min-w-0 flex-col rounded-2xl border border-[#eee8dc] bg-white p-4 shadow-sm sm:p-5 xl:col-span-8">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="rounded-md bg-[#f5f3f5] px-2 py-1 text-[11px] font-semibold text-[#6c6571]">PRODUCT ID: #{product.product_code || product.id}</span>
             <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-bold ${stockStatus.toLowerCase().includes("stock") && !stockStatus.toLowerCase().includes("out") ? "bg-emerald-100 text-emerald-800" : "bg-rose-100 text-rose-700"}`}>
