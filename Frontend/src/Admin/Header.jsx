@@ -76,6 +76,7 @@ const pageTitles = {
   "/admin/reviews": "Reviews",
   "/admin/enquiries": "Enquiries",
   "/admin/enquiries/new": "Add Enquiry",
+  "/admin/enquiries/edit": "Edit Enquiry",
   "/admin/dealers": "Dealer Management",
   "/admin/dealers/purchases": "Dealer Purchases & Payables",
   "/admin/dealers/jobs": "Goldsmith Job Work",
@@ -127,6 +128,7 @@ const Header = ({ onMenuClick }) => {
 
   const getPageTitle = () => {
     if (pageTitles[location.pathname]) return pageTitles[location.pathname];
+    if (location.pathname.startsWith("/admin/enquiries/edit/")) return pageTitles["/admin/enquiries/edit"];
     for (const [path, title] of Object.entries(pageTitles)) {
       if (location.pathname.startsWith(path + "/")) return title;
     }

@@ -147,6 +147,7 @@ const router = createBrowserRouter([
       { path: "profile", element: <Profile /> },
       { path: "enquiries", element: <Enquiries /> },
       { path: "enquiries/new", element: <Enquiries /> },
+      { path: "enquiries/edit/:id", element: <Enquiries /> },
     ],
   },
 ]);
