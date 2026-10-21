@@ -61,6 +61,9 @@ const ProductCard = ({ product, queryString = "" }) => {
         >
           <Heart size={18} fill={isFavorite ? "currentColor" : "none"} />
         </button>
+        <span className="absolute bottom-2.5 right-2.5 mb-2 max-w-[70%] truncate rounded-full bg-[#173f38]/95 px-2.5 py-1.5 text-[9px] font-semibold text-white shadow-sm sm:text-[10px]">
+          {product.product_code || "—"}
+        </span>
       </div>
 
       <div className="relative z-10 -mt-3 flex min-h-[76px] flex-1 flex-col rounded-t-[14px] bg-white px-3 pb-2.5 pt-2 sm:px-4 sm:pb-3">
@@ -69,12 +72,6 @@ const ProductCard = ({ product, queryString = "" }) => {
             {product.name}
           </Link>
         </h3>
-        <p className="mt-1">
-          <span className="inline-block max-w-full truncate rounded-md bg-[#173f38] px-2 py-1 text-[9px] font-semibold text-white sm:text-[10px]">
-            {product.product_code || "—"}
-          </span>
-        </p>
-
         <div className="mt-1 flex items-center justify-between gap-2">
           <div
             className="flex min-w-0 items-center gap-1 text-[10px] text-[#716b60] sm:text-[11px]"
