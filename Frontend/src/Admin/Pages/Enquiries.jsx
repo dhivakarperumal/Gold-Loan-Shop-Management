@@ -322,11 +322,11 @@ const Enquiries = ({ isPopup = false, onClose }) => {
           ? "relative max-h-[calc(100vh-1.5rem)] w-full max-w-4xl overflow-y-auto rounded-2xl bg-slate-50 p-4 shadow-2xl sm:max-h-[calc(100vh-3rem)] sm:p-6"
           : ""}
       >
-      <header className={`flex flex-wrap items-end justify-between gap-3 ${isPopup ? "mb-5 mt-2 pr-12" : ""}`}>
-        <div>
+      <header className={`flex w-full flex-wrap items-end justify-between gap-3 ${isPopup ? "w-[calc(100%+2rem)] -mx-4 -mt-4 mb-5 rounded-t-2xl bg-white px-4 pb-2 pt-3 pr-16 shadow-sm sm:w-[calc(100%+3rem)] sm:-mx-6 sm:-mt-6 sm:px-6 sm:pb-3 sm:pt-4 sm:pr-16" : ""}`}>
+        <div className={isPopup ? "mt-1" : ""}>
          
-          <h1 id={isPopup ? "enquiry-form-title" : undefined} className="text-2xl font-black tracking-tight text-slate-900">{isEditing ? "Edit Gold Enquiry" : "Add Gold Enquiry"}</h1>
-          {!isPopup && <p className="mt-1 text-sm text-slate-500">{isEditing ? "Update customer and product enquiry details." : "Add a new customer enquiry for gold jewellery, coins, or other products."}</p>}
+          <h1 id={isPopup ? "enquiry-form-title" : undefined} className="mt-0 text-2xl font-black tracking-tight text-slate-900">{isEditing ? "Edit Gold Enquiry" : "Add Gold Enquiry"}</h1>
+          <p className="mt-1 text-sm text-slate-500">{isEditing ? "Update customer and product enquiry details." : isPopup ? "Enter customer and product details below." : "Add a new customer enquiry for gold jewellery, coins, or other products."}</p>
         </div>
         {isPopup
           ? <button type="button" onClick={onClose} aria-label="Close add enquiry dialog" className="absolute right-4 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-100 hover:text-slate-900 sm:right-6 sm:top-6"><X size={18} /></button>
