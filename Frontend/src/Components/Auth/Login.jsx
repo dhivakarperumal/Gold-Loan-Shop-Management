@@ -130,7 +130,7 @@ function Login() {
             <p className="text-gray-500 text-sm">Sign in to explore jewellery made for every occasion.</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-gray-100 p-4 sm:p-5">
 
             {/* Email/Mobile */}
             <div>
