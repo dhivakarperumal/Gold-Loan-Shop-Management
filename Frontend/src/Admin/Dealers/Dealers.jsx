@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useLocation } from "react-router-dom";
 import {
-  AlertTriangle, ArrowDownToLine, ArrowLeft, ArrowRightLeft, Building2, Check,
-  ClipboardList, Coins, Download, FileText, LoaderCircle, Plus, Printer, RefreshCw,
+  AlertTriangle, ArrowLeft, ArrowRightLeft, Building2, Check, ChevronRight,
+  ClipboardList, Coins, Download, FileText, LoaderCircle, Plus, Printer,
   LayoutGrid, List, Search, ShieldCheck, Truck, Wallet, X
 } from "lucide-react";
 import { toast } from "react-hot-toast";
@@ -489,41 +489,36 @@ const Dealers = () => {
   const openJobs = jobs.filter((job) => !["Reconciled", "Cancelled"].includes(job.status));
 
   return <div className="space-y-6">
-    <div className="flex flex-wrap items-center justify-between gap-4">
-      <div>
-        <p className="text-xs font-black uppercase tracking-[0.18em] text-[#008577]">Sri Vengateswara Gold Shop</p>
-        <h1 className="mt-1 text-2xl font-black text-slate-900">Dealer Management</h1>
-        <p className="mt-1 text-sm text-slate-500">Supplier accounts, metal custody, job work and settlements</p>
-      </div>
-      <div className="flex gap-2">
-        <button type="button" onClick={() => void refresh()} className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50"><RefreshCw size={16} /> Refresh</button>
-        {section === "jobs" && <button type="button" onClick={() => setDialog("job")} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#008577]"><Plus size={17} /> Create Job Order</button>}
-        {section === "refining" && <><button type="button" onClick={() => setDialog("oldGold")} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#008577]"><Plus size={17} /> Receive Old Gold</button><button type="button" onClick={() => setDialog("refining")} className="inline-flex items-center gap-2 rounded-lg border border-[#003B3B] px-4 py-2.5 text-sm font-bold text-[#003B3B]"><ArrowDownToLine size={16} /> Refining Receipt</button></>}
-      </div>
-    </div>
-
     {!["dealers", "purchases"].includes(section) && <DateRangeFilter onApply={(range) => { setPage(1); setDateRange(range); }} />}
 
-    <div className="grid grid-cols-2 gap-3 xl:grid-cols-6">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
       {[
-        ["Active dealers", summary?.dealers?.active ?? "—", Truck],
-        ["Supplier payables", summary ? currency(summary.payables) : "—", Wallet],
-        ["Dealer receivables", summary ? currency(summary.receivables) : "—", ArrowRightLeft],
-        ["Purchases this month", summary ? currency(summary.purchases_this_month) : "—", Coins],
-        ["Overdue invoices", summary ? `${summary.overdue.count} · ${currency(summary.overdue.amount)}` : "—", AlertTriangle],
-        ["Open job orders", summary?.pending_jobs ?? "—", ClipboardList]
-      ].map(([label, value, Icon]) => <div key={label} className="rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-        <div className="flex items-center justify-between gap-2"><span className="text-xs font-semibold text-slate-500">{label}</span><Icon size={17} className="text-[#008577]" /></div>
-        <p className="mt-2 truncate text-xl font-black text-slate-900">{value}</p>
-      </div>)}
+        { label: "Active dealers", value: summary?.dealers?.active ?? "—", note: "Currently active", Icon: Truck, theme: "border-emerald-700 bg-[#103d34]", accent: "text-emerald-300" },
+        { label: "Supplier payables", value: summary ? currency(summary.payables) : "—", note: "Outstanding balance", Icon: Wallet, theme: "border-amber-700 bg-[#40331b]", accent: "text-amber-300" },
+        { label: "Dealer receivables", value: summary ? currency(summary.receivables) : "—", note: "Amount to receive", Icon: ArrowRightLeft, theme: "border-sky-700 bg-[#15354b]", accent: "text-sky-300" },
+        { label: "Purchases this month", value: summary ? currency(summary.purchases_this_month) : "—", note: "Monthly total", Icon: Coins, theme: "border-orange-700 bg-[#4a2a22]", accent: "text-orange-300" },
+        { label: "Overdue invoices", value: summary ? `${summary.overdue.count} · ${currency(summary.overdue.amount)}` : "—", note: "Invoices past due", Icon: AlertTriangle, theme: "border-rose-700 bg-[#422333]", accent: "text-rose-300" },
+        { label: "Open job orders", value: summary?.pending_jobs ?? "—", note: "Awaiting completion", Icon: ClipboardList, theme: "border-teal-700 bg-[#173c46]", accent: "text-teal-300" }
+      ].map(({ label, value, note, Icon, theme, accent }) => <article key={label} className={`relative flex min-h-32 items-center gap-4 overflow-hidden rounded-2xl border-l-4 p-4 text-white shadow-md transition duration-200 hover:-translate-y-0.5 hover:shadow-lg ${theme}`}>
+        <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-black/20 text-white shadow-inner">
+          <Icon size={24} aria-hidden="true" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs font-bold text-white/80">{label}</p>
+          <p className="mt-1 truncate text-xl font-black text-white">{value}</p>
+          <p className={`mt-1 truncate text-[11px] font-bold ${accent}`}>{note}</p>
+        </div>
+        <span aria-hidden="true" className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-white/60 text-slate-700">
+          <ChevronRight size={15} />
+        </span>
+        <span aria-hidden="true" className={`absolute bottom-3 right-4 flex h-7 items-end gap-1 opacity-70 ${accent}`}>
+          <i className="h-2 w-1.5 rounded-t-sm bg-current" />
+          <i className="h-4 w-1.5 rounded-t-sm bg-current" />
+          <i className="h-3 w-1.5 rounded-t-sm bg-current" />
+          <i className="h-6 w-1.5 rounded-t-sm bg-current" />
+        </span>
+      </article>)}
     </div>
-
-    {summary?.metal_outstanding?.length > 0 && <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
-      <div className="mb-3 flex items-center gap-2 text-sm font-black text-amber-900"><Coins size={17} /> Metal outstanding by purity</div>
-      <div className="flex flex-wrap gap-2">{summary.metal_outstanding.map((metal) => <span key={`${metal.metal_type}-${metal.purity}`} className="rounded-full border border-amber-200 bg-white px-3 py-1.5 text-xs font-bold text-slate-700">
-        {metal.metal_type} {metal.purity}: {Number(metal.weight).toFixed(3)} g <span className="text-slate-400">({Number(metal.fine_gold_weight).toFixed(3)} fine g)</span>
-      </span>)}</div>
-    </div>}
 
     <ErrorBox message={error} retry={() => void fetchAll()} />
     {loading ? <div className="flex min-h-64 items-center justify-center gap-3 rounded-xl border border-slate-100 bg-white text-sm font-bold text-slate-500"><LoaderCircle className="animate-spin" /> Loading dealer records...</div> : <>
@@ -629,7 +624,7 @@ const Dealers = () => {
       </>}
 
       {section === "jobs" && <section className="overflow-hidden rounded-xl border border-slate-100 bg-white">
-        <div className="border-b border-slate-100 p-4"><h2 className="font-black text-slate-800">Goldsmith issue, receipt & reconciliation</h2><p className="text-xs text-slate-500">Weights are tracked by purity and fine-gold equivalent. Unexplained variance requires approval reason.</p>{jobs.filter((job) => job.reconciliation_status === "Pending").map((job) => <div key={job.id} className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm"><span>{job.job_number} has a pending fine-gold variance of {Number(job.reconciliation_variance).toFixed(3)} g.</span><button type="button" onClick={() => void approveReconciliation(job)} className="rounded bg-amber-700 px-3 py-1.5 text-xs font-bold text-white">Approve with reason</button></div>)}</div>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-4"><div><h2 className="font-black text-slate-800">Goldsmith issue, receipt & reconciliation</h2><p className="text-xs text-slate-500">Weights are tracked by purity and fine-gold equivalent. Unexplained variance requires approval reason.</p></div><button type="button" onClick={() => setDialog("job")} className="inline-flex items-center gap-2 rounded-lg bg-[#003B3B] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#008577]"><Plus size={17} /> Create Job Order</button>{jobs.filter((job) => job.reconciliation_status === "Pending").map((job) => <div key={job.id} className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm"><span>{job.job_number} has a pending fine-gold variance of {Number(job.reconciliation_variance).toFixed(3)} g.</span><button type="button" onClick={() => void approveReconciliation(job)} className="rounded bg-amber-700 px-3 py-1.5 text-xs font-bold text-white">Approve with reason</button></div>)}</div>
         <div className="overflow-x-auto"><table className="w-full min-w-[900px] text-left"><thead><tr className="bg-[#003B3B] text-xs uppercase text-white"><th className="p-3">Job / Dealer</th><th className="p-3">Due</th><th className="p-3 text-right">Issued fine g</th><th className="p-3 text-right">Returned fine g</th><th className="p-3">Status / Variance</th><th className="p-3 text-right">Post movement</th></tr></thead><tbody>{jobs.length ? jobs.map((job) => <tr key={job.id} className="border-b text-sm"><td className="p-3 font-bold">{job.job_number}<p className="text-xs font-normal text-slate-500">{job.dealer_name}</p></td><td className="p-3">{job.due_date || "—"}</td><td className="p-3 text-right">{Number(job.issued_fine_weight).toFixed(3)}</td><td className="p-3 text-right">{Number(job.returned_fine_weight).toFixed(3)}</td><td className="p-3">{job.status}{job.reconciliation_variance != null && <p className="text-xs font-bold text-amber-700">Variance {Number(job.reconciliation_variance).toFixed(3)} fine g</p>}</td><td className="p-3"><div className="flex justify-end gap-1"><button type="button" disabled={!["Open","Issued"].includes(job.status)} onClick={() => { setMetalForm({ ...metalForm, job_id: String(job.id), weight: "" }); setDialog("issue"); }} className="rounded border px-2 py-1 text-[10px] font-bold disabled:opacity-40">Issue</button><button type="button" disabled={!["Issued","Partially Received"].includes(job.status)} onClick={() => { setMetalForm({ ...metalForm, job_id: String(job.id), weight: "" }); setDialog("receipt"); }} className="rounded border px-2 py-1 text-[10px] font-bold disabled:opacity-40">Receive</button><button type="button" disabled={["Reconciled","Cancelled"].includes(job.status)} onClick={() => { setReconcileForm({ job_id: job.id, approved_loss: "0", reason: "" }); setDialog("reconcile"); }} className="rounded bg-[#003B3B] px-2 py-1 text-[10px] font-bold text-white disabled:opacity-40">Reconcile</button></div></td></tr>) : <tr><td colSpan="6" className="p-10 text-center text-slate-400">No job orders recorded.</td></tr>}</tbody></table></div>
       </section>}
 
