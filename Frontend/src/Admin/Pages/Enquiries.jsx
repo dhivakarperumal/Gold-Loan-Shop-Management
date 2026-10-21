@@ -68,12 +68,12 @@ const Field = ({ label, children, className = "" }) => (
   </label>
 );
 
-const Enquiries = () => {
+const Enquiries = ({ isPopup = false, onClose }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const { id: editId } = useParams();
   const { current: activeRateSet, loading: ratesLoading, error: ratesError } = useGoldRates();
-  const isCreate = location.pathname.endsWith("/new");
+  const isCreate = isPopup || location.pathname.endsWith("/new");
   const isEditing = Boolean(editId);
   const isForm = isCreate || isEditing;
   const categoriesRef = useRef([]);
@@ -264,7 +264,8 @@ const Enquiries = () => {
         setCustomCategory(false);
         return;
       }
-      navigate("/admin/enquiries");
+      if (isPopup) onClose?.();
+      else navigate("/admin/enquiries");
     } catch (error) {
       toast.error(error.response?.data?.message || "Unable to save enquiry.");
     } finally {
@@ -305,14 +306,31 @@ const Enquiries = () => {
   const inputClass = "mt-1.5 min-h-10 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-normal text-slate-800 outline-none focus:border-[#008577] focus:ring-2 focus:ring-emerald-800/10";
 
   if (isForm) {
-    return <main className="space-y-4 pb-5">
-      <header className="flex flex-wrap items-end justify-between gap-3">
+    return <main
+      className={isPopup
+        ? "fixed inset-0 z-[110] flex items-center justify-center overflow-y-auto bg-slate-950/50 p-3 sm:p-6"
+        : "space-y-4 pb-5"}
+      onMouseDown={isPopup ? (event) => {
+        if (event.target === event.currentTarget) onClose?.();
+      } : undefined}
+    >
+      <div
+        role={isPopup ? "dialog" : undefined}
+        aria-modal={isPopup ? "true" : undefined}
+        aria-labelledby={isPopup ? "enquiry-form-title" : undefined}
+        className={isPopup
+          ? "relative max-h-[calc(100vh-1.5rem)] w-full max-w-4xl overflow-y-auto rounded-2xl bg-slate-50 p-4 shadow-2xl sm:max-h-[calc(100vh-3rem)] sm:p-6"
+          : ""}
+      >
+      <header className={`flex flex-wrap items-end justify-between gap-3 ${isPopup ? "mb-5 mt-2 pr-12" : ""}`}>
         <div>
          
-          <h1 className="text-2xl font-black tracking-tight text-slate-900">{isEditing ? "Edit Gold Enquiry" : "Add Gold Enquiry"}</h1>
-          <p className="mt-1 text-sm text-slate-500">{isEditing ? "Update customer and product enquiry details." : "Add a new customer enquiry for gold jewellery, coins, or other products."}</p>
+          <h1 id={isPopup ? "enquiry-form-title" : undefined} className="text-2xl font-black tracking-tight text-slate-900">{isEditing ? "Edit Gold Enquiry" : "Add Gold Enquiry"}</h1>
+          {!isPopup && <p className="mt-1 text-sm text-slate-500">{isEditing ? "Update customer and product enquiry details." : "Add a new customer enquiry for gold jewellery, coins, or other products."}</p>}
         </div>
-        <Link to="/admin/enquiries" className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"><ArrowLeft size={15} />Back to Enquiries</Link>
+        {isPopup
+          ? <button type="button" onClick={onClose} aria-label="Close add enquiry dialog" className="absolute right-4 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-100 hover:text-slate-900 sm:right-6 sm:top-6"><X size={18} /></button>
+          : <Link to="/admin/enquiries" className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"><ArrowLeft size={15} />Back to Enquiries</Link>}
       </header>
 
       {editLoading ? <section className="rounded-2xl border border-slate-100 bg-white p-10 text-center text-sm text-slate-500 shadow-sm">Loading enquiry details…</section> :
@@ -396,6 +414,7 @@ const Enquiries = () => {
           </section>
         </aside>
       </form>}
+      </div>
     </main>;
   }
 
