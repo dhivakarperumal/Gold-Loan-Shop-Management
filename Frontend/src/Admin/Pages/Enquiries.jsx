@@ -40,7 +40,7 @@ const formForProduct = (product) => {
     product_id: String(product.id ?? product.product_id ?? ""),
     product_name: product.name || "",
     metal_type: product.metal_type || "Gold",
-    purity: product.purity || "",
+    purity: purityValueForProduct(product.purity, product.metal_type || "Gold"),
     weight: product.gross_weight == null ? "" : String(product.gross_weight),
     approx_budget: String(product.offer_price ?? product.final_selling_price ?? product.mrp ?? "")
   };
@@ -72,6 +72,18 @@ const purityValueForRate = (rate) => {
     "750": "18K",
     "585": "14K"
   })[rate.purity] || rate.purity;
+};
+
+const purityValueForProduct = (purity, metalType = "Gold") => {
+  const value = String(purity || "");
+  if (metalType !== "Gold") return value;
+  return ({
+    "999": "24K",
+    "916": "22K",
+    "833": "20K",
+    "750": "18K",
+    "585": "14K"
+  })[value] || value;
 };
 
 const purityLabelForEnquiry = (enquiry) => {
@@ -233,6 +245,7 @@ const Enquiries = ({ isPopup = false, onClose, initialProduct = null, isPublicEn
   ));
   const metalTypes = [...new Set((activeRateSet?.rates || []).map((rate) => rate.metal_type))];
   const purityRates = (activeRateSet?.rates || []).filter((rate) => rate.metal_type === form.metal_type);
+  const hasSelectedPurityOption = purityRates.some((rate) => purityValueForRate(rate) === form.purity);
   const selectedRate = getRateForPurity(activeRateSet, form.purity, form.metal_type);
 
   const setField = (key, value) => setForm((current) => ({ ...current, [key]: value }));
@@ -257,13 +270,16 @@ const Enquiries = ({ isPopup = false, onClose, initialProduct = null, isPublicEn
     const productRate = matchingProduct?.purity
       ? getRateForPurity(activeRateSet, matchingProduct.purity, productMetal || form.metal_type)
       : null;
+    const metalType = productRate?.metal_type || productMetal || form.metal_type;
     setForm((current) => ({
       ...current,
       product_id: matchingProduct ? String(matchingProduct.id) : "",
       product_name: matchingProduct?.name || "",
-      ...(productRate ? {
-        metal_type: productRate.metal_type,
-        purity: purityValueForRate(productRate)
+      ...(matchingProduct?.purity ? {
+        metal_type: metalType,
+        purity: productRate
+          ? purityValueForRate(productRate)
+          : purityValueForProduct(matchingProduct.purity, metalType)
       } : {})
     }));
   };
@@ -383,7 +399,7 @@ const Enquiries = ({ isPopup = false, onClose, initialProduct = null, isPublicEn
               <Field label="Product Category"><select value={isCustomCategory ? OTHER_CATEGORY : form.product_category} onChange={(event) => setProductCategory(event.target.value)} className={inputClass}><option value="">Select product category</option>{categories.filter((category) => category.name !== "Other").map((category) => <option key={category.catId || category.id || category.name} value={category.name}>{category.name}</option>)}<option value={OTHER_CATEGORY}>Other</option></select>{isCustomCategory && <input required maxLength={100} value={form.product_category} onChange={(event) => setField("product_category", event.target.value)} placeholder="Enter product category" className={inputClass} />}</Field>
               <Field label="Product Name / Item"><select value={form.product_id} onChange={(event) => setProductSelection(event.target.value)} className={inputClass}><option value="">Select product</option>{categoryProducts.map((product) => <option key={product.id} value={product.id}>{product.name}{product.product_code ? ` · ${product.product_code}` : ""}</option>)}<option value="custom">Other / Custom Item</option></select>{form.product_id === "custom" && <input maxLength={200} value={form.product_name} onChange={(event) => setField("product_name", event.target.value)} placeholder="Enter product name" className={inputClass} />}</Field>
               <Field label="Metal Type"><select value={form.metal_type} onChange={(event) => setForm((current) => ({ ...current, metal_type: event.target.value, purity: "" }))} className={inputClass}><option value="">Select metal</option>{metalTypes.map((metal) => <option key={metal}>{metal}</option>)}</select></Field>
-              <Field label="Purity"><select value={form.purity} onChange={(event) => setField("purity", event.target.value)} className={inputClass} disabled={ratesLoading || !form.metal_type}><option value="">Select purity</option>{purityRates.map((rate) => {
+              <Field label="Purity"><select value={form.purity} onChange={(event) => setField("purity", event.target.value)} className={inputClass} disabled={ratesLoading || !form.metal_type}><option value="">Select purity</option>{form.purity && !hasSelectedPurityOption && <option value={form.purity}>{form.purity}</option>}{purityRates.map((rate) => {
                 const karat = purityValueForRate(rate);
                 return <option key={rate.purity} value={karat}>{karat === rate.purity ? rate.purity : `${karat} (${rate.purity})`}</option>;
               })}</select></Field>
