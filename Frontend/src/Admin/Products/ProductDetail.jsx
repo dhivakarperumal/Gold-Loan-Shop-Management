@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { toast } from "react-hot-toast";
-import { QRCodeCanvas } from "qrcode.react";
 import {
   FiActivity,
   FiArrowLeft,
@@ -114,7 +113,6 @@ function ProductDetail() {
   const [activeImage, setActiveImage] = useState(0);
   const [activeTab, setActiveTab] = useState("information");
   const [deleting, setDeleting] = useState(false);
-  const qrCodeRef = useRef(null);
 
   useEffect(() => {
     let active = true;
@@ -191,24 +189,6 @@ function ProductDetail() {
         console.error("Failed to share product:", error);
         toast.error("Could not share the product link.");
       }
-    }
-  };
-
-  const downloadProductQr = () => {
-    const canvas = qrCodeRef.current;
-    if (!canvas) {
-      toast.error("Product QR code is not ready to download.");
-      return;
-    }
-
-    try {
-      const downloadLink = document.createElement("a");
-      downloadLink.href = canvas.toDataURL("image/png");
-      downloadLink.download = `${product.product_code || `product-${id}`}-qr.png`;
-      downloadLink.click();
-    } catch (error) {
-      console.error("Failed to download product QR code:", error);
-      toast.error("Could not download the product QR code.");
     }
   };
 
@@ -396,32 +376,6 @@ function ProductDetail() {
           </div>
         </section>
 
-        <section className="flex flex-col items-center rounded-2xl border border-[#eee8dc] bg-white p-4 text-center shadow-sm sm:p-5 xl:col-span-3">
-          <h2 className="flex items-center gap-2 self-start font-semibold text-[#173f38]">
-            <FiGrid className="text-[#c99435]" />
-            Product QR Code
-          </h2>
-          <div className="mt-4 rounded-xl border border-[#f0ece4] bg-white p-2">
-            <QRCodeCanvas
-              ref={qrCodeRef}
-              value={`${window.location.origin}/product/${id}`}
-              size={160}
-              level="H"
-              includeMargin
-              title={`QR code for ${product.name || "product"}`}
-            />
-          </div>
-          <p className="mt-3 text-xs leading-5 text-[#737d77]">
-            Scan to view this product on your website.
-          </p>
-          <button
-            type="button"
-            onClick={downloadProductQr}
-            className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[#ece7dd] px-3 py-2.5 text-xs font-semibold text-[#40514a] transition hover:bg-[#fbfaf7]"
-          >
-            <FiExternalLink /> Download QR Code
-          </button>
-        </section>
       </div>
 
       <nav aria-label="Product details sections" className="hide-scrollbar overflow-x-auto rounded-xl border border-[#eee8dc] bg-white shadow-sm">
