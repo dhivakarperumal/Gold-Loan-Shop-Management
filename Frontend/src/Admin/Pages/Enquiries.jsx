@@ -347,14 +347,50 @@ const Enquiries = () => {
     <section aria-label="Enquiry summary" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
       {filteredStats.map(({ label, value, note, icon: Icon, color }) => {
         const colors = {
-          emerald: "bg-emerald-50 text-emerald-700",
-          amber: "bg-amber-50 text-amber-700",
-          sky: "bg-sky-50 text-sky-700",
-          rose: "bg-rose-50 text-rose-700"
+          emerald: {
+            card: "border-l-emerald-400 bg-[#123F37]",
+            icon: "bg-emerald-700 text-white",
+            note: "text-emerald-300",
+            dot: "bg-emerald-300",
+            bars: "bg-emerald-300"
+          },
+          amber: {
+            card: "border-l-amber-400 bg-[#3D321B]",
+            icon: "bg-amber-500 text-white",
+            note: "text-amber-300",
+            dot: "bg-amber-300",
+            bars: "bg-amber-300"
+          },
+          sky: {
+            card: "border-l-sky-400 bg-[#173B56]",
+            icon: "bg-[#00796B] text-white",
+            note: "text-sky-300",
+            dot: "bg-sky-300",
+            bars: "bg-sky-300"
+          },
+          rose: {
+            card: "border-l-orange-400 bg-[#4A2A24]",
+            icon: "bg-amber-500 text-white",
+            note: "text-orange-200",
+            dot: "bg-orange-300",
+            bars: "bg-orange-300"
+          }
         };
-        return <article key={label} className="flex min-h-24 items-center gap-3 rounded-xl border border-slate-100 bg-white p-4 shadow-sm">
-          <span className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${colors[color]}`}><Icon size={21} /></span>
-          <div className="min-w-0"><p className="truncate text-xs font-semibold text-slate-500">{label}</p><p className="text-xl font-black text-slate-900">{Number(value).toLocaleString("en-IN")}</p><p className="truncate text-[10px] text-slate-500">{note}</p></div>
+        const theme = colors[color];
+        return <article key={label} className={`relative isolate flex min-h-36 items-center gap-4 overflow-hidden rounded-2xl border border-white/10 border-l-4 p-5 text-white shadow-md transition duration-200 hover:-translate-y-0.5 hover:shadow-lg ${theme.card}`}>
+          <span className="absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-full bg-white/70 text-slate-600"><ChevronRight size={15} /></span>
+          <span className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl shadow-md ${theme.icon}`}><Icon size={23} /></span>
+          <div className="min-w-0 pb-1">
+            <p className="truncate text-xs font-semibold text-white/90">{label}</p>
+            <p className="mt-1 text-2xl font-black leading-none tracking-tight">{Number(value).toLocaleString("en-IN")}</p>
+            <p className={`mt-3 flex items-center gap-1.5 truncate text-[11px] font-bold ${theme.note}`}><span className={`h-2 w-2 shrink-0 rounded-full ${theme.dot}`} />{note}</p>
+          </div>
+          <div aria-hidden="true" className={`absolute bottom-3 right-3 flex h-7 items-end gap-1 opacity-90 ${theme.bars}`}>
+            <span className="h-3 w-1 rounded-t-sm bg-current" />
+            <span className="h-5 w-1 rounded-t-sm bg-current" />
+            <span className="h-4 w-1 rounded-t-sm bg-current" />
+            <span className="h-7 w-1 rounded-t-sm bg-current" />
+          </div>
         </article>;
       })}
     </section>
