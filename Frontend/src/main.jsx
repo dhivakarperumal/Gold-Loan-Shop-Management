@@ -150,6 +150,9 @@ const router = createHashRouter([
       { path: "settings/receipt", element: <ReceiptSettings /> },
       { path: "settings/home-sections", element: <HomeSections /> },
       { path: "profile", element: <Profile /> },
+      { path: "enquiries", element: <Enquiries /> },
+      { path: "enquiries/new", element: <Enquiries /> },
+      { path: "enquiries/edit/:id", element: <Enquiries /> },
     ],
   },
 ]);

@@ -112,9 +112,23 @@ async function updateEnquiryStatus(id, status) {
   return Boolean(await getEnquiry(id));
 }
 
+async function updateEnquiry(id, enquiry) {
+  const fields = [
+    'customer_name', 'phone', 'alternate_phone', 'email', 'address', 'city', 'state', 'pincode',
+    'enquiry_type', 'product_category', 'product_id', 'product_name', 'purity', 'quantity', 'weight',
+    'approx_budget', 'preferred_design', 'message', 'status', 'follow_up_date', 'follow_up_time',
+    'assigned_to', 'source', 'priority', 'whatsapp_confirmation'
+  ];
+  const [result] = await pool.execute(
+    `UPDATE enquiries SET ${fields.map((field) => `${field} = ?`).join(', ')} WHERE id = ?`,
+    [...fields.map((field) => enquiry[field] ?? null), id]
+  );
+  return result.affectedRows > 0 || Boolean(await getEnquiry(id));
+}
+
 async function deleteEnquiry(id) {
   const [result] = await pool.execute('DELETE FROM enquiries WHERE id = ?', [id]);
   return result.affectedRows > 0;
 }
 
-module.exports = { createEnquiry, deleteEnquiry, getEnquiry, initializeEnquiryModule, listEnquiries, updateEnquiryStatus };
+module.exports = { createEnquiry, deleteEnquiry, getEnquiry, initializeEnquiryModule, listEnquiries, updateEnquiry, updateEnquiryStatus };

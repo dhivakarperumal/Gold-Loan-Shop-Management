@@ -61,7 +61,7 @@ function normalizePeople(value, field) {
       return { error: `${field} ${index + 1} is invalid` };
     }
     const name = normalizeText(person.name, `${field} ${index + 1} name`, 150, true);
-    const phone = normalizeText(person.phone, `${field} ${index + 1} phone`, 32);
+    const phone = normalizeText(person.phone, `${field} ${index + 1} phone`, 32, true);
     const email = normalizeText(person.email, `${field} ${index + 1} email`, 254);
     const address = normalizeText(person.address, `${field} ${index + 1} address`, 500);
     if (name.error || phone.error || email.error || address.error) {

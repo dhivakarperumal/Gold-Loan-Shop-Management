@@ -7,10 +7,11 @@ import {
     FiEdit2,
     FiEye,
     FiFilter,
+    FiGrid,
+    FiList,
     FiMail,
     FiPhone,
     FiPlus,
-    FiRefreshCw,
     FiSearch,
     FiTrash2,
     FiUser,
@@ -48,6 +49,7 @@ const getInitials = (name) =>
 const Users = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
+    const [viewMode, setViewMode] = useState("table");
     const [dateRange, setDateRange] = useState({ preset: "all", startDate: "", endDate: "" });
     const [currentPage, setCurrentPage] = useState(1);
     const [selectedUserId, setSelectedUserId] = useState(null);
@@ -239,11 +241,6 @@ const Users = () => {
                         </Link>
                     </div>
                     <div className="flex flex-wrap items-center gap-3">
-                        <DateRangeFilter onApply={(range) => {
-                            setLoading(true);
-                            setCurrentPage(1);
-                            setDateRange(range);
-                        }} />
                         <button
                             type="button"
                             onClick={openAddModal}
@@ -271,8 +268,8 @@ const Users = () => {
 
                 <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-[minmax(0,1fr)_280px]">
                     <section className="min-w-0 overflow-hidden rounded-xl border border-slate-100 bg-white shadow-sm">
-                        <div className="flex flex-col gap-2 border-b border-slate-100 p-3 lg:flex-row lg:items-center">
-                            <label className="relative min-w-0 flex-1">
+                        <div className="flex flex-col gap-2 border-b border-slate-100 p-3 lg:flex-row lg:items-center lg:justify-between">
+                            <label className="relative min-w-0 flex-1 lg:max-w-md">
                                 <FiSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                                 <input
                                     value={searchTerm}
@@ -281,7 +278,11 @@ const Users = () => {
                                     className="w-full rounded-lg border border-slate-200 py-2.5 pl-9 pr-3 text-xs outline-none transition placeholder:text-slate-400 focus:border-[#008577] focus:ring-2 focus:ring-emerald-100"
                                 />
                             </label>
-                            <div className="flex flex-wrap items-center gap-2">
+                            <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+                                <DateRangeFilter onApply={(range) => {
+                                    setCurrentPage(1);
+                                    setDateRange(range);
+                                }} />
                                 <label className="relative">
                                     <FiFilter className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                                     <select
@@ -294,35 +295,42 @@ const Users = () => {
                                         <option value="inactive">Inactive</option>
                                     </select>
                                 </label>
-                                <button
-                                    type="button"
-                                    onClick={() => { setSearchTerm(""); setStatusFilter("all"); }}
-                                    className="rounded-lg border border-slate-200 px-3 py-2.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
-                                >
-                                    Reset
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={fetchUsers}
-                                    disabled={loading}
-                                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#008577] px-3 py-2.5 text-xs font-bold text-white transition hover:bg-[#00695C] disabled:opacity-60"
-                                >
-                                    <FiRefreshCw className={loading ? "animate-spin" : ""} /> Refresh
-                                </button>
+                                <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1" role="group" aria-label="Customer view mode">
+                                    <button
+                                        type="button"
+                                        onClick={() => setViewMode("card")}
+                                        aria-label="Card view"
+                                        title="Card view"
+                                        aria-pressed={viewMode === "card"}
+                                        className={`inline-flex h-8 w-8 items-center justify-center rounded-md transition ${viewMode === "card" ? "bg-[#008577] text-white shadow-sm" : "text-slate-600 hover:bg-white"}`}
+                                    >
+                                        <FiGrid size={15} />
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setViewMode("table")}
+                                        aria-label="Table view"
+                                        title="Table view"
+                                        aria-pressed={viewMode === "table"}
+                                        className={`inline-flex h-8 w-8 items-center justify-center rounded-md transition ${viewMode === "table" ? "bg-[#008577] text-white shadow-sm" : "text-slate-600 hover:bg-white"}`}
+                                    >
+                                        <FiList size={15} />
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="overflow-x-auto">
-                            <table className="w-full min-w-[720px] border-collapse text-left">
+                        {viewMode === "table" ? <div className="overflow-x-auto">
+                            <table className="w-full min-w-[720px] border-separate border-spacing-0 text-left">
                                 <thead>
-                                    <tr className="bg-slate-50 text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                                        <th className="px-3 py-3">#</th>
-                                        <th className="px-3 py-3">Customer</th>
-                                        <th className="px-3 py-3">Contact</th>
-                                        <th className="px-3 py-3">Role</th>
-                                        <th className="px-3 py-3">Status</th>
-                                        <th className="px-3 py-3">Join Date</th>
-                                        <th className="px-3 py-3 text-right">Actions</th>
+                                    <tr className="bg-gradient-to-r from-[#003B3B] to-[#008577] text-[10px] font-bold uppercase tracking-wide text-white">
+                                        <th className="rounded-tl-xl px-4 py-4">S No</th>
+                                        <th className="px-4 py-4">Customer</th>
+                                        <th className="px-4 py-4">Contact</th>
+                                        <th className="px-4 py-4">Role</th>
+                                        <th className="px-4 py-4">Status</th>
+                                        <th className="px-4 py-4">Join Date</th>
+                                        <th className="rounded-tr-xl px-4 py-4 text-right">Actions</th>
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
@@ -336,7 +344,7 @@ const Users = () => {
                                             onClick={() => setSelectedUserId(user.id)}
                                             className={`cursor-pointer transition hover:bg-emerald-50/40 ${String(selectedUserId) === String(user.id) ? "bg-emerald-50/50" : ""}`}
                                         >
-                                            <td className="px-3 py-3 text-xs font-medium text-slate-400">#{user.id ?? "—"}</td>
+                                            <td className="px-3 py-3 text-xs font-medium text-slate-400">{(safePage - 1) * PAGE_SIZE + index + 1}</td>
                                             <td className="px-3 py-3">
                                                 <div className="flex items-center gap-2.5">
                                                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#F7EBCB] text-xs font-bold text-[#795713]">{getInitials(user.name)}</div>
@@ -363,7 +371,46 @@ const Users = () => {
                                     ))}
                                 </tbody>
                             </table>
-                        </div>
+                        </div> : (
+                            <div className="p-4">
+                                {loading ? (
+                                    <p className="py-12 text-center text-sm text-slate-400">Loading customers...</p>
+                                ) : currentItems.length === 0 ? (
+                                    <p className="py-12 text-center text-sm text-slate-400">No customers match your search.</p>
+                                ) : (
+                                    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+                                        {currentItems.map((user) => (
+                                            <article
+                                                key={user.id ?? user.email}
+                                                onClick={() => setSelectedUserId(user.id)}
+                                                className={`cursor-pointer rounded-xl border p-4 transition hover:border-emerald-200 hover:bg-emerald-50/30 ${String(selectedUserId) === String(user.id) ? "border-emerald-300 bg-emerald-50/50" : "border-slate-100 bg-white"}`}
+                                            >
+                                                <div className="flex items-start justify-between gap-3">
+                                                    <div className="flex min-w-0 items-center gap-2.5">
+                                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#F7EBCB] text-xs font-bold text-[#795713]">{getInitials(user.name)}</div>
+                                                        <div className="min-w-0">
+                                                            <p className="truncate text-sm font-bold text-slate-800">{user.name}</p>
+                                                            <p className="text-[10px] text-slate-400">Customer #{user.id ?? "—"}</p>
+                                                        </div>
+                                                    </div>
+                                                    <span className={`shrink-0 rounded-md px-2 py-1 text-[10px] font-bold ${user.status === "Active" ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>{user.status}</span>
+                                                </div>
+                                                <div className="mt-3 space-y-1.5 border-t border-slate-100 pt-3 text-xs">
+                                                    <p className="truncate text-slate-700">{user.email || "Email not provided"}</p>
+                                                    <p className="text-slate-500">{user.phone || "Phone not provided"}</p>
+                                                    <p className="capitalize text-slate-500">{user.role} · Joined {formatJoinDate(user.created_at, { day: "2-digit", month: "short", year: "numeric" })}</p>
+                                                </div>
+                                                <div className="mt-3 flex justify-end gap-1.5 border-t border-slate-100 pt-3">
+                                                    <button type="button" title="View customer" aria-label={`View ${user.name}`} onClick={(event) => { event.stopPropagation(); setSelectedUserId(user.id); }} className="rounded-md border border-slate-200 p-2 text-slate-600 hover:border-emerald-300 hover:text-[#008577]"><FiEye size={14} /></button>
+                                                    <button type="button" disabled={refreshing} title="Edit customer" aria-label={`Edit ${user.name}`} onClick={(event) => { event.stopPropagation(); openEditModal(user); }} className="rounded-md border border-slate-200 p-2 text-slate-600 hover:border-amber-300 hover:text-amber-700 disabled:cursor-not-allowed disabled:opacity-50"><FiEdit2 size={14} /></button>
+                                                    <button type="button" disabled={refreshing} title="Delete customer" aria-label={`Delete ${user.name}`} onClick={(event) => { event.stopPropagation(); handleDeleteUser(user); }} className="rounded-md border border-rose-100 p-2 text-rose-500 hover:bg-rose-50 disabled:cursor-not-allowed disabled:opacity-50"><FiTrash2 size={14} /></button>
+                                                </div>
+                                            </article>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         <div className="flex flex-col gap-3 border-t border-slate-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                             <p className="text-xs text-slate-500">

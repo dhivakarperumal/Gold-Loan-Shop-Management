@@ -90,7 +90,7 @@ function Login() {
           <img
             src="/images/loginbanner.png"
             alt="Login banner"
-            className="w-full h-full object-cover opacity-90 transition-transform duration-1000 hover:scale-105 origin-left"
+            className="h-full w-full object-cover object-[72%_center] opacity-90 transition-transform duration-1000 hover:scale-105"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-primary/90 via-black/20 to-transparent pointer-events-none" />
           <div className="absolute bottom-44 left-12 xl:left-16 text-white z-30">
@@ -130,7 +130,7 @@ function Login() {
             <p className="text-gray-500 text-sm">Sign in to explore jewellery made for every occasion.</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4 rounded-2xl border border-gray-100 p-4 sm:p-5">
 
             {/* Email/Mobile */}
             <div>

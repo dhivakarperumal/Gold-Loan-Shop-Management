@@ -549,46 +549,47 @@ const Dashboard = () => {
           </button>
         </div>
 
-        {currentGoldRates?.rates ? (
-          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 2xl:grid-cols-6">
-            {[...currentGoldRates.rates]
-              .sort((first, second) => (
-                ["Gold", "Silver", "Platinum", "Diamond"].indexOf(first.metal_type)
-                - ["Gold", "Silver", "Platinum", "Diamond"].indexOf(second.metal_type)
-              ))
-              .map((rate) => (
-              <div key={`${rate.metal_type}-${rate.purity}`} className="group rounded-xl border border-white/10 bg-white/[0.08] px-3.5 py-3 backdrop-blur-sm transition hover:-translate-y-0.5 hover:border-amber-200/40 hover:bg-white/[0.13]">
-                <span className="block truncate text-[10px] font-bold uppercase tracking-[0.1em] text-emerald-50/70">
-                  {rate.metal_type} {rate.metal_type === "Gold" ? ({
-                    "999": "24K (999)",
-                    "916": "22K (916)",
-                    "833": "20K (833)",
-                    "750": "18K (750)",
-                    "585": "14K (585)"
-                  })[rate.purity] || rate.purity : rate.purity}
-                </span>
-                <p className="mt-1.5 text-base font-extrabold tabular-nums text-white">
-                  {formatCurrency(rate.rate_per_unit ?? rate.rate_per_gram)}
-                  <span className="ml-1 text-xs font-semibold text-emerald-100/70">/{rate.rate_unit === "carat" ? "ct" : "g"}</span>
-                </p>
-              </div>
+        {currentGoldRates?.rates?.length ? (
+          <div className="mt-5 space-y-3">
+            {[...new Set(currentGoldRates.rates.map((rate) => rate.metal_type))]
+              .sort((first, second) => {
+                const metalOrder = ["Gold", "Silver", "Platinum", "Diamond"];
+                const firstIndex = metalOrder.indexOf(first);
+                const secondIndex = metalOrder.indexOf(second);
+                return (firstIndex === -1 ? metalOrder.length : firstIndex)
+                  - (secondIndex === -1 ? metalOrder.length : secondIndex);
+              })
+              .map((metal) => (
+                <section key={metal} className="grid gap-2 border-t border-white/15 pt-3 first:border-t-0 first:pt-0 sm:grid-cols-[100px_minmax(0,1fr)] sm:items-center">
+                  <h3 className="text-sm font-bold text-emerald-100">{metal}</h3>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
+                    {currentGoldRates.rates
+                      .filter((rate) => rate.metal_type === metal)
+                      .map((rate) => (
+                        <div key={`${rate.metal_type}-${rate.purity}`} className="group rounded-xl border border-white/10 bg-white/[0.08] px-3.5 py-3 backdrop-blur-sm transition hover:-translate-y-0.5 hover:border-amber-200/40 hover:bg-white/[0.13]">
+                          <span className="block truncate text-[10px] font-bold uppercase tracking-[0.1em] text-emerald-50/70">
+                            {rate.metal_type === "Gold" ? ({
+                              "999": "24K (999)",
+                              "916": "22K (916)",
+                              "833": "20K (833)",
+                              "750": "18K (750)",
+                              "585": "14K (585)"
+                            })[rate.purity] || rate.purity : rate.purity}
+                          </span>
+                          <p className="mt-1.5 text-base font-extrabold tabular-nums text-white">
+                            {formatCurrency(rate.rate_per_unit ?? rate.rate_per_gram)}
+                            <span className="ml-1 text-xs font-semibold text-emerald-100/70">/{rate.rate_unit === "carat" ? "ct" : "g"}</span>
+                          </p>
+                        </div>
+                      ))}
+                  </div>
+                </section>
               ))}
           </div>
         ) : (
-          <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <div className="rounded-xl border border-amber-200/15 bg-white/[0.08] px-3.5 py-3">
-              <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-amber-100/80">Gold 22K (916)</span>
-              <p className="mt-1.5 text-base font-extrabold text-white">₹6,850.00/g</p>
-            </div>
-            <div className="rounded-xl border border-amber-200/15 bg-white/[0.08] px-3.5 py-3">
-              <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-amber-100/80">Gold 24K</span>
-              <p className="mt-1.5 text-base font-extrabold text-white">₹7,472.00/g</p>
-            </div>
-            <div className="rounded-xl border border-white/10 bg-white/[0.08] px-3.5 py-3">
-              <span className="text-[10px] font-bold uppercase tracking-[0.1em] text-emerald-50/70">Silver 999</span>
-              <p className="mt-1.5 text-base font-extrabold text-white">₹98.50/g</p>
-            </div>
-          </div>
+          <p className="mt-5 rounded-xl border border-white/10 bg-white/[0.08] px-4 py-3 text-sm font-medium text-emerald-50/80">
+            No active metal rates are configured yet.
+          </p>
         )}
       </div>
 

@@ -40,6 +40,8 @@ const navItems = [
  
 
   { path: "/admin/billings", label: "Billing", icon: Files },
+  { path: "/admin/enquiries", label: "All Enquiries", icon:  MessageCircle, activePaths: ["/admin/enquiries/new"] },
+ 
   {
     label: "Loan Management",
     icon: HandCoins,
