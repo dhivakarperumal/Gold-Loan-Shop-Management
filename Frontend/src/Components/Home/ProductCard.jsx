@@ -69,6 +69,11 @@ const ProductCard = ({ product, queryString = "" }) => {
             {product.name}
           </Link>
         </h3>
+        <p className="mt-1">
+          <span className="inline-block max-w-full truncate rounded-md bg-[#173f38] px-2 py-1 text-[9px] font-semibold text-white sm:text-[10px]">
+            {product.product_code || "—"}
+          </span>
+        </p>
 
         <div className="mt-1 flex items-center justify-between gap-2">
           <div
