@@ -73,6 +73,8 @@ const pageTitles = {
   "/admin/banners": "Banners",
   "/admin/videos": "Showcase Videos",
   "/admin/reviews": "Reviews",
+  "/admin/enquiries": "Enquiries",
+  "/admin/enquiries/new": "Add Enquiry",
   "/admin/dealers": "Dealer Management",
   "/admin/dealers/purchases": "Dealer Purchases & Payables",
   "/admin/dealers/jobs": "Goldsmith Job Work",
