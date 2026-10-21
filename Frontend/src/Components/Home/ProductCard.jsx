@@ -61,7 +61,7 @@ const ProductCard = ({ product, queryString = "" }) => {
         >
           <Heart size={18} fill={isFavorite ? "currentColor" : "none"} />
         </button>
-        <span className="absolute bottom-2.5 right-2.5 mb-2 max-w-[70%] truncate rounded-full bg-[#173f38]/95 px-2.5 py-1.5 text-[9px] font-semibold text-white shadow-sm sm:text-[10px]">
+        <span className="absolute bottom-2.5 right-2.5 mb-2 max-w-[70%] truncate rounded-full bg-[#8c5e13]/95 px-2.5 py-1.5 text-[9px] font-semibold text-white shadow-sm sm:text-[10px]">
           {product.product_code || "—"}
         </span>
       </div>
