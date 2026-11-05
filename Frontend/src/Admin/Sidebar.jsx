@@ -26,7 +26,8 @@ import {
   Clock3,
   Coins,
   CheckCircle2,
-  Wallet
+  Wallet,
+  MessageCircle
 } from "lucide-react";
 
 /* ================= NAV ITEMS ================= */
