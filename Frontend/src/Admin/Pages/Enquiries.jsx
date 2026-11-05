@@ -106,7 +106,10 @@ const Field = ({ label, children, className = "" }) => (
 const Enquiries = ({ isPopup = false, onClose, initialProduct = null, isPublicEnquiry = false }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { id: editId } = useParams();
+  const { id: routeId } = useParams();
+  const editId = location.pathname.startsWith("/admin/enquiries/edit/")
+    ? routeId
+    : undefined;
   const { current: activeRateSet, loading: ratesLoading, error: ratesError } = useGoldRates();
   const isCreate = isPopup || location.pathname.endsWith("/new");
   const isEditing = Boolean(editId);
