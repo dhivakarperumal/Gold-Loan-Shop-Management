@@ -46,6 +46,7 @@ const OverdueLoans = React.lazy(() => import("./Admin/Loanmanagements/OverdueLoa
 const BannerManagement = React.lazy(() => import("./Admin/Marketing/BannerManagement.jsx"));
 const VideoManagement = React.lazy(() => import("./Admin/Marketing/VideoManagement.jsx"));
 const Reviews = React.lazy(() => import("./Admin/Pages/Reviews.jsx"));
+const Enquiries = React.lazy(() => import("./Admin/Pages/Enquiries.jsx"));
 const Settings = React.lazy(() => import("./Admin/Pages/Settings.jsx"));
 const FundManagement = React.lazy(() => import("./Admin/Pages/FundManagement.jsx"));
 const DailyGoldRate = React.lazy(() => import("./Admin/Pages/DailyGoldRate.jsx"));
