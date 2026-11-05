@@ -2,6 +2,7 @@
 import React, { useEffect, useState } from "react";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Autoplay } from "swiper/modules";
+import { Link } from "react-router-dom";
 import api from "../../api";
 import { resolveBackendImageUrl } from "./productDisplay";
 
@@ -106,8 +107,8 @@ const Category = () => {
 
               return (
                 <SwiperSlide key={category.catId} className="h-auto">
-                  <button
-                    type="button"
+                  <Link
+                    to={`/explore?category=${encodeURIComponent(category.name)}`}
                     className="group flex h-full min-w-0 w-full flex-col items-center px-1 text-center transition-transform duration-300 hover:-translate-y-1"
                   >
                     <div className="relative aspect-square w-full max-w-[105px] rounded-full border-2 border-[#e9ce98] bg-white p-[3px] shadow-[0_0_0_2px_rgba(225,188,116,0.12)] transition-all duration-300 group-hover:border-[#bd8732] group-hover:shadow-[0_0_0_4px_rgba(225,188,116,0.18)] sm:max-w-[125px] lg:max-w-[145px]">
@@ -133,7 +134,7 @@ const Category = () => {
                         ✦
                       </span>
                     </div>
-                  </button>
+                  </Link>
                 </SwiperSlide>
               );
             })}
