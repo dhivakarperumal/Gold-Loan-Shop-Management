@@ -49,6 +49,12 @@ test('preserves each customer address in the saved billing payload', () => {
   assert.equal(result.billing.customers[0].address, '12 Gold Street');
 });
 
+test('requires a phone number for every bill customer', () => {
+  const input = billingInput();
+  input.customers[0].phone = '';
+  assert.match(normalizeBilling(input).error, /customers 1 phone is required/i);
+});
+
 test('deducts exchange credit before calculating entered GST', () => {
   const result = normalizeBilling(billingInput({
     payment_type: 'EXCHANGE_GOLD',

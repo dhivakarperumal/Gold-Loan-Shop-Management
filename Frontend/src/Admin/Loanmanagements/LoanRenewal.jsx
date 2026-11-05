@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { FiAlertCircle, FiArrowLeft, FiCalendar, FiCheckCircle, FiChevronRight, FiGrid, FiLayers, FiList, FiPlus, FiRefreshCw, FiSearch, FiShield } from "react-icons/fi";
+import { FiAlertCircle, FiArrowLeft, FiCalendar, FiCheckCircle, FiChevronRight, FiEye, FiGrid, FiLayers, FiList, FiPlus, FiRefreshCw, FiSearch, FiShield, FiX } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import api, { getPrivateFile } from "../../api";
 import { isLoanReviewDue, loanReviewDate } from "./loanPolicy";
@@ -34,6 +34,165 @@ function Info({ label, value }) {
   );
 }
 
+export function LoanPaymentModal({ loan: loanRow, onClose, onLoanUpdated }) {
+  const [data, setData] = useState(null);
+  const [fundAccounts, setFundAccounts] = useState([]);
+  const [accountId, setAccountId] = useState("");
+  const [paymentAmount, setPaymentAmount] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("Cash");
+  const [referenceNumber, setReferenceNumber] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState("");
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    Promise.all([
+      api.get(`/loans/${loanRow.id}/renewal`),
+      api.get("/funds/accounts")
+    ]).then(([renewalResponse, accountsResponse]) => {
+      if (!Array.isArray(accountsResponse.data)) throw new Error("The server returned an invalid fund account list.");
+      if (!active) return;
+      const activeAccounts = accountsResponse.data.filter((account) => account.is_active);
+      setData(renewalResponse.data);
+      setFundAccounts(activeAccounts);
+      setAccountId(String(activeAccounts[0]?.id || ""));
+      setLoadError("");
+    }).catch((error) => {
+      console.error("Failed to load loan payment details:", error);
+      if (!active) return;
+      const message = error.response?.data?.message || error.message || "Could not load payment and renewal details.";
+      setLoadError(message);
+      toast.error(message);
+    }).finally(() => {
+      if (active) setLoading(false);
+    });
+    return () => { active = false; };
+  }, [loanRow.id]);
+
+  const loan = data?.loan;
+  const preview = data?.preview;
+  const amount = Number(paymentAmount);
+  const principalReduction = preview && Number.isFinite(amount)
+    ? Math.max(0, Math.min(preview.current_principal, amount - preview.accrued_interest))
+    : 0;
+  const canPay = Boolean(
+    loan
+    && preview
+    && loan.loan_status === "Active"
+    && preview.current_principal > 0
+    && accountId
+    && Number.isFinite(amount)
+    && amount > 0
+    && amount + 0.001 >= preview.minimum_payment
+    && amount <= preview.total_due + 0.001
+  );
+
+  const submitPayment = async (event) => {
+    event.preventDefault();
+    if (!canPay || saving) return;
+    setSaving(true);
+    try {
+      const { data: updatedData } = await api.post(`/loans/${loanRow.id}/renewal`, {
+        payment_amount: amount,
+        account_id: accountId,
+        payment_method: paymentMethod,
+        reference_number: referenceNumber.trim(),
+        idempotency_key: crypto.randomUUID()
+      });
+      setData(updatedData);
+      setPaymentAmount("");
+      setReferenceNumber("");
+      onLoanUpdated(updatedData.loan);
+      toast.success(updatedData.preview.current_principal === 0
+        ? "Loan paid in full. Complete and record the gold release."
+        : `Payment recorded. Loan renewed through ${dateText(updatedData.loan.maturity_date)}.`);
+    } catch (error) {
+      console.error("Failed to record loan payment:", error);
+      toast.error(error.response?.data?.message || "Could not record this payment.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[70] flex items-center justify-center overflow-y-auto bg-slate-950/60 p-3 sm:p-5" onMouseDown={(event) => { if (event.target === event.currentTarget && !saving) onClose(); }}>
+      <section role="dialog" aria-modal="true" aria-labelledby="loan-payment-title" className="my-auto max-h-[95vh] w-full max-w-3xl overflow-y-auto rounded-2xl bg-white shadow-2xl">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-100 bg-white p-4 sm:p-5">
+          <div className="min-w-0">
+            <p className="text-xs font-bold uppercase tracking-widest text-emerald-700">Payment and renewal</p>
+            <h2 id="loan-payment-title" className="mt-1 truncate text-lg font-black text-slate-900">{loanRow.loan_number} · {loanRow.customer_name || "Customer"}</h2>
+          </div>
+          <button type="button" onClick={onClose} disabled={saving} aria-label="Close payment details" className="rounded-lg p-2 text-slate-500 hover:bg-slate-100 disabled:opacity-50"><FiX size={20} /></button>
+        </div>
+
+        {loading
+          ? <p className="p-8 text-center text-sm text-slate-500">Loading payment details...</p>
+          : loadError || !loan || !preview
+            ? <div className="p-6"><p role="alert" className="text-sm text-rose-700">{loadError || "Payment details are unavailable."}</p></div>
+            : <div className="p-4 sm:p-5">
+              <section className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <span className="grid h-9 w-9 place-items-center rounded-xl bg-emerald-50 text-[#008577]"><FiCalendar /></span>
+                  <div><h3 className="font-bold text-slate-800">Payment and renewal</h3><p className="text-xs text-slate-500">Renewal date: {dateText(preview.renewal_date)}</p></div>
+                </div>
+                <div className="space-y-2 rounded-xl bg-slate-50 p-4 text-sm">
+                  <div className="flex justify-between gap-3 text-slate-600"><span>Current principal</span><strong className="text-slate-800">{money(preview.current_principal)}</strong></div>
+                  <div className="flex justify-between gap-3 text-slate-600"><span>Maturity date</span><strong className="text-slate-800">{dateText(loan.maturity_date)}</strong></div>
+                  <div className="flex justify-between gap-3 text-slate-600"><span>Regular interest accrued</span><strong className="text-slate-800">{money(preview.regular_interest)}</strong></div>
+                  <div className="flex justify-between gap-3 text-slate-600"><span>Overdue extra interest / late fee</span><strong className="text-rose-700">{money(preview.late_payment_fee)}</strong></div>
+                  <div className="flex justify-between gap-3 text-xs text-slate-500"><span>Saved late-payment interest rate</span><strong>{rateText(loan.late_payment_interest_rate)}</strong></div>
+                  <div className="flex justify-between gap-3 border-t border-slate-200 pt-2 text-slate-600"><span>Total interest and late fee</span><strong className="text-slate-800">{money(preview.accrued_interest)}</strong></div>
+                  <div className="flex justify-between gap-3 border-t border-slate-200 pt-2 font-bold text-slate-800"><span>Total due</span><span>{money(preview.total_due)}</span></div>
+                  <p className="pt-1 text-[11px] leading-relaxed text-slate-500">Overdue extra interest uses the loan&apos;s saved late-payment rate. Total due is principal plus accrued interest and overdue charges; processing and other charges are not included.</p>
+                </div>
+                {preview.current_principal > 0 ? (
+                  <form onSubmit={submitPayment} className="space-y-3">
+                    <label className="block text-sm font-semibold text-slate-700">Payable amount
+                      <span className="mt-1.5 flex min-h-12 items-center rounded-xl border border-slate-200 bg-white px-3 focus-within:border-[#008577] focus-within:ring-4 focus-within:ring-emerald-700/10">
+                        <span className="mr-2 text-slate-400">₹</span>
+                        <input type="number" inputMode="decimal" min="0.01" max={preview.total_due} step="0.01" value={paymentAmount} onChange={(event) => setPaymentAmount(event.target.value)} disabled={loan.loan_status !== "Active" || saving} placeholder="Enter amount received" className="w-full border-0 bg-transparent text-sm font-bold text-slate-800 outline-none" />
+                      </span>
+                    </label>
+                    <label className="block text-sm font-semibold text-slate-700">Deposit account
+                      <select required value={accountId} onChange={(event) => setAccountId(event.target.value)} disabled={saving || !fundAccounts.length} className="mt-1.5 min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:border-[#008577]">
+                        <option value="">Select account</option>
+                        {fundAccounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+                      </select>
+                    </label>
+                    <label className="block text-sm font-semibold text-slate-700">Payment method
+                      <select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)} disabled={saving} className="mt-1.5 min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:border-[#008577]">
+                        {["Cash", "UPI", "Card", "Bank Transfer", "Cheque", "Other"].map((method) => <option key={method} value={method}>{method}</option>)}
+                      </select>
+                    </label>
+                    <label className="block text-sm font-semibold text-slate-700">Reference number <span className="font-normal text-slate-400">(optional)</span>
+                      <input value={referenceNumber} onChange={(event) => setReferenceNumber(event.target.value)} maxLength={100} disabled={saving} className="mt-1.5 min-h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-normal text-slate-700 outline-none focus:border-[#008577]" />
+                    </label>
+                    {!fundAccounts.length && <p className="text-xs text-rose-600">No active fund accounts are available. Add or activate a fund account before recording this payment.</p>}
+                    <div className="rounded-xl border border-amber-100 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">Minimum interest payment: <strong>{money(preview.minimum_payment)}</strong>. Any extra payment reduces the principal; remaining balance earns interest at the saved rate for the next 11 months.</div>
+                    {paymentAmount && Number.isFinite(amount) && amount > 0 && <div className="space-y-1 rounded-xl border border-emerald-100 bg-emerald-50/70 p-3 text-xs">
+                      <p className="flex justify-between gap-2 text-slate-600"><span>Interest covered</span><strong>{money(Math.min(amount, preview.accrued_interest))}</strong></p>
+                      <p className="flex justify-between gap-2 text-slate-600"><span>Principal reduction</span><strong>{money(principalReduction)}</strong></p>
+                      <p className="flex justify-between gap-2 font-bold text-[#064A41]"><span>Principal after payment</span><strong>{money(preview.current_principal - principalReduction)}</strong></p>
+                    </div>}
+                    <button type="submit" disabled={!canPay || saving} className="inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#064A41] px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-[#087263] disabled:cursor-not-allowed disabled:opacity-50">
+                      {saving ? "Saving payment..." : <><FiRefreshCw /> Record Payment &amp; Renew</>}
+                    </button>
+                    {loan.loan_status !== "Active" && <p className="text-center text-xs font-semibold text-slate-500">This loan is not active and cannot be renewed.</p>}
+                  </form>
+                ) : <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+                  <p className="font-semibold">This loan is paid in full.</p>
+                  <Link to={`/admin/loans/goldrelease/${loan.id}`} onClick={onClose} className="mt-3 inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#064A41] px-3 py-2 font-bold text-white hover:bg-[#087263]"><FiCheckCircle /> Continue to Gold Release</Link>
+                </div>}
+              </section>
+
+            </div>}
+      </section>
+    </div>
+  );
+}
+
 export default function LoanRenewal() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -43,6 +202,10 @@ export default function LoanRenewal() {
   const [statusFilter, setStatusFilter] = useState("All");
   const [viewMode, setViewMode] = useState("table");
   const [paymentAmount, setPaymentAmount] = useState("");
+  const [fundAccounts, setFundAccounts] = useState([]);
+  const [accountId, setAccountId] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("Cash");
+  const [referenceNumber, setReferenceNumber] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingReview, setSavingReview] = useState(false);
@@ -52,6 +215,7 @@ export default function LoanRenewal() {
   const [reviewNotes, setReviewNotes] = useState("");
   const [reviewActionNotes, setReviewActionNotes] = useState("");
   const [dateRange, setDateRange] = useState({ preset: "all", startDate: "", endDate: "" });
+  const [paymentLoan, setPaymentLoan] = useState(null);
 
   useEffect(() => {
     let active = true;
@@ -82,6 +246,25 @@ export default function LoanRenewal() {
   }, [id, dateRange.startDate, dateRange.endDate]);
 
   const loan = renewalData?.loan;
+  useEffect(() => {
+    if (!id) return undefined;
+    let active = true;
+    api.get("/funds/accounts")
+      .then(({ data }) => {
+        if (!Array.isArray(data)) throw new Error("The server returned an invalid fund account list.");
+        const activeAccounts = data.filter((account) => account.is_active);
+        if (active) {
+          setFundAccounts(activeAccounts);
+          setAccountId((current) => current || String(activeAccounts[0]?.id || ""));
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to load fund accounts for loan renewal:", error);
+        if (active) toast.error(error.response?.data?.message || "Could not load fund accounts.");
+      });
+    return () => { active = false; };
+  }, [id]);
+
   useEffect(() => {
     if (!loan) return;
     setCustomerMessage(
@@ -152,11 +335,19 @@ export default function LoanRenewal() {
     if (!canRenew || saving) return;
     setSaving(true);
     try {
-      const { data } = await api.post(`/loans/${id}/renewal`, { payment_amount: amount });
+      const { data } = await api.post(`/loans/${id}/renewal`, {
+        payment_amount: amount,
+        account_id: accountId,
+        payment_method: paymentMethod,
+        reference_number: referenceNumber.trim(),
+        idempotency_key: crypto.randomUUID()
+      });
       setRenewalData(data);
       setPaymentAmount("");
+      setReferenceNumber("");
       if (data.preview.current_principal === 0) {
-        toast.success("Loan paid in full. Complete and record the gold release.");
+        toast.success("Loan paid in full. Complete and record the gold release."          && Boolean(accountId)
+        );
         navigate(`/admin/loans/completeloan/${id}`);
       } else {
         toast.success(`Payment recorded. Loan renewed through ${dateText(data.loan.maturity_date)}.`);
@@ -233,7 +424,7 @@ export default function LoanRenewal() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[780px] border-separate border-spacing-0 text-left">
               <thead><tr className="bg-[#064A41] text-[11px] font-bold uppercase tracking-wide text-emerald-50/90">
-                {["Loan Number", "Customer", "Mobile", "Principal", "Balance", "Interest", "Maturity", ""].map((label) =>
+                {["Loan Number", "Customer", "Mobile", "Principal", "Balance", "Interest", "Maturity", "Actions"].map((label) =>
                   <th key={label} className="whitespace-nowrap px-4 py-3 first:pl-5">{label}</th>)}
               </tr></thead>
               <tbody className="divide-y divide-slate-100">
@@ -255,7 +446,10 @@ export default function LoanRenewal() {
                           {item.loan_status === "Active" && Number(item.outstanding_principal ?? item.principal_amount) === 0
                             ? <Link to={`/admin/loans/completeloan/${item.id}`} onClick={(event) => event.stopPropagation()} className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">Complete loan <FiChevronRight /></Link>
                             : item.loan_status === "Active"
-                              ? <Link to={`/admin/loans/loanreniwel/${item.id}`} onClick={(event) => event.stopPropagation()} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">Renew <FiChevronRight /></Link>
+                              ? <div className="flex items-center gap-2">
+                                <button type="button" onClick={(event) => { event.stopPropagation(); setPaymentLoan(item); }} className="inline-flex items-center gap-1 rounded-lg bg-[#064A41] px-3 py-2 text-xs font-bold text-white hover:bg-[#087263]">Pay</button>
+                                <Link to={`/admin/loans/loanreniwel/${item.id}`} onClick={(event) => event.stopPropagation()} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">Renew <FiEye /></Link>
+                              </div>
                             : item.loan_status === "Suspended"
                               ? <Link to={`/admin/loans/loanreniwel/${item.id}`} onClick={(event) => event.stopPropagation()} className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">Review <FiChevronRight /></Link>
                             : <span className="rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-500">{item.loan_status}</span>}
@@ -291,12 +485,17 @@ export default function LoanRenewal() {
                     {item.loan_status === "Active" && Number(item.outstanding_principal ?? item.principal_amount) === 0
                       ? <Link to={`/admin/loans/completeloan/${item.id}`} className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">Complete loan <FiChevronRight /></Link>
                       : item.loan_status === "Active"
-                        ? <Link to={`/admin/loans/loanreniwel/${item.id}`} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">Renew <FiChevronRight /></Link>
+                        ? <Link to={`/admin/loans/loanreniwel/${item.id}`} className="inline-flex items-center gap-1 rounded-lg bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-800">Renew <FiEye /></Link>
                         : <Link to={`/admin/loans/loanreniwel/${item.id}`} className="inline-flex items-center gap-1 rounded-lg bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">Review <FiChevronRight /></Link>}
                   </div>
                 </article>
               ))}
             </section>}
+        {paymentLoan && <LoanPaymentModal
+          loan={paymentLoan}
+          onClose={() => setPaymentLoan(null)}
+          onLoanUpdated={(updatedLoan) => setLoans((current) => current.map((item) => item.id === updatedLoan.id ? { ...item, ...updatedLoan } : item))}
+        />}
       </main>
     );
   }
@@ -476,6 +675,24 @@ export default function LoanRenewal() {
                     placeholder="Enter amount received" className="w-full border-0 bg-transparent text-sm font-bold text-slate-800 outline-none" />
                 </span>
               </label>
+              <label className="block text-sm font-semibold text-slate-700">Deposit account
+                <select value={accountId} onChange={(event) => setAccountId(event.target.value)} disabled={saving || fundAccounts.length === 0}
+                  className="mt-1.5 min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:border-[#008577]">
+                  <option value="">Select account</option>
+                  {fundAccounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+                </select>
+              </label>
+              <label className="block text-sm font-semibold text-slate-700">Payment method
+                <select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)} disabled={saving}
+                  className="mt-1.5 min-h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:border-[#008577]">
+                  {["Cash", "UPI", "Card", "Bank Transfer", "Cheque", "Other"].map((method) => <option key={method} value={method}>{method}</option>)}
+                </select>
+              </label>
+              <label className="block text-sm font-semibold text-slate-700">Reference number <span className="font-normal text-slate-400">(optional)</span>
+                <input value={referenceNumber} onChange={(event) => setReferenceNumber(event.target.value)} maxLength={100} disabled={saving}
+                  className="mt-1.5 min-h-11 w-full rounded-xl border border-slate-200 px-3 text-sm font-normal text-slate-700 outline-none focus:border-[#008577]" />
+              </label>
+              {fundAccounts.length === 0 && <p className="text-xs text-rose-600">No active fund accounts are available. Add or activate a fund account before recording this payment.</p>}
               <div className="rounded-xl border border-amber-100 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900">
                 Minimum interest payment: <strong>{money(preview.minimum_payment)}</strong>. Any extra payment reduces the principal; remaining balance earns interest at the saved rate for the next 11 months.
               </div>
@@ -497,20 +714,6 @@ export default function LoanRenewal() {
             </form>
           </section>
 
-          <section className="overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-sm">
-            <div className="border-b border-slate-100 px-4 py-3"><h2 className="font-bold text-slate-800">Renewal and payment history</h2></div>
-            {!renewalData.history?.length
-              ? <p className="p-4 text-xs text-slate-500">No renewals recorded for this loan.</p>
-              : <div className="max-h-72 overflow-auto">
-                {renewalData.history.map((item) => (
-                  <article key={item.id} className="space-y-1 border-b border-slate-100 p-4 last:border-0">
-                    <div className="flex justify-between gap-3 text-xs"><strong className="text-slate-800">{dateText(item.renewal_date)}</strong><span className="font-bold text-[#064A41]">{money(item.payment_amount)}</span></div>
-                    <p className="text-[11px] text-slate-500">Interest {money(Number(item.interest_paid) - Number(item.late_payment_fee || 0))} · Late fee {money(item.late_payment_fee)} · Principal {money(item.principal_paid)}</p>
-                    <p className="text-[11px] text-slate-500">Balance {money(item.principal_after)} · New maturity {dateText(item.new_maturity_date)}</p>
-                  </article>
-                ))}
-              </div>}
-          </section>
         </aside>
       </div>
     </main>

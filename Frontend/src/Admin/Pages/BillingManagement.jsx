@@ -6,8 +6,8 @@ import DateRangeFilter from "../Components/DateRangeFilter";
 import useGoldRates from "../../PrivateRouter/useGoldRates";
 import { getReceiptSettings } from "./receiptSettings";
 import { formatCurrency as currency } from "../../utils/currency";
+import { resolveBackendImageUrl } from "../../Components/Home/productDisplay";
 
-const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
 const EMPTY_CUSTOMER = { name: "", phone: "", email: "", address: "" };
 const EMPTY_PRODUCT = {
   product_id: "",
@@ -44,8 +44,7 @@ function getProductImage(product) {
   const image = images.find((value) => typeof value === "string" && value.trim())
     || (typeof rawImages === "string" && !rawImages.trim().startsWith("[") ? rawImages : "");
   if (!image) return "";
-  if (/^(https?:|data:|blob:)/i.test(image)) return image;
-  return `${BACKEND_URL}${image.startsWith("/") ? image : `/${image}`}`;
+  return resolveBackendImageUrl(image);
 }
 
 function escapeHtml(value) {
@@ -1236,7 +1235,7 @@ export default function BillingManagement() {
                   {customers.length > 1 && <div className="flex justify-end"><button type="button" onClick={() => setCustomers((rows) => rows.filter((_, rowIndex) => rowIndex !== index))} className="text-rose-500" aria-label={`Remove customer ${index + 1}`}><FiTrash2 /></button></div>}
                   <div className="grid gap-3 md:grid-cols-2">
                     <TextField label="Customer Name" value={customer.name} onChange={(value) => updateRow(setCustomers, customers, index, "name", value)} required placeholder="Enter customer name" />
-                    <TextField label="Phone Number" value={customer.phone} onChange={(value) => updateRow(setCustomers, customers, index, "phone", value)} type="tel" placeholder="Enter phone number" />
+                    <TextField label="Phone Number" value={customer.phone} onChange={(value) => updateRow(setCustomers, customers, index, "phone", value)} type="tel" required placeholder="Enter phone number" />
                     <TextField label="Email Address" value={customer.email} onChange={(value) => updateRow(setCustomers, customers, index, "email", value)} type="email" placeholder="Enter email address" />
                     <label className={labelClass}>
                       Address

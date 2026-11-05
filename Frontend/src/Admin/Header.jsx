@@ -56,24 +56,36 @@ const pageTitles = {
   "/admin/products/all": "All Products",
   "/admin/products/add": "Add Product",
   "/admin/products/edit": "Edit Product",
-  "/admin/products/category": "Categories",
   "/admin/metals": "Add Metal",
   "/admin/products/stock": "Stock Details",
   "/admin/products/stock/add": "Add Stock",
   "/admin/products": "Inventory",
+  "/admin/billings": "Billing",
+  "/admin/kyc": "KYC Review",
+  "/admin/loans/customermanagement": "Customer Management",
+  "/admin/loans/customers": "Customer Management",
+  "/admin/loans/allloans": "All Loans",
+  "/admin/loans/createloan": "All Loans",
+  "/admin/loans/edit": "All Loans",
+  "/admin/loans/details": "All Loans",
+  "/admin/loans/interestmanagement": "All Loans",
+  "/admin/loans/overdueloans": "Overdue Loans",
+  "/admin/loans/loanreniwel": "Loan Renewal",
+  "/admin/loans/goldrelease": "Gold Release",
+  "/admin/loans/completeloan": "Complete Loan",
+  "/admin/products/category": "Categories",
   "/admin/orders/billing": "Billing",
   "/admin/orders/shop-create": "Create Billing",
-  "/admin/orders/new": "New Orders",
-  "/admin/orders/all": "All Orders",
-  "/admin/orders/delivery": "Delivery Orders",
-  "/admin/orders/cancelled": "Cancelled Orders",
-  "/admin/orders": "Orders",
+ 
   "/admin/users/all": "Customers",
   "/admin/users/new": "New Users",
   
   "/admin/banners": "Banners",
   "/admin/videos": "Showcase Videos",
   "/admin/reviews": "Reviews",
+  "/admin/enquiries": "Enquiries",
+  "/admin/enquiries/new": "Add Enquiry",
+  "/admin/enquiries/edit": "Edit Enquiry",
   "/admin/dealers": "Dealer Management",
   "/admin/dealers/purchases": "Dealer Purchases & Payables",
   "/admin/dealers/jobs": "Goldsmith Job Work",
@@ -125,6 +137,11 @@ const Header = ({ onMenuClick }) => {
 
   const getPageTitle = () => {
     if (pageTitles[location.pathname]) return pageTitles[location.pathname];
+    if (location.pathname.startsWith("/admin/enquiries/edit/")) return pageTitles["/admin/enquiries/edit"];
+    if (/^\/admin\/products\/[^/]+$/.test(location.pathname)
+      && !["all", "add", "stock", "category"].includes(location.pathname.split("/").at(-1))) {
+      return pageTitles["/admin/products/all"];
+    }
     for (const [path, title] of Object.entries(pageTitles)) {
       if (location.pathname.startsWith(path + "/")) return title;
     }

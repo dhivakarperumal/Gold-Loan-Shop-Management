@@ -17,6 +17,7 @@ import {
   Phone,
   MapPin,
   LogOut,
+  MessageCircle,
 } from "lucide-react";
 import PageContainer from "./PageContainer";
 import WishlistDrawer from "./WishlistDrawer";
@@ -24,6 +25,8 @@ import { useAuth } from "../../PrivateRouter/AuthContext";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 import api from "../../api";
 import { formatCurrency } from "../../utils/currency";
+
+const EnquiriesPopup = React.lazy(() => import("../../Admin/Pages/Enquiries.jsx"));
 
 const INFO_PAGES = [
   { label: "About Us", to: "/about" },
@@ -45,9 +48,20 @@ const Navbar = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [accountOpen, setAccountOpen] = useState(false);
   const [wishlistOpen, setWishlistOpen] = useState(false);
+  const [addEnquiryOpen, setAddEnquiryOpen] = useState(false);
+  const [enquiryProduct, setEnquiryProduct] = useState(null);
   const [categories, setCategories] = useState([]);
   const [metals, setMetals] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(null);
+
+  useEffect(() => {
+    const handleProductEnquiry = (event) => {
+      setEnquiryProduct(event.detail);
+      setAddEnquiryOpen(true);
+    };
+    window.addEventListener("open-product-enquiry", handleProductEnquiry);
+    return () => window.removeEventListener("open-product-enquiry", handleProductEnquiry);
+  }, []);
 
   const wishlistCount = wishlist.length;
   const cartCount = cart.length;
@@ -577,6 +591,20 @@ const Navbar = () => {
                 {renderSearchResults("desktop-product-search-results")}
               </div>
 
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    closeMenus();
+                    setAddEnquiryOpen(true);
+                  }}
+                  className="inline-flex h-10 items-center gap-2 rounded-full bg-[#064638] px-4 text-sm font-semibold text-[#f3d795] shadow-sm transition hover:bg-[#0b5948]"
+                >
+                  <MessageCircle size={16} />
+                  Add Enquiry
+                </button>
+              )}
+
               {/* Wishlist */}
               <button
                 type="button"
@@ -670,6 +698,7 @@ const Navbar = () => {
                   </div>
                 )}
               </div>
+
             </div>
 
             {/* Mobile actions */}
@@ -735,6 +764,22 @@ const Navbar = () => {
             </form>
             {renderSearchResults("mobile-product-search-results")}
           </div>
+
+          {isAdmin && (
+            <div className="mb-3 lg:hidden">
+              <button
+                type="button"
+                onClick={() => {
+                  closeMenus();
+                  setAddEnquiryOpen(true);
+                }}
+                className="flex w-full items-center justify-center gap-2 rounded-full bg-[#064638] px-4 py-2.5 text-sm font-semibold text-[#f3d795] shadow-sm transition hover:bg-[#0b5948]"
+              >
+                <MessageCircle size={17} />
+                Add Enquiry
+              </button>
+            </div>
+          )}
 
           {/* Mobile menu */}
           {mobileMenuOpen && (
@@ -892,6 +937,7 @@ const Navbar = () => {
                 <UserRound size={17} />
                 {user ? "My Account" : "Login / Register"}
               </button>
+
             </div>
           )}
         </PageContainer>
@@ -900,6 +946,19 @@ const Navbar = () => {
         <div className="pointer-events-none absolute bottom-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#b8872e]/30 via-[#e8c574] to-[#b8872e]/30" />
       </nav>
     </header>
+    {addEnquiryOpen && (
+      <React.Suspense fallback={<div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/50 text-sm text-white" role="status">Loading enquiry form…</div>}>
+        <EnquiriesPopup
+          isPopup
+          initialProduct={enquiryProduct}
+          isPublicEnquiry={Boolean(enquiryProduct)}
+          onClose={() => {
+            setAddEnquiryOpen(false);
+            setEnquiryProduct(null);
+          }}
+        />
+      </React.Suspense>
+    )}
     <WishlistDrawer isOpen={wishlistOpen} onClose={() => setWishlistOpen(false)} />
     </>
   );

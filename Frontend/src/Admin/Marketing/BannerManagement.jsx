@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { createPortal } from "react-dom";
+import imageCompression from "browser-image-compression";
 import api from "../../api";
+import useAdminCachedList from "../useAdminCachedList";
 import {
     FiPlus,
     FiSearch,
@@ -17,11 +19,20 @@ import {
 } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import { useAuth } from "../../PrivateRouter/AuthContext";
+import { resolveBackendImageUrl } from "../../Components/Home/productDisplay";
 
 const BannerManagement = () => {
     const { user } = useAuth();
-    const [banners, setBanners] = useState([]);
-    const [loading, setLoading] = useState(true);
+    const {
+        data: banners,
+        setData: setBanners,
+        loading,
+        refreshing,
+        refresh: refreshBanners
+    } = useAdminCachedList("admin:banners", async () => {
+        const response = await api.get("/banners/manage");
+        return Array.isArray(response.data) ? response.data : [];
+    }, []);
     const [searchTerm, setSearchTerm] = useState("");
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentBanner, setCurrentBanner] = useState({
@@ -41,24 +52,8 @@ const BannerManagement = () => {
     const [typeFilter, setTypeFilter] = useState("all");
     const [activeFilter, setActiveFilter] = useState("all");
 
-    const fetchBanners = async () => {
-        setLoading(true);
-        try {
-            const response = await api.get("/banners/manage");
-            setBanners(Array.isArray(response.data) ? response.data : []);
-        } catch (error) {
-            console.error("Error fetching banners:", error);
-            toast.error("Failed to load banners");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchBanners();
-    }, []);
-
     const handleDelete = async (id) => {
+        if (refreshing) return;
         if (!window.confirm("Are you sure you want to delete this banner?")) return;
         try {
             await api.delete(`/banners/${id}`);
@@ -71,23 +66,28 @@ const BannerManagement = () => {
     };
 
     const handleOpenModal = (banner = { title: "", subtitle: "", description: "", image: "", mobile_image: "", link: "", type: "hero", active: true }) => {
+        if (refreshing) return;
         setCurrentBanner(banner);
         setIsEditing(!!banner.id);
         setIsModalOpen(true);
     };
 
     const resolveAssetUrl = (url) => {
-        if (!url || /^(https?:|data:|blob:)/i.test(url)) return url;
-        const backendUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
-        return `${backendUrl}${url.startsWith("/") ? url : `/${url}`}`;
+        return resolveBackendImageUrl(url);
     };
 
     const handleImageUpload = async (e, isMobile = false) => {
         const file = e.target.files[0];
         if (!file) return;
 
+        if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+            toast.error("Choose a JPG, PNG, or WebP image.");
+            e.target.value = "";
+            return;
+        }
         if (file.size > 5 * 1024 * 1024) {
             toast.error("Image too large! Max 5MB.");
+            e.target.value = "";
             return;
         }
 
@@ -95,9 +95,16 @@ const BannerManagement = () => {
         else setUploading(true);
 
         try {
+            const optimizedImage = await imageCompression(file, {
+                maxSizeMB: 0.5,
+                maxWidthOrHeight: isMobile ? 900 : 1920,
+                useWebWorker: true,
+                fileType: "image/webp",
+                initialQuality: 0.82
+            });
             const formData = new FormData();
             formData.append("type", currentBanner.type || "hero");
-            formData.append("image", file);
+            formData.append("image", optimizedImage);
             const response = await api.post("/banners/upload", formData);
             const imageUrl = response.data.url;
             if (isMobile) {
@@ -110,6 +117,7 @@ const BannerManagement = () => {
             console.error("Error uploading banner image:", error);
             toast.error("Image upload failed");
         } finally {
+            e.target.value = "";
             if (isMobile) setMobileUploading(false);
             else setUploading(false);
         }
@@ -117,6 +125,7 @@ const BannerManagement = () => {
 
     const handleSubmit = async (e, shouldContinue = false) => {
         e.preventDefault();
+        if (refreshing) return;
         try {
             const bannerPayload = {
                 ...currentBanner,
@@ -129,7 +138,7 @@ const BannerManagement = () => {
                 await api.post("/banners", bannerPayload);
                 toast.success("Banner added successfully");
             }
-            fetchBanners();
+            await refreshBanners();
 
             if (shouldContinue && !isEditing) {
                 // Reset form for next entry
@@ -215,7 +224,7 @@ const BannerManagement = () => {
                 </div>
             </div>
 
-            {loading ? (
+            {loading && banners.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm text-slate-800">
                     <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mb-4"></div>
                     <p className="text-gray-500 font-bold">Synchronizing studio assets...</p>
@@ -282,6 +291,7 @@ const BannerManagement = () => {
                                                     <span className="md:hidden text-[10px] font-black text-gray-400 uppercase tracking-widest">Actions</span>
                                                     <div className="flex items-center justify-end gap-2">
                                                         <button
+                                                            disabled={refreshing}
                                                             onClick={() => handleOpenModal(banner)}
                                                             className="p-2 border border-[#008577] bg-[#008577] text-white rounded-lg hover:bg-[#003B3B] hover:border-[#003B3B] transition-all shadow-sm md:shadow-none"
                                                             title="Edit"
@@ -289,6 +299,7 @@ const BannerManagement = () => {
                                                             <FiEdit2 size={16} />
                                                         </button>
                                                         <button
+                                                            disabled={refreshing}
                                                             onClick={() => handleDelete(banner.id)}
                                                             className="p-2 border border-rose-600 bg-rose-600 text-white rounded-lg hover:bg-rose-700 hover:border-rose-700 transition-all shadow-sm md:shadow-none"
                                                             title="Delete"
@@ -374,6 +385,7 @@ const BannerManagement = () => {
                                     <div className="mt-4 flex gap-2">
                                         <button
                                             type="button"
+                                            disabled={refreshing}
                                             onClick={() => handleOpenModal(banner)}
                                             className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#008577] px-3 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#003B3B] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#008577] focus-visible:ring-offset-2"
                                         >
@@ -381,6 +393,7 @@ const BannerManagement = () => {
                                         </button>
                                         <button
                                             type="button"
+                                            disabled={refreshing}
                                             onClick={() => handleDelete(banner.id)}
                                             className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-rose-200 bg-white px-3 py-2.5 text-sm font-semibold text-rose-600 transition-colors hover:border-rose-600 hover:bg-rose-600 hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 focus-visible:ring-offset-2"
                                         >

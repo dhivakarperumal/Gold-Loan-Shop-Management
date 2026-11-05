@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { FiAlertCircle, FiCheck, FiCheckCircle, FiChevronLeft, FiChevronRight, FiEdit2, FiEye, FiGrid, FiLayers, FiList, FiPauseCircle, FiPlus, FiPrinter, FiSearch, FiTrash2 } from "react-icons/fi";
 import { toast } from "react-hot-toast";
@@ -7,6 +7,7 @@ import { printLoanAgreement } from "./loanPrint";
 import DateRangeFilter from "../Components/DateRangeFilter";
 import { isLoanReviewDue } from "./loanPolicy";
 import { formatCurrency } from "../../utils/currency";
+import useAdminCachedList, { invalidateAdminListCache } from "../useAdminCachedList";
 
 const rateText = (value) => {
   if (value == null || value === "") return "—";
@@ -45,8 +46,6 @@ function displayStatus(loan) {
 }
 
 export default function AllLoans() {
-  const [loans, setLoans] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [viewMode, setViewMode] = useState("table");
@@ -56,26 +55,35 @@ export default function AllLoans() {
   const todayUtc = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
 
   const [dateRange, setDateRange] = useState({ preset: "all", startDate: "", endDate: "" });
-  const loadLoans = useCallback(async ({ showLoading = true } = {}) => {
-    if (showLoading) setLoading(true);
-    try {
+  const listCacheKey = `admin:loans:${dateRange.startDate}:${dateRange.endDate}`;
+  const {
+    data: loans,
+    setData: setLoans,
+    loading,
+    refreshing,
+    error,
+    refresh: loadLoans
+  } = useAdminCachedList(listCacheKey, async () => {
       const { data } = await api.get("/loans", {
         params: { startDate: dateRange.startDate, endDate: dateRange.endDate }
       });
       if (!Array.isArray(data)) throw new Error("The server returned an invalid loan list.");
-      setLoans(data);
-    } catch (error) {
+      return data;
+  }, []);
+
+  useEffect(() => {
+    if (error) {
       console.error("Failed to load loans:", error);
       toast.error(error.response?.data?.message || error.message || "Could not load loans.");
-    } finally {
-      setLoading(false);
     }
-  }, [dateRange.startDate, dateRange.endDate]);
+  }, [error]);
 
   const handleDeleteLoan = async (loan) => {
+    if (refreshing) return;
     if (!window.confirm(`Permanently delete loan ${loan.loan_number}? This action cannot be undone.`)) return;
     try {
       await api.delete(`/loans/${loan.id}`);
+      invalidateAdminListCache("admin:loans");
       setLoans((currentLoans) => currentLoans.filter((item) => item.id !== loan.id));
       toast.success(`Loan ${loan.loan_number} deleted.`);
     } catch (error) {
@@ -85,8 +93,10 @@ export default function AllLoans() {
   };
 
   useEffect(() => {
-    loadLoans({ showLoading: false });
-    const refreshLoans = () => loadLoans({ showLoading: false });
+    const refreshLoans = () => loadLoans().catch((error) => {
+      console.error("Failed to refresh loans:", error);
+      toast.error(error.response?.data?.message || error.message || "Could not load loans.");
+    });
     window.addEventListener("focus", refreshLoans);
     return () => window.removeEventListener("focus", refreshLoans);
   }, [loadLoans]);
@@ -223,8 +233,8 @@ export default function AllLoans() {
                             <Link to={`/admin/loans/details/${loan.id}`} aria-label={`View loan ${loan.loan_number}`} title="View loan" className="rounded-lg p-2 text-slate-400 transition hover:bg-teal-50 hover:text-[#008577] focus:outline-none focus:ring-2 focus:ring-teal-600/30"><FiEye size={16} /></Link>
                             {Number(loan.outstanding_principal ?? loan.principal_amount) > 0 && loan.loan_status !== "Completed" && loan.release_status !== "Released" && <Link to={`/admin/loans/edit/${loan.id}`} aria-label={`Edit loan ${loan.loan_number}`} title="Edit loan" className="rounded-lg p-2 text-slate-400 transition hover:bg-blue-50 hover:text-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-600/30"><FiEdit2 size={16} /></Link>}
                             {loan.release_status === "Pending Release" && Number(loan.outstanding_principal ?? loan.principal_amount) === 0 && <Link to={`/admin/loans/completeloan/${loan.id}`} aria-label={`Complete loan ${loan.loan_number}`} title="Complete Loan" className="rounded-lg p-2 text-amber-600 transition hover:bg-amber-50 hover:text-amber-800"><FiCheckCircle size={16} /></Link>}
-                            <button type="button" onClick={() => printLoanAgreement(loan.id)} aria-label={`Print or download loan ${loan.loan_number}`} title="Print / Download PDF" className="rounded-lg p-2 text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-600/30"><FiPrinter size={16} /></button>
-                            <button type="button" onClick={() => handleDeleteLoan(loan)} aria-label={`Delete loan ${loan.loan_number}`} title="Delete loan" className="rounded-lg p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-600/30"><FiTrash2 size={16} /></button>
+                            <button type="button" disabled={refreshing} onClick={() => printLoanAgreement(loan.id)} aria-label={`Print or download loan ${loan.loan_number}`} title="Print / Download PDF" className="rounded-lg p-2 text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-600/30 disabled:cursor-not-allowed disabled:opacity-50"><FiPrinter size={16} /></button>
+                            <button type="button" disabled={refreshing} onClick={() => handleDeleteLoan(loan)} aria-label={`Delete loan ${loan.loan_number}`} title="Delete loan" className="rounded-lg p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-600/30 disabled:cursor-not-allowed disabled:opacity-50"><FiTrash2 size={16} /></button>
                           </div>
                         </td>
                       </tr>
@@ -254,7 +264,7 @@ export default function AllLoans() {
                     <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
                       <Link to={`/admin/loans/details/${loan.id}`} className="inline-flex items-center gap-1.5 text-sm font-bold text-[#008577] hover:underline"><FiEye /> View details</Link>
                       <div className="flex items-center gap-1">
-                        <button type="button" onClick={() => printLoanAgreement(loan.id)} aria-label={`Print or download loan ${loan.loan_number}`} title="Print / Download PDF" className="rounded-lg p-2 text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-700"><FiPrinter size={16} /></button>
+                        <button type="button" disabled={refreshing} onClick={() => printLoanAgreement(loan.id)} aria-label={`Print or download loan ${loan.loan_number}`} title="Print / Download PDF" className="rounded-lg p-2 text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"><FiPrinter size={16} /></button>
                         {loan.release_status === "Pending Release" && Number(loan.outstanding_principal ?? loan.principal_amount) === 0 && <Link to={`/admin/loans/completeloan/${loan.id}`} aria-label={`Complete loan ${loan.loan_number}`} title="Complete Loan" className="rounded-lg p-2 text-amber-600 transition hover:bg-amber-50 hover:text-amber-800"><FiCheckCircle size={16} /></Link>}
                         {Number(loan.outstanding_principal ?? loan.principal_amount) > 0 && loan.loan_status !== "Completed" && loan.release_status !== "Released" && <Link to={`/admin/loans/edit/${loan.id}`} aria-label={`Edit loan ${loan.loan_number}`} title="Edit loan" className="rounded-lg p-2 text-slate-400 transition hover:bg-blue-50 hover:text-blue-700"><FiEdit2 size={16} /></Link>}
                         <button type="button" onClick={() => handleDeleteLoan(loan)} aria-label={`Delete loan ${loan.loan_number}`} title="Delete loan" className="rounded-lg p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-700"><FiTrash2 size={16} /></button>

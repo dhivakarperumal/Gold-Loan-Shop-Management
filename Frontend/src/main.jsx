@@ -2,7 +2,7 @@ import React from "react";
 import { createRoot } from "react-dom/client";
 import "./index.css";
 import App from "./App.jsx";
-import { createBrowserRouter, RouterProvider } from "react-router-dom";
+import { createHashRouter, RouterProvider } from "react-router-dom";
 import { GoogleOAuthProvider } from "@react-oauth/google";
 import { AuthProvider } from "./PrivateRouter/AuthContext.jsx";
 import { StoreProvider } from "./PrivateRouter/StoreContext.jsx";
@@ -51,6 +51,7 @@ const FundManagement = React.lazy(() => import("./Admin/Pages/FundManagement.jsx
 const DailyGoldRate = React.lazy(() => import("./Admin/Pages/DailyGoldRate.jsx"));
 const ReceiptSettings = React.lazy(() => import("./Admin/Pages/ReceiptSettings.jsx"));
 const HomeSections = React.lazy(() => import("./Admin/Pages/HomeSections.jsx"));
+const Profile = React.lazy(() => import("./Admin/Pages/Profile.jsx"));
 const Dealers = React.lazy(() => import("./Admin/Dealers/Dealers.jsx"));
 const CustomerKyc = React.lazy(() => import("./Components/Account/CustomerKyc.jsx"));
 const UserProfile  = React.lazy(() => import("./Components/Account/UserProfile.jsx"));
@@ -61,7 +62,13 @@ const Reports = React.lazy(() => import("./Admin/Pages/Reports.jsx"));
 
 const ErrorPage = React.lazy(() => import("./Admin/Pages/ErrorPage.jsx"));
 
-const router = createBrowserRouter([
+if (window.location.pathname !== "/" && !window.location.hash) {
+  window.location.replace(
+    `${window.location.origin}/#${window.location.pathname}${window.location.search}`
+  );
+}
+
+const router = createHashRouter([
   {
     path: "/",
     element: <App />,
@@ -135,13 +142,17 @@ const router = createBrowserRouter([
       { path: "videos", element: <VideoManagement /> },
       { path: "reviews", element: <Reviews /> },
       { path: "reports", element: <Reports /> },
+      { path: "dealers", element: <Dealers /> },
       { path: "dealers/*", element: <Dealers /> },
       { path: "settings", element: <Settings /> },
       { path: "funds", element: <FundManagement /> },
       { path: "settings/daily-gold-rate", element: <DailyGoldRate /> },
       { path: "settings/receipt", element: <ReceiptSettings /> },
       { path: "settings/home-sections", element: <HomeSections /> },
-      // { path: "profile", element: <Profile /> },
+      { path: "profile", element: <Profile /> },
+      { path: "enquiries", element: <Enquiries /> },
+      { path: "enquiries/new", element: <Enquiries /> },
+      { path: "enquiries/edit/:id", element: <Enquiries /> },
     ],
   },
 ]);

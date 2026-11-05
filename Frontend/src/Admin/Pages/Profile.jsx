@@ -1,585 +1,370 @@
-import React, { useContext, useState, useEffect } from "react";
+import { useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import {
+  Activity, Bell, CalendarDays, Camera, Check, ChevronRight, Eye, EyeOff,
+  Info, LockKeyhole, Mail, MapPin, Phone, Save, ShieldCheck, Trash2, Upload, UserRound
+} from "lucide-react";
+import { toast } from "react-hot-toast";
 import { AuthContext } from "../../PrivateRouter/AuthContext";
 import api from "../../api";
-import { toast, Toaster } from "react-hot-toast";
-import {
-    FiMail,
-    FiPhone,
-    FiMapPin,
-    FiShield,
-    FiCamera,
-    FiCheck,
-    FiKey,
-    FiLock,
-    FiX,
-    FiEdit2,
-    FiUser,
-    FiCalendar,
-    FiLoader
-} from "react-icons/fi";
+
+const EMPTY_PROFILE = {
+  user_id: "",
+  username: "",
+  name: "",
+  email: "",
+  phone: "",
+  address: "",
+  role: "",
+  status: "",
+  created_at: "",
+  updated_at: "",
+  notification_preferences: { email: true, orders: true }
+};
+const backendUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
+
+const dateLabel = (value, options = { day: "2-digit", month: "short", year: "numeric" }) => {
+  if (!value) return "Not recorded";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "Not recorded" : date.toLocaleDateString("en-IN", options);
+};
+
+const dateTimeLabel = (value) => {
+  if (!value) return "Not recorded";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "Not recorded"
+    : date.toLocaleString("en-IN", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
+};
 
 const Profile = () => {
-    const { user, login } = useContext(AuthContext);
+  const { user, login } = useContext(AuthContext);
+  const [profile, setProfile] = useState(EMPTY_PROFILE);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [savingPreferences, setSavingPreferences] = useState("");
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [activeSection, setActiveSection] = useState("personal-information");
+  const [passwords, setPasswords] = useState({ current: "", next: "", confirm: "" });
+  const [visiblePasswords, setVisiblePasswords] = useState({});
+  const imageInputRef = useRef(null);
 
-    const [isPwdModalOpen, setIsPwdModalOpen] = useState(false);
-    const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-    const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
-    const [changingPwd, setChangingPwd] = useState(false);
-
-    const [currentPwd, setCurrentPwd] = useState("");
-    const [newPwd, setNewPwd] = useState("");
-    const [confirmPwd, setConfirmPwd] = useState("");
-
-    const [profileData, setProfileData] = useState({
-        username: "",
-        name: "",
-        email: "",
-        phone: "",
-        street_address: "",
-        city: "",
-        district: "",
-        state: "",
-        country: "India",
-        zip_code: "",
-        role: "",
-        created_at: ""
-    });
-
-    // Fetch full profile from API
-    const fetchProfile = async () => {
-        try {
-            setLoading(true);
-            const res = await api.get(`/auth/profile/${user?.id}`);
-            setProfileData({
-                username: res.data.username || "",
-                name: res.data.name || "",
-                email: res.data.email || "",
-                phone: res.data.phone || "",
-                street_address: res.data.street_address || "",
-                city: res.data.city || "",
-                district: res.data.district || "",
-                state: res.data.state || "",
-                country: res.data.country || "India",
-                zip_code: res.data.zip_code || "",
-                role: res.data.role || "",
-                created_at: res.data.created_at || ""
-            });
-        } catch (err) {
-            console.error("Failed to load profile:", err);
-            // Fallback to local user data
-            setProfileData({
-                username: user?.username || "",
-                name: user?.name || "",
-                email: user?.email || "",
-                phone: user?.phone || "",
-                street_address: "",
-                city: "",
-                district: "",
-                state: "",
-                country: "India",
-                zip_code: "",
-                role: user?.role || "",
-                created_at: ""
-            });
-        } finally {
-            setLoading(false);
+  const loadProfile = useCallback(async () => {
+    setLoading(true);
+    setLoadError("");
+    try {
+      const response = await api.get("/auth/me");
+      setProfile({
+        ...EMPTY_PROFILE,
+        ...response.data.user,
+        notification_preferences: {
+          ...EMPTY_PROFILE.notification_preferences,
+          ...(response.data.user?.notification_preferences || {})
         }
-    };
-
-    useEffect(() => {
-        if (user?.id) fetchProfile();
-    }, [user?.id]);
-
-    const openPwdModal = () => setIsPwdModalOpen(true);
-    const openEditModal = () => setIsEditModalOpen(true);
-
-    const closePwdModal = () => {
-        setIsPwdModalOpen(false);
-        setCurrentPwd("");
-        setNewPwd("");
-        setConfirmPwd("");
-    };
-
-    const closeEditModal = () => {
-        setIsEditModalOpen(false);
-    };
-
-    // Save profile to DB
-    const handleProfileUpdate = async () => {
-        if (!profileData.username.trim()) {
-            toast.error("Username is required");
-            return;
-        }
-        if (!profileData.email.trim()) {
-            toast.error("Email is required");
-            return;
-        }
-
-        try {
-            setSaving(true);
-            const res = await api.put(`/auth/profile/${user?.id}`, {
-                username: profileData.username,
-                name: profileData.name,
-                email: profileData.email,
-                phone: profileData.phone,
-                street_address: profileData.street_address,
-                city: profileData.city,
-                district: profileData.district,
-                state: profileData.state,
-                country: profileData.country,
-                zip_code: profileData.zip_code
-            });
-
-            // Update local storage & context with new data
-            const updatedUser = res.data.user;
-            const token = localStorage.getItem("token");
-            login({ ...user, ...updatedUser }, token);
-
-            toast.success("Profile updated successfully");
-            closeEditModal();
-        } catch (err) {
-            toast.error(err.response?.data?.message || "Failed to update profile");
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    // Change password via API
-    const handlePwdChange = async () => {
-        if (!currentPwd.trim()) {
-            toast.error("Enter your current password");
-            return;
-        }
-        if (newPwd.length < 6) {
-            toast.error("New password must be at least 6 characters");
-            return;
-        }
-        if (newPwd !== confirmPwd) {
-            toast.error("New passwords do not match");
-            return;
-        }
-
-        try {
-            setChangingPwd(true);
-            await api.put(`/auth/profile/${user?.id}/password`, {
-                currentPassword: currentPwd,
-                newPassword: newPwd
-            });
-
-            toast.success("Password changed successfully");
-            closePwdModal();
-        } catch (err) {
-            toast.error(err.response?.data?.message || "Failed to change password");
-        } finally {
-            setChangingPwd(false);
-        }
-    };
-
-    const locationDisplay = [profileData.city, profileData.state, profileData.country]
-        .filter(Boolean)
-        .join(", ") || "Not set";
-
-    const memberSince = profileData.created_at
-        ? new Date(profileData.created_at).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" })
-        : "";
-    const profileInitials = (profileData.name || profileData.username || "User")
-        .split(" ")
-        .filter(Boolean)
-        .slice(0, 2)
-        .map((part) => part.charAt(0).toUpperCase())
-        .join("");
-
-    if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-[400px]">
-                <FiLoader className="animate-spin text-4xl text-blue-500" />
-            </div>
-        );
+      });
+    } catch (error) {
+      setLoadError(error.response?.data?.message || "Unable to load your profile.");
+    } finally {
+      setLoading(false);
     }
+  }, []);
 
-    return (
-        <div className="max-w-5xl mx-auto space-y-8">
+  useEffect(() => {
+    void loadProfile();
+  }, [loadProfile]);
 
-            {/* Profile Card */}
-            <div className="px-4 md:px-8">
-                <div className="bg-white rounded-[2.5rem] shadow-2xl p-6 md:p-10 border border-gray-100">
+  const initials = useMemo(() => (profile.name || profile.username || "A")
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase())
+    .join(""), [profile.name, profile.username]);
 
-                    <div className="flex flex-col md:flex-row items-center gap-8 md:gap-10 border-b border-gray-200 pb-10">
+  const updateField = (field, value) => {
+    setProfile((current) => ({ ...current, [field]: value }));
+  };
 
-                        {/* Avatar */}
-                        <div className="relative group">
-                            <div className="w-40 h-40 rounded-[2.25rem] bg-[#DFF1C9] ring-8 ring-white shadow-xl flex items-center justify-center">
-                                <span className="text-6xl font-light tracking-tight text-slate-950">{profileInitials}</span>
-                                <div className="absolute inset-0 bg-black/10 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-[2.25rem] cursor-pointer">
-                                    <FiCamera className="text-slate-700 text-2xl" />
-                                </div>
-                            </div>
-                        </div>
+  const saveProfile = async (event) => {
+    event.preventDefault();
+    if (!profile.username.trim() || !profile.name.trim() || !profile.email.trim()) {
+      toast.error("Name, username, and email are required.");
+      return;
+    }
+    setSaving(true);
+    try {
+      const response = await api.put("/auth/me", {
+        username: profile.username,
+        name: profile.name,
+        email: profile.email,
+        phone: profile.phone,
+        address: profile.address
+      });
+      const updatedProfile = {
+        ...profile,
+        ...response.data.user,
+        notification_preferences: profile.notification_preferences
+      };
+      setProfile(updatedProfile);
+      const token = localStorage.getItem("token");
+      if (token) login({ ...user, ...response.data.user }, token);
+      toast.success("Profile saved.");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Unable to save your profile.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
-                        {/* User Info */}
-                        <div className="text-center md:text-left space-y-2 flex-1">
+  const changePassword = async (event) => {
+    event.preventDefault();
+    if (!passwords.current) {
+      toast.error("Enter your current password.");
+      return;
+    }
+    if (passwords.next.length < 8) {
+      toast.error("New password must be at least 8 characters.");
+      return;
+    }
+    if (passwords.next !== passwords.confirm) {
+      toast.error("The new passwords do not match.");
+      return;
+    }
+    setChangingPassword(true);
+    try {
+      await api.put("/auth/me/password", {
+        currentPassword: passwords.current,
+        newPassword: passwords.next
+      });
+      setPasswords({ current: "", next: "", confirm: "" });
+      toast.success("Password updated.");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Unable to update your password.");
+    } finally {
+      setChangingPassword(false);
+    }
+  };
 
-                            <div className="flex items-center gap-3 justify-center md:justify-start">
-                                <h1 className="text-3xl md:text-4xl font-black uppercase tracking-tight text-slate-900">
-                                    {profileData.name || profileData.username || "User"}
-                                </h1>
+  const uploadProfileImage = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      toast.error("Choose a JPG, PNG, or WEBP image.");
+      return;
+    }
+    if (file.size > 2 * 1024 * 1024) {
+      toast.error("Profile images must be 2 MB or smaller.");
+      return;
+    }
+    const formData = new FormData();
+    formData.append("image", file);
+    setUploadingImage(true);
+    try {
+      const response = await api.post("/auth/me/photo", formData);
+      setProfile((current) => ({ ...current, ...response.data.user }));
+      toast.success("Profile photo updated.");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Unable to upload profile photo.");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
-                                <button
-                                    onClick={openEditModal}
-                                    className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
-                                >
-                                    <FiEdit2 />
-                                </button>
-                            </div>
+  const removeProfileImage = async () => {
+    setUploadingImage(true);
+    try {
+      const response = await api.delete("/auth/me/photo");
+      setProfile((current) => ({ ...current, ...response.data.user }));
+      toast.success("Profile photo removed.");
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Unable to remove profile photo.");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
-                            <p className="text-gray-400 font-medium">
-                                @{profileData.username} • {profileData.role || "Admin"}
-                            </p>
+  const changePreference = async (key) => {
+    const previous = profile.notification_preferences;
+    const next = { ...previous, [key]: !previous[key] };
+    setProfile((current) => ({ ...current, notification_preferences: next }));
+    setSavingPreferences(key);
+    try {
+      const response = await api.put("/auth/me/notifications", next);
+      setProfile((current) => ({
+        ...current,
+        notification_preferences: response.data.user.notification_preferences
+      }));
+      toast.success("Notification preference saved.");
+    } catch (error) {
+      setProfile((current) => ({ ...current, notification_preferences: previous }));
+      toast.error(error.response?.data?.message || "Unable to save notification preference.");
+    } finally {
+      setSavingPreferences("");
+    }
+  };
 
-                            <div className="flex flex-wrap gap-4 mt-4 justify-center md:justify-start">
-                                <span className="flex items-center gap-2 text-xs font-bold text-gray-400">
-                                    <FiMapPin className="text-blue-500" />
-                                    {locationDisplay}
-                                </span>
+  const inputClass = "mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-[#008577] focus:ring-2 focus:ring-emerald-800/10";
+  const labelClass = "block text-xs font-semibold text-slate-700";
 
-                                <span className="flex items-center gap-2 text-xs font-bold text-gray-400">
-                                    <FiShield className="text-emerald-500" />
-                                    Identity Verified
-                                </span>
+  if (loading) {
+    return <div className="flex min-h-80 items-center justify-center text-sm font-semibold text-slate-500" role="status">Loading your profile…</div>;
+  }
 
-                                {memberSince && (
-                                    <span className="flex items-center gap-2 text-xs font-bold text-gray-400">
-                                        <FiCalendar className="text-purple-500" />
-                                        Joined {memberSince}
-                                    </span>
-                                )}
-                            </div>
+  if (loadError) {
+    return <section className="rounded-2xl border border-rose-200 bg-white p-6 shadow-sm" role="alert">
+      <p className="font-bold text-rose-800">{loadError}</p>
+      <button type="button" onClick={() => void loadProfile()} className="mt-4 rounded-lg bg-[#00695C] px-4 py-2 text-sm font-bold text-white">Retry</button>
+    </section>;
+  }
 
-                        </div>
+  const memberSince = dateLabel(profile.created_at, { day: "2-digit", month: "short", year: "numeric" });
+  const roleLabel = (profile.role || "admin").replace(/^\w/, (letter) => letter.toUpperCase());
 
-                        {/* Change Password */}
-                        <button
-                            onClick={openPwdModal}
-                            className="flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-7 py-4 rounded-xl font-bold transition-colors whitespace-nowrap"
-                        >
-                            <FiLock />
-                            Change Password
-                        </button>
+  return <main className="space-y-4 pb-5">
+    <header className="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 className="text-2xl font-black tracking-tight text-slate-900">Profile</h1>
+        <p className="mt-1 text-sm text-slate-500">Manage your account details, security and preferences.</p>
+      </div>
+      
+    </header>
 
-                    </div>
-
-                    {/* Account Info */}
-                    <div className="grid md:grid-cols-2 gap-6 mt-8">
-
-                        <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl">
-                            <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-                                <FiUser className="text-blue-500" />
-                            </div>
-                            <div>
-                                <p className="text-xs text-gray-400">Username</p>
-                                <p className="font-bold text-slate-700">{profileData.username || "–"}</p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl">
-                            <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-                                <FiMail className="text-blue-500" />
-                            </div>
-                            <div>
-                                <p className="text-xs text-gray-400">Email</p>
-                                <p className="font-bold text-slate-700">{profileData.email || "–"}</p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl">
-                            <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-                                <FiPhone className="text-blue-500" />
-                            </div>
-                            <div>
-                                <p className="text-xs text-gray-400">Phone</p>
-                                <p className="font-bold text-slate-700">{profileData.phone || "Not set"}</p>
-                            </div>
-                        </div>
-
-                        <div className="flex items-center gap-4 p-4 bg-gray-50 rounded-2xl">
-                            <div className="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
-                                <FiMapPin className="text-blue-500" />
-                            </div>
-                            <div>
-                                <p className="text-xs text-gray-400">Location</p>
-                                <p className="font-bold text-slate-700">{locationDisplay}</p>
-                            </div>
-                        </div>
-
-                    </div>
-
-                </div>
-            </div>
-
-
-            {/* EDIT PROFILE MODAL */}
-            {isEditModalOpen && (
-                <div className="fixed inset-0 z-[100] flex h-screen w-screen items-center justify-center bg-black/40 p-4 backdrop-blur-md">
-
-                    <div className="bg-white p-6 rounded-2xl w-full max-w-lg relative max-h-[90vh] overflow-y-auto">
-
-                        <button
-                            onClick={closeEditModal}
-                            className="absolute top-3 right-3 p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                        >
-                            <FiX />
-                        </button>
-
-                        <h2 className="text-xl font-black mb-6 flex items-center gap-2">
-                            <FiEdit2 className="text-blue-500" />
-                            Edit Profile
-                        </h2>
-
-                        <div className="space-y-4">
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 mb-1 block">Username *</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Username"
-                                        value={profileData.username}
-                                        onChange={(e) =>
-                                            setProfileData({ ...profileData, username: e.target.value })
-                                        }
-                                        className="w-full border border-gray-200 px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 mb-1 block">Full Name</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Full Name"
-                                        value={profileData.name}
-                                        onChange={(e) =>
-                                            setProfileData({ ...profileData, name: e.target.value })
-                                        }
-                                        className="w-full border border-gray-200 px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 mb-1 block">Email *</label>
-                                <input
-                                    type="email"
-                                    placeholder="Email"
-                                    value={profileData.email}
-                                    onChange={(e) =>
-                                        setProfileData({ ...profileData, email: e.target.value })
-                                    }
-                                    className="w-full border border-gray-200 px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 mb-1 block">Phone</label>
-                                <input
-                                    type="text"
-                                    placeholder="Phone number"
-                                    value={profileData.phone}
-                                    onChange={(e) =>
-                                        setProfileData({ ...profileData, phone: e.target.value })
-                                    }
-                                    className="w-full border border-gray-200 px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                                />
-                            </div>
-
-
-                            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">Address</p>
-
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 mb-1 block">Street Address</label>
-                                <input
-                                    type="text"
-                                    placeholder="Street address"
-                                    value={profileData.street_address}
-                                    onChange={(e) =>
-                                        setProfileData({ ...profileData, street_address: e.target.value })
-                                    }
-                                    className="w-full border border-gray-200 px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                                />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 mb-1 block">City</label>
-                                    <input
-                                        type="text"
-                                        placeholder="City"
-                                        value={profileData.city}
-                                        onChange={(e) =>
-                                            setProfileData({ ...profileData, city: e.target.value })
-                                        }
-                                        className="w-full border border-gray-200 px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 mb-1 block">District</label>
-                                    <input
-                                        type="text"
-                                        placeholder="District"
-                                        value={profileData.district}
-                                        onChange={(e) =>
-                                            setProfileData({ ...profileData, district: e.target.value })
-                                        }
-                                        className="w-full border border-gray-200 px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                                    />
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-3 gap-4">
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 mb-1 block">State</label>
-                                    <input
-                                        type="text"
-                                        placeholder="State"
-                                        value={profileData.state}
-                                        onChange={(e) =>
-                                            setProfileData({ ...profileData, state: e.target.value })
-                                        }
-                                        className="w-full border border-gray-200 px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 mb-1 block">Country</label>
-                                    <input
-                                        type="text"
-                                        placeholder="Country"
-                                        value={profileData.country}
-                                        onChange={(e) =>
-                                            setProfileData({ ...profileData, country: e.target.value })
-                                        }
-                                        className="w-full border border-gray-200 px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                                    />
-                                </div>
-                                <div>
-                                    <label className="text-xs font-bold text-gray-500 mb-1 block">ZIP Code</label>
-                                    <input
-                                        type="text"
-                                        placeholder="ZIP"
-                                        value={profileData.zip_code}
-                                        onChange={(e) =>
-                                            setProfileData({ ...profileData, zip_code: e.target.value })
-                                        }
-                                        className="w-full border border-gray-200 px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                                    />
-                                </div>
-                            </div>
-
-                            <button
-                                onClick={handleProfileUpdate}
-                                disabled={saving}
-                                className="w-full bg-primary hover:bg-primary-dark disabled:bg-primary/60 text-white py-3 rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
-                            >
-                                {saving ? (
-                                    <>
-                                        <FiLoader className="animate-spin" />
-                                        Saving...
-                                    </>
-                                ) : (
-                                    <>
-                                        <FiCheck />
-                                        Save Changes
-                                    </>
-                                )}
-                            </button>
-
-                        </div>
-
-                    </div>
-
-                </div>
-            )}
-
-
-            {/* PASSWORD MODAL */}
-            {isPwdModalOpen && (
-                <div className="fixed inset-0 z-[100] flex h-screen w-screen items-center justify-center bg-black/40 p-4 backdrop-blur-md">
-
-                    <div className="bg-white p-6 rounded-2xl w-full max-w-md relative">
-
-                        <button
-                            onClick={closePwdModal}
-                            className="absolute top-3 right-3 p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                        >
-                            <FiX />
-                        </button>
-
-                        <h2 className="text-xl font-black mb-6 flex items-center gap-2">
-                            <FiLock className="text-blue-500" />
-                            Change Password
-                        </h2>
-
-                        <div className="space-y-4">
-
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 mb-1 block">Current Password</label>
-                                <input
-                                    type="password"
-                                    placeholder="Enter current password"
-                                    value={currentPwd}
-                                    onChange={(e) => setCurrentPwd(e.target.value)}
-                                    className="w-full border border-gray-200 px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 mb-1 block">New Password</label>
-                                <input
-                                    type="password"
-                                    placeholder="Minimum 6 characters"
-                                    value={newPwd}
-                                    onChange={(e) => setNewPwd(e.target.value)}
-                                    className="w-full border border-gray-200 px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="text-xs font-bold text-gray-500 mb-1 block">Confirm Password</label>
-                                <input
-                                    type="password"
-                                    placeholder="Re-enter new password"
-                                    value={confirmPwd}
-                                    onChange={(e) => setConfirmPwd(e.target.value)}
-                                    className="w-full border border-gray-200 px-4 py-2.5 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                                />
-                            </div>
-
-                            <button
-                                onClick={handlePwdChange}
-                                disabled={changingPwd}
-                                className="w-full bg-primary hover:bg-primary-dark disabled:bg-primary/60 text-white py-3 rounded-xl font-bold transition-colors flex items-center justify-center gap-2"
-                            >
-                                {changingPwd ? (
-                                    <>
-                                        <FiLoader className="animate-spin" />
-                                        Updating...
-                                    </>
-                                ) : (
-                                    <>
-                                        <FiKey />
-                                        Update Password
-                                    </>
-                                )}
-                            </button>
-
-                        </div>
-
-                    </div>
-
-                </div>
-            )}
-
-            <Toaster position="top-right" />
+    <section className="grid gap-4 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm md:grid-cols-[1.15fr_1fr_auto] md:items-center md:px-5">
+      <div className="flex min-w-0 items-center gap-4">
+        <div className="relative flex h-[76px] w-[76px] shrink-0 items-center justify-center rounded-full bg-[#003B3B] text-3xl font-semibold text-white">
+          {profile.profile_image
+            ? <img src={`${backendUrl}${profile.profile_image}`} alt="" className="h-full w-full rounded-full object-cover" />
+            : initials}
+          <span className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-slate-100 text-slate-600"><Camera size={15} /></span>
         </div>
-    );
+        <div className="min-w-0">
+          <h2 className="truncate text-xl font-extrabold text-slate-900">{profile.name || profile.username}</h2>
+          <p className="mt-0.5 text-xs text-slate-500">{roleLabel}</p>
+          <span className="mt-2 inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-800"><ShieldCheck size={12} /> {roleLabel}</span>
+        </div>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-sky-100 text-sky-700"><Mail size={16} /></span>
+          <span className="min-w-0"><span className="block truncate text-xs font-bold text-slate-800">{profile.email || "Email not set"}</span><span className="text-[10px] text-slate-500">Email Address</span></span>
+        </div>
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"><Phone size={16} /></span>
+          <span className="min-w-0"><span className="block truncate text-xs font-bold text-slate-800">{profile.phone || "Phone not set"}</span><span className="text-[10px] text-slate-500">Mobile Number</span></span>
+        </div>
+        <div className="flex items-center gap-2.5 sm:col-span-2">
+          <span className="flex h-9 w-9 items-center justify-center rounded-full bg-amber-100 text-amber-700"><CalendarDays size={16} /></span>
+          <span><span className="block text-xs font-bold text-slate-800">{memberSince}</span><span className="text-[10px] text-slate-500">Member Since</span></span>
+        </div>
+      </div>
+      <button type="button" onClick={() => setActiveSection("personal-information")} className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg border border-emerald-600 px-4 py-2 text-xs font-bold text-emerald-800 transition hover:bg-emerald-50"><UserRound size={15} /> Edit Profile</button>
+    </section>
+
+    <nav role="tablist" aria-label="Profile sections" className="flex flex-wrap gap-2 rounded-xl border border-slate-100 bg-white p-1.5 shadow-sm">
+      {[
+        ["personal-information", UserRound, "Personal Information"],
+        ["change-password", LockKeyhole, "Change Password"],
+        ["notification-preferences", Bell, "Notifications"],
+        ["activity-log", Activity, "Activity Log"]
+      ].map(([id, Icon, label]) => <button key={id} id={`profile-tab-${id}`} type="button" role="tab" aria-selected={activeSection === id} aria-controls={`profile-panel-${id}`} onClick={() => setActiveSection(id)} className={`inline-flex items-center gap-2 rounded-lg px-3 py-2.5 text-[11px] font-bold transition sm:px-4 ${activeSection === id ? "bg-[#00796B] text-white shadow-sm" : "text-slate-600 hover:bg-slate-50"}`}>
+        <Icon size={15} />{label}
+      </button>)}
+    </nav>
+
+    <div className={`grid items-start gap-3 ${activeSection === "personal-information" ? "lg:grid-cols-[1.15fr_0.85fr]" : "grid-cols-1"}`}>
+      {activeSection === "personal-information" && <form id="profile-panel-personal-information" role="tabpanel" aria-labelledby="profile-tab-personal-information" onSubmit={saveProfile} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm sm:p-5">
+        <div className="mb-4">
+          <h2 className="text-sm font-extrabold text-slate-900">Personal Information</h2>
+          <p className="mt-1 text-xs text-slate-500">Update your personal details and contact information.</p>
+        </div>
+        <div className="grid gap-3.5 sm:grid-cols-2">
+          <label className={labelClass}>Full Name *<input className={inputClass} value={profile.name} onChange={(event) => updateField("name", event.target.value)} autoComplete="name" required /></label>
+          <label className={labelClass}>Email Address *<input className={inputClass} type="email" value={profile.email} onChange={(event) => updateField("email", event.target.value)} autoComplete="email" required /></label>
+          <label className={labelClass}>Mobile Number<input className={inputClass} type="tel" value={profile.phone || ""} onChange={(event) => updateField("phone", event.target.value)} autoComplete="tel" /></label>
+          <label className={labelClass}>Role<input className={`${inputClass} bg-slate-50 text-slate-500`} value={roleLabel} readOnly /></label>
+          <label className={labelClass}>Username<input className={`${inputClass} bg-slate-50 text-slate-500`} value={profile.username} readOnly autoComplete="username" /></label>
+          <div className="sm:col-span-2">
+            <p className={labelClass}>Profile Image</p>
+            <div className="mt-1.5 flex min-h-[68px] flex-wrap items-center gap-3 rounded-lg border border-slate-200 px-3 py-2.5">
+              <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#003B3B] text-lg font-semibold text-white">
+                {profile.profile_image ? <img src={`${backendUrl}${profile.profile_image}`} alt="Profile" className="h-full w-full object-cover" /> : initials}
+              </span>
+              <input ref={imageInputRef} type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={uploadProfileImage} />
+              <button type="button" disabled={uploadingImage} onClick={() => imageInputRef.current?.click()} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-[#00695C] px-3 py-2 text-[11px] font-bold text-white disabled:opacity-60"><Upload size={14} />{uploadingImage ? "Uploading…" : "Change Image"}</button>
+              {profile.profile_image && <button type="button" disabled={uploadingImage} onClick={() => void removeProfileImage()} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-rose-50 px-3 py-2 text-[11px] font-bold text-rose-700 hover:bg-rose-100 disabled:opacity-60"><Trash2 size={14} />Remove</button>}
+              <span className="text-[10px] text-slate-500">JPG, PNG or WEBP; max 2 MB</span>
+            </div>
+          </div>
+          <label className={`${labelClass} sm:col-span-2`}>Address<textarea className={`${inputClass} min-h-[68px] resize-y`} value={profile.address || ""} onChange={(event) => updateField("address", event.target.value)} placeholder="Enter your address" /></label>
+        </div>
+        <div className="mt-4 flex justify-end">
+          <button type="submit" disabled={saving} className="inline-flex min-h-10 items-center gap-2 rounded-lg bg-[#00695C] px-4 py-2 text-xs font-bold text-white shadow-sm transition hover:bg-[#00574d] disabled:cursor-wait disabled:opacity-60"><Save size={15} />{saving ? "Saving…" : "Save Changes"}</button>
+        </div>
+      </form>}
+
+      <div className="space-y-3">
+        {(activeSection === "personal-information" || activeSection === "change-password") && <form id="profile-panel-change-password" role="tabpanel" aria-labelledby="profile-tab-change-password" onSubmit={changePassword} className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-start gap-2.5">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-700"><LockKeyhole size={16} /></span>
+            <span><h2 className="text-xs font-extrabold text-slate-900">Change Password</h2><p className="mt-0.5 text-[10px] text-slate-500">Update your password to keep your account secure.</p></span>
+          </div>
+          <div className="space-y-2">
+            {[["current", "Current Password"], ["next", "New Password"], ["confirm", "Confirm New Password"]].map(([key, label]) => <label key={key} className="relative block">
+              <span className="sr-only">{label}</span>
+              <input className={`${inputClass} mt-0 pr-10 text-xs`} type={visiblePasswords[key] ? "text" : "password"} placeholder={label} value={passwords[key]} onChange={(event) => setPasswords((current) => ({ ...current, [key]: event.target.value }))} autoComplete={key === "current" ? "current-password" : "new-password"} />
+              <button type="button" aria-label={visiblePasswords[key] ? `Hide ${label}` : `Show ${label}`} onClick={() => setVisiblePasswords((current) => ({ ...current, [key]: !current[key] }))} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500">{visiblePasswords[key] ? <EyeOff size={15} /> : <Eye size={15} />}</button>
+            </label>)}
+          </div>
+          <div className="mt-2 flex justify-end"><button type="submit" disabled={changingPassword} className="inline-flex min-h-9 items-center gap-1.5 rounded-lg bg-[#00695C] px-3 py-2 text-[11px] font-bold text-white transition hover:bg-[#00574d] disabled:opacity-60"><LockKeyhole size={13} />{changingPassword ? "Updating…" : "Update Password"}</button></div>
+        </form>}
+
+        {(activeSection === "personal-information" || activeSection === "notification-preferences") && <section id="profile-panel-notification-preferences" role="tabpanel" aria-labelledby="profile-tab-notification-preferences" className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-start gap-2.5">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-700"><Bell size={16} /></span>
+            <span><h2 className="text-xs font-extrabold text-slate-900">Notification Preferences</h2><p className="mt-0.5 text-[10px] text-slate-500">Manage how you receive notifications.</p></span>
+          </div>
+          {[["email", "Email Notifications", "Receive important updates via email"], ["orders", "Order Notifications", "Get notified about new orders and enquiries"]].map(([key, label, description]) => <div key={key} className="flex items-center justify-between gap-3 py-1.5">
+            <span><span className="block text-[11px] font-bold text-slate-800">{label}</span><span className="text-[10px] text-slate-500">{description}</span></span>
+            <button type="button" role="switch" aria-checked={Boolean(profile.notification_preferences[key])} aria-label={label} disabled={Boolean(savingPreferences)} onClick={() => void changePreference(key)} className={`relative h-5 w-10 shrink-0 rounded-full transition disabled:opacity-60 ${profile.notification_preferences[key] ? "bg-[#008577]" : "bg-slate-300"}`}>
+              <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all ${profile.notification_preferences[key] ? "left-[22px]" : "left-0.5"}`} />
+            </button>
+          </div>)}
+        </section>}
+
+        {activeSection === "personal-information" && <section className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+          <div className="mb-3 flex items-center gap-2.5">
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-sky-100 text-sky-700"><Info size={16} /></span>
+            <span><h2 className="text-xs font-extrabold text-slate-900">Account Information</h2><p className="text-[10px] text-slate-500">Your account and access details.</p></span>
+          </div>
+          <dl className="divide-y divide-slate-100 rounded-lg bg-slate-50 px-2.5 text-[10px]">
+            <div className="flex justify-between gap-3 py-1.5"><dt className="text-slate-500">User ID</dt><dd className="font-semibold text-slate-700">#ADM{String(profile.user_id || "").padStart(3, "0")}</dd></div>
+            <div className="flex justify-between gap-3 py-1.5"><dt className="text-slate-500">Role</dt><dd className="font-semibold text-slate-700">{roleLabel}</dd></div>
+            <div className="flex justify-between gap-3 py-1.5"><dt className="text-slate-500">Status</dt><dd><span className="rounded-full bg-emerald-100 px-2 py-0.5 font-bold text-emerald-800">{profile.status || "Active"}</span></dd></div>
+            <div className="flex justify-between gap-3 py-1.5"><dt className="text-slate-500">Last Login</dt><dd className="font-semibold text-slate-700">Not tracked</dd></div>
+            <div className="flex justify-between gap-3 py-1.5"><dt className="text-slate-500">Member Since</dt><dd className="font-semibold text-slate-700">{memberSince}</dd></div>
+          </dl>
+        </section>}
+      </div>
+    </div>
+
+    {activeSection === "activity-log" && <section id="profile-panel-activity-log" role="tabpanel" aria-labelledby="profile-tab-activity-log" className="rounded-2xl border border-slate-100 bg-white p-4 shadow-sm">
+      <div className="flex items-center gap-2.5">
+        <span className="flex h-8 w-8 items-center justify-center rounded-full bg-violet-100 text-violet-700"><Activity size={16} /></span>
+        <div><h2 className="text-xs font-extrabold text-slate-900">Activity Log</h2><p className="text-[10px] text-slate-500">Recent account activity available for this profile.</p></div>
+      </div>
+      <div className="mt-3 grid gap-2 sm:grid-cols-2">
+        <div className="flex items-center gap-3 rounded-lg bg-slate-50 px-3 py-2.5">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"><Check size={14} /></span>
+          <span><span className="block text-xs font-bold text-slate-800">Account created</span><span className="text-[10px] text-slate-500">{dateTimeLabel(profile.created_at)}</span></span>
+        </div>
+        <div className="flex items-center gap-3 rounded-lg bg-slate-50 px-3 py-2.5">
+          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-sky-100 text-sky-700"><MapPin size={14} /></span>
+          <span><span className="block text-xs font-bold text-slate-800">Profile last updated</span><span className="text-[10px] text-slate-500">{dateTimeLabel(profile.updated_at)}</span></span>
+        </div>
+      </div>
+    </section>}
+  </main>;
 };
 
 export default Profile;

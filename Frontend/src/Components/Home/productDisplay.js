@@ -3,18 +3,47 @@ import { formatCurrency } from "../../utils/currency";
 const backendUrl = (
   import.meta.env.VITE_BACKEND_URL ||
   import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, '') ||
-  'http://localhost:5000'
-).replace(/\/$/, '')
+  ''
+).trim().replace(/\/$/, '')
+const localBackendUrlPattern =
+  /^(?:https?:)?\/\/(?:localhost|127\.0\.0\.1|\[::1\])(?::\d+)?(?=\/|$)/i
+
+export const resolveBackendImageUrl = (image) => {
+  if (!image || /^(data:|blob:)/i.test(image)) return image
+
+  if (/^(https?:)?\/\//i.test(image)) {
+    if (backendUrl && localBackendUrlPattern.test(image)) {
+      return image.replace(localBackendUrlPattern, backendUrl)
+    }
+    return image
+  }
+
+  return backendUrl
+    ? `${backendUrl}${image.startsWith('/') ? image : `/${image}`}`
+    : image
+}
 
 export const getProductImageUrl = (product) => {
-  const variantImage = product.variants?.find(
-    (variant) => Array.isArray(variant.images) && variant.images.length > 0
-  )?.images[0]
-  const image = variantImage || product.images?.[0]
+  const firstImage = (images) => {
+    if (typeof images === 'string') {
+      try {
+        images = JSON.parse(images)
+      } catch {
+        return images.trim()
+      }
+    }
 
-  if (!image || typeof image !== 'string') return ''
-  if (/^(https?:|data:|blob:)/i.test(image)) return image
-  return `${backendUrl}${image.startsWith('/') ? image : `/${image}`}`
+    return Array.isArray(images)
+      ? images.find((value) => typeof value === 'string' && value.trim()) || ''
+      : ''
+  }
+  const variantImage = Array.isArray(product.variants)
+    ? product.variants.map((variant) => firstImage(variant.images)).find(Boolean)
+    : ''
+  const image = variantImage || firstImage(product.images)
+
+  if (!image) return ''
+  return resolveBackendImageUrl(image)
 }
 
 export const formatProductPrice = (product) => {

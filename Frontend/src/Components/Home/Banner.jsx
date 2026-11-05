@@ -39,6 +39,7 @@ const Banner = () => {
               src={banner.image}
               alt={banner.title}
               loading="lazy"
+              decoding="async"
               className="absolute inset-0 -z-20 h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
             />
 

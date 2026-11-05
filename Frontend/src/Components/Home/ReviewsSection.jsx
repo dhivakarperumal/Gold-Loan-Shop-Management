@@ -4,14 +4,9 @@ import { Autoplay } from "swiper/modules";
 import { FaStar, FaQuoteLeft } from "react-icons/fa";
 import api from "../../api";
 import PageContainer from "../CommenComponents/PageContainer";
+import { resolveBackendImageUrl } from "./productDisplay";
 
 import "swiper/css";
-
-const resolveReviewImage = (image) => {
-  if (!image || /^(https?:|data:|blob:)/i.test(image)) return image;
-  const backendUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
-  return `${backendUrl}${image.startsWith("/") ? image : `/${image}`}`;
-};
 
 const StarRow = ({ rating }) => (
   <div className="flex items-center gap-0.5">
@@ -80,8 +75,10 @@ const ReviewCard = ({ review }) => (
               style={{ width: "56px", height: "56px", background: "#f9f5ee" }}
             >
               <img
-                src={resolveReviewImage(review.review_image)}
+                src={resolveBackendImageUrl(review.review_image)}
                 alt="Review"
+                loading="lazy"
+                decoding="async"
                 className="h-full w-full object-contain"
               />
             </div>

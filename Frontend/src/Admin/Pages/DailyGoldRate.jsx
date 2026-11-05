@@ -267,10 +267,27 @@ export default function DailyGoldRate() {
           <span className="rounded-full border border-white/15 bg-white/10 px-3.5 py-1.5 text-xs font-bold text-emerald-100">{rateSetStatus}</span>
         </div>
         {currentError && <p role="alert" className="mt-3 rounded-lg bg-rose-500/15 px-3 py-2 text-xs font-semibold text-rose-100">Rate refresh failed: {currentError}</p>}
-        {current && <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3 xl:grid-cols-4">
-          {RATE_FIELDS.map(({ key, label, metal, purity, unit }) => {
-            const rate = current.rates.find((item) => item.metal_type.toLowerCase() === metal.toLowerCase() && item.purity === purity);
-            return <div key={key} className="rounded-xl border border-white/10 bg-white/10 p-3 backdrop-blur-sm"><p className="text-[11px] font-semibold text-white/70">{label}</p><p className="mt-1 text-base font-extrabold text-white">{rate ? <>{currency(rate.rate_per_unit ?? rate.rate_per_gram)}<span className="ml-1 text-[11px] font-medium text-white/70">/ {unit === "carat" ? "ct" : "g"}</span></> : <span className="text-sm font-semibold text-white/60">Not set</span>}</p></div>;
+        {current && <div className="mt-5 space-y-3">
+          {RATE_METALS.map((metal) => {
+            const metalRates = RATE_FIELDS.filter((field) => field.metal === metal);
+            return (
+              <div key={metal} className="grid gap-2 border-t border-white/15 pt-3 first:border-t-0 first:pt-0 sm:grid-cols-[100px_minmax(0,1fr)] sm:items-center">
+                <h3 className="text-sm font-bold text-emerald-100">{metal}</h3>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-5">
+                  {metalRates.map(({ key, label, purity, unit }) => {
+                    const rate = current.rates.find((item) => item.metal_type.toLowerCase() === metal.toLowerCase() && item.purity === purity);
+                    return (
+                      <div key={key} className="rounded-xl border border-white/10 bg-white/10 p-3 backdrop-blur-sm">
+                        <p className="text-[11px] font-semibold text-white/70">{label}</p>
+                        <p className="mt-1 text-base font-extrabold text-white">
+                          {rate ? <>{currency(rate.rate_per_unit ?? rate.rate_per_gram)}<span className="ml-1 text-[11px] font-medium text-white/70">/ {unit === "carat" ? "ct" : "g"}</span></> : <span className="text-sm font-semibold text-white/60">Not set</span>}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
           })}
         </div>}
         {current && <div className="mt-5 border-t border-white/15 pt-5">

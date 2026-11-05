@@ -49,6 +49,7 @@ const INTEREST_TYPES = new Set([
   'simple', 'compound', 'flat', 'reducing_balance', 'daily', 'monthly',
   'annual', 'fixed', 'slab_based', 'custom'
 ]);
+const PAYMENT_METHODS = new Set(['Cash', 'UPI', 'Card', 'Bank Transfer', 'Cheque', 'Other']);
 const REQUIRED_TEXT = ['jewellery_type', 'gold_purity'];
 const MAXIMUM = 999999999999;
 
@@ -293,19 +294,46 @@ async function postLoanRenewal(req, res, next) {
   if (!validId(req.params.id)) return res.status(400).json({ message: 'Loan ID is invalid' });
   const amount = parseAmount(req.body?.payment_amount, 'Payment amount', { min: 0.01 });
   if (amount.error) return res.status(400).json({ message: amount.error });
+  if (!validId(req.body?.account_id) || !PAYMENT_METHODS.has(req.body?.payment_method)) {
+    return res.status(400).json({ message: 'Select a valid fund account and payment method' });
+  }
+  const referenceNumber = req.body?.reference_number == null
+    ? ''
+    : String(req.body.reference_number).trim();
+  if (referenceNumber.length > 100) {
+    return res.status(400).json({ message: 'Reference number is invalid' });
+  }
+  const idempotencyKey = req.body?.idempotency_key == null
+    ? ''
+    : String(req.body.idempotency_key).trim();
+  if (idempotencyKey.length > 150) return res.status(400).json({ message: 'Payment retry key is invalid' });
   try {
-    return res.json(await renewLoan(req.params.id, amount.value, req.adminUser.user_id));
+    return res.json(await renewLoan(req.params.id, amount.value, req.adminUser.user_id, {
+      account_id: req.body.account_id,
+      payment_method: req.body.payment_method,
+      reference_number: referenceNumber,
+      idempotency_key: idempotencyKey
+    }));
   } catch (error) {
     if (error.code === 'LOAN_NOT_FOUND') return res.status(404).json({ message: error.message });
-    if (['LOAN_NOT_ACTIVE', 'LOAN_READY_FOR_GOLD_RELEASE'].includes(error.code)) {
+    if ([
+      'LOAN_NOT_ACTIVE',
+      'LOAN_READY_FOR_GOLD_RELEASE',
+      'FUND_ACCOUNT_NOT_FOUND',
+      'DUPLICATE_RENEWAL'
+    ].includes(error.code)) {
       return res.status(409).json({ message: error.message });
     }
+    if (error.code === 'FUND_ACCOUNT_NOT_FOUND') return res.status(400).json({ message: error.message });
     if ([
       'INVALID_RENEWAL_PAYMENT',
       'RENEWAL_PAYMENT_BELOW_INTEREST',
       'RENEWAL_PAYMENT_EXCEEDS_DUE'
     ].includes(error.code)) {
       return res.status(400).json({ message: error.message });
+    }
+    if (error.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ message: 'This renewal payment has already been recorded' });
     }
     return next(error);
   }
@@ -434,6 +462,7 @@ async function getLoanGoldImage(req, res, next) {
   if (!imagePath) return res.status(400).json({ message: 'Gold image reference is invalid' });
   try {
     if (!fs.existsSync(imagePath)) return res.status(404).json({ message: 'Gold image not found' });
+    res.set('Cache-Control', 'private, max-age=86400, immutable');
     return res.sendFile(imagePath, (error) => {
       if (error && !res.headersSent) next(error);
     });

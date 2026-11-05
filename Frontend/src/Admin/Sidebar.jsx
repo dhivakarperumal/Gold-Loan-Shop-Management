@@ -40,6 +40,8 @@ const navItems = [
  
 
   { path: "/admin/billings", label: "Billing", icon: Files },
+  { path: "/admin/enquiries", label: "All Enquiries", icon:  MessageCircle, activePaths: ["/admin/enquiries/new"] },
+ 
   {
     label: "Loan Management",
     icon: HandCoins,
@@ -109,7 +111,7 @@ const navItems = [
       { path: "/admin/banners", label: "Offers & Banners", icon: Tag },
       { path: "/admin/videos", label: "Showcase Videos", icon: Video },
       { path: "/admin/reviews", label: "Reviews", icon: Star },
-      { path: "/admin/users/all", label: "Customers", icon: Users },
+      
     ],
   },
 
@@ -118,10 +120,9 @@ const navItems = [
     label: "Dealers",
     icon: Handshake,
     children: [
-      { path: "/admin/dealers", label: "Dealer Master", icon: List },
+      { path: "/admin/dealers", label: "Dealer", icon: List },
       { path: "/admin/dealers/purchases", label: "Purchases & Payables", icon: Files },
-      { path: "/admin/dealers/jobs", label: "Goldsmith Job Work", icon: HandCoins },
-      { path: "/admin/dealers/refining", label: "Old Gold & Refining", icon: Gem },
+      // { path: "/admin/dealers/refining", label: "Old Gold & Refining", icon: Gem },
     ],
   },
 

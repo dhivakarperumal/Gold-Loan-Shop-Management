@@ -12,16 +12,10 @@ import {
 
 import "swiper/css";
 import "swiper/css/effect-fade";
-
-const backendUrl = (
-  import.meta.env.VITE_BACKEND_URL ||
-  import.meta.env.VITE_API_URL?.replace(/\/api\/?$/, "") ||
-  "http://localhost:5000"
-).replace(/\/$/, "");
+import { resolveBackendImageUrl } from "./productDisplay";
 
 const getBannerImageUrl = (image) => {
-  if (!image || /^(https?:|data:|blob:)/i.test(image)) return image || "";
-  return `${backendUrl}${image.startsWith("/") ? image : `/${image}`}`;
+  return resolveBackendImageUrl(image);
 };
 
 const getHeadingParts = (title) => {
@@ -88,7 +82,7 @@ const Hero = () => {
             }}
             className="!absolute inset-0 h-full w-full"
           >
-            {slides.map((item) => {
+            {slides.map((item, index) => {
               const desktopImage = getBannerImageUrl(item.image);
               const mobileImage = item.mobile_image
                 ? getBannerImageUrl(item.mobile_image)
@@ -103,6 +97,9 @@ const Hero = () => {
                     <img
                       src={desktopImage}
                       alt=""
+                      loading={index === 0 ? "eager" : "lazy"}
+                      fetchPriority={index === 0 ? "high" : "auto"}
+                      decoding="async"
                       className="h-full w-full object-cover object-[75%_center] sm:object-contain sm:object-center"
                       onError={(event) => {
                         if (mobileImage && event.currentTarget.currentSrc !== desktopImage) {

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { FiArrowLeft, FiCalendar, FiCamera, FiCheck, FiChevronDown, FiPrinter, FiSearch, FiUploadCloud, FiUserPlus } from "react-icons/fi";
 import { toast } from "react-hot-toast";
+import imageCompression from "browser-image-compression";
 import api, { getPrivateFile } from "../../api";
 import { formatRateDate, getRateForPurity } from "../../PrivateRouter/goldRateUtils";
 import useGoldRates from "../../PrivateRouter/useGoldRates";
@@ -235,6 +236,7 @@ export default function CreateLoan() {
   const [loadedFor, setLoadedFor] = useState(null);
   const [goldImageFile, setGoldImageFile] = useState(null);
   const [goldImagePreview, setGoldImagePreview] = useState(null);
+  const [compressingGoldImage, setCompressingGoldImage] = useState(false);
   const goldImageInput = useRef(null);
   const goldImageCameraInput = useRef(null);
   const selectedGoldImagePreview = useRef("");
@@ -385,7 +387,7 @@ export default function CreateLoan() {
     ? (goldImagePreview && goldImagePreview.key === goldImageFile ? goldImagePreview.url : "")
     : (goldImagePreview && goldImagePreview.key === loanRecord?.gold_image_url ? goldImagePreview.url : "");
 
-  const handleGoldImageSelect = (event) => {
+  const handleGoldImageSelect = async (event) => {
     const input = event.currentTarget;
     const file = input.files?.[0];
     input.value = "";
@@ -398,10 +400,29 @@ export default function CreateLoan() {
       toast.error("Gold image must be 5 MB or smaller.");
       return;
     }
-    if (selectedGoldImagePreview.current) URL.revokeObjectURL(selectedGoldImagePreview.current);
-    selectedGoldImagePreview.current = URL.createObjectURL(file);
-    setGoldImagePreview({ key: file, url: selectedGoldImagePreview.current });
-    setGoldImageFile(file);
+    setCompressingGoldImage(true);
+    try {
+      const compressedImage = await imageCompression(file, {
+        maxSizeMB: 0.35,
+        maxWidthOrHeight: 1200,
+        useWebWorker: true,
+        fileType: "image/jpeg"
+      });
+      const optimizedFile = new File(
+        [compressedImage],
+        `${file.name.replace(/\.[^.]+$/, "")}.jpg`,
+        { type: "image/jpeg", lastModified: Date.now() }
+      );
+      if (selectedGoldImagePreview.current) URL.revokeObjectURL(selectedGoldImagePreview.current);
+      selectedGoldImagePreview.current = URL.createObjectURL(optimizedFile);
+      setGoldImagePreview({ key: optimizedFile, url: selectedGoldImagePreview.current });
+      setGoldImageFile(optimizedFile);
+    } catch (error) {
+      console.error("Failed to optimize pledged gold image:", error);
+      toast.error(error.message || "Could not optimize the gold image. Please choose another image.");
+    } finally {
+      setCompressingGoldImage(false);
+    }
   };
 
   const filteredCustomers = useMemo(() => {
@@ -1005,6 +1026,7 @@ export default function CreateLoan() {
             </div>
             <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/70 p-4">
               <p className={labelClass}>Gold Image <span className="font-normal text-slate-400">(optional, PNG or JPG up to 5 MB)</span></p>
+              {compressingGoldImage && <p role="status" className="mt-2 text-xs font-medium text-emerald-700">Optimizing image for faster upload and viewing...</p>}
               <input
                 ref={goldImageInput}
                 className="sr-only"
@@ -1068,7 +1090,7 @@ export default function CreateLoan() {
         <div className="sticky bottom-3 z-10 order-6 flex flex-wrap justify-end gap-2 rounded-2xl border border-slate-200/90 bg-white/95 p-3 shadow-xl shadow-slate-900/10 backdrop-blur-md sm:p-4 lg:col-span-2">
           <button type="button" onClick={() => navigate("/admin/loans/allloans")} disabled={saving} className="min-h-11 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50">Cancel</button>
           {!loanRecord && <button type="button" onClick={handleReset} disabled={saving} className="min-h-11 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50">Reset</button>}
-          <button type="submit" disabled={saving || loadingCustomer || !customer || interestTypes.length === 0} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#064A41] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#087263] focus:outline-none focus:ring-4 focus:ring-emerald-700/20 disabled:cursor-not-allowed disabled:opacity-50">
+          <button type="submit" disabled={saving || compressingGoldImage || loadingCustomer || !customer || interestTypes.length === 0} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#064A41] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#087263] focus:outline-none focus:ring-4 focus:ring-emerald-700/20 disabled:cursor-not-allowed disabled:opacity-50">
             <FiCheck /> {saving ? (loanRecord ? "Updating Loan..." : "Saving Loan...") : (loanRecord ? "Update Loan" : "Save Loan")}
           </button>
         </div>

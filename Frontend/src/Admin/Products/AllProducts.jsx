@@ -7,6 +7,7 @@ import { toast, Toaster } from "react-hot-toast";
 import { FaRupeeSign } from "react-icons/fa";
 import useGoldRates from "../../PrivateRouter/useGoldRates";
 import { formatCurrency } from "../../utils/currency";
+import { getProductImageUrl } from "../../Components/Home/productDisplay";
 import {
     FiPlus,
     FiSearch,
@@ -23,6 +24,8 @@ import {
 const AllProducts = () => {
     const navigate = useNavigate();
     const { productsCache, setProductsCached } = useAdmin();
+    const productsCacheRef = useRef(productsCache);
+    productsCacheRef.current = productsCache;
     const { current: activeRateSet } = useGoldRates();
 
     const [searchTerm, setSearchTerm] = useState("");
@@ -51,6 +54,7 @@ const AllProducts = () => {
     const pageData = productsCache[currentCacheKey];
     const [products, setProducts] = useState(pageData?.products || []);
     const [loading, setLoading] = useState(!pageData);
+    const [refreshing, setRefreshing] = useState(true);
     const [viewMode, setViewMode] = useState("table"); // 'table' or 'grid'
 
     // Stock Update Modal State
@@ -118,7 +122,8 @@ const AllProducts = () => {
             sortOrder
         };
         const cacheKey = JSON.stringify(params);
-        setLoading(true);
+        if (!productsCacheRef.current[cacheKey]) setLoading(true);
+        setRefreshing(true);
 
         try {
             const response = await api.get("/products", { params });
@@ -145,6 +150,7 @@ const AllProducts = () => {
             setProducts([]);
         } finally {
             setLoading(false);
+            setRefreshing(false);
         }
     }, [currentPage, itemsPerPage, searchTerm, categoryFilter, purityFilter, stockFilter, lastPriceUpdateFilter, sortBy, sortOrder, setProductsCached]);
 
@@ -180,9 +186,11 @@ const AllProducts = () => {
     }, [activeRateSignature, fetchProducts, setProductsCached]);
 
     const handleDelete = async (id) => {
+        if (refreshing) return;
         if (!window.confirm("Are you sure you want to delete this product?")) return;
         try {
             await api.delete(`/products/${id}`);
+            setProductsCached({});
             toast.success("Product removed from vault.");
             fetchProducts();
         } catch (error) {
@@ -193,7 +201,7 @@ const AllProducts = () => {
 
     const handleStockUpdate = async (e) => {
         e.preventDefault();
-        if (!currentProduct || newStock === "") return;
+        if (!currentProduct || newStock === "" || refreshing) return;
 
         setUpdatingStock(true);
         try {
@@ -202,6 +210,7 @@ const AllProducts = () => {
             // Assuming current backend needs a full update based on our previous look.
             const updatedProduct = { ...currentProduct, total_stock: parseInt(newStock) };
             await api.put(`/products/${currentProduct.id}`, updatedProduct);
+            setProductsCached({});
 
             toast.success("Stock updated instantly!");
             setProducts(products.map(p => p.id === currentProduct.id ? { ...p, total_stock: parseInt(newStock), status: parseInt(newStock) === 0 ? 'Out of Stock' : parseInt(newStock) < 10 ? 'Low Stock' : 'Active' } : p));
@@ -256,36 +265,8 @@ const AllProducts = () => {
     };
 
     const getProductImage = (product) => {
-        let imgUrl = null;
-        try {
-            const processUrl = (url) => {
-                if (!url || typeof url !== 'string') return null;
-                if (url.startsWith('http') || url.startsWith('data:')) return url;
-                const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-                const cleanPath = url.startsWith('/') ? url : `/${url}`;
-                return `${backendUrl}${cleanPath}`;
-            };
-
-            // 1. Try variants first
-            if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
-                const firstVar = product.variants[0];
-                const vImgs = typeof firstVar.images === 'string' ? JSON.parse(firstVar.images) : firstVar.images;
-                if (Array.isArray(vImgs) && vImgs.length > 0) imgUrl = vImgs[0];
-            }
-
-            // 2. Try main images column
-            if (!imgUrl && product.images) {
-                const imgs = typeof product.images === 'string' ? JSON.parse(product.images) : product.images;
-                if (Array.isArray(imgs) && imgs.length > 0) imgUrl = imgs[0];
-            }
-
-            const finalUrl = processUrl(imgUrl);
-            if (finalUrl) return finalUrl;
-        } catch (e) {
-            console.error("Error getting product image:", e);
-        }
-
-        return `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name || 'P')}&background=random`;
+        return getProductImageUrl(product)
+            || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name || 'P')}&background=random`;
     };
 
     return (
@@ -414,7 +395,7 @@ const AllProducts = () => {
                                         {currentItems.map((product, index) => (
                                             <tr key={product.id} className="hover:bg-[#240046]/5 transition-colors group">
                                                 <td className="px-4 py-3 text-xs font-semibold text-slate-500">{(currentPage - 1) * itemsPerPage + index + 1}</td>
-                                                <td className="px-4 py-3"><img src={getProductImage(product)} alt={product.name} loading="lazy" className="h-11 w-11 rounded-lg border border-gray-100 object-cover" /></td>
+                                                <td className="px-4 py-3"><img src={getProductImage(product)} alt={product.name} loading="lazy" onError={(event) => { event.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name || "P")}&background=random`; }} className="h-11 w-11 rounded-lg border border-gray-100 object-cover" /></td>
                                                 <td className="max-w-[180px] px-4 py-3 text-sm font-bold text-slate-800">{product.name}</td>
                                                 <td className="px-4 py-3 text-xs font-semibold text-slate-600">{product.product_code || "—"}</td>
                                                 <td className="px-4 py-3 text-xs text-slate-600">{product.category || "—"}</td>

@@ -23,6 +23,9 @@ async function initializeAuthModule() {
       email VARCHAR(254) NOT NULL UNIQUE,
       phone VARCHAR(32) NULL UNIQUE,
       password_hash VARCHAR(255) NOT NULL,
+      address TEXT NULL,
+      profile_image VARCHAR(255) NULL,
+      notification_preferences TEXT NULL,
       role VARCHAR(32) NOT NULL DEFAULT 'user',
       status ENUM('Active', 'Inactive') NOT NULL DEFAULT 'Active',
       created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -42,6 +45,12 @@ async function initializeAuthModule() {
   const [emailColumns] = await pool.query("SHOW COLUMNS FROM users LIKE 'email'");
   if (emailColumns[0]?.Null === 'NO') {
     await pool.query('ALTER TABLE users MODIFY COLUMN email VARCHAR(254) NULL');
+  }
+  for (const column of ['address', 'profile_image', 'notification_preferences']) {
+    const [columns] = await pool.query(`SHOW COLUMNS FROM users LIKE '${column}'`);
+    if (!columns.length) {
+      await pool.query(`ALTER TABLE users ADD COLUMN ${column} TEXT NULL`);
+    }
   }
 }
 
@@ -66,6 +75,74 @@ async function getUserById(userId) {
     [userId]
   );
   return users[0] || null;
+}
+
+async function getOwnProfile(userId) {
+  const [users] = await pool.execute(
+    `SELECT user_id, username, name, email, phone, address, profile_image, notification_preferences,
+            role, status, created_at, updated_at
+     FROM users WHERE user_id = ?`,
+    [userId]
+  );
+  const user = users[0];
+  if (!user) return null;
+  let notificationPreferences = { email: true, orders: true };
+  if (user.notification_preferences) {
+    try {
+      notificationPreferences = {
+        ...notificationPreferences,
+        ...JSON.parse(user.notification_preferences)
+      };
+    } catch (error) {
+      console.error(`Invalid notification preferences for user ${userId}:`, error);
+    }
+  }
+  const { notification_preferences: storedPreferences, ...profile } = user;
+  return { ...profile, notification_preferences: notificationPreferences };
+}
+
+async function updateOwnProfile(userId, { username, name, email, phone, address }) {
+  await pool.execute(
+    `UPDATE users SET username = ?, name = ?, email = ?, phone = ?, address = ?
+     WHERE user_id = ?`,
+    [username, name, email, phone || null, address || null, userId]
+  );
+  return getOwnProfile(userId);
+}
+
+async function updateOwnProfileImage(userId, imageUrl) {
+  await pool.execute(
+    'UPDATE users SET profile_image = ? WHERE user_id = ?',
+    [imageUrl, userId]
+  );
+  return getOwnProfile(userId);
+}
+
+async function getPasswordHash(userId) {
+  const [users] = await pool.execute(
+    'SELECT password_hash FROM users WHERE user_id = ?',
+    [userId]
+  );
+  return users[0]?.password_hash || null;
+}
+
+async function updatePasswordHash(userId, passwordHash) {
+  await pool.execute(
+    'UPDATE users SET password_hash = ? WHERE user_id = ?',
+    [passwordHash, userId]
+  );
+}
+
+async function hashPassword(password) {
+  return bcrypt.hash(password, 12);
+}
+
+async function updateNotificationPreferences(userId, preferences) {
+  await pool.execute(
+    'UPDATE users SET notification_preferences = ? WHERE user_id = ?',
+    [JSON.stringify(preferences), userId]
+  );
+  return getOwnProfile(userId);
 }
 
 async function listUsers(dateRange = {}) {
@@ -129,10 +206,17 @@ module.exports = {
   createUser,
   deleteUser,
   findUserForLogin,
+  getOwnProfile,
+  getPasswordHash,
   getUserById,
+  hashPassword,
   initializeAuthModule,
   insertUser,
   listUsers,
   updateUser,
+  updateOwnProfile,
+  updateOwnProfileImage,
+  updatePasswordHash,
+  updateNotificationPreferences,
   verifyPassword
 };

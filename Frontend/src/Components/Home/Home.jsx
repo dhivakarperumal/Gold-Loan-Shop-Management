@@ -22,6 +22,9 @@ const Home = () => {
   const [sections, setSections] = useState([]);
   const [sectionsLoading, setSectionsLoading] = useState(true);
   const [sectionsError, setSectionsError] = useState("");
+  const [products, setProducts] = useState([]);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [productsError, setProductsError] = useState(false);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -45,6 +48,32 @@ const Home = () => {
       })
       .finally(() => {
         if (!controller.signal.aborted) setSectionsLoading(false);
+      });
+
+    return () => controller.abort();
+  }, []);
+
+  useEffect(() => {
+    const controller = new AbortController();
+
+    api
+      .get("/products", {
+        params: { page: 1, limit: 100, status: "Active" },
+        signal: controller.signal,
+      })
+      .then(({ data }) => {
+        if (!Array.isArray(data?.products)) {
+          throw new TypeError("The products response must contain a products array");
+        }
+        setProducts(data.products);
+      })
+      .catch((error) => {
+        if (controller.signal.aborted) return;
+        console.error("Failed to load home products:", error);
+        setProductsError(true);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setProductsLoading(false);
       });
 
     return () => controller.abort();
@@ -86,7 +115,11 @@ const Home = () => {
                 {/* Show metal banner after the second product section */}
                 {index === 2 && <MetalsShowcase />}
 
-                <Section />
+                <Section
+                  products={products}
+                  loading={productsLoading}
+                  error={productsError}
+                />
               </React.Fragment>
             );
           })}

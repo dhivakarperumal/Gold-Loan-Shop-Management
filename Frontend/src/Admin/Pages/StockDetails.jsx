@@ -17,6 +17,7 @@ import {
     FiList,
 } from "react-icons/fi";
 import AddStock from "../Products/AddStock";
+import { getProductImageUrl } from "../../Components/Home/productDisplay";
 
 const StockDetails = () => {
     const { stockCache, setStockCached } = useAdmin();
@@ -236,34 +237,8 @@ const StockDetails = () => {
     };
 
     const getProductImage = (product) => {
-        let imgUrl = null;
-        try {
-            const processUrl = (url) => {
-                if (!url || typeof url !== 'string') return null;
-                if (url.startsWith('http') || url.startsWith('data:')) return url;
-                const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
-                const cleanPath = url.startsWith('/') ? url : '/' + url;
-                return backendUrl + cleanPath;
-            };
-
-            if (product.variants && Array.isArray(product.variants) && product.variants.length > 0) {
-                const firstVar = product.variants[0];
-                const vImgs = typeof firstVar.images === 'string' ? JSON.parse(firstVar.images) : firstVar.images;
-                if (Array.isArray(vImgs) && vImgs.length > 0) imgUrl = vImgs[0];
-            }
-
-            if (!imgUrl && product.images) {
-                const imgs = typeof product.images === 'string' ? JSON.parse(product.images) : product.images;
-                if (Array.isArray(imgs) && imgs.length > 0) imgUrl = imgs[0];
-            }
-
-            const finalUrl = processUrl(imgUrl);
-            if (finalUrl) return finalUrl;
-        } catch (e) {
-            console.error("Error getting product image:", e);
-        }
-
-        return `https://ui-avatars.com/api/?name=` + encodeURIComponent(product.name || 'P') + `&background=random`;
+        return getProductImageUrl(product)
+            || `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name || 'P')}&background=random`;
     };
 
     return (
