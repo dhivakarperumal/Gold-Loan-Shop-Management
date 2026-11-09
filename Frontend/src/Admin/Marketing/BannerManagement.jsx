@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import imageCompression from "browser-image-compression";
 import api from "../../api";
@@ -21,18 +21,33 @@ import { toast } from "react-hot-toast";
 import { useAuth } from "../../PrivateRouter/AuthContext";
 import { resolveBackendImageUrl } from "../../Components/Home/productDisplay";
 
+const BANNERS_CACHE_KEY = "admin:banners:cache";
+
+const readCachedBanners = () => {
+    try {
+        const cached = sessionStorage.getItem(BANNERS_CACHE_KEY);
+        const parsed = cached ? JSON.parse(cached) : [];
+        return Array.isArray(parsed) ? parsed : [];
+    } catch (error) {
+        console.warn("Could not read the cached admin banners:", error);
+        return [];
+    }
+};
+
 const BannerManagement = () => {
     const { user } = useAuth();
+    const [cachedBanners] = useState(readCachedBanners);
     const {
         data: banners,
         setData: setBanners,
         loading,
         refreshing,
-        refresh: refreshBanners
+        refresh: refreshBanners,
+        error: bannersError
     } = useAdminCachedList("admin:banners", async () => {
         const response = await api.get("/banners/manage");
         return Array.isArray(response.data) ? response.data : [];
-    }, []);
+    }, cachedBanners);
     const [searchTerm, setSearchTerm] = useState("");
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentBanner, setCurrentBanner] = useState({
@@ -51,6 +66,14 @@ const BannerManagement = () => {
     const [viewMode, setViewMode] = useState("table");
     const [typeFilter, setTypeFilter] = useState("all");
     const [activeFilter, setActiveFilter] = useState("all");
+
+    useEffect(() => {
+        try {
+            sessionStorage.setItem(BANNERS_CACHE_KEY, JSON.stringify(banners));
+        } catch (error) {
+            console.warn("Could not cache the admin banners:", error);
+        }
+    }, [banners]);
 
     const handleDelete = async (id) => {
         if (refreshing) return;
@@ -224,13 +247,12 @@ const BannerManagement = () => {
                 </div>
             </div>
 
-            {loading && banners.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm text-slate-800">
-                    <div className="w-12 h-12 border-4 border-indigo-500/20 border-t-indigo-500 rounded-full animate-spin mb-4"></div>
-                    <p className="text-gray-500 font-bold">Synchronizing studio assets...</p>
-                </div>
-            ) : (
-                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden text-slate-800">
+            {bannersError && (
+                <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800" role="alert">
+                    Banner data could not be refreshed. {banners.length > 0 ? "Showing the saved banner data." : "Try refreshing the page."}
+                </p>
+            )}
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden text-slate-800">
                     {viewMode === "table" ? <div className="overflow-x-auto hide-scrollbar">
                         <table className="w-full text-left border-collapse block md:table">
                             <thead className="hidden md:table-header-group">
@@ -313,14 +335,16 @@ const BannerManagement = () => {
                                     ))}
                             </tbody>
                         </table>
-                        {filteredBanners.length === 0 && (
+                        {filteredBanners.length === 0 && !loading && (
                             <div className="text-center py-20">
                                 <FiImage className="mx-auto text-gray-200 mb-4" size={48} />
                                 <p className="text-gray-400 font-bold tracking-tight">No creative banners discovered.</p>
                             </div>
                         )}
                     </div> : <div className="grid grid-cols-1 gap-5 p-4 sm:grid-cols-2 xl:grid-cols-3">
-                        {filteredBanners.length === 0 ? <div className="col-span-full text-center py-16 text-gray-400 font-bold">No creative banners discovered.</div> : filteredBanners.map((banner, index) => (
+                        {filteredBanners.length === 0
+                            ? !loading && <div className="col-span-full text-center py-16 text-gray-400 font-bold">No creative banners discovered.</div>
+                            : filteredBanners.map((banner, index) => (
                             <article key={banner.id} className="flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg">
                                 <div className="relative aspect-[16/9] overflow-hidden bg-slate-100">
                                     {banner.image ? (
@@ -404,8 +428,7 @@ const BannerManagement = () => {
                             </article>
                         ))}
                     </div>}
-                </div>
-            )}
+            </div>
 
             {/* Modal */}
             {isModalOpen && (

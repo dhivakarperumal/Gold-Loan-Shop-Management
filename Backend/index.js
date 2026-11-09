@@ -51,9 +51,21 @@ app.get('/', (req, res) => {
 });
 
 app.use('/api', (req, res, next) => {
-  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
-  res.set('Pragma', 'no-cache');
-  res.set('Expires', '0');
+  const publicCacheableGet = req.method === 'GET' && (
+    ['/categories', '/metals', '/banners', '/home-sections', '/gold-rates/current', '/reviews/public']
+      .includes(req.path)
+    || (req.path === '/products'
+      && req.query.status === 'Active'
+      && req.query.view === 'summary')
+  );
+
+  if (publicCacheableGet) {
+    res.set('Cache-Control', 'public, max-age=15, s-maxage=60, stale-while-revalidate=45');
+  } else {
+    res.set('Cache-Control', 'no-store, no-cache, must-revalidate, proxy-revalidate');
+    res.set('Pragma', 'no-cache');
+    res.set('Expires', '0');
+  }
   return next();
 });
 

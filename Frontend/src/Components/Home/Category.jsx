@@ -101,7 +101,7 @@ const Category = () => {
             }}
             className="category-swiper !overflow-hidden !px-1"
           >
-            {categories.map((category) => {
+            {categories.map((category, index) => {
               const image = Array.isArray(category.images) ? category.images[0] : category.images;
 
               return (
@@ -116,7 +116,8 @@ const Category = () => {
                           <img
                             src={getImageUrl(image)}
                             alt={category.name}
-                            loading="lazy"
+                            loading={index < 9 ? "eager" : "lazy"}
+                            fetchPriority={index === 0 ? "high" : "auto"}
                             decoding="async"
                             className="h-full w-full rounded-full object-cover transition-transform duration-500 group-hover:scale-110"
                           />

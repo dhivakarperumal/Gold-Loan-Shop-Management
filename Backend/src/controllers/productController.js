@@ -121,7 +121,8 @@ async function getProducts(req, res, next) {
       lastPriceUpdate: String(req.query.lastPriceUpdate || ''),
       sortBy: String(req.query.sortBy || ''),
       sortOrder: String(req.query.sortOrder || ''),
-      dateRange
+      dateRange,
+      summary: req.query.view === 'summary' && req.query.status === 'Active'
     }));
   } catch (error) {
     return next(error);

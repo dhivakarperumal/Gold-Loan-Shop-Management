@@ -18,6 +18,13 @@ const PRODUCT_COLUMNS = `
   zari_color, age, created_at, updated_at
 `;
 
+const PRODUCT_SUMMARY_COLUMNS = `
+  id, product_code, name, brand, category, subcategory, metal_type, product_type,
+  purity, gross_weight, mrp, offer, offer_price, discount, final_selling_price,
+  rating, total_reviews, total_stock, stock_status, images, status, featured,
+  new_arrival, best_seller, created_at
+`;
+
 const JSON_COLUMNS = new Set(['available_sizes', 'highlights', 'images', 'variants']);
 
 function parseProduct(product) {
@@ -151,7 +158,7 @@ async function initializeProductModule() {
 
 async function listProducts({
   page, limit, search, status, category, purity, offerStatus, stockStatus,
-  lastPriceUpdate, sortBy, sortOrder, dateRange = {}
+  lastPriceUpdate, sortBy, sortOrder, dateRange = {}, summary = false
 }) {
   const where = [];
   const params = [];
@@ -201,6 +208,17 @@ async function listProducts({
   const direction = sortOrder === 'asc' ? 'ASC' : 'DESC';
   const whereSql = where.length ? `WHERE ${where.join(' AND ')}` : '';
   const [[{ total }]] = await pool.execute(`SELECT COUNT(*) AS total FROM products ${whereSql}`, params);
+  const offset = (page - 1) * limit;
+  const [rows] = await pool.execute(
+    `SELECT ${summary ? PRODUCT_SUMMARY_COLUMNS : PRODUCT_COLUMNS} FROM products ${whereSql}
+     ORDER BY \`${orderBy}\` ${direction}, id DESC LIMIT ? OFFSET ?`,
+    [...params, limit, offset]
+  );
+  const pagination = { total, totalPages: Math.max(1, Math.ceil(total / limit)), page, limit };
+  if (summary) {
+    return { products: rows.map(parseProduct), pagination };
+  }
+
   const dateConditions = [];
   const dateValues = [];
   addDateRangeCondition(dateConditions, dateValues, 'created_at', dateRange);
@@ -211,15 +229,9 @@ async function listProducts({
   const [[{ outOfStock }]] = await pool.execute(`SELECT COUNT(*) AS outOfStock FROM products ${dateWhere ? `${dateWhere} AND` : 'WHERE'} total_stock <= 0`, dateValues);
   const [categoryRows] = await pool.query('SELECT DISTINCT category FROM products WHERE category IS NOT NULL ORDER BY category');
   const [purityRows] = await pool.query('SELECT DISTINCT purity FROM products WHERE purity IS NOT NULL ORDER BY purity');
-  const offset = (page - 1) * limit;
-  const [rows] = await pool.execute(
-    `SELECT ${PRODUCT_COLUMNS} FROM products ${whereSql}
-     ORDER BY \`${orderBy}\` ${direction}, id DESC LIMIT ? OFFSET ?`,
-    [...params, limit, offset]
-  );
   return {
     products: rows.map(parseProduct),
-    pagination: { total, totalPages: Math.max(1, Math.ceil(total / limit)), page, limit },
+    pagination,
     stats: { total: allTotal, active, lowStock, outOfStock },
     filters: {
       categories: categoryRows.map((row) => row.category),

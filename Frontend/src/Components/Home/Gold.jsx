@@ -73,9 +73,13 @@ const Gold = ({ products: catalogProducts, loading, error }) => {
                             centeredSlides={products.length === 1}
                             className="!pb-2"
                         >
-                            {products.map((product) => (
+                            {products.map((product, index) => (
                                 <SwiperSlide key={product.id} className="h-auto w-[260px] sm:w-[280px] xl:w-[300px]">
-                                    <ProductCard product={product} />
+                                    <ProductCard
+                                        product={product}
+                                        priority={index === 0}
+                                        eager={index < 5}
+                                    />
                                 </SwiperSlide>
                             ))}
                         </Swiper>

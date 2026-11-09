@@ -24,23 +24,30 @@ export const resolveBackendImageUrl = (image) => {
 }
 
 export const getProductImageUrl = (product) => {
-  const firstImage = (images) => {
-    if (typeof images === 'string') {
+  const imageSource = (image) => {
+    if (typeof image === 'string') return image.trim()
+    if (image && typeof image === 'object' && !Array.isArray(image)) {
+      return imageSource(image.url || image.path || image.src)
+    }
+    return ''
+  }
+  const imageList = (images) => {
+    if (Array.isArray(images)) return images
+    if (typeof images === 'string' && images.trim()) {
       try {
-        images = JSON.parse(images)
+        const parsed = JSON.parse(images)
+        return Array.isArray(parsed) ? parsed : [parsed]
       } catch {
-        return images.trim()
+        return [images]
       }
     }
-
-    return Array.isArray(images)
-      ? images.find((value) => typeof value === 'string' && value.trim()) || ''
-      : ''
+    return []
   }
-  const variantImage = Array.isArray(product.variants)
-    ? product.variants.map((variant) => firstImage(variant.images)).find(Boolean)
-    : ''
-  const image = variantImage || firstImage(product.images)
+  const firstImage = (images) => imageList(images).map(imageSource).find(Boolean) || ''
+  const variantImage = imageList(product?.variants)
+    .map((variant) => firstImage(variant?.images))
+    .find(Boolean)
+  const image = variantImage || firstImage(product?.images)
 
   if (!image) return ''
   return resolveBackendImageUrl(image)

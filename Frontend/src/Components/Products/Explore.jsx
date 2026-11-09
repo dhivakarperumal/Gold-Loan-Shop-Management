@@ -114,7 +114,7 @@ const Explore = () => {
         setLoading(true);
         setError("");
         const firstResponse = await api.get("/products", {
-          params: { page: 1, limit: PAGE_SIZE, search: "", status: "Active" },
+          params: { page: 1, limit: PAGE_SIZE, search: "", status: "Active", view: "summary" },
           signal: controller.signal,
         });
         if (!Array.isArray(firstResponse.data?.products)) {
@@ -125,7 +125,7 @@ const Explore = () => {
         const additionalResponses = await Promise.all(
           Array.from({ length: totalPages - 1 }, (_, index) =>
             api.get("/products", {
-              params: { page: index + 2, limit: PAGE_SIZE, search: "", status: "Active" },
+              params: { page: index + 2, limit: PAGE_SIZE, search: "", status: "Active", view: "summary" },
               signal: controller.signal,
             })
           )
@@ -585,12 +585,14 @@ const Explore = () => {
             ) : filteredProducts.length ? (
               <>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 2xl:grid-cols-5">
-                  {paginatedProducts.map((product) => (
+                  {paginatedProducts.map((product, index) => (
                   <ProductCard
                     key={product.id ?? product.product_id ?? product.product_code}
                     product={product}
                     variant="explore"
                     queryString={searchParams.toString()}
+                    priority={index === 0}
+                    eager={index < gridColumns}
                   />
                   ))}
                 </div>

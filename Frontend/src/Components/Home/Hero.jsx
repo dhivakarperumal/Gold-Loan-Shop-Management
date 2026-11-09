@@ -14,6 +14,18 @@ import "swiper/css";
 import "swiper/css/effect-fade";
 import { resolveBackendImageUrl } from "./productDisplay";
 
+const DEFAULT_HERO_IMAGE = "/images/Hero/hero4.png";
+const DEFAULT_HERO_BANNER = {
+  id: "local-default",
+  title: "Designed to shine forever",
+  subtitle: "Beauty ✦ Heritage ✦ Everyday Luxury",
+  description: "Discover jewellery made for every occasion.",
+  image: DEFAULT_HERO_IMAGE,
+  link: "/#/explore",
+  type: "hero",
+  active: true,
+};
+
 const getBannerImageUrl = (image) => {
   return resolveBackendImageUrl(image);
 };
@@ -30,7 +42,7 @@ const getHeadingParts = (title) => {
 
 const Hero = () => {
   const [activeSlide, setActiveSlide] = useState(0);
-  const [slides, setSlides] = useState([]);
+  const [slides, setSlides] = useState([DEFAULT_HERO_BANNER]);
   const [error, setError] = useState(false);
 
   useEffect(() => {
@@ -42,7 +54,11 @@ const Hero = () => {
         if (!Array.isArray(response.data)) {
           throw new TypeError("The banners response must be an array");
         }
-        setSlides(response.data.filter((banner) => banner.type === "hero" && banner.active));
+        const heroBanners = response.data.filter(
+          (banner) => banner.type === "hero" && banner.active
+        );
+        setSlides(heroBanners.length > 0 ? heroBanners : [DEFAULT_HERO_BANNER]);
+        setActiveSlide(0);
       } catch (fetchError) {
         if (!controller.signal.aborted) {
           console.error("Failed to fetch home hero banners:", fetchError);
@@ -83,7 +99,10 @@ const Hero = () => {
             className="!absolute inset-0 h-full w-full"
           >
             {slides.map((item, index) => {
-              const desktopImage = getBannerImageUrl(item.image);
+              const isDefaultBanner = item.id === DEFAULT_HERO_BANNER.id;
+              const desktopImage = isDefaultBanner
+                ? DEFAULT_HERO_IMAGE
+                : getBannerImageUrl(item.image);
               const mobileImage = item.mobile_image
                 ? getBannerImageUrl(item.mobile_image)
                 : "";
@@ -103,7 +122,19 @@ const Hero = () => {
                       className="h-full w-full object-cover object-[75%_center] sm:object-contain sm:object-center"
                       onError={(event) => {
                         if (mobileImage && event.currentTarget.currentSrc !== desktopImage) {
+                          event.currentTarget.parentElement
+                            ?.querySelector("source")
+                            ?.remove();
                           event.currentTarget.src = desktopImage;
+                          return;
+                        }
+                        if (!isDefaultBanner
+                          && event.currentTarget.dataset.fallbackApplied !== "true") {
+                          event.currentTarget.dataset.fallbackApplied = "true";
+                          event.currentTarget.parentElement
+                            ?.querySelector("source")
+                            ?.remove();
+                          event.currentTarget.src = DEFAULT_HERO_IMAGE;
                         }
                       }}
                     />
@@ -157,6 +188,11 @@ const Hero = () => {
                     className="transition-transform duration-300 group-hover:translate-x-1"
                   />
                 </a>
+                {error && (
+                  <p className="mt-3 text-xs text-[#f7ead0]" role="alert">
+                    Showing the default banner because live banners could not be loaded.
+                  </p>
+                )}
               </>
             ) : error ? (
               <p className="text-sm text-[#f7ead0]" role="alert">

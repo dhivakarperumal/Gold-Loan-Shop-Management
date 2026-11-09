@@ -58,7 +58,7 @@ const Home = () => {
 
     api
       .get("/products", {
-        params: { page: 1, limit: 100, status: "Active" },
+        params: { page: 1, limit: 100, status: "Active", view: "summary" },
         signal: controller.signal,
       })
       .then(({ data }) => {

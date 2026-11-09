@@ -3,11 +3,11 @@ import { Link } from "react-router-dom";
 import { BadgeCheck, CircleCheck, CircleX, Heart, MessageCircle, Star, Weight } from "lucide-react";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 import { getProductImageUrl } from "./productDisplay";
-import { formatCurrency } from "../../utils/currency";
+import { formatCurrencyRounded } from "../../utils/currency";
 
-const formatPrice = formatCurrency;
+const formatPrice = formatCurrencyRounded;
 
-const ProductCard = ({ product, queryString = "" }) => {
+const ProductCard = ({ product, queryString = "", priority = false, eager = priority }) => {
   const { wishlist, toggleWishlist } = useContext(StoreContext);
   const productId = product.id ?? product.product_id ?? product.productId;
   const productPath = `/product/${productId}${queryString ? `?${queryString}` : ""}`;
@@ -45,7 +45,8 @@ const ProductCard = ({ product, queryString = "" }) => {
           <img
             src={getProductImageUrl(product)}
             alt={product.name}
-            loading="lazy"
+            loading={eager ? "eager" : "lazy"}
+            fetchPriority={priority ? "high" : "auto"}
             decoding="async"
             className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
           />

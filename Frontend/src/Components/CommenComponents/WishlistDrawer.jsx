@@ -4,33 +4,8 @@ import { FiX, FiTrash2, FiShoppingBag } from "react-icons/fi";
 import { FaHeart, FaStar } from "react-icons/fa";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 import { formatCurrency } from "../../utils/currency";
+import { getProductImageUrl, resolveBackendImageUrl } from "../Home/productDisplay";
 import api from "../../api";
-
-const resolveImageUrl = (image) => {
-  if (image && typeof image === "object") {
-    return resolveImageUrl(image.url || image.path || image.src);
-  }
-  if (!image || typeof image !== "string" || /^(https?:|data:|blob:)/i.test(image)) return image;
-  const backendUrl = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
-  return `${backendUrl}${image.startsWith("/") ? image : `/${image}`}`;
-};
-
-const productImages = (value) => {
-  if (Array.isArray(value)) return value;
-  if (typeof value !== "string" || !value.trim()) return [];
-  try {
-    const parsed = JSON.parse(value);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [value];
-  }
-};
-
-const getProductImage = (product) => {
-  const variantImage = productImages(product?.variants)
-    .flatMap((variant) => productImages(variant?.images))[0];
-  return resolveImageUrl(variantImage || productImages(product?.images)[0]);
-};
 
 const StarRating = ({ rating = 0, count = 0 }) => {
   const stars = Math.round(rating);
@@ -267,6 +242,10 @@ const WishlistDrawer = ({ isOpen, onClose }) => {
                     : Math.round(((mrp - offerPrice) / mrp) * 100)
                   : 0;
                 const totalReviews = Number(product?.total_reviews) || 0;
+                const savedImage = typeof item.image === "string"
+                  ? resolveBackendImageUrl(item.image)
+                  : "";
+                const image = getProductImageUrl(product) || savedImage;
 
                 return (
                   <div
@@ -276,13 +255,14 @@ const WishlistDrawer = ({ isOpen, onClose }) => {
                   >
                     <div className="relative shrink-0">
                       <img
-                        src={
-                          getProductImage(product) ||
-                          "https://ui-avatars.com/api/?name=Jewel&background=f3f4f6&color=004D40"
-                        }
+                        src={image || "https://ui-avatars.com/api/?name=Jewel&background=f3f4f6&color=004D40"}
                         alt={product?.name || "Product"}
                         className="h-[90px] w-[75px] rounded-xl object-cover"
                         style={{ border: "1.5px solid rgba(212,160,23,0.2)" }}
+                        onError={(event) => {
+                          event.currentTarget.onerror = null;
+                          event.currentTarget.src = "https://ui-avatars.com/api/?name=Jewel&background=f3f4f6&color=004D40";
+                        }}
                       />
                     </div>
 
