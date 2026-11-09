@@ -409,7 +409,7 @@ const ProductDetail = () => {
             </div>
 
             {(product.description || product.full_description) && (
-              <p className="mt-3 line-clamp-3 text-sm leading-6 text-[#59645e]">{product.description || product.full_description}</p>
+              <p className="mt-3 line-clamp-3 text-justify text-sm leading-6 text-[#59645e]">{product.description || product.full_description}</p>
             )}
 
             <div className="mt-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">

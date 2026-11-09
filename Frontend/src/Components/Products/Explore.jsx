@@ -61,7 +61,9 @@ const Explore = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [sortBy, setSortBy] = useState("newest");
-  const [filtersOpen, setFiltersOpen] = useState(true);
+  const [filtersOpen, setFiltersOpen] = useState(
+    () => typeof window !== "undefined" && window.innerWidth >= 1024
+  );
   const [openFilters, setOpenFilters] = useState({
     category: true,
     metal: true,
@@ -84,6 +86,15 @@ const Explore = () => {
     updateGridColumns();
     window.addEventListener("resize", updateGridColumns);
     return () => window.removeEventListener("resize", updateGridColumns);
+  }, []);
+
+  useEffect(() => {
+    const desktopBreakpoint = window.matchMedia("(min-width: 1024px)");
+    const syncFiltersToViewport = () => setFiltersOpen(desktopBreakpoint.matches);
+
+    syncFiltersToViewport();
+    desktopBreakpoint.addEventListener("change", syncFiltersToViewport);
+    return () => desktopBreakpoint.removeEventListener("change", syncFiltersToViewport);
   }, []);
 
   const searchQuery = searchParams.get("search")?.trim() || "";
@@ -342,7 +353,7 @@ const Explore = () => {
       <PageHeader title={headerTitle} breadcrumbTitle="Explore" />
 
       <div className={`mx-auto grid max-w-[1700px] items-start gap-x-4 px-4 pt-4 sm:px-6 lg:px-8 ${filtersOpen ? "lg:grid-cols-[220px_minmax(0,1fr)] xl:grid-cols-[235px_minmax(0,1fr)]" : "lg:grid-cols-1"}`}>
-        <section className={`mt-4 lg:row-start-1 lg:mt-3 ${filtersOpen ? "lg:col-start-2" : "lg:col-start-1"}`} aria-labelledby="top-searches-title">
+        <section className={`mt-4 min-w-0 lg:row-start-1 lg:mt-3 ${filtersOpen ? "lg:col-start-2" : "lg:col-start-1"}`} aria-labelledby="top-searches-title">
           <div className="flex items-center justify-between gap-3">
             <h2 id="top-searches-title" className="flex items-center gap-2 font-serif text-base font-bold text-[#29231c]">
               <FaSearch className="text-xs text-[#a77525]" /> Top Searches
@@ -358,7 +369,7 @@ const Explore = () => {
             </button>
           </div>
           {topSearchProducts.length ? (
-            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4 lg:grid-cols-8">
+            <div className="mt-2 flex w-full min-w-0 snap-x snap-mandatory flex-nowrap gap-2 overflow-x-auto overflow-y-hidden overscroll-x-contain pb-2 sm:grid sm:grid-cols-4 sm:overflow-visible sm:pb-0 lg:grid-cols-8">
               {topSearchProducts.map((product) => {
                 const productId = product.id ?? product.product_id ?? product.product_code ?? product.name;
                 const image = getProductImageUrl(product);
@@ -368,7 +379,7 @@ const Explore = () => {
                   type="button"
                   onClick={() => setSearchFilter(searchQuery === product.name ? "" : product.name)}
                   title={product.name}
-                  className={`flex min-w-0 items-center gap-2 rounded-lg border px-2 py-2 text-left text-[10px] font-medium transition sm:text-[11px] ${searchQuery === product.name ? "border-[#174a38] bg-[#edf5ef] text-[#174a38]" : "border-[#eee5d6] bg-white text-[#514638] hover:border-[#d8b46c] hover:bg-[#fffaf0]"}`}
+                  className={`flex w-[calc(50%-4px)] shrink-0 snap-start items-center gap-2 rounded-lg border px-2 py-2 text-left text-[10px] font-medium transition sm:w-auto sm:min-w-0 sm:text-[11px] ${searchQuery === product.name ? "border-[#174a38] bg-[#edf5ef] text-[#174a38]" : "border-[#eee5d6] bg-white text-[#514638] hover:border-[#d8b46c] hover:bg-[#fffaf0]"}`}
                 >
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-md bg-[#f8f2e8]">
                     {image

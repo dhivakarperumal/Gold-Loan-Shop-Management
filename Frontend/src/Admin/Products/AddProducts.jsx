@@ -12,11 +12,11 @@ import {
   FiX
 } from "react-icons/fi";
 import api from "../../api";
+import { resolveBackendImageUrl } from "../../Components/Home/productDisplay";
 import { formatRateDate, getRateForPurity } from "../../PrivateRouter/goldRateUtils";
 import useGoldRates from "../../PrivateRouter/useGoldRates";
 import { formatCurrency } from "../../utils/currency";
 
-const BACKEND_URL = (import.meta.env.VITE_BACKEND_URL || "http://localhost:5000").replace(/\/$/, "");
 const GOLD_SHOP = "Sri Gold";
 const FALLBACK_PURITY_OPTIONS = {
   gold: ["24K / 999", "22K / 916", "20K / 833", "18K / 750", "14K / 585"],
@@ -107,12 +107,6 @@ const EMPTY_PRODUCT = {
 
 const inputClass = "mt-1.5 w-full rounded-xl border border-gray-200 bg-gray-50 px-3.5 py-2.5 text-sm font-medium text-slate-800 outline-none transition focus:border-amber-400 focus:bg-white focus:ring-2 focus:ring-amber-100";
 const labelClass = "block text-xs font-bold uppercase tracking-wide text-gray-500";
-
-const imageUrl = (path) => {
-  if (!path) return "";
-  if (/^(https?:|data:|blob:)/i.test(path)) return path;
-  return `${BACKEND_URL}${path.startsWith("/") ? path : `/${path}`}`;
-};
 
 const Section = ({ title, children }) => (
   <section className="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm">
@@ -561,18 +555,18 @@ const AddProducts = () => {
                   {/\.pdf(?:$|[?#])/i.test(formData.size_guide_chart) ? (
                     <iframe
                       className="h-32 w-full sm:h-40"
-                      src={imageUrl(formData.size_guide_chart)}
+                      src={resolveBackendImageUrl(formData.size_guide_chart)}
                       title="Size guide chart preview"
                     />
                   ) : (
                     <img
                       className="h-32 w-full bg-white object-contain sm:h-40"
-                      src={imageUrl(formData.size_guide_chart)}
+                      src={resolveBackendImageUrl(formData.size_guide_chart)}
                       alt="Size guide chart preview"
                     />
                   )}
                   <div className="flex items-center justify-between gap-3 border-t border-gray-200 bg-white px-3 py-2">
-                    <a className="text-sm font-semibold text-[#003B3B] underline" href={imageUrl(formData.size_guide_chart)} target="_blank" rel="noreferrer">Open size guide</a>
+                    <a className="text-sm font-semibold text-[#003B3B] underline" href={resolveBackendImageUrl(formData.size_guide_chart)} target="_blank" rel="noreferrer">Open size guide</a>
                     <button type="button" onClick={() => updateFormField("size_guide_chart", "")} aria-label="Remove size guide" className="text-red-500"><FiX /></button>
                   </div>
                 </div>
@@ -640,7 +634,7 @@ const AddProducts = () => {
                 <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
                   {formData.images.map((image, index) => (
                     <div key={`${image}-${index}`} className="group relative aspect-square overflow-hidden rounded-xl border border-gray-200">
-                      <img src={imageUrl(image)} alt={`Product ${index + 1}`} className="h-full w-full object-cover" />
+                      <img src={resolveBackendImageUrl(image)} alt={`Product ${index + 1}`} className="h-full w-full object-cover" />
                       <button type="button" onClick={() => removeImage(index)} aria-label="Remove product image" className="absolute right-2 top-2 rounded-full bg-white p-1.5 text-red-500 opacity-0 shadow transition group-hover:opacity-100"><FiTrash2 /></button>
                     </div>
                   ))}
@@ -653,7 +647,7 @@ const AddProducts = () => {
                 <p className={`${labelClass} mb-2`}>Product Video</p>
                 {formData.video ? (
                   <div className="overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
-                    <video className="h-32 w-full bg-black object-contain sm:h-40" src={imageUrl(formData.video)} controls preload="metadata">
+                    <video className="h-32 w-full bg-black object-contain sm:h-40" src={resolveBackendImageUrl(formData.video)} controls preload="metadata">
                       Your browser does not support video playback.
                     </video>
                     <div className="flex justify-end border-t border-gray-200 bg-white px-3 py-2">
@@ -669,18 +663,18 @@ const AddProducts = () => {
                     {/\.pdf(?:$|[?#])/i.test(formData.certificate) ? (
                       <iframe
                         className="h-32 w-full sm:h-40"
-                        src={imageUrl(formData.certificate)}
+                        src={resolveBackendImageUrl(formData.certificate)}
                         title="Certificate preview"
                       />
                     ) : (
                       <img
                         className="h-32 w-full bg-white object-contain sm:h-40"
-                        src={imageUrl(formData.certificate)}
+                        src={resolveBackendImageUrl(formData.certificate)}
                         alt="Certificate preview"
                       />
                     )}
                     <div className="flex items-center justify-between gap-3 border-t border-gray-200 bg-white px-3 py-2">
-                      <a className="text-sm font-semibold text-[#003B3B] underline" href={imageUrl(formData.certificate)} target="_blank" rel="noreferrer">Open certificate</a>
+                      <a className="text-sm font-semibold text-[#003B3B] underline" href={resolveBackendImageUrl(formData.certificate)} target="_blank" rel="noreferrer">Open certificate</a>
                       <button type="button" onClick={() => updateFormField("certificate", "")} aria-label="Remove certificate" className="text-red-500"><FiX /></button>
                     </div>
                   </div>
@@ -724,7 +718,7 @@ const AddProducts = () => {
               <h2 className="text-sm font-extrabold text-[#003B3B]">Product Snapshot</h2>
             </div>
             {formData.images[0] ? (
-              <img src={imageUrl(formData.images[0])} alt={formData.name || "Product preview"} className="aspect-square w-full rounded-xl bg-gray-50 object-contain" />
+              <img src={resolveBackendImageUrl(formData.images[0])} alt={formData.name || "Product preview"} className="aspect-square w-full rounded-xl bg-gray-50 object-contain" />
             ) : (
               <div className="flex aspect-square w-full flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-200 bg-gray-50 text-gray-400">
                 <FiImage size={30} />
