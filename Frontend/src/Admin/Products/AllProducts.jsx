@@ -424,8 +424,7 @@ const AllProducts = () => {
                                                                     MRP <span className={Number(product.mrp) > Number(product.final_selling_price) ? "line-through" : "font-semibold"}>{formatMoney(product.mrp)}</span>
                                                                 </span>
                                                                 <span className="text-slate-500">
-                                                                    Offer <span className="font-semibold text-orange-600">{formatMoney(product.offer_price)}</span>
-                                                                    {Number(product.applied_discount) > 0 && <span className="ml-1 text-orange-600">−{formatMoney(product.applied_discount)}</span>}
+                                                                    Discount <span className="font-semibold text-orange-600">−{formatMoney(product.applied_discount)}</span>
                                                                 </span>
                                                                 <span className="font-bold text-[#240046]">Final {formatMoney(product.final_selling_price)}</span>
                                                             </div>
@@ -526,7 +525,11 @@ const AllProducts = () => {
                                         <h4 className="text-sm font-bold text-slate-800 truncate mt-0.5">{product.name}</h4>
                                         <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-50">
                                             <div>
-                                                <p className="text-base font-black text-slate-800">{formatCurrency(product.offer_price || product.mrp || 0)}</p>
+                                                <p className="text-base font-black text-slate-800">{formatCurrency(product.final_selling_price ?? product.offer_price ?? product.mrp ?? 0)}</p>
+                                                <p className="text-[10px] text-gray-500">
+                                                    Final price
+                                                    {Number(product.applied_discount) > 0 && <span className="ml-1 text-orange-600">· Discount −{formatCurrency(product.applied_discount)}</span>}
+                                                </p>
                                                 <p className="text-[10px] text-gray-400">Stock: {product.total_stock ?? 0}</p>
                                             </div>
                                             <Link to={`/admin/products/${product.id}`} className="px-3 py-1.5 bg-[#003B3B]/10 text-[#003B3B] rounded-lg text-xs font-bold hover:bg-[#003B3B] hover:text-white transition-all">
