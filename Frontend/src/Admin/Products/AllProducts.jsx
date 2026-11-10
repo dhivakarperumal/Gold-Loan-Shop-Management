@@ -36,7 +36,9 @@ const AllProducts = () => {
     const [sortBy, setSortBy] = useState("created_at");
     const [sortOrder, setSortOrder] = useState("desc");
     const [currentPage, setCurrentPage] = useState(1);
-    const itemsPerPage = 10;
+    const [viewMode, setViewMode] = useState("table");
+    const [cardItemsPerPage, setCardItemsPerPage] = useState(8);
+    const itemsPerPage = viewMode === "grid" ? cardItemsPerPage : 10;
 
     const currentCacheKey = JSON.stringify({
         page: currentPage,
@@ -55,7 +57,6 @@ const AllProducts = () => {
     const [products, setProducts] = useState(pageData?.products || []);
     const [loading, setLoading] = useState(!pageData);
     const [refreshing, setRefreshing] = useState(true);
-    const [viewMode, setViewMode] = useState("table"); // 'table' or 'grid'
 
     // Stock Update Modal State
     const [currentProduct, setCurrentProduct] = useState(null);
@@ -242,7 +243,7 @@ const AllProducts = () => {
     // Reset to page 1 when search/filters change
     useEffect(() => {
         setCurrentPage(1);
-    }, [searchTerm, categoryFilter, purityFilter, stockFilter, lastPriceUpdateFilter, sortBy, sortOrder]);
+    }, [searchTerm, categoryFilter, purityFilter, stockFilter, lastPriceUpdateFilter, sortBy, sortOrder, itemsPerPage]);
 
     const refreshPrices = async () => {
         if (!window.confirm("Recalculate product prices using the currently active daily gold rates?")) return;
@@ -369,6 +370,21 @@ const AllProducts = () => {
                             <FiGrid size={17} />
                         </button>
                     </div>
+                    {viewMode === "grid" && (
+                        <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+                            Show
+                            <select
+                                value={cardItemsPerPage}
+                                onChange={(event) => setCardItemsPerPage(Number(event.target.value))}
+                                className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm font-medium text-slate-600 outline-none"
+                                aria-label="Products per card page"
+                            >
+                                <option value={8}>8</option>
+                                <option value={12}>12</option>
+                            </select>
+                            per page
+                        </label>
+                    )}
                     <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-slate-500">
                         <p>Prices are stored from the active daily metal rates; MRP remains manually configured.</p>
                         <p>{lastPriceRefresh ? `Last manual refresh: ${formatDate(lastPriceRefresh)}` : "Product rows show each price's last update."}</p>
