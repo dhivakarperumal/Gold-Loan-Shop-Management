@@ -11,6 +11,7 @@ import {
   UserRound
 } from "lucide-react";
 import PageContainer from "../CommenComponents/PageContainer";
+import PageHeader from "../CommenComponents/PageHeader";
 
 const sections = [
   { id: "information-we-collect", label: "Information we collect", icon: UserRound },
@@ -113,42 +114,19 @@ const policySections = [
 export default function InfoPage() {
   return (
     <main className="min-h-screen bg-[#fffaf0] pb-12">
-      <section className="relative isolate overflow-hidden bg-[#073b2f] text-white">
-        <div className="absolute -right-20 -top-32 -z-10 h-80 w-80 rounded-full border border-white/10" aria-hidden="true" />
-        <div className="absolute -right-8 -top-20 -z-10 h-56 w-56 rounded-full border border-[#e9c66d]/20" aria-hidden="true" />
-        <PageContainer className="py-9 sm:py-12 lg:py-16">
-          <nav className="text-xs text-white/65" aria-label="Breadcrumb">
-            <Link to="/" className="transition hover:text-white">Home</Link>
-            <span className="mx-2" aria-hidden="true">/</span>
-            <span className="font-semibold text-white">Privacy Policy</span>
-          </nav>
-          <div className="mt-8 grid items-end gap-6 sm:mt-10 sm:grid-cols-[1fr_auto]">
-            <div className="max-w-3xl">
-              <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#f2d58a] sm:text-xs">
-                <ShieldCheck size={15} aria-hidden="true" />
-                Your information, handled with care
-              </span>
-              <h1 className="mt-4 font-serif text-3xl font-bold leading-tight sm:text-4xl lg:text-5xl">Privacy Policy</h1>
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-white/75 sm:text-base">
-                Learn what information Sri Golds collects, why we use it, and the choices available to you when using our website, jewellery and gold-loan services.
-              </p>
-            </div>
-            <div className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-xs text-white/75">
-              <Clock3 size={18} className="shrink-0 text-[#f2d58a]" aria-hidden="true" />
-              <span><span className="block font-semibold text-white">Last updated</span>10 November 2026</span>
-            </div>
-          </div>
-        </PageContainer>
-      </section>
+      <PageHeader title="Privacy Policy" />
 
       <PageContainer className="py-7 sm:py-10">
         <div className="mb-6 flex items-start gap-3 rounded-xl border border-[#ead8b6] bg-white p-4 shadow-sm sm:p-5">
           <span className="mt-0.5 rounded-full bg-[#fff4d9] p-2 text-[#a66b00]">
             <ShieldCheck size={18} aria-hidden="true" />
           </span>
-          <p className="text-xs leading-6 text-[#665842] sm:text-sm">
-            This policy applies to information handled through the Sri Golds website and related shop services. It explains our current practices in plain language; the information requested depends on the service you use.
-          </p>
+          <div className="flex flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-xs leading-6 text-[#665842] sm:text-sm">
+              This policy applies to information handled through the Sri Golds website and related shop services. It explains our current practices in plain language; the information requested depends on the service you use.
+            </p>
+            <p className="shrink-0 text-[11px] font-semibold text-[#81786b]">Last updated: 10 November 2026</p>
+          </div>
         </div>
 
         <div className="grid items-start gap-6 lg:grid-cols-[250px_minmax(0,1fr)] lg:gap-8">
