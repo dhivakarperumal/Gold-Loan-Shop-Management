@@ -233,7 +233,10 @@ const AllProducts = () => {
     };
 
     // Simplified Pagination (Handled by backend)
-    const totalPages = pagination.totalPages;
+    const totalPages = Math.max(1, Number(pagination.totalPages) || 1);
+    const pageNumbers = [...new Set([1, currentPage - 1, currentPage, currentPage + 1, totalPages])]
+        .filter((page) => page >= 1 && page <= totalPages)
+        .sort((firstPage, secondPage) => firstPage - secondPage);
     const currentItems = products;
 
     // Reset to page 1 when search/filters change
@@ -383,20 +386,36 @@ const AllProducts = () => {
                         /* Table View */
                         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                             <div className="overflow-x-auto">
-                                <table className="w-full min-w-[1900px] text-left">
+                                <table className="w-full min-w-[1700px] text-left">
                                     <thead>
                                         <tr className="border-b border-white/10 bg-gradient-to-r from-[#07564B] via-[#064A41] to-[#043D37]">
-                                            {["S No", "Image", "Product Name", "SKU / Product Code", "Category", "Metal Type", "Purity", "Gross Weight (g)", "Net Gold Weight (g)", "Making Charge", "Daily Gold Rate", "Gold Value", "MRP", "Offer Type", "Offer Price / Discount", "Final Price", "Stock Status", "Last Price Updated", "Actions"].map((heading) => (
-                                                <th key={heading} className="whitespace-nowrap px-4 py-4 text-[11px] font-bold uppercase tracking-wider text-white">{heading}</th>
+                                            {["S No", "Product & Pricing", "SKU / Product Code", "Category", "Metal Type", "Purity", "Gross Weight (g)", "Net Gold Weight (g)", "Making Charge", "Daily Gold Rate", "Gold Value", "Stock Status", "Last Price Updated", "Actions"].map((heading, index) => (
+                                                <th key={heading} className={`whitespace-nowrap px-4 py-4 text-[11px] font-bold uppercase tracking-wider text-white ${index === 0 ? "sticky left-0 z-20 w-[60px] min-w-[60px] bg-[#07564B]" : index === 1 ? "sticky left-[60px] z-20 bg-[#064A41]" : ""}`}>{heading}</th>
                                             ))}
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-200">
                                         {currentItems.map((product, index) => (
                                             <tr key={product.id} className="hover:bg-[#240046]/5 transition-colors group">
-                                                <td className="px-4 py-3 text-xs font-semibold text-slate-500">{(currentPage - 1) * itemsPerPage + index + 1}</td>
-                                                <td className="px-4 py-3"><img src={getProductImage(product)} alt={product.name} loading="lazy" onError={(event) => { event.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name || "P")}&background=random`; }} className="h-11 w-11 rounded-lg border border-gray-100 object-cover" /></td>
-                                                <td className="max-w-[180px] px-4 py-3 text-sm font-bold text-slate-800">{product.name}</td>
+                                                <td className="sticky left-0 z-10 w-[60px] min-w-[60px] bg-white px-4 py-3 text-xs font-semibold text-slate-500 group-hover:bg-[#faf8fc]">{(currentPage - 1) * itemsPerPage + index + 1}</td>
+                                                <td className="sticky left-[60px] z-10 min-w-[380px] bg-white px-4 py-3 group-hover:bg-[#faf8fc]">
+                                                    <div className="flex items-center gap-3">
+                                                        <img src={getProductImage(product)} alt={product.name} loading="lazy" onError={(event) => { event.currentTarget.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(product.name || "P")}&background=random`; }} className="h-12 w-12 shrink-0 rounded-lg border border-gray-100 object-cover" />
+                                                        <div className="min-w-0">
+                                                            <p className="truncate text-sm font-bold text-slate-800">{product.name}</p>
+                                                            <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1 text-[10px]">
+                                                                <span className="text-slate-500">
+                                                                    MRP <span className={Number(product.mrp) > Number(product.final_selling_price) ? "line-through" : "font-semibold"}>{formatMoney(product.mrp)}</span>
+                                                                </span>
+                                                                <span className="text-slate-500">
+                                                                    Offer <span className="font-semibold text-orange-600">{formatMoney(product.offer_price)}</span>
+                                                                    {Number(product.applied_discount) > 0 && <span className="ml-1 text-orange-600">−{formatMoney(product.applied_discount)}</span>}
+                                                                </span>
+                                                                <span className="font-bold text-[#240046]">Final {formatMoney(product.final_selling_price)}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </td>
                                                 <td className="px-4 py-3 text-xs font-semibold text-slate-600">{product.product_code || "—"}</td>
                                                 <td className="px-4 py-3 text-xs text-slate-600">{product.category || "—"}</td>
                                                 <td className="px-4 py-3 text-xs text-slate-600">{product.metal_type || "—"}</td>
@@ -406,16 +425,6 @@ const AllProducts = () => {
                                                 <td className="px-4 py-3 text-xs text-slate-600">{product.making_charge == null ? "—" : `${product.making_charge_type === "Percentage" ? `${product.making_charge}%` : formatMoney(product.making_charge)}`}</td>
                                                 <td className="px-4 py-3 text-xs text-slate-600">{product.gold_rate_per_gram == null ? "—" : `${formatMoney(product.gold_rate_per_gram)} / g`}</td>
                                                 <td className="px-4 py-3 text-xs font-semibold text-slate-700">{formatMoney(product.gold_value)}</td>
-                                                <td className="px-4 py-3 text-xs text-slate-500">
-                                                    {Number(product.mrp) > Number(product.final_selling_price) && <span className="line-through">{formatMoney(product.mrp)}</span>}
-                                                    {Number(product.mrp) <= Number(product.final_selling_price) && formatMoney(product.mrp)}
-                                                </td>
-                                                <td className="px-4 py-3 text-xs text-slate-600">{product.offer_type || (Number(product.offer) > 0 ? "Percentage" : "None")}</td>
-                                                <td className="px-4 py-3 text-xs text-slate-600">
-                                                    <span>{formatMoney(product.offer_price)}</span>
-                                                    {Number(product.applied_discount) > 0 && <span className="ml-1 rounded bg-orange-50 px-1.5 py-0.5 text-[10px] font-bold text-[#ff8500]">−{formatMoney(product.applied_discount)}</span>}
-                                                </td>
-                                                <td className="px-4 py-3 text-sm font-black text-[#240046]">{formatMoney(product.final_selling_price)}</td>
                                                 <td className="px-4 py-3">
                                                     <span className={`rounded-lg border px-2.5 py-1 text-[11px] font-bold ${getStatusStyle(product.total_stock <= 0 ? "Out of Stock" : product.total_stock < 10 ? "Low Stock" : "Active")}`}>
                                                         {product.total_stock <= 0 ? "Out of Stock" : product.total_stock < 10 ? "Low Stock" : "In Stock"}
@@ -463,45 +472,6 @@ const AllProducts = () => {
                                 </table>
                             </div>
 
-                            {/* Table Footer / Pagination */}
-                            <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-between">
-                                <p className="text-xs text-gray-500 font-medium">
-                                    Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, pagination.total)} of {pagination.total} jewelry products
-                                </p>
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                                        disabled={currentPage === 1}
-                                        className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-500 hover:border-[#7b2cbf] hover:text-[#7b2cbf] disabled:opacity-30 transition-all"
-                                    >‹</button>
-                                    {[...Array(Math.min(totalPages, 5))].map((_, i) => {
-                                        const page = i + 1;
-                                        return (
-                                            <button
-                                                key={page}
-                                                onClick={() => setCurrentPage(page)}
-                                                className={`w-8 h-8 rounded-lg text-xs font-bold transition-all border ${currentPage === page ? "bg-[#003B3B] border-[#003B3B] text-white shadow-md shadow-[#003B3B]/20" : "bg-white border-gray-200 text-gray-500 hover:border-[#003B3B]"}`}
-                                            >
-                                                {page}
-                                            </button>
-                                        );
-                                    })}
-                                    {totalPages > 5 && <span className="text-gray-400 text-sm">...</span>}
-                                    {totalPages > 5 && (
-                                        <button
-                                            onClick={() => setCurrentPage(totalPages)}
-                                            className={`w-8 h-8 rounded-lg text-xs font-bold border ${currentPage === totalPages ? "bg-[#003B3B] border-[#003B3B] text-white" : "bg-white border-gray-200 text-gray-500 hover:border-[#003B3B]"}`}
-                                        >
-                                            {totalPages}
-                                        </button>
-                                    )}
-                                    <button
-                                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                                        disabled={currentPage === totalPages}
-                                        className="px-3 py-1.5 rounded-lg border border-gray-200 text-sm text-gray-500 hover:border-[#7b2cbf] hover:text-[#7b2cbf] disabled:opacity-30 transition-all"
-                                    >›</button>
-                                </div>
-                            </div>
                         </div>
                     ) : (
                         /* Grid View */
@@ -550,6 +520,40 @@ const AllProducts = () => {
                                     </div>
                                 </div>
                             ))}
+                        </div>
+                    )}
+
+                    {pagination.total > 0 && (
+                        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-gray-100 bg-white px-5 py-4 shadow-sm">
+                            <p className="text-xs font-medium text-gray-500">
+                                Showing {(currentPage - 1) * itemsPerPage + 1} to {Math.min(currentPage * itemsPerPage, pagination.total)} of {pagination.total} jewelry products
+                            </p>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => setCurrentPage((page) => Math.max(page - 1, 1))}
+                                    disabled={currentPage === 1}
+                                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-500 transition-all hover:border-[#7b2cbf] hover:text-[#7b2cbf] disabled:opacity-30"
+                                    aria-label="Previous page"
+                                >‹</button>
+                                {pageNumbers.map((page, index) => (
+                                    <React.Fragment key={page}>
+                                        {index > 0 && page - pageNumbers[index - 1] > 1 && <span className="px-1 text-sm text-gray-400">…</span>}
+                                        <button
+                                            onClick={() => setCurrentPage(page)}
+                                            aria-current={currentPage === page ? "page" : undefined}
+                                            className={`h-8 w-8 rounded-lg border text-xs font-bold transition-all ${currentPage === page ? "border-[#003B3B] bg-[#003B3B] text-white shadow-md shadow-[#003B3B]/20" : "border-gray-200 bg-white text-gray-500 hover:border-[#003B3B]"}`}
+                                        >
+                                            {page}
+                                        </button>
+                                    </React.Fragment>
+                                ))}
+                                <button
+                                    onClick={() => setCurrentPage((page) => Math.min(page + 1, totalPages))}
+                                    disabled={currentPage === totalPages}
+                                    className="rounded-lg border border-gray-200 px-3 py-1.5 text-sm text-gray-500 transition-all hover:border-[#7b2cbf] hover:text-[#7b2cbf] disabled:opacity-30"
+                                    aria-label="Next page"
+                                >›</button>
+                            </div>
                         </div>
                     )}
 
