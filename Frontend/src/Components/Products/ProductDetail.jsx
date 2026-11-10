@@ -14,6 +14,7 @@ import { StoreContext } from "../../PrivateRouter/StoreContext";
 import PageContainer from "../CommenComponents/PageContainer";
 import PageHeader from "../CommenComponents/PageHeader";
 import api from "../../api";
+import { getProductDiscountPercentage } from "../../utils/productDiscount";
 import { Autoplay } from "swiper/modules";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
@@ -208,9 +209,7 @@ const ProductDetail = () => {
 
   const offerPrice = Number(product.offer_price ?? product.final_selling_price ?? product.mrp ?? 0);
   const mrp = Number(product.mrp || 0);
-  const discount = Number(product.discount) > 0
-    ? Number(product.discount)
-    : mrp > offerPrice ? Math.round(((mrp - offerPrice) / mrp) * 100) : 0;
+  const discount = getProductDiscountPercentage(product);
   const highlights = parseArray(product.highlights);
   const specs = parseArray(product.specifications);
   const sizeGuide = assetUrl(product.size_guide_chart);
@@ -260,7 +259,7 @@ const ProductDetail = () => {
   ];
   const pricingDetails = [
     ["Offer", product.offer != null ? `${product.offer}%` : ""],
-    ["Discount", product.discount != null ? `${product.discount}%` : ""],
+    ["Discount", discount ? `${discount}%` : ""],
     ["GST", product.gst_rate != null ? `${product.gst_rate}%` : ""],
     ["Making charge", product.making_charge != null
       ? String(product.making_charge_type).toLowerCase() === "percentage"

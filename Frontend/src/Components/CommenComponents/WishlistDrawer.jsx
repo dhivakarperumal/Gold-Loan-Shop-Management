@@ -4,6 +4,7 @@ import { FiX, FiTrash2, FiShoppingBag } from "react-icons/fi";
 import { FaHeart, FaStar } from "react-icons/fa";
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 import { formatCurrency } from "../../utils/currency";
+import { getProductDiscountPercentage } from "../../utils/productDiscount";
 import { getProductImageUrl, resolveBackendImageUrl } from "../Home/productDisplay";
 import api from "../../api";
 
@@ -236,11 +237,7 @@ const WishlistDrawer = ({ isOpen, onClose }) => {
                   : Number(product?.final_selling_price) > 0
                     ? Number(product.final_selling_price)
                     : mrp;
-                const discount = mrp > offerPrice
-                  ? Number(product?.discount) > 0
-                    ? Number(product.discount)
-                    : Math.round(((mrp - offerPrice) / mrp) * 100)
-                  : 0;
+                const discount = getProductDiscountPercentage(product || {});
                 const totalReviews = Number(product?.total_reviews) || 0;
                 const savedImage = typeof item.image === "string"
                   ? resolveBackendImageUrl(item.image)

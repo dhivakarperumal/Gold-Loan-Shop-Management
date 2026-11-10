@@ -21,6 +21,7 @@ import {
   FiTrash2
 } from "react-icons/fi";
 import api from "../../api";
+import { getProductDiscountPercentage } from "../../utils/productDiscount";
 import { formatCurrency } from "../../utils/currency";
 
 const BACKEND_URL = (
@@ -219,7 +220,7 @@ function ProductDetail() {
   const selectedImage = images[activeImage] || images[0] || "";
   const offerPrice = Number(product.offer_price ?? product.final_selling_price ?? product.mrp ?? 0);
   const mrp = Number(product.mrp || 0);
-  const discount = Number(product.discount || product.offer || (mrp > offerPrice ? ((mrp - offerPrice) / mrp) * 100 : 0));
+  const discount = getProductDiscountPercentage(product);
   const stockStatus = product.stock_status || (Number(product.total_stock) > 0 ? "In Stock" : "Out of Stock");
   const productInfo = [
     ["Product Name", product.name],

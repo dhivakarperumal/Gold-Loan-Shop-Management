@@ -4,6 +4,7 @@ import { BadgeCheck, CircleCheck, CircleX, Heart, MessageCircle, Star, Weight } 
 import { StoreContext } from "../../PrivateRouter/StoreContext";
 import { getProductImageUrl } from "./productDisplay";
 import { formatCurrencyRounded } from "../../utils/currency";
+import { getProductDiscountPercentage } from "../../utils/productDiscount";
 
 const formatPrice = formatCurrencyRounded;
 
@@ -18,11 +19,7 @@ const ProductCard = ({ product, queryString = "", priority = false, eager = prio
   const offerPrice = Number(
     product.offer_price ?? product.final_selling_price ?? product.mrp ?? 0
   );
-  const discount = mrp > offerPrice
-    ? Number(product.discount) > 0
-      ? Number(product.discount)
-      : Math.round(((mrp - offerPrice) / mrp) * 100)
-    : 0;
+  const discount = getProductDiscountPercentage(product);
   const weight = product.gross_weight != null && product.gross_weight !== ""
     ? `${Number(product.gross_weight)} g`
     : "-";

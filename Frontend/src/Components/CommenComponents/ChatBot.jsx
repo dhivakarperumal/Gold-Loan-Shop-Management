@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../../api";
 import { formatCurrency } from "../../utils/currency";
+import { getProductDiscountPercentage } from "../../utils/productDiscount";
 import "./ChatBot.css";
 
 // ─── Intent Detection ────────────────────────────────────────────────────────
@@ -655,7 +656,7 @@ const MessageBubble = ({ msg, onProductClick, onOrderClick, onActionClick, onSen
                 const price = product.offer_price || product.price;
                 const originalPrice = product.offer_price ? product.price : null;
                 const discount = originalPrice
-                  ? Math.round(((originalPrice - price) / originalPrice) * 100)
+                  ? getProductDiscountPercentage({ price: originalPrice, offer_price: price })
                   : null;
                 return (
                   <div key={product.id} className="product-card-chat" onClick={() => onProductClick(product)}>
