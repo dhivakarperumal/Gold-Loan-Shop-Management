@@ -452,7 +452,8 @@ export default function LoanCustomerManagement() {
 
   const handleSave = async (event) => {
     event.preventDefault();
-    if (!form.photo_url.trim()) {
+    const photoUrl = String(form.photo_url ?? "").trim();
+    if (!photoUrl) {
       toast.error("Upload a customer photo before saving.");
       return;
     }
@@ -471,14 +472,14 @@ export default function LoanCustomerManagement() {
     }
     setSaving(true);
     let customerPersisted = false;
-    const payload = {
-      ...form,
-      full_name: form.full_name.trim(),
-      mobile: form.mobile.trim(),
-      alternate_mobile: form.alternate_mobile.trim(),
-      photo_url: form.photo_url.trim()
-    };
     try {
+      const payload = {
+        ...form,
+        full_name: String(form.full_name ?? "").trim(),
+        mobile: String(form.mobile ?? "").trim(),
+        alternate_mobile: String(form.alternate_mobile ?? "").trim(),
+        photo_url: photoUrl
+      };
       let savedCustomer;
       if (editingCustomer) {
         const response = await api.put(`/loan-customers/${editingCustomer.id}`, payload);
