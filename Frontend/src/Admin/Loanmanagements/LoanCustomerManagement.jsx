@@ -285,11 +285,20 @@ export default function LoanCustomerManagement() {
   useEffect(() => {
     const editCustomerId = location.state?.editCustomerId;
     if (loading || !editCustomerId || handledEditCustomerId.current === String(editCustomerId)) return;
-    const customer = customers.find((item) => String(item.id) === String(editCustomerId));
-    if (!customer) return;
     handledEditCustomerId.current = String(editCustomerId);
     navigate(location.pathname, { replace: true, state: null });
-    openEditCustomer(customer);
+    const customer = customers.find((item) => String(item.id) === String(editCustomerId));
+    if (customer) {
+      void openEditCustomer(customer);
+      return;
+    }
+
+    api.get(`/loan-customers/${editCustomerId}`)
+      .then(({ data }) => openEditCustomer(data))
+      .catch((error) => {
+        console.error("Failed to load customer for editing:", error);
+        toast.error(error.response?.data?.message || "Could not load this customer for editing.");
+      });
   }, [loading, customers, location, navigate]);
 
   const closeForm = () => {
