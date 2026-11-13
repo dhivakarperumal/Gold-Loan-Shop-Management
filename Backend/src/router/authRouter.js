@@ -2,6 +2,7 @@ const express = require('express');
 const {
   createManagedUser,
   changeMyPassword,
+  deactivateMyAccount,
   getMyProfile,
   getUsers,
   login,
@@ -24,6 +25,7 @@ router.post('/register', register);
 router.post('/login', login);
 router.get('/me', requireUser, getMyProfile);
 router.put('/me', requireUser, updateMyProfile);
+router.put('/me/status', requireUser, deactivateMyAccount);
 router.put('/me/password', requireUser, changeMyPassword);
 router.put('/me/notifications', requireUser, saveMyNotificationPreferences);
 router.post('/me/photo', requireUser, (req, res, next) => {

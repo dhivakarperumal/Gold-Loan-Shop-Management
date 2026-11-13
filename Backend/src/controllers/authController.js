@@ -285,6 +285,16 @@ async function updateManagedUserStatus(req, res, next) {
   }
 }
 
+async function deactivateMyAccount(req, res, next) {
+  try {
+    const user = await updateUserStatus(Number(req.storeUser.user_id), 'Inactive');
+    if (!user) return res.status(404).json({ message: 'Customer not found' });
+    return res.json({ message: 'Account deactivated successfully', user });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function removeManagedUser(req, res, next) {
   const userId = Number(req.params.id);
   if (!Number.isSafeInteger(userId) || userId < 1) {
@@ -314,6 +324,7 @@ module.exports = {
   removeMyProfileImage,
   saveMyProfileImage,
   saveMyNotificationPreferences,
+  deactivateMyAccount,
   updateMyProfile,
   updateManagedUser,
   updateManagedUserStatus
