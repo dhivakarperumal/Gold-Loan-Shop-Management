@@ -254,12 +254,14 @@ const Users = () => {
                 event.stopPropagation();
                 handleToggleUserStatus(user);
             }}
-            className="inline-flex items-center gap-2 rounded-md p-1 text-[10px] font-bold text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+            className="inline-flex min-w-[96px] items-center gap-2 rounded-md px-1 py-1 text-left text-[11px] font-semibold disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 focus-visible:ring-offset-2"
         >
-            <span className={`relative h-5 w-9 rounded-full transition-colors ${user.status === "Active" ? "bg-emerald-500" : "bg-slate-300"}`}>
-                <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${user.status === "Active" ? "translate-x-4" : "translate-x-0.5"}`} />
+            <span className={`relative h-5 w-9 shrink-0 rounded-full transition-colors ${user.status === "Active" ? "bg-emerald-500" : "bg-slate-300"}`}>
+                <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow-sm transition-[left] ${user.status === "Active" ? "left-4" : "left-0.5"}`} />
             </span>
-            {user.status}
+            <span className={`whitespace-nowrap ${user.status === "Active" ? "text-emerald-700" : "text-slate-500"}`}>
+                {user.status}
+            </span>
         </button>
     );
 
@@ -370,7 +372,7 @@ const Users = () => {
                                         <th className="px-4 py-4">Customer</th>
                                         <th className="px-4 py-4">Contact</th>
                                         <th className="px-4 py-4">Role</th>
-                                        <th className="px-4 py-4">Status</th>
+                                        <th className="w-[110px] px-4 py-4">Status</th>
                                         <th className="px-4 py-4">Join Date</th>
                                         <th className="rounded-tr-xl px-4 py-4 text-right">Actions</th>
                                     </tr>
