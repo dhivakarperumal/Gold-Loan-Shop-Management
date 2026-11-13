@@ -12,6 +12,7 @@ const {
   updateOwnProfileImage,
   updatePasswordHash,
   updateUser,
+  updateUserStatus,
   verifyPassword
 } = require('../modules/authModule');
 const { isValidProfileImage, removeProfileImage } = require('../middleware/profileImageUpload');
@@ -67,7 +68,7 @@ async function login(req, res, next) {
       return res.status(401).json({ message: 'Invalid credentials' });
     }
     if (user.status !== 'Active') {
-      return res.status(403).json({ message: 'This account is inactive' });
+      return res.status(403).json({ message: 'Your account is inactive. Please contact the administrator.' });
     }
 
     const { password_hash: passwordHash, ...publicUser } = user;
@@ -259,6 +260,31 @@ async function updateManagedUser(req, res, next) {
   }
 }
 
+async function updateManagedUserStatus(req, res, next) {
+  const userId = Number(req.params.id);
+  const status = typeof req.body?.status === 'string'
+    ? normalizeStatus(req.body.status)
+    : null;
+
+  if (!Number.isSafeInteger(userId) || userId < 1) {
+    return res.status(400).json({ message: 'Customer ID is invalid' });
+  }
+  if (!status || !VALID_STATUSES.has(status)) {
+    return res.status(400).json({ message: 'Status must be Active or Inactive' });
+  }
+  if (userId === Number(req.adminUser.user_id) && status === 'Inactive') {
+    return res.status(400).json({ message: 'You cannot deactivate your own administrator account' });
+  }
+
+  try {
+    const user = await updateUserStatus(userId, status);
+    if (!user) return res.status(404).json({ message: 'Customer not found' });
+    return res.json({ message: `Customer ${status.toLowerCase()} successfully`, user });
+  } catch (error) {
+    return next(error);
+  }
+}
+
 async function removeManagedUser(req, res, next) {
   const userId = Number(req.params.id);
   if (!Number.isSafeInteger(userId) || userId < 1) {
@@ -289,5 +315,6 @@ module.exports = {
   saveMyProfileImage,
   saveMyNotificationPreferences,
   updateMyProfile,
-  updateManagedUser
+  updateManagedUser,
+  updateManagedUserStatus
 };

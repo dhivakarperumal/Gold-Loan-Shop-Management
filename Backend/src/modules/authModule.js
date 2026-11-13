@@ -167,6 +167,14 @@ async function updateUser(userId, { username, name, email, phone, role }) {
   return getUserById(userId);
 }
 
+async function updateUserStatus(userId, status) {
+  await pool.execute(
+    'UPDATE users SET status = ? WHERE user_id = ?',
+    [status, userId]
+  );
+  return getUserById(userId);
+}
+
 async function deleteUser(userId) {
   const [result] = await pool.execute(
     'DELETE FROM users WHERE user_id = ?',
@@ -214,6 +222,7 @@ module.exports = {
   insertUser,
   listUsers,
   updateUser,
+  updateUserStatus,
   updateOwnProfile,
   updateOwnProfileImage,
   updatePasswordHash,

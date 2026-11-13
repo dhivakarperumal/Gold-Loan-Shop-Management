@@ -11,7 +11,8 @@ const {
   saveMyProfileImage,
   saveMyNotificationPreferences,
   updateMyProfile,
-  updateManagedUser
+  updateManagedUser,
+  updateManagedUserStatus
 } = require('../controllers/authController');
 const requireAdmin = require('../middleware/requireAdmin');
 const requireUser = require('../middleware/requireUser');
@@ -36,6 +37,7 @@ router.delete('/me/photo', requireUser, removeMyProfileImage);
 router.get('/users', requireAdmin, getUsers);
 router.post('/users', requireAdmin, createManagedUser);
 router.put('/users/:id', requireAdmin, updateManagedUser);
+router.put('/users/:id/status', requireAdmin, updateManagedUserStatus);
 router.delete('/users/:id', requireAdmin, removeManagedUser);
 
 module.exports = router;

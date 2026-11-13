@@ -57,6 +57,7 @@ const Users = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [editUserId, setEditUserId] = useState(null);
     const [submitLoading, setSubmitLoading] = useState(false);
+    const [updatingStatusUserId, setUpdatingStatusUserId] = useState(null);
     const [formData, setFormData] = useState({
         username: "",
         name: "",
@@ -221,6 +222,47 @@ const Users = () => {
         }
     };
 
+    const handleToggleUserStatus = async (user) => {
+        if (refreshing || updatingStatusUserId !== null) return;
+        const status = user.status === "Active" ? "Inactive" : "Active";
+        setUpdatingStatusUserId(user.id);
+        try {
+            const response = await api.put(`/auth/users/${user.id}/status`, { status });
+            setUsers((currentUsers) => currentUsers.map((currentUser) =>
+                String(currentUser.id) === String(user.id)
+                    ? { ...currentUser, status: response.data.user.status }
+                    : currentUser
+            ));
+            toast.success(`Customer ${status.toLowerCase()} successfully.`);
+        } catch (error) {
+            console.error("Failed to update customer status:", error);
+            toast.error(error.response?.data?.message || "Could not update this customer's status.");
+        } finally {
+            setUpdatingStatusUserId(null);
+        }
+    };
+
+    const renderStatusToggle = (user) => (
+        <button
+            type="button"
+            role="switch"
+            aria-checked={user.status === "Active"}
+            aria-label={`${user.status === "Active" ? "Deactivate" : "Activate"} ${user.name}`}
+            title={`Click to ${user.status === "Active" ? "deactivate" : "activate"} ${user.name}`}
+            disabled={refreshing || updatingStatusUserId !== null}
+            onClick={(event) => {
+                event.stopPropagation();
+                handleToggleUserStatus(user);
+            }}
+            className="inline-flex items-center gap-2 rounded-md p-1 text-[10px] font-bold text-slate-600 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+            <span className={`relative h-5 w-9 rounded-full transition-colors ${user.status === "Active" ? "bg-emerald-500" : "bg-slate-300"}`}>
+                <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${user.status === "Active" ? "translate-x-4" : "translate-x-0.5"}`} />
+            </span>
+            {user.status}
+        </button>
+    );
+
     const statCards = [
         { label: "Total Customers", value: users.length, note: "Registered accounts", icon: FiUserPlus, color: "bg-emerald-100 text-emerald-700" },
         { label: "New Today", value: todayCount, note: "Joined today", icon: FiUserCheck, color: "bg-amber-100 text-amber-700" },
@@ -357,7 +399,7 @@ const Users = () => {
                                             </td>
                                             <td className="px-3 py-3 text-xs capitalize text-slate-600">{user.role}</td>
                                             <td className="px-3 py-3">
-                                                <span className={`rounded-md px-2 py-1 text-[10px] font-bold ${user.status === "Active" ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>{user.status}</span>
+                                                {renderStatusToggle(user)}
                                             </td>
                                             <td className="px-3 py-3 text-xs text-slate-500">{formatJoinDate(user.created_at, { day: "2-digit", month: "short", year: "numeric" })}</td>
                                             <td className="px-3 py-3">
@@ -393,7 +435,7 @@ const Users = () => {
                                                             <p className="text-[10px] text-slate-400">Customer #{user.id ?? "—"}</p>
                                                         </div>
                                                     </div>
-                                                    <span className={`shrink-0 rounded-md px-2 py-1 text-[10px] font-bold ${user.status === "Active" ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-700"}`}>{user.status}</span>
+                                                    {renderStatusToggle(user)}
                                                 </div>
                                                 <div className="mt-3 space-y-1.5 border-t border-slate-100 pt-3 text-xs">
                                                     <p className="truncate text-slate-700">{user.email || "Email not provided"}</p>
